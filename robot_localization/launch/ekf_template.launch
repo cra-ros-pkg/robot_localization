@@ -1,0 +1,71 @@
+<!-- Launch file for ekf_localization_node -->
+
+<launch>
+
+    <!-- This node will take in measurements from odometry, IMU, stamped pose, and stamped twist messages. It tracks
+         the state of the robot, with the state vector being defined as X position, Y position, Z position,
+         roll, pitch, yaw, and the respective velocites for those quantities. Accelerations are not used (yet).
+         Units for all measurements are assumed to be in meters and radians. By default, the node outputs an
+         Odometry message with the topic name odometry/filtered -->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization" clear_params="true">
+
+      <!-- The frequency, in Hz, at which the filter will output a position estimate. Note that
+           the filter will not begin computation until it receives at least one message from
+           one of the inputs. It will then run continuously at the frequency specified here,
+           regardless of whether it receives more measurements. --> 
+      <param name="frequency" value="30"/>  
+
+      <!-- The period, in seconds, after which we consider a sensor to have timed out. In this event, we
+           carry out a predict cycle on the EKF without correcting it. This parameter can be thought of
+           as the minimum frequency with which the filter will generate output. -->
+      <param name="sensor_timeout" value="0.1"/>  
+
+      <!-- The filter accepts an arbitrary number of inputs from each input message type (Odometry, PoseStamped,
+           TwistStamped, Imu). To add a new one, simply append the next number in the sequence to its base name,
+           e.g., odom0, odom1, twist0, twist1, imu0, imu1, imu2, etc. The value should be the topic name. -->
+      <param name="odom0" value="example/odom"/>
+      <param name="odom1" value="example/another_odom"/>
+      <param name="pose0" value="example/pose"/>
+      <param name="twist0" value="example/twist"/>
+      <param name="imu0" value="example/imu/data"/> 
+
+      <!-- Each sensor reading updates some or all of the filter's state. These options give you greater control over
+           which values from each measurement are fed to the filter. For example, if you have an odometry message as input,
+           but only want to use its Z position value, then set the entire vector to false, except for the third entry.
+           The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw -->
+      <rosparam param="odom0_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
+      <rosparam param="odom1_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
+      <rosparam param="pose0_config">[true, true, false, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true]</rosparam>
+      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true]</rosparam>
+
+      <!-- Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file
+           specified by debug_out_file. I hope you like matrices! -->
+      <param name="debug"           value="false"/>
+      <param name="debug_out_file"  value="debug_ekf_localization.txt"/>
+
+      <!-- For the tf tree, this specifies the name of the local (odom) and vehicle (base_link) frames. There's 
+           a good chance you can leave these alone, as the default values adhere to the ROS spec. -->
+      <param name="odom_frame" value="odom"/>
+      <param name="base_link_frame" value="base_link"/>
+
+      <!-- The process noise covariance matrix can be difficult to tune, and can vary for each application, so it
+           is exposed as a configuration parameter. PLEASE NOTE that every value in this matrix *must* be specified
+           as real-valued, i.e., it must have a decimal point. Integers don't load correctly. The values are ordered
+           as x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw. -->
+      <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.004]</rosparam>
+
+    </node>
+	 
+</launch>
