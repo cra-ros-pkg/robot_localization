@@ -32,12 +32,26 @@
       <!-- Each sensor reading updates some or all of the filter's state. These options give you greater control over
            which values from each measurement are fed to the filter. For example, if you have an odometry message as input,
            but only want to use its Z position value, then set the entire vector to false, except for the third entry.
-           The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw -->
+           The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw. Note that not some message
+           types lack certain variables. For example, a TwistWithCovarianceStamped message has no pose information, so the first
+           six values would be meaningless in that case. -->
       <rosparam param="odom0_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
       <rosparam param="odom1_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
       <rosparam param="pose0_config">[true, true, false, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true]</rosparam>
       <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true]</rosparam>
+
+      <!-- The first measurement for a given pose variable from a given sensor may have a non-zero value. We can either
+           initialize the filter with this value, or we can consider that a "zero point" for all future measurements,
+           and simply integrate them after subtracting the initial measurement's value (i.e, differentially). Be careful
+           when using this: if, for example, you have a UGV that starts on a slope or a UAV that starts with a non-zero
+           altitude, you will not want to integrate those values differentially. If you're not sure, then set all values
+           to false for your sensors. Note that this is only valid for sensors that contain pose data (i.e., not velocity).
+           The order of the values is x, y, z, roll, pitch, yaw. -->
+      <rosparam param="odom0_differential">[true, true, false, false, false, false]</rosparam>
+      <rosparam param="odom1_differential">[false, false, true, false, false, false]</rosparam>
+      <rosparam param="pose0_differential">[false, false, false, false, false, false]</rosparam>
+      <rosparam param="imu0_differential">[false, false, false, false, false, true]</rosparam>
 
       <!-- Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file
            specified by debug_out_file. I hope you like matrices! -->
