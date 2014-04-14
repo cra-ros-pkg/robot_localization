@@ -33,6 +33,9 @@
 #ifndef RobotLocalization_RosFilter_h
 #define RobotLocalization_RosFilter_h
 
+// Temporary measure until tf moves to boost::signals2
+#define BOOST_SIGNALS_NO_DEPRECATION_WARNING
+
 #include <robot_localization/filter_common.h>
 #include <robot_localization/filter_base.h>
 
