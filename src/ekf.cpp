@@ -201,17 +201,10 @@ namespace RobotLocalization
 
     state_ = state_ + kalmanGainSubset * innovationSubset;
 
-    // (3) Update the estimate error covariance matrix: P = (I - KH)P
-    //estimateErrorCovariance_ = (identity_ - kalmanGainSubset * stateToMeasurementSubset) * estimateErrorCovariance_;
-
-    // (4) Carry out safety precautions for keeping the covariance positive-definite.
-    // Need to be careful with Eigen aliasing here - use eval on the transpose
-    //estimateErrorCovariance_ = 0.5 * estimateErrorCovariance_ + 0.5 * estimateErrorCovariance_.transpose().eval();
-    //estimateErrorCovariance_ += covarianceEpsilon_;
-
     // (3) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
-    estimateErrorCovariance_ = (identity_ - kalmanGainSubset * stateToMeasurementSubset) * estimateErrorCovariance_ *
-        (identity_ - kalmanGainSubset * stateToMeasurementSubset).transpose() + kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
+    Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
+    estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_ * gainResidual.transpose() +
+        kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
 
     // Handle wrapping of angles
     wrapStateAngles();
