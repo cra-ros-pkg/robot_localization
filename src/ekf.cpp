@@ -176,11 +176,11 @@ namespace RobotLocalization
       *debugStream_ << stateToMeasurementSubset << "\n";
     }
 
-    // (1) Compute the Kalman gain: K = (P * H') / (H * P * H' + R)
+    // (1) Compute the Kalman gain: K = (PH') / (HPH' + R)
     kalmanGainSubset = estimateErrorCovariance_ * stateToMeasurementSubset.transpose()
       * (stateToMeasurementSubset * estimateErrorCovariance_ * stateToMeasurementSubset.transpose() + measurementCovarianceSubset).inverse();
 
-    // (2) Apply the gain to the difference between the state and measurement: x = x + K * (z - Hx)
+    // (2) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
     innovationSubset = (measurementSubset - stateSubset);
 
     // Wrap angles in the innovation
@@ -201,13 +201,10 @@ namespace RobotLocalization
 
     state_ = state_ + kalmanGainSubset * innovationSubset;
 
-    // (3) Update the estimate error covariance matrix
-    estimateErrorCovariance_ = (identity_ - kalmanGainSubset * stateToMeasurementSubset) * estimateErrorCovariance_;
-
-    // (4) Carry out safety precautions for keeping the covariance positive-definite.
-    // Need to be careful with Eigen aliasing here - use eval on the transpose
-    estimateErrorCovariance_ = 0.5 * estimateErrorCovariance_ + 0.5 * estimateErrorCovariance_.transpose().eval();
-    estimateErrorCovariance_ += covarianceEpsilon_;
+    // (3) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
+    Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
+    estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_ * gainResidual.transpose() +
+        kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
 
     // Handle wrapping of angles
     wrapStateAngles();
@@ -329,4 +326,5 @@ namespace RobotLocalization
   }
 
 }
+
 
