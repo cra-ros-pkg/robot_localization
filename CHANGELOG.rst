@@ -2,8 +2,10 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.2 (2014-04-11)
+------------------
+* Updated covariance correction formulation to "Joseph form" to improve filter stability. 
+* Implemented new versioning scheme.
 
 0.1.1 (2014-04-11)
 ------------------
