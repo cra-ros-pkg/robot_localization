@@ -16,8 +16,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS roscpp
-  DEPENDS eigen
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
 )
 
 ###########
