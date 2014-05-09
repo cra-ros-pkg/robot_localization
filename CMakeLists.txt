@@ -28,6 +28,7 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
 add_library(filter_base src/filter_base.cpp)
 add_library(ekf src/ekf.cpp)
+target_link_libraries(ekf filter_base)
 
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
 
