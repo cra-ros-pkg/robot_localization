@@ -15,8 +15,9 @@ find_package(Eigen REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
+  LIBRARIES filter_base ekf
   CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
+  DEPENDS Eigen
 )
 
 ###########
@@ -27,6 +28,7 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
 add_library(filter_base src/filter_base.cpp)
 add_library(ekf src/ekf.cpp)
+target_link_libraries(ekf filter_base)
 
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
 
