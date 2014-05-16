@@ -240,6 +240,9 @@ namespace RobotLocalization
     double xVel = state_(StateMemberVx);
     double yVel = state_(StateMemberVy);
     double zVel = state_(StateMemberVz);
+    double xAcc = state_(StateMemberAx);
+    double yAcc = state_(StateMemberAy);
+    double zAcc = state_(StateMemberAz);
 
     // We'll need these trig calculations a lot.
     double cr = cos(roll);
@@ -253,26 +256,79 @@ namespace RobotLocalization
     transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
     transferFunction_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
     transferFunction_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
+    transferFunction_(StateMemberX, StateMemberAx) = 0.5 * transferFunction_(StateMemberX, StateMemberVx) * delta;
+    transferFunction_(StateMemberX, StateMemberAy) = 0.5 * transferFunction_(StateMemberX, StateMemberVy) * delta;
+    transferFunction_(StateMemberX, StateMemberAz) = 0.5 * transferFunction_(StateMemberX, StateMemberVz) * delta;
     transferFunction_(StateMemberY, StateMemberVx) = sy * cp * delta;
     transferFunction_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
     transferFunction_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
+    transferFunction_(StateMemberY, StateMemberAx) = 0.5 * transferFunction_(StateMemberY, StateMemberVx) * delta;
+    transferFunction_(StateMemberY, StateMemberAy) = 0.5 * transferFunction_(StateMemberY, StateMemberVy) * delta;
+    transferFunction_(StateMemberY, StateMemberAz) = 0.5 * transferFunction_(StateMemberY, StateMemberVz) * delta;
     transferFunction_(StateMemberZ, StateMemberVx) = -sp * delta;
     transferFunction_(StateMemberZ, StateMemberVy) = cp * sr * delta;
     transferFunction_(StateMemberZ, StateMemberVz) = cp * cr * delta;
+    transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
+    transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
+    transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
     transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
     transferFunction_(StateMemberPitch, StateMemberVpitch) = delta;
     transferFunction_(StateMemberYaw, StateMemberVyaw) = delta;
+    transferFunction_(StateMemberVx, StateMemberAx) = delta;
+    transferFunction_(StateMemberVy, StateMemberAy) = delta;
+    transferFunction_(StateMemberVz, StateMemberAz) = delta;
 
     // Prepare the transfer function Jacobian. This function is analytically derived from the
     // transfer function.
-    double dF0dr = (cy * sp * cr + sy * sr) * delta * yVel + (-cy * sp * sr + sy * cr) * delta * zVel;
-    double dF0dp = -cy * sp * delta * xVel + cy * cp * sr * delta * yVel + cy * cp * cr * delta * zVel;
-    double dF0dy = -sy * cp * delta * xVel + (-sy * sp * sr - cy * cr) * delta * yVel + (-sy * sp * cr + cy * sr) * delta * zVel;
-    double dF1dr = (sy * sp * cr - cy * sr) * delta * yVel + (-sy * sp * sr - cy * cr) * delta * zVel;
-    double dF1dp = -sy * sp * delta * xVel + sy * cp * sr * delta * yVel + sy * cp * cr * delta * zVel;
-    double dF1dy = cy * cp * delta * xVel + (cy * sp * sr - sy * cr) * delta * yVel + (cy * sp * cr + sy * sr) * delta * zVel;
-    double dF2dr = cp * cr * delta * yVel - cp * sr * delta * zVel;
-    double dF2dp = -cp * delta * xVel - sp * sr * delta * yVel - sp * cr * delta * zVel;
+    double xCoeff = 0.0;
+    double yCoeff = 0.0;
+    double zCoeff = 0.0;
+    double oneHalfATSquared = 0.5 * delta * delta;
+
+    yCoeff = cy * sp * cr + sy * sr;
+    zCoeff = -cy * sp * sr + sy * cr;
+    double dF0dr = (yCoeff * yVel + zCoeff * zVel) * delta +
+                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    xCoeff = -cy * sp;
+    yCoeff = cy * cp * sr;
+    zCoeff = cy * cp * cr;
+    double dF0dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    xCoeff = -sy * cp;
+    yCoeff = -sy * sp * sr - cy * cr;
+    zCoeff = -sy * sp * cr + cy * sr;
+    double dF0dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    yCoeff = sy * sp * cr - cy * sr;
+    zCoeff = -sy * sp * sr - cy * cr;
+    double dF1dr = (yCoeff * yVel + zCoeff * zVel) * delta +
+                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    xCoeff = -sy * sp;
+    yCoeff = sy * cp * sr;
+    zCoeff = sy * cp * cr;
+    double dF1dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    xCoeff = cy * cp;
+    yCoeff = cy * sp * sr - sy * cr;
+    zCoeff = cy * sp * cr + sy * sr;
+    double dF1dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    yCoeff = cp * cr;
+    zCoeff = -cp * sr;
+    double dF2dr = (yCoeff * yVel + zCoeff * zVel) * delta +
+                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+
+    xCoeff = -cp;
+    yCoeff = -sp * sr;
+    zCoeff = -sp * cr;
+    double dF2dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transferFunctionJacobian_ = transferFunction_;
