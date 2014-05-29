@@ -31,8 +31,10 @@ add_library(ekf src/ekf.cpp)
 target_link_libraries(ekf filter_base)
 
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
+add_executable(utm_transform_node src/utm_transform_node.cpp)
 
 target_link_libraries(ekf_localization_node ekf filter_base ${catkin_LIBRARIES})
+target_link_libraries(utm_transform_node ${catkin_LIBRARIES})
 
 #############
 ## Install ##
