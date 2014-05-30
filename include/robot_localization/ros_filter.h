@@ -33,9 +33,6 @@
 #ifndef RobotLocalization_RosFilter_h
 #define RobotLocalization_RosFilter_h
 
-// Temporary measure until tf moves to boost::signals2
-#define BOOST_SIGNALS_NO_DEPRECATION_WARNING
-
 #include <robot_localization/filter_common.h>
 #include <robot_localization/filter_base.h>
 
@@ -873,34 +870,26 @@ namespace RobotLocalization
             poseCorrected.setOrigin(trans * poseTmp.getOrigin());
             poseCorrected.setRotation(trans * poseTmp.getRotation());
 
-            // Now create an augmented matrix that contains
-            // a 3D rotation matrix in the upper-left quadrant,
-            // an identity matrix in the lower-right quadrant,
-            // and zeros elsewhere.
-            double roll, pitch, yaw;
-            quatToRPY(trans.getRotation(), roll, pitch, yaw);
-
-            double cr = cos(roll);
-            double cp = cos(pitch);
-            double cy = cos(yaw);
-            double sr = sin(roll);
-            double sp = sin(pitch);
-            double sy = sin(yaw);
-
+            // Now rotate the covariance: create an augmented
+            // matrix that contains a 3D rotation matrix in the
+            // upper-left and lower-right quadrants, with zeros
+            // elsewhere
+            tf::Matrix3x3 rot(trans.getRotation());
             Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
             rot6d.setIdentity();
-            rot6d(0, 0) = cp * cy;
-            rot6d(0, 1) = cy * sr * sp - cr * sy;
-            rot6d(0, 2) = cr * cy * sp + sr * sy;
-            rot6d(1, 0) = cp * sy;
-            rot6d(1, 1) = cr * cy + sr * sp * sy;
-            rot6d(1, 2) = -cy * sr + cr * sp * sy;
-            rot6d(2, 0) = -sp;
-            rot6d(2, 1) = cp * sr;
-            rot6d(2, 2) = cr * cp;
+
+            for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+            {
+              rot6d(rInd, 0) = rot.getRow(rInd).getX();
+              rot6d(rInd, 1) = rot.getRow(rInd).getY();
+              rot6d(rInd, 2) = rot.getRow(rInd).getZ();
+              rot6d(rInd+POSITION_SIZE, 3) = rot.getRow(rInd).getX();
+              rot6d(rInd+POSITION_SIZE, 4) = rot.getRow(rInd).getY();
+              rot6d(rInd+POSITION_SIZE, 5) = rot.getRow(rInd).getZ();
+            }
 
             // Rotate the covariance
-            covarianceRotated = rot6d * covarianceRotated * rot6d;
+            covarianceRotated = rot6d * covarianceRotated.eval() * rot6d.transpose();
           }
         }
         catch (tf::TransformException &ex)
@@ -1108,34 +1097,26 @@ namespace RobotLocalization
             twistCorrected.setOrigin(trans * twistTmp.getOrigin());
             twistCorrected.setRotation(trans * twistTmp.getRotation());
 
-            // Now create an augmented matrix that contains
-            // a 3D rotation matrix in the upper-left quadrant,
-            // an identity matrix in the lower-right quadrant,
-            // and zeros elsewhere.
-            double roll, pitch, yaw;
-            quatToRPY(trans.getRotation(), roll, pitch, yaw);
-
-            double cr = cos(roll);
-            double cp = cos(pitch);
-            double cy = cos(yaw);
-            double sr = sin(roll);
-            double sp = sin(pitch);
-            double sy = sin(yaw);
-
+            // Now rotate the covariance: create an augmented
+            // matrix that contains a 3D rotation matrix in the
+            // upper-left and lower-right quadrants, and zeros
+            // elsewhere
+            tf::Matrix3x3 rot(trans.getRotation());
             Eigen::MatrixXd rot6d(TWIST_SIZE, TWIST_SIZE);
             rot6d.setIdentity();
-            rot6d(0, 0) = cp * cy;
-            rot6d(0, 1) = cy * sr * sp - cr * sy;
-            rot6d(0, 2) = cr * cy * sp + sr * sy;
-            rot6d(1, 0) = cp * sy;
-            rot6d(1, 1) = cr * cy + sr * sp * sy;
-            rot6d(1, 2) = -cy * sr + cr * sp * sy;
-            rot6d(2, 0) = -sp;
-            rot6d(2, 1) = cp * sr;
-            rot6d(2, 2) = cr * cp;
+
+            for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+            {
+              rot6d(rInd, 0) = rot.getRow(rInd).getX();
+              rot6d(rInd, 1) = rot.getRow(rInd).getY();
+              rot6d(rInd, 2) = rot.getRow(rInd).getZ();
+              rot6d(rInd+POSITION_SIZE, 3) = rot.getRow(rInd).getX();
+              rot6d(rInd+POSITION_SIZE, 4) = rot.getRow(rInd).getY();
+              rot6d(rInd+POSITION_SIZE, 5) = rot.getRow(rInd).getZ();
+            }
 
             // Rotate the covariance
-            covarianceRotated = rot6d * covarianceRotated * rot6d;
+            covarianceRotated = rot6d * covarianceRotated.eval() * rot6d.transpose();
           }
 
         }
