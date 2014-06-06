@@ -125,6 +125,7 @@ namespace RobotLocalization
     if (debug_)
     {
       *debugStream_ << "------ FilterBase::integrateMeasurements ------\n\n";
+      *debugStream_ << "Integration time is " << std::setprecision(20) << currentTime << "\n";
     }
 
     // If we have any measurements in the queue, process them
@@ -163,8 +164,8 @@ namespace RobotLocalization
 
         if (debug_)
         {
-          *debugStream_ << "Sensor timeout! Last measurement was " << lastMeasurementTime_ << ", current time is " <<
-                           currentTime << ", delta is " << lastUpdateDelta << ", " << "projection time is " << projectTime << "\n";
+          *debugStream_ << "Sensor timeout! Last measurement was " << std::setprecision(10) << lastMeasurementTime_ << ", current time is " <<
+                           currentTime << ", delta is " << lastUpdateDelta << ", projection time is " << projectTime << "\n";
         }
 
         validateDelta(projectTime);
