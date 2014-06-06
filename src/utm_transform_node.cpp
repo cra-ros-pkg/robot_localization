@@ -64,6 +64,9 @@ double utmOdomTfPitch_;
 //! @brief Stores the yaw we need to compute the transform
 double utmOdomTfYaw_;
 
+//! @brief Whether or not the GPS fix is usable
+bool hasFix_;
+
 //! @brief Whether or not we've computed a good heading
 bool transformGood_;
 
@@ -81,102 +84,113 @@ double yawOffset_;
 //!
 void computeOdomUtmTransform()
 {
-  // Only do this if we've received the messages we need already and haven't computed the
-  // odom_frame->utm_frame transform before
-  if(!transformGood_ && latestUtmMsg_ != NULL && latestImuMsg_ != NULL && latestOdomMessage_ != NULL)
+  // Only do this if:
+  // 1. We haven't computed the odom_frame->utm_frame transform before
+  // 2. We've received the messages we need already
+  // 3. We have good GPS data
+  if(!transformGood_ &&
+     latestUtmMsg_ != NULL &&
+     latestImuMsg_ != NULL &&
+     latestOdomMessage_ != NULL &&
+     hasFix_)
   {
-    ROS_INFO_STREAM("Computing initial " << latestOdomMessage_->header.frame_id << "->" << latestUtmMsg_->header.frame_id << " transform");
-
-    // Now that we have what we need, create the transform so it will be broadcast
-    if(odomUtmTransform_ == NULL)
+    if(!std::isnan(latestUtmMsg_->pose.pose.position.x) &&
+       !std::isnan(latestUtmMsg_->pose.pose.position.y) &&
+       !std::isnan(latestUtmMsg_->pose.pose.position.z))
     {
-      odomUtmTransform_ = new tf::StampedTransform();
+      ROS_INFO_STREAM("Computing initial " << latestOdomMessage_->header.frame_id << "->" << latestUtmMsg_->header.frame_id << " transform");
+
+      // Now that we have what we need, create the transform so it will be broadcast
+      if(odomUtmTransform_ == NULL)
+      {
+        odomUtmTransform_ = new tf::StampedTransform();
+      }
+
+      // Get the IMU's current RPY values. Need the raw values (for yaw, anyway).
+      tf::Matrix3x3 mat(tf::Quaternion(latestImuMsg_->orientation.x,
+                                       latestImuMsg_->orientation.y,
+                                       latestImuMsg_->orientation.z,
+                                       latestImuMsg_->orientation.w));
+
+      // Convert to RPY
+      mat.getRPY(utmOdomTfRoll_, utmOdomTfPitch_, utmOdomTfYaw_);
+
+      ROS_INFO_STREAM("Latest IMU orientation was: (" << std::fixed << utmOdomTfRoll_ << ", " << utmOdomTfPitch_ << ", " << utmOdomTfYaw_ << ")");
+
+      // Compute the final yaw value that corrects for the difference between the
+      // IMU's heading and the UTM grid's belief of where 0 heading should be (i.e.,
+      // along the x-axis)
+      utmOdomTfYaw_ += (magneticDeclination_ + yawOffset_ + (M_PI / 2.0));
+
+      ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
+                      ", user-specified offset of " << yawOffset_ << ", and fixed offset of " << (M_PI / 2.0) <<
+                      ". Transform heading factor is now " << utmOdomTfYaw_);
+
+      // Convert to tf-friendly structures
+      tf::Quaternion quat;
+      quat.setRPY(utmOdomTfRoll_, utmOdomTfPitch_, utmOdomTfYaw_);
+      tf::Vector3 pos;
+      tf::pointMsgToTF(latestUtmMsg_->pose.pose.position, pos);
+
+      // Put the transform together
+      odomUtmTransform_->frame_id_ = latestOdomMessage_->header.frame_id;
+      odomUtmTransform_->child_frame_id_ = latestUtmMsg_->header.frame_id;
+      odomUtmTransform_->setRotation(quat);
+      odomUtmTransform_->setOrigin(pos);
+
+      ROS_INFO_STREAM("Before correcttion, " << odomUtmTransform_->frame_id_  << "->" <<
+                      odomUtmTransform_->child_frame_id_ << " transform is: " << std::fixed <<
+                      "\nPosition: (" << odomUtmTransform_->getOrigin().getX() << ", " <<
+                                         odomUtmTransform_->getOrigin().getY() << ", " <<
+                                         odomUtmTransform_->getOrigin().getZ() << ")" <<
+                      "\nOrientation: (" << utmOdomTfRoll_ << ", " <<
+                                            utmOdomTfPitch_ << ", " <<
+                                            utmOdomTfYaw_ << ")");
+
+      // If we started in a location without GPS (or with poor GPS), then we could be at some non-zero
+      // (x, y) location in the odomFrame_ frame. For that reason, we need to move this transform to the
+      // origin. To do that, we need to figure out what our odometry origin (the inverse
+      // of our position) is in the UTM frame.
+
+      // Convert the pose to a tf object
+      tf::Pose odomPose;
+      tf::poseMsgToTF(latestOdomMessage_->pose.pose, odomPose);
+
+      // The transform order will be orig_odom_pos * orig_utm_pos_inverse * cur_utm_pos
+      odomUtmTransform_->mult(odomPose, odomUtmTransform_->inverse());
+
+      double odomRoll;
+      double odomPitch;
+      double odomYaw;
+      double utmRoll;
+      double utmPitch;
+      double utmYaw;
+
+      mat.setRotation(odomPose.getRotation());
+      mat.getRPY(odomRoll, odomPitch, odomYaw);
+
+      ROS_INFO_STREAM("Latest " << latestOdomMessage_->header.frame_id << " pose is: " << std::fixed <<
+                      "\nPosition: (" << odomPose.getOrigin().getX() << ", " <<
+                                         odomPose.getOrigin().getY() << ", " <<
+                                         odomPose.getOrigin().getZ() << ")" <<
+                      "\nOrientation: (" << odomRoll << ", " <<
+                                            odomPitch << ", " <<
+                                            odomYaw << ")");
+
+      mat.setRotation(odomUtmTransform_->getRotation());
+      mat.getRPY(utmRoll, utmPitch, utmYaw);
+
+      ROS_INFO_STREAM(odomUtmTransform_->frame_id_  << "->" << odomUtmTransform_->child_frame_id_ <<
+                       " transform is now: " << std::fixed <<
+                       "\nPosition: (" << odomUtmTransform_->getOrigin().getX() << ", " <<
+                                          odomUtmTransform_->getOrigin().getY() << ", " <<
+                                          odomUtmTransform_->getOrigin().getZ() << ")" <<
+                       "\nOrientation: (" << utmRoll << ", " <<
+                                             utmPitch << ", " <<
+                                             utmYaw << ")");
+
+      transformGood_ = true;
     }
-
-    // Get the IMU's current RPY values. Need the raw values (for yaw, anyway).
-    tf::Matrix3x3 mat(tf::Quaternion(latestImuMsg_->orientation.x,
-                                     latestImuMsg_->orientation.y,
-                                     latestImuMsg_->orientation.z,
-                                     latestImuMsg_->orientation.w));
-
-    // Convert to RPY
-    mat.getRPY(utmOdomTfRoll_, utmOdomTfPitch_, utmOdomTfYaw_);
-
-    ROS_INFO_STREAM("Latest IMU orientation was: (" << std::fixed << utmOdomTfRoll_ << ", " << utmOdomTfPitch_ << ", " << utmOdomTfYaw_ << ")");
-
-    // Compute the final yaw value that corrects for the difference between the
-    // IMU's heading and the UTM grid's belief of where 0 heading should be (i.e.,
-    // along the x-axis)
-    utmOdomTfYaw_ += (magneticDeclination_ + yawOffset_ + (M_PI / 2.0));
-
-    ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
-                     ", user-specified offset of " << yawOffset_ << ", and fixed offset of " << (M_PI / 2.0) <<
-                     ". Transform heading factor is now " << utmOdomTfYaw_);
-
-    // Convert to tf-friendly structures
-    tf::Quaternion quat;
-    quat.setRPY(utmOdomTfRoll_, utmOdomTfPitch_, utmOdomTfYaw_);
-    tf::Vector3 pos;
-    tf::pointMsgToTF(latestUtmMsg_->pose.pose.position, pos);
-
-    // Put the transform together
-    odomUtmTransform_->frame_id_ = latestOdomMessage_->header.frame_id;
-    odomUtmTransform_->child_frame_id_ = latestUtmMsg_->header.frame_id;
-    odomUtmTransform_->setRotation(quat);
-    odomUtmTransform_->setOrigin(pos);
-
-    ROS_INFO_STREAM("Before correcttion, " << odomUtmTransform_->frame_id_  << "->" <<
-                     odomUtmTransform_->child_frame_id_ << " transform is: " << std::fixed <<
-                     "\nPosition: (" << odomUtmTransform_->getOrigin().getX() << ", " <<
-                                        odomUtmTransform_->getOrigin().getY() << ", " <<
-                                        odomUtmTransform_->getOrigin().getZ() << ")" <<
-                     "\nOrientation: (" << utmOdomTfRoll_ << ", " <<
-                                           utmOdomTfPitch_ << ", " <<
-                                           utmOdomTfYaw_ << ")");
-
-    // If we started in a location without GPS (or with poor GPS), then we could be at some non-zero
-    // (x, y) location in the odomFrame_ frame. For that reason, we need to move this transform to the
-    // origin. To do that, we need to figure out what our odometry origin (the inverse
-    // of our position) is in the UTM frame.
-
-    // Convert the pose to a tf object
-    tf::Pose odomPose;
-    tf::poseMsgToTF(latestOdomMessage_->pose.pose, odomPose);
-
-    // The transform order will be orig_odom_pos * orig_utm_pos_inverse * cur_utm_pos
-    odomUtmTransform_->mult(odomPose, odomUtmTransform_->inverse());
-
-    double odomRoll;
-    double odomPitch;
-    double odomYaw;
-    double utmRoll;
-    double utmPitch;
-    double utmYaw;
-
-    mat.setRotation(odomPose.getRotation());
-    mat.getRPY(odomRoll, odomPitch, odomYaw);
-
-    ROS_INFO_STREAM("Latest " << latestOdomMessage_->header.frame_id << " pose is: " << std::fixed <<
-                     "\nPosition: (" << odomPose.getOrigin().getX() << ", " <<
-                                        odomPose.getOrigin().getY() << ", " <<
-                                        odomPose.getOrigin().getZ() << ")" <<
-                     "\nOrientation: (" << odomRoll << ", " <<
-                                           odomPitch << ", " <<
-                                           odomYaw << ")");
-
-    mat.setRotation(odomUtmTransform_->getRotation());
-    mat.getRPY(utmRoll, utmPitch, utmYaw);
-
-    ROS_INFO_STREAM(odomUtmTransform_->frame_id_  << "->" << odomUtmTransform_->child_frame_id_ <<
-                     " transform is now: " << std::fixed <<
-                     "\nPosition: (" << odomUtmTransform_->getOrigin().getX() << ", " <<
-                                        odomUtmTransform_->getOrigin().getY() << ", " <<
-                                        odomUtmTransform_->getOrigin().getZ() << ")" <<
-                     "\nOrientation: (" << utmRoll << ", " <<
-                                           utmPitch << ", " <<
-                                           utmYaw << ")");
-
-    transformGood_ = true;
   }
 }
 
@@ -222,6 +236,16 @@ void odomCallback(const nav_msgs::OdometryConstPtr& msg)
   *latestOdomMessage_ = *msg;
 }
 
+//! @brief Callback for the GPS fix data
+//!
+void gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
+{
+  hasFix_ = (msg->status.status != sensor_msgs::NavSatStatus::STATUS_NO_FIX &&
+             !std::isnan(msg->altitude) &&
+             !std::isnan(msg->latitude) &&
+             !std::isnan(msg->longitude));
+}
+
 //! @brief Waits until a transform is ready, then
 //! broadcasts it at a specified rate
 //!
@@ -244,6 +268,7 @@ int main(int argc, char **argv)
 
   magneticDeclination_ = 0;
   utmOdomTfYaw_ = 0;
+  hasFix_ = false;
   transformGood_ = false;
   double frequency = 0;
 
@@ -251,6 +276,7 @@ int main(int argc, char **argv)
   ros::Subscriber utmSub = nh.subscribe("gps/gps_utm", 10, &utmCallback);
   ros::Subscriber imuSub = nh.subscribe("imu/data", 10, &imuCallback);
   ros::Subscriber odomSub = nh.subscribe("odometry/filtered", 10, &odomCallback);
+  ros::Subscriber gpsFixSub = nh.subscribe("gps/fix", 10, &gpsFixCallback);
 
   // Load the parameters we need
   nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
