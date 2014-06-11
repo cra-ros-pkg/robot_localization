@@ -1093,8 +1093,10 @@ namespace RobotLocalization
             tf::StampedTransform trans;
             tfListener_.lookupTransform(targetFrame, twistTmp.frame_id_, twistTmp.stamp_, trans);
 
-            // Transform to correct frame
-            twistCorrected.setOrigin(trans * twistTmp.getOrigin());
+            // Transform to correct frame. The origin does NOT get transformed,
+            // as the body frame velocity is irrespective of the location of the
+            // sensor.
+            twistCorrected.setOrigin(tf::Vector3(0, 0, 0));
             twistCorrected.setRotation(trans * twistTmp.getRotation());
 
             // Now rotate the covariance: create an augmented
