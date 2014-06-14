@@ -59,8 +59,9 @@ std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
   double roll, pitch, yaw;
   orientation.getRPY(roll, pitch, yaw);
 
-  os << "Origin: (" << trans.getOrigin().getX() << " " << trans.getOrigin().getY() << " " << trans.getOrigin().getZ() << ")\n"
-     << "Rotation (RPY): (" << roll << ", " << pitch << ", " << yaw << ")\n";
+  os << "Origin: (" << std::setprecision(20) << trans.getOrigin().getX() << " " <<
+        trans.getOrigin().getY() << " " << trans.getOrigin().getZ() << ")\n" <<
+        "Rotation (RPY): (" << roll << ", " << pitch << ", " << yaw << ")\n";
 
   return os;
 }
@@ -148,7 +149,7 @@ namespace RobotLocalization
       //!
       void loadParams()
       {
-        // Grab the debug param. This will produce a LOT of output.
+        // Grab the debug param. If true, the node will produce a LOT of output.
         bool debug;
         nhLocal_.param("debug", debug, false);
 
@@ -222,28 +223,30 @@ namespace RobotLocalization
         bool moreParams = false;
         do
         {
-          // Build the string in the form of "odomX", where X is the odom topic number
+          // Build the string in the form of "odomX", where X is the odom topic number,
+          // then check if we have any parameters with that value. Users need to make
+          // sure they don't have gaps in their configs (e.g., odom0 and then odom2)
           std::stringstream ss;
           ss << "odom" << topicInd++;
           std::string odomTopicName = ss.str();
-
-          // Check if we have any topics with that name
           moreParams = nhLocal_.hasParam(odomTopicName);
 
           if (moreParams)
           {
+            // Determine if we want to integrate this sensor differentially
+            bool differential;
+            nhLocal_.param(odomTopicName + std::string("_differential"), differential, false);
+
             // Subscribe using boost::bind, which lets us append arbitrary data,
             // in this case, the topic name (e.g., odom0 or odom1)
             std::string odomTopic;
             nhLocal_.getParam(odomTopicName, odomTopic);
 
-            // Now pull in its boolean update vector configuration and differential
-            // update configuration (as this contains pose information)
+            // Now pull in its boolean update vector configuration
             std::vector<int> updateVec = loadUpdateConfig(odomTopicName);
-            std::vector<int> diffVec = loadDifferentialConfig(odomTopicName);
             topicSubs_.push_back(
               nh_.subscribe<nav_msgs::Odometry>(odomTopic, 1,
-                boost::bind(&RosFilter<Filter>::odometryCallback, this, _1, odomTopicName, updateVec, diffVec)));
+                boost::bind(&RosFilter<Filter>::odometryCallback, this, _1, odomTopicName, updateVec, differential)));
 
             if (filter_.getDebug())
             {
@@ -264,16 +267,16 @@ namespace RobotLocalization
 
           if (moreParams)
           {
+            bool differential;
+            nhLocal_.param(poseTopicName + std::string("_differential"), differential, false);
+
             std::string poseTopic;
             nhLocal_.getParam(poseTopicName, poseTopic);
 
-            // Now pull in its boolean update vector configuration and differential
-            // update configuration (as this contains pose information)
             std::vector<int> updateVec = loadUpdateConfig(poseTopicName);
-            std::vector<int> diffVec = loadDifferentialConfig(poseTopicName);
             topicSubs_.push_back(
               nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, 1,
-                boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, odomFrameName_, updateVec, diffVec)));
+                boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, odomFrameName_, updateVec, differential)));
 
             if (filter_.getDebug())
             {
@@ -322,16 +325,18 @@ namespace RobotLocalization
 
           if (moreParams)
           {
+            bool differential;
+            nhLocal_.param(imuTopicName + std::string("_differential"), differential, false);
+
             std::string imuTopic;
             nhLocal_.getParam(imuTopicName, imuTopic);
 
             // Now pull in its boolean update vector configuration and differential
             // update configuration (as this contains pose information)
             std::vector<int> updateVec = loadUpdateConfig(imuTopicName);
-            std::vector<int> diffVec = loadDifferentialConfig(imuTopicName);
             topicSubs_.push_back(
               nh_.subscribe<sensor_msgs::Imu>(imuTopic, 1,
-                boost::bind(&RosFilter<Filter>::imuCallback, this, _1, imuTopicName, updateVec, diffVec)));
+                boost::bind(&RosFilter<Filter>::imuCallback, this, _1, imuTopicName, updateVec, differential)));
 
             if (filter_.getDebug())
             {
@@ -386,17 +391,17 @@ namespace RobotLocalization
       //! @param[in] msg - The ROS IMU message to take in.
       //! @param[in] topicName - The name of the IMU data topic (we support many)
       //! @param[in] updateVector - Specifies which variables we want to update from this measurement
+      //! @param[in] differential - Whether we integrate the pose portions of this message differentially
       //!
       void imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
                        const std::string &topicName,
                        const std::vector<int> &updateVector,
-                       const std::vector<int> &differentialVector)
+                       const bool differential)
       {
         if (filter_.getDebug())
         {
-          debugStream_ << "------ RosFilter::imuCallback (" << topicName << ") ------\n";
-          debugStream_ << "IMU message:\n";
-          debugStream_ << *msg;
+          debugStream_ << "------ RosFilter::imuCallback (" << topicName << ") ------\n" <<
+                          "IMU message:\n" << *msg;
         }
 
         // As with the odometry message, we can separate out the pose- and twist-related variables
@@ -423,7 +428,7 @@ namespace RobotLocalization
         // The attitude is going to be the same regardless of the robot's position
         // in the world, and so we're safe to just transform it to base_link.
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, topicName, baseLinkFrameName_, poseUpdateVec, differentialVector);
+        poseCallback(pptr, topicName, baseLinkFrameName_, poseUpdateVec, differential);
 
         std::vector<int> twistUpdateVec(STATE_SIZE, false);
         std::copy(updateVector.begin() + POSITION_V_OFFSET, updateVector.end(), twistUpdateVec.begin() + POSITION_V_OFFSET);
@@ -453,13 +458,17 @@ namespace RobotLocalization
       //! @param[in] msg - The ROS odometry message to take in.
       //! @param[in] topicName - The name of the odometry topic (we support many)
       //! @param[in] updateVector - Specifies which variables we want to update from this measurement
+      //! @param[in] differential - Whether we integrate the pose portions of this message differentially
       //!
-      void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const std::string &topicName,
-                            const std::vector<int> &updateVector, const std::vector<int> &differentialVector)
+      void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg,
+                            const std::string &topicName,
+                            const std::vector<int> &updateVector,
+                            const bool differential)
       {
         if (filter_.getDebug())
         {
-          debugStream_ << "------ RosFilter::odometryCallback (" << topicName << ") ------\n" << "Odometry message:\n" << *msg;
+          debugStream_ << "------ RosFilter::odometryCallback (" << topicName << ") ------\n" <<
+                          "Odometry message:\n" << *msg;
         }
 
         // Grab the pose portion of the message and pass it to the poseCallback
@@ -469,9 +478,9 @@ namespace RobotLocalization
         posPtr->header = msg->header;
         posPtr->pose = msg->pose;
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, topicName, odomFrameName_, poseUpdateVec, differentialVector);
+        poseCallback(pptr, topicName, odomFrameName_, poseUpdateVec, differential);
 
-        // Grab the twistr portion of the message and pass it to the twistCallback
+        // Grab the twist portion of the message and pass it to the twistCallback
         std::vector<int> twistUpdateVec(STATE_SIZE, false);
         std::copy(updateVector.begin() + POSITION_V_OFFSET, updateVector.end(), twistUpdateVec.begin() + POSITION_V_OFFSET);
         geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
@@ -492,16 +501,18 @@ namespace RobotLocalization
       //! @param[in] topicName - The name of the pose topic (we support many)
       //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
       //! @param[in] updateVector - Specifies which variables we want to update from this measurement
+      //! @param[in] differential - Whether we integrate the pose portions of this message differentially
       //!
       void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                         const std::string &topicName,
                         const std::string &targetFrame,
                         const std::vector<int> &updateVector,
-                        const std::vector<int> &differentialVector)
+                        const bool differential)
       {
         if (filter_.getDebug())
         {
-          debugStream_ << "------ RosFilter::poseCallback (" << topicName << ") ------\n" << "Pose message:\n" << *msg;
+          debugStream_ << "------ RosFilter::poseCallback (" << topicName << ") ------\n" <<
+                          "Pose message:\n" << *msg;
         }
 
         // Put the initial value in the lastMessagTimes_ for this variable if it's empty
@@ -530,10 +541,10 @@ namespace RobotLocalization
               updateVector[StateMemberRoll] || updateVector[StateMemberPitch] || updateVector[StateMemberYaw])
           {
             // Prepare the pose data for inclusion in the filter
-            if (preparePose(msg, topicName + "_pose", targetFrame, updateVector, differentialVector, measurement, measurementCovariance))
+            if (preparePose(msg, topicName + "_pose", targetFrame, updateVector, differential, measurement, measurementCovariance))
             {
               // Store the measurement
-              filter_.enqueueMeasurement(measurement, measurementCovariance, updateVector, msg->header.stamp.toSec());
+              filter_.enqueueMeasurement(topicName + "_pose", measurement, measurementCovariance, updateVector, msg->header.stamp.toSec());
             }
           }
           else
@@ -600,7 +611,7 @@ namespace RobotLocalization
         const std::vector<int> differentialVector(POSE_SIZE, false);
 
         // Prepare the pose data for inclusion in the filter
-        preparePose(msg, topicName, odomFrameName_, updateVector, differentialVector, measurement, measurementCovariance);
+        preparePose(msg, topicName, odomFrameName_, updateVector, false, measurement, measurementCovariance);
         filter_.setState(measurement);
 
         if (filter_.getDebug())
@@ -654,7 +665,7 @@ namespace RobotLocalization
             if (prepareTwist(msg, topicName + "_twist", targetFrame, updateVector, measurement, measurementCovariance))
             {
               // Store the measurement
-              filter_.enqueueMeasurement(measurement, measurementCovariance, updateVector, msg->header.stamp.toSec());
+              filter_.enqueueMeasurement(topicName + "_twist", measurement, measurementCovariance, updateVector, msg->header.stamp.toSec());
             }
           }
           else
@@ -703,6 +714,8 @@ namespace RobotLocalization
 
         ros::Rate loop_rate(frequency_);
 
+        std::map<std::string, Eigen::VectorXd> postUpdateStates;
+
         while (ros::ok())
         {
           // Get latest state and publish it
@@ -728,7 +741,26 @@ namespace RobotLocalization
           ros::spinOnce();
 
           // Now we'll integrate any measurements we've received
-          filter_.integrateMeasurements(ros::Time::now().toSec());
+          filter_.integrateMeasurements(ros::Time::now().toSec(),
+                                        postUpdateStates);
+
+          // Now copy the post-update states into our local
+          // copies
+          std::map<std::string, Eigen::VectorXd>::iterator mapIt;
+
+          for(mapIt = postUpdateStates.begin(); mapIt != postUpdateStates.end(); ++mapIt)
+          {
+            tf::Transform trans;
+            trans.setOrigin(tf::Vector3(mapIt->second(StateMemberX),
+                                        mapIt->second(StateMemberY),
+                                        mapIt->second(StateMemberZ)));
+            tf::Quaternion quat;
+            quat.setRPY(mapIt->second(StateMemberRoll),
+                        mapIt->second(StateMemberPitch),
+                        mapIt->second(StateMemberYaw));
+            trans.setRotation(quat);
+            previousStates_[mapIt->first] = trans;
+          }
 
           loop_rate.sleep();
         }
@@ -770,44 +802,6 @@ namespace RobotLocalization
         return updateVector;
       }
 
-      //! @brief Loads differential settings from the config file
-      //! @param[in] topicName - The name of the topic for which to load settings
-      //! @return The differential settings (boolean update vector) for the topic in question
-      //!
-      std::vector<int> loadDifferentialConfig(const std::string &topicName)
-      {
-        XmlRpc::XmlRpcValue diffConfig;
-        std::vector<int> differentialVector(POSE_SIZE, static_cast<int>(false));
-
-        try
-        {
-          std::string diffTopic = topicName + "_differential";
-
-          if(nhLocal_.hasParam(diffTopic))
-          {
-            nhLocal_.getParam(diffTopic, diffConfig);
-
-            ROS_ASSERT(diffConfig.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-            for (int i = 0; i < diffConfig.size(); i++)
-            {
-              // The double cast looks strange, but we'll get exceptions if we
-              // remove the cast to bool. vector<bool> is discouraged, so differentialVector
-              // uses integers
-              differentialVector[i] = static_cast<int>(static_cast<bool>(diffConfig[i]));
-            }
-          }
-          // else, all will be false (which is fine)
-        }
-        catch (XmlRpc::XmlRpcException &e)
-        {
-          ROS_ERROR_STREAM("ERROR reading sensor differential config: " << e.getMessage() << " for topic " <<
-                           topicName << " (type: " << diffConfig.getType() << ", expected: " << XmlRpc::XmlRpcValue::TypeArray << ")");
-        }
-
-        return differentialVector;
-      }
-
       //! @brief Prepares a pose message for integration into the filter
       //! @param[in] msg - The pose message to prepare
       //! @param[in] topicName - The name of the topic over which this message was received
@@ -820,7 +814,7 @@ namespace RobotLocalization
                        const std::string &topicName,
                        const std::string &targetFrame,
                        const std::vector<int> &updateVector,
-                       const std::vector<int> &differentialVector,
+                       const bool differential,
                        Eigen::VectorXd &measurement,
                        Eigen::MatrixXd &measurementCovariance)
       {
@@ -836,35 +830,16 @@ namespace RobotLocalization
         poseTmp.frame_id_ = (msg->header.frame_id == "" ? targetFrame : msg->header.frame_id);
         poseTmp.stamp_ = msg->header.stamp;
 
-        // Copy the position information into poseTmp, making sure to zero out
-        // values that we don't want included in the measurement.
-        tf::Vector3 curPosition;
-        curPosition.setX(updateVector[StateMemberX] ? msg->pose.pose.position.x : 0.0);
-        curPosition.setY(updateVector[StateMemberY] ? msg->pose.pose.position.y : 0.0);
-        curPosition.setZ(updateVector[StateMemberZ] ? msg->pose.pose.position.z : 0.0);
-        poseTmp.setOrigin(curPosition);
+        tf::poseMsgToTF(msg->pose.pose, poseTmp);
 
         // Handle cases of bad (all-zero) quaternions
-        tf::Quaternion curOrientation;
-        tf::quaternionMsgToTF(msg->pose.pose.orientation, curOrientation);
+        tf::Quaternion curOrientation = poseTmp.getRotation();
 
         if (curOrientation.getX() + curOrientation.getY() + curOrientation.getZ() + curOrientation.getZ() == 0)
         {
           ROS_WARN("Bad (all zero) odometry quaternion specified. Correcting...");
 
           curOrientation.setRPY(0, 0, 0);
-        }
-        else
-        {
-          // If we had a usable orientation, break into RPY, zero
-          // out what we don't want, then convert back
-          double roll, pitch, yaw;
-          quatToRPY(curOrientation, roll, pitch, yaw);
-          roll = (updateVector[StateMemberRoll] ? roll : 0.0);
-          pitch = (updateVector[StateMemberPitch] ? pitch : 0.0);
-          yaw = (updateVector[StateMemberYaw] ? yaw : 0.0);
-          curOrientation.setRPY(roll, pitch, yaw);
-          poseTmp.setRotation(curOrientation);
         }
 
         if (filter_.getDebug())
@@ -873,7 +848,7 @@ namespace RobotLocalization
         }
 
         // 2. Store the measurement as a transform for the next value (differential integration)
-        tf::Transform nextTrans = poseTmp;
+        tf::Transform curMeasurement = poseTmp;
 
         // 3. We'll need to rotate the covariance as well. Create a container and
         // copy over the covariance data
@@ -890,18 +865,29 @@ namespace RobotLocalization
         }
 
         // 4. We have a series of transforms to carry out:
-        //   a. Remove the previous measurement's value for differential integration
+        //   a. Remove the previous measurement's value (only if carrying out differential integration)
         //   b. Transform into the target frame
-        //   c. Apply the current state as a transform to get a measurement that is consistent with the state
+        //   c. Apply the current state as a transform to get a measurement that is consistent with the
+        //      state (again, only if carrying out differential integration)
 
         // First, we want to make sure we can carry out all the transforms we need.
 
-        // Make sure the last position exists as a transform.
-        bool canTransform = (previousMeasurements_.count(topicName) > 0 && previousStates_.count(topicName) > 0);
+        // If this is the first measurement from a sensor, create a value in previousStates_
+        // (we only use this in differential integration)
+        if(differential && previousStates_.count(topicName) == 0)
+        {
+          tf::Pose prevPose;
+          tf::transformMsgToTF(odomTrans_.transform, prevPose);
+          previousStates_.insert(std::pair<std::string, tf::Transform>(topicName, prevPose));
+        }
+
+        // If we' need it're doing differential integration, make sure the last
+        // measurement exists as a transform.
+        bool canTransform = (!differential || previousMeasurements_.count(topicName) > 0);
         tf::StampedTransform targetFrameTrans;
 
         // Make sure the transform to the target frame (probably odomFrameName_) exists
-        // We may already be in that frame, in which case this should be the identity.
+        // We may already be in that frame, in which case this would be the identity.
         if(canTransform)
         {
           try
@@ -939,20 +925,57 @@ namespace RobotLocalization
           }
         }
 
+        // At this point, we know whether we can transform the measurement
         if(canTransform)
         {
-          // 4a. If we have a previous measurement for this sensor,
-          // then we need to apply the inverse of that measurement
-          // to this new measurement. We already store the inverse,
-          // so just apply it directly.
-          poseTmp.mult(previousMeasurements_[topicName].inverse(), poseTmp);
-
-          if (filter_.getDebug())
+          // 4a. If we are carrying out differential integration and
+          // we have a previous measurement for this sensor,then we
+          // need to apply the inverse of that measurement to this new
+          // measurement.
+          if(differential)
           {
-            debugStream_ << "Previous measurement was\n" << previousMeasurements_[topicName] <<
-                            "\nPrevious measurement transform is\n" << previousMeasurements_[topicName].inverse() <<
-                            "\nAfter removing previous measurement, measurement is\n" << poseTmp << "\n";
+            // Even if we're not using all of the variables from this sensor,
+            // we need to use the whole measurement to determine the delta
+            // to the new measurement
+            tf::Pose prevMeasurement = previousMeasurements_[topicName];
+
+            // Determine the position offset by removing the previous measurement.
+            // This will also remove part (nearly all) of this measurement's rotation,
+            // leaving you with a value that can be added (transformed) onto the current
+            // state.
+            tf::Vector3 positionDelta = prevMeasurement.inverse() * poseTmp.getOrigin();
+            tf::Quaternion orientationDelta = poseTmp.getRotation() * prevMeasurement.getRotation().inverse();
+
+            poseTmp.setOrigin(positionDelta);
+            poseTmp.setRotation(orientationDelta);
+
+            //poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
+
+            if (filter_.getDebug())
+            {
+              debugStream_ << "Previous measurement was\n" << previousMeasurements_[topicName] <<
+                              "\nPrevious measurement transform is\n" << previousMeasurements_[topicName].inverse() <<
+                              "\nAfter removing previous measurement, measurement is\n" << poseTmp << "\n";
+            }
           }
+
+          // Copy the position information into poseTmp, making sure to zero out
+          // values that we don't want included in the measurement.
+          tf::Vector3 curPosition;
+          curPosition.setX(updateVector[StateMemberX] ? poseTmp.getOrigin().getX() : 0.0);
+          curPosition.setY(updateVector[StateMemberY] ? poseTmp.getOrigin().getY() : 0.0);
+          curPosition.setZ(updateVector[StateMemberZ] ? poseTmp.getOrigin().getZ() : 0.0);
+          poseTmp.setOrigin(curPosition);
+
+          // If we had a usable orientation, break into RPY, zero
+          // out what we don't want, then convert back
+          double roll, pitch, yaw;
+          quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
+          roll = (updateVector[StateMemberRoll] ? roll : 0.0);
+          pitch = (updateVector[StateMemberPitch] ? pitch : 0.0);
+          yaw = (updateVector[StateMemberYaw] ? yaw : 0.0);
+          curOrientation.setRPY(roll, pitch, yaw);
+          poseTmp.setRotation(curOrientation);
 
           // 4b. Now transform into targetFrame. Most of the time,
           // we'll get pose measurements that are already in that
@@ -965,18 +988,32 @@ namespace RobotLocalization
                             targetFrame << ", measurement is\n" << poseTmp << "\n";
           }
 
-          // 4c. Now we have the data in the right frame, but we may have more
-          // than one data source for absolute pose information in this frame. This
-          // is why we allow for differential integration. Take the variables
-          // that are integrated differentially, and transform them by essentially
-          // adding them to our current state. This produces a new measurement that
-          // is consistent with our state, even if the original measurement wasn't.
-          poseTmp.mult(previousStates_[topicName], poseTmp);
-
-          if (filter_.getDebug())
+          if(differential)
           {
-            debugStream_ << "Transforming to align with previous state. State was:\n" <<
-                            previousStates_[topicName] << "\nMeasurement is now:\n" << poseTmp << "\n";
+            // 4c. Now we have the data in the right frame, but we may have more
+            // than one data source for absolute pose information in this frame. This
+            // is why we allow for differential integration. Take the variables
+            // that are integrated differentially, and transform them by essentially
+            // adding them to our current state. This produces a new measurement that
+            // is consistent with our state, even if the original measurement wasn't.
+            // We need to be careful here: the position data is already in the right
+            // frame, so we don't want to rotate it by the current state. Instead, apply
+            // the previous state's rotation and translation separately
+            tf::Pose prevPose = previousStates_[topicName];
+
+            //poseTmp.mult(prevPose, poseTmp);
+
+            tf::Vector3 newPosition = prevPose * poseTmp.getOrigin();
+            tf::Quaternion newOrientation = prevPose.getRotation() * poseTmp.getRotation();
+
+            poseTmp.setOrigin(newPosition);
+            poseTmp.setRotation(newOrientation);
+
+            if (filter_.getDebug())
+            {
+              debugStream_ << "Transforming to align with state. State is:\n" <<
+                              prevPose << "\nMeasurement is now:\n" << poseTmp << "\n";
+            }
           }
 
           // 5. Now rotate the covariance: create an augmented
@@ -1011,7 +1048,6 @@ namespace RobotLocalization
           measurement(StateMemberZ) = poseTmp.getOrigin().z();
 
           // The filter needs roll, pitch, and yaw values instead of quaternions
-          double roll, pitch, yaw;
           quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
           measurement(StateMemberRoll) = roll;
           measurement(StateMemberPitch) = pitch;
@@ -1021,36 +1057,11 @@ namespace RobotLocalization
         }
 
         // 7. Now store this measurement's inverse as a transform for next time
-        nextTrans.getOrigin().setX((static_cast<bool>(differentialVector[StateMemberX]) ? nextTrans.getOrigin().getX() : 0));
-        nextTrans.getOrigin().setY((static_cast<bool>(differentialVector[StateMemberY]) ? nextTrans.getOrigin().getY() : 0));
-        nextTrans.getOrigin().setZ((static_cast<bool>(differentialVector[StateMemberZ]) ? nextTrans.getOrigin().getZ() : 0));
-
-        // Handle rotation
-        double roll, pitch, yaw;
-        quatToRPY(nextTrans.getRotation(), roll, pitch, yaw);
-        roll = (static_cast<bool>(differentialVector[StateMemberRoll]) ? roll : 0);
-        pitch = (static_cast<bool>(differentialVector[StateMemberPitch]) ? pitch : 0);
-        yaw = (static_cast<bool>(differentialVector[StateMemberYaw]) ? yaw : 0);
-        tf::Quaternion yawQuat;
-        yawQuat.setRPY(roll, pitch, yaw);
-        nextTrans.setRotation(yawQuat);
-
-        // Store the measurement so we can remove it
-        previousMeasurements_[topicName] = nextTrans;
-
-        // 8. Store the current state so that next time, we can project measurement differences forward using it
-        tf::Transform curPoseTrans;
-        tf::transformMsgToTF(odomTrans_.transform, curPoseTrans);
-        curPoseTrans.setOrigin(tf::Vector3(differentialVector[StateMemberX] ? curPoseTrans.getOrigin().getX() : 0.0,
-                                           differentialVector[StateMemberY] ? curPoseTrans.getOrigin().getY() : 0.0,
-                                           differentialVector[StateMemberZ] ? curPoseTrans.getOrigin().getZ() : 0.0));
-
-        quatToRPY(curPoseTrans.getRotation(), roll, pitch, yaw);
-        curOrientation.setRPY(differentialVector[StateMemberRoll] ? roll : 0.0,
-                              differentialVector[StateMemberPitch] ? pitch : 0.0,
-                              differentialVector[StateMemberYaw] ? yaw : 0.0);
-        curPoseTrans.setRotation(curOrientation);
-        previousStates_[topicName] = curPoseTrans;
+        if(differential)
+        {
+          // Store the measurement so we can remove it
+          previousMeasurements_[topicName] = curMeasurement;
+        }
 
         if(filter_.getDebug())
         {
@@ -1156,7 +1167,11 @@ namespace RobotLocalization
 
         if(canTransform)
         {
-          // Transform to correct frame
+          // Transform to correct frame. Need to be careful here:
+          // the transform may contain rotation and translation, and
+          // we don't want to translate a velocity, as it will simply
+          // create a false velocity.
+          targetFrameTrans.setOrigin(tf::Vector3(0, 0, 0));
           twistTmp.mult(targetFrameTrans, twistTmp);
 
           if (filter_.getDebug())
