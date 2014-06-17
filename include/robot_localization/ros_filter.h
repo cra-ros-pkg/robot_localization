@@ -810,6 +810,7 @@ namespace RobotLocalization
       //! @param[in] topicName - The name of the topic over which this message was received
       //! @param[in] targetFrame - The target tf frame
       //! @param[in, out] updateVector - The update vector for the data source
+      //! @param[in, out] differential - Whether we're carrying out differential integration
       //! @param[in] measurement - The pose data converted to a measurement
       //! @param[in] measurementCovariance - The covariance of the converted measurement
       //!
@@ -895,18 +896,14 @@ namespace RobotLocalization
           previousStates_.insert(std::pair<std::string, tf::Transform>(topicName, prevPose));
         }
 
-        // If we're doing differential integration, make sure the last
-        // measurement exists as a transform.
+        // 4a. Get the target frame transformation
         bool canTransform = true;
         tf::StampedTransform targetFrameTrans;
 
-        // Make sure the transform to the target frame (probably odomFrameName_) exists
-        // We may already be in that frame, in which case this would be the identity.
         try
         {
-          // This throws an exception if it fails. It shouldn't if we're in here, but better to be safe.
+          // This throws an exception if it fails
           tfListener_.lookupTransform(targetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
-
         }
         catch (tf::TransformException &ex)
         {
@@ -938,16 +935,15 @@ namespace RobotLocalization
 
         if(canTransform)
         {
-          // 4b. Now transform into targetFrame. Most of the time,
-          // we'll get pose measurements that are already in that
-          // frame, but we have to account for it here if not.
+          // Apply the target frame transformation to the
+          // pose object and the mask
           poseTmp.mult(targetFrameTrans, poseTmp);
           maskPose.mult(targetFrameTrans, maskPose);
 
-          // 2. Store the measurement as a transform for the next value (differential integration)
+          // Store the measurement as a transform for the next value (differential integration)
           curMeasurement = poseTmp;
 
-          // 4c. Now copy the mask values back into the update vector
+          // Now copy the mask values back into the update vector
           updateVector[StateMemberX] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getX()) >= 1e-6);
           updateVector[StateMemberY] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getY()) >= 1e-6);
           updateVector[StateMemberZ] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getZ()) >= 1e-6);
@@ -972,7 +968,7 @@ namespace RobotLocalization
           canTransform = (!differential || previousMeasurements_.count(topicName) > 0);
           if(differential && canTransform)
           {
-            // 4a. If we are carrying out differential integration and
+            // 4b. If we are carrying out differential integration and
             // we have a previous measurement for this sensor,then we
             // need to apply the inverse of that measurement to this new
             // measurement.
@@ -1003,9 +999,6 @@ namespace RobotLocalization
             // that are integrated differentially, and transform them by essentially
             // adding them to our current state. This produces a new measurement that
             // is consistent with our state, even if the original measurement wasn't.
-            // We need to be careful here: the position data is already in the right
-            // frame, so we don't want to rotate it by the current state. Instead, apply
-            // the previous state's rotation and translation separately
             tf::Pose prevPose = previousStates_[topicName];
 
             //poseTmp.mult(prevPose, poseTmp);
@@ -1022,24 +1015,6 @@ namespace RobotLocalization
                               "\nMeasurement is now:\n" << poseTmp << "\n";
             }
           }
-
-          // Copy the position information into poseTmp, making sure to zero out
-          // values that we don't want included in the measurement.
-          /*tf::Vector3 curPosition;
-          curPosition.setX(updateVector[StateMemberX] ? poseTmp.getOrigin().getX() : 0.0);
-          curPosition.setY(updateVector[StateMemberY] ? poseTmp.getOrigin().getY() : 0.0);
-          curPosition.setZ(updateVector[StateMemberZ] ? poseTmp.getOrigin().getZ() : 0.0);
-          poseTmp.setOrigin(curPosition);
-
-          // If we had a usable orientation, break into RPY, zero
-          // out what we don't want, then convert back
-          tf::Quaternion curOrientation;
-          quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
-          roll = (updateVector[StateMemberRoll] ? roll : 0.0);
-          pitch = (updateVector[StateMemberPitch] ? pitch : 0.0);
-          yaw = (updateVector[StateMemberYaw] ? yaw : 0.0);
-          curOrientation.setRPY(roll, pitch, yaw);
-          poseTmp.setRotation(curOrientation);*/
 
           // 5. Now rotate the covariance: create an augmented
           // matrix that contains a 3D rotation matrix in the
@@ -1142,7 +1117,7 @@ namespace RobotLocalization
                                  updateVector[StateMemberVpitch],
                                  updateVector[StateMemberVyaw]);
 
-        // 2. We'll need to rotate the covariance as well
+        // 3. We'll need to rotate the covariance as well
         Eigen::MatrixXd covarianceRotated(TWIST_SIZE, TWIST_SIZE);
         covarianceRotated.setZero();
 
@@ -1163,10 +1138,9 @@ namespace RobotLocalization
                           "\nOriginal covariance matrix:\n" << covarianceRotated << "\n";
         }
 
-        // 3. We need to transform this into the target frame (probably base_link)
+        // 4. We need to transform this into the target frame (probably base_link)
         // It's unlikely that we'll get a velocity measurement in another frame, but
         // we have to handle the situation.
-
         bool canTransform = true;
         tf::StampedTransform targetFrameTrans;
 
@@ -1190,7 +1164,7 @@ namespace RobotLocalization
 
         if(!canTransform)
         {
-          // Transforming fromd  a frame id to itself can fail when the tf tree isn't
+          // Transforming from a frame id to itself can fail when the tf tree isn't
           // being broadcast (e.g., for some bag files). Handle this situation.
           std::string msgFrame = (tfPrefix_.empty() ? msg->header.frame_id : "/" + tfPrefix_ + "/" + msgFrame);
 
@@ -1203,13 +1177,14 @@ namespace RobotLocalization
 
         if(canTransform)
         {
-          // Transform to correct frame
+          // Transform to correct frame. Note that we can get linear velocity
+          // as a result of the sensor offset and rotational velocity
           twistRot = targetFrameTrans.getBasis() * twistRot;
           twistLin = targetFrameTrans.getBasis() * twistLin + targetFrameTrans.getOrigin().cross(twistRot);
           maskTwistRot = targetFrameTrans * maskTwistRot;
           maskTwistLin = targetFrameTrans * maskTwistLin + targetFrameTrans.getOrigin().cross(maskTwistRot);
 
-          // 4c. Now copy the mask values back into the update vector
+          // Now copy the mask values back into the update vector
           updateVector[StateMemberVx] = 1 * static_cast<int>(::fabs(maskTwistLin.getX()) >= 1e-6);
           updateVector[StateMemberVy] = 1 * static_cast<int>(::fabs(maskTwistLin.getY()) >= 1e-6);
           updateVector[StateMemberVz] = 1 * static_cast<int>(::fabs(maskTwistLin.getZ()) >= 1e-6);
@@ -1225,26 +1200,7 @@ namespace RobotLocalization
                             "Linear: " << twistRot << "\nRotational: " << twistRot << "\n";
           }
 
-          /*
-          // Copy the position information into twistTmp, making sure to zero out
-          // values that we don't want included in the measurement.
-          tf::Vector3 curLinearVelocity;
-          curLinearVelocity.setX(updateVector[StateMemberVx] ? msg->twist.twist.linear.x : 0.0);
-          curLinearVelocity.setY(updateVector[StateMemberVy] ? msg->twist.twist.linear.y : 0.0);
-          curLinearVelocity.setZ(updateVector[StateMemberVz] ? msg->twist.twist.linear.z : 0.0);
-          twistTmp.setOrigin(curLinearVelocity);
-
-          // It's a velocity, so it gets reported in RPY, but we are
-          // transforming it like it's a position, so we have to
-          // convert it to a quaternion
-          tf::Quaternion curOrientationVelocity;
-          curOrientationVelocity.setRPY(updateVector[StateMemberVroll] ? msg->twist.twist.angular.x : 0.0,
-                                        updateVector[StateMemberVpitch] ? msg->twist.twist.angular.y : 0.0,
-                                        updateVector[StateMemberVyaw] ? msg->twist.twist.angular.z : 0.0);
-          twistTmp.setRotation(curOrientationVelocity);
-*/
-
-          // 4. Now rotate the covariance: create an augmented
+          // 5. Now rotate the covariance: create an augmented
           // matrix that contains a 3D rotation matrix in the
           // upper-left and lower-right quadrants, and zeros
           // elsewhere
@@ -1270,7 +1226,7 @@ namespace RobotLocalization
             debugStream_ << "Transformed covariance is \n" << covarianceRotated << "\n";
           }
 
-          // 5. Store our corrected measurement and covariance
+          // 6. Store our corrected measurement and covariance
           measurement(StateMemberVx) = twistLin.getX();
           measurement(StateMemberVy) = twistLin.getY();
           measurement(StateMemberVz) = twistLin.getZ();
@@ -1335,21 +1291,21 @@ namespace RobotLocalization
       //! @brief Stores the last measurement from a given topic for
       //! differential integration
       //!
-      //! To carry out differential integration, we have to (1) "subtract"
-      //! the previous measurement from the current measurement, (2) transform
+      //! To carry out differential integration, we have to (1) transform
       //! that into the target frame (probably the frame specified by
-      //! \p odomFrameName_), and then (3) transform it again by the previous
-      //! state estimate. This holds the measurements used for step (1).
+      //! \p odomFrameName_), (2) "subtract"  the previous measurement from
+      //! the current measurement, and then (3) transform it again by the previous
+      //! state estimate. This holds the measurements used for step (2).
       //!
       std::map<std::string, tf::Transform> previousMeasurements_;
 
       //! @brief Stores the last state estimate at the time the previous
       //! measurement from this sensor was captured
       //!
-      //! To carry out differential integration, we have to (1) "subtract"
-      //! the previous measurement from the current measurement, (2) transform
+      //! To carry out differential integration, we have to (1) transform
       //! that into the target frame (probably the frame specified by
-      //! \p odomFrameName_), and then (3) transform it again by the previous
+      //! \p odomFrameName_), (2)  "subtract" the previous measurement from
+      //! the current measurement, and then (3) transform it again by the previous
       //! state estimate. This holds the measurements used for step (3).
       //!
       std::map<std::string, tf::Transform> previousStates_;
