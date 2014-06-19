@@ -105,13 +105,15 @@ namespace RobotLocalization
   {
   }
 
-  void FilterBase::enqueueMeasurement(const Eigen::VectorXd &measurement,
+  void FilterBase::enqueueMeasurement(const std::string &topicName,
+                                      const Eigen::VectorXd &measurement,
                                       const Eigen::MatrixXd &measurementCovariance,
                                       const std::vector<int> &updateVector,
                                       const double time)
   {
     Measurement meas;
 
+    meas.topicName_ = topicName;
     meas.measurement_ = measurement;
     meas.covariance_ = measurementCovariance;
     meas.updateVector_ = updateVector;
@@ -120,12 +122,16 @@ namespace RobotLocalization
     measurementQueue_.push(meas);
   }
 
-  void FilterBase::integrateMeasurements(double currentTime)
+  void FilterBase::integrateMeasurements(double currentTime,
+                                         std::map<std::string, Eigen::VectorXd> &postUpdateStates)
   {
     if (debug_)
     {
       *debugStream_ << "------ FilterBase::integrateMeasurements ------\n\n";
+      *debugStream_ << "Integration time is " << std::setprecision(20) << currentTime << "\n";
     }
+
+    postUpdateStates.clear();
 
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
@@ -137,14 +143,7 @@ namespace RobotLocalization
 
         processMeasurement(measurement);
 
-        // Update the last measurement and update time.
-        // The measurement time is based on the time stamp of the
-        // measurement, whereas the update time is based on this
-        // node's current ROS time. The update time is used to
-        // determine if we have a sensor timeout, whereas the
-        // measurement time is used to calculate time deltas for
-        // prediction and correction.
-        lastMeasurementTime_ = measurement.time_;
+        postUpdateStates.insert(std::pair<std::string, Eigen::VectorXd>(measurement.topicName_, state_));
       }
 
       lastUpdateTime_ = currentTime;
@@ -163,8 +162,8 @@ namespace RobotLocalization
 
         if (debug_)
         {
-          *debugStream_ << "Sensor timeout! Last measurement was " << lastMeasurementTime_ << ", current time is " <<
-                           currentTime << ", delta is " << lastUpdateDelta << ", " << "projection time is " << projectTime << "\n";
+          *debugStream_ << "Sensor timeout! Last measurement was " << std::setprecision(10) << lastMeasurementTime_ << ", current time is " <<
+                           currentTime << ", delta is " << lastUpdateDelta << ", projection time is " << projectTime << "\n";
         }
 
         validateDelta(projectTime);
@@ -238,19 +237,22 @@ namespace RobotLocalization
       *debugStream_ << "------ FilterBase::processMeasurement ------\n";
     }
 
+    double delta = 0.0;
+
     // If we've had a previous reading, then go through the predict/update
     // cycle. Otherwise, set our state and covariance to whatever we get
     // from this measurement.
     if (initialized_)
     {
+      // Determine how much time has passed since our last measurement
+      delta = measurement.time_ - lastMeasurementTime_;
+
       if (debug_)
       {
         *debugStream_ << "Filter is already initialized. Carrying out EKF loop...\n";
+        *debugStream_ << "Measurement time is " << std::setprecision(20) << measurement.time_ <<
+                         ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n";
       }
-
-      // Could use msg->header.stamp here, but we may never get updates from
-      // slower sensors
-      double delta = measurement.time_ - lastMeasurementTime_;
 
       // Only want to carry out a prediction if it's
       // forward in time. Otherwise, just correct.
@@ -273,6 +275,18 @@ namespace RobotLocalization
       state_ = measurement.measurement_;
 
       initialized_ = true;
+    }
+
+    if(delta >= 0.0)
+    {
+      // Update the last measurement and update time.
+      // The measurement time is based on the time stamp of the
+      // measurement, whereas the update time is based on this
+      // node's current ROS time. The update time is used to
+      // determine if we have a sensor timeout, whereas the
+      // measurement time is used to calculate time deltas for
+      // prediction and correction.
+      lastMeasurementTime_ = measurement.time_;
     }
 
     if (debug_)
