@@ -31,6 +31,7 @@
       <!-- Placeholders for remapping. Set your topic names as the "to" values.
         <remap from="/imu/data" to="" />
         <remap from="/gps/gps_utm" to="" />
+        <remap from="/gps/fix" to="" />
         <remap from="/odometry/filtered to="" />
       -->
 

@@ -41,17 +41,18 @@
       <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true]</rosparam>
       <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true]</rosparam>
 
-      <!-- The first measurement for a given pose variable from a given sensor may have a non-zero value. We can either
-           initialize the filter with this value, or we can consider that a "zero point" for all future measurements,
-           and simply integrate them after subtracting the initial measurement's value (i.e, differentially). Be careful
-           when using this: if, for example, you have a UGV that starts on a slope or a UAV that starts with a non-zero
-           altitude, you will not want to integrate those values differentially. If you're not sure, then set all values
-           to false for your sensors. Note that this is only valid for sensors that contain pose data (i.e., not velocity).
-           The order of the values is x, y, z, roll, pitch, yaw. -->
-      <rosparam param="odom0_differential">[true, true, false, false, false, false]</rosparam>
-      <rosparam param="odom1_differential">[false, false, true, false, false, false]</rosparam>
-      <rosparam param="pose0_differential">[false, false, false, false, false, false]</rosparam>
-      <rosparam param="imu0_differential">[false, false, false, false, false, true]</rosparam>
+      <!-- The best practice for including new sensors in ekf_localization_node is to pass in velocity measurements and let
+           ekf_localization_node integrate them. However, this isn't always feasible, and so ekf_localization (and the other
+           nodes in robot_localization) support fusion of absolute measurements. If you have more than one sensor providing
+           absolute measurements, however, you will quickly run into problems, as the sensors will inevitably diverge from
+           one another, causing the filter to jump back and forth rapidly. To combat this situation, you can set the sensor's
+           differential parameter to true. This will carry out differential integration of the sensor data, i.e., it will 
+           repeatedly integrate the difference between a given measurement and the previous measurement from that sensor. 
+           NOTE: this only applies to sensors that provide absolute measurements, so Twist messages are not supported. -->
+      <param name="odom0_differential" value="true"/>
+      <param name="odom1_differential" value="false"/>
+      <param name="pose0_differential" value="true"/>
+      <param name="imu0_differential" value="false"/>
 
       <!-- Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file
            specified by debug_out_file. I hope you like matrices! -->
