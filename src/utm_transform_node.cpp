@@ -51,6 +51,14 @@ tf::TransformListener *tfListener_;
 //! @brief The utm_frame->odom_frame transform object
 tf::StampedTransform *odomUtmTransform_;
 
+//! @brief Used for updating the transform so as to
+//! remove altitude from the UTM measurements.
+tf::Pose originalOdomPose_;
+
+//! @brief Used for updating the transform so as to
+//! remove altitude from the UTM measurements.
+tf::Pose originalUtmPose_;
+
 //! @brief Parameter that specifies the magnetic decliation for the robot's
 //! environment.
 double magneticDeclination_;
@@ -70,9 +78,23 @@ bool hasFix_;
 //! @brief Whether or not we've computed a good heading
 bool transformGood_;
 
-//! @brief Your IMU should read 0 when facing magnetic north. If it
-//! doesn't, this (parameterized) value gives the offset
+//! @brief On level ground, your IMU should read 0 roll. If
+//! it doesn't, this (parameterized) value gives the offset
+double rollOffset_;
+
+//! @brief On level ground, your IMU should read 0 pitch. If
+//! it doesn't, this (parameterized) value gives the offset
+double pitchOffset_;
+
+//! @brief Your IMU should read 0 when facing *magnetic* north. If it
+//! doesn't, this (parameterized) value gives the offset (NOTE: if you
+//! have a magenetic declination, use the parameter setting for that).
 double yawOffset_;
+
+//! @brief If this parameter is true, we continually update the transform
+//! using the current altitude from the UTM message. This allows users to
+//! receive a (nearly) zero Z measurement when they use the transform.
+bool zeroAltitude_;
 
 //! @brief Computes the transform from the odometry message's frame_id
 //! to the UTM message's frame_id
@@ -121,6 +143,8 @@ void computeOdomUtmTransform()
       // IMU's heading and the UTM grid's belief of where 0 heading should be (i.e.,
       // along the x-axis)
       utmOdomTfYaw_ += (magneticDeclination_ + yawOffset_ + (M_PI / 2.0));
+      utmOdomTfPitch_ += pitchOffset_;
+      utmOdomTfRoll_ += rollOffset_;
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
                       ", user-specified offset of " << yawOffset_ << ", and fixed offset of " << (M_PI / 2.0) <<
@@ -157,7 +181,10 @@ void computeOdomUtmTransform()
       tf::poseMsgToTF(latestOdomMessage_->pose.pose, odomPose);
 
       // The transform order will be orig_odom_pos * orig_utm_pos_inverse * cur_utm_pos
-      odomUtmTransform_->mult(odomPose, odomUtmTransform_->inverse());
+      // Store these values so we can change and re-compose the transform later.
+      originalOdomPose_ = odomPose;
+      originalUtmPose_ = *odomUtmTransform_;
+      odomUtmTransform_->mult(originalOdomPose_, originalUtmPose_.inverse());
 
       double odomRoll;
       double odomPitch;
@@ -206,6 +233,18 @@ void utmCallback(const nav_msgs::OdometryConstPtr& msg)
   }
 
   *latestUtmMsg_ = *msg;
+
+  if(zeroAltitude_ && odomUtmTransform_ != NULL)
+  {
+    // Grab the original transforms, update the z position
+    // in the original UTM transform, and then put it back
+    // together.
+    tf::Vector3 origin = originalUtmPose_.getOrigin();
+    origin.setZ(msg->pose.pose.position.z);
+    originalUtmPose_.setOrigin(origin);
+
+    odomUtmTransform_->mult(originalOdomPose_, originalUtmPose_.inverse());
+  }
 }
 
 //! @brief Callback for the IMU data
@@ -268,6 +307,9 @@ int main(int argc, char **argv)
 
   magneticDeclination_ = 0;
   utmOdomTfYaw_ = 0;
+  rollOffset_ = 0;
+  pitchOffset_ = 0;
+  yawOffset_ = 0;
   hasFix_ = false;
   transformGood_ = false;
   double frequency = 0;
@@ -280,7 +322,10 @@ int main(int argc, char **argv)
 
   // Load the parameters we need
   nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
+  nhPriv.getParam("roll_offset", rollOffset_);
+  nhPriv.getParam("pitch_offset", pitchOffset_);
   nhPriv.getParam("yaw_offset", yawOffset_);
+  nhPriv.param("zero_altitude", zeroAltitude_, false);
   nhPriv.param("frequency", frequency, 50.0);
 
   ros::Rate rate(frequency);
