@@ -1059,7 +1059,7 @@ namespace RobotLocalization
           // Apply the target frame transformation to the
           // pose object and the mask
           poseTmp.mult(targetFrameTrans, poseTmp);
-          maskPose.mult(targetFrameTrans, maskPose);
+          maskPose.setOrigin(targetFrameTrans.getBasis() * maskPose.getOrigin());
 
           // Store the measurement as a transform for the next value (differential integration)
           curMeasurement = poseTmp;
@@ -1301,9 +1301,9 @@ namespace RobotLocalization
           // Transform to correct frame. Note that we can get linear velocity
           // as a result of the sensor offset and rotational velocity
           twistRot = targetFrameTrans.getBasis() * twistRot;
-          twistLin = targetFrameTrans.getBasis() * twistLin + targetFrameTrans.getOrigin().cross(twistRot);
-          maskTwistRot = targetFrameTrans * maskTwistRot;
-          maskTwistLin = targetFrameTrans * maskTwistLin + targetFrameTrans.getOrigin().cross(maskTwistRot);
+          twistLin = targetFrameTrans.getBasis() * twistLin - targetFrameTrans.getOrigin().cross(twistRot);
+          maskTwistRot = targetFrameTrans.getBasis() * maskTwistRot;
+          maskTwistLin = targetFrameTrans.getBasis() * maskTwistLin;
 
           // Now copy the mask values back into the update vector
           updateVector[StateMemberVx] = 1 * static_cast<int>(::fabs(maskTwistLin.getX()) >= 1e-6);
