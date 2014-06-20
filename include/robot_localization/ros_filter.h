@@ -960,6 +960,23 @@ namespace RobotLocalization
 
         tf::poseMsgToTF(msg->pose.pose, poseTmp);
 
+        // The selective updating of variables can be a bit tricky, especially
+        // when we have differential updating to worry about. Rather than go into
+        // the details of why here, suffice it to say that users must, if using
+        // selective updating, be *very* careful about which variables they exclude
+        // from the measurement.
+        poseTmp.setOrigin(tf::Vector3(updateVector[StateMemberX] ? msg->pose.pose.position.x : 0.0,
+                                      updateVector[StateMemberY] ? msg->pose.pose.position.y : 0.0,
+                                      updateVector[StateMemberZ] ? msg->pose.pose.position.z : 0.0));
+
+        tf::Quaternion orientation;
+        tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
+        double orRoll, orPitch, orYaw;
+        quatToRPY(orientation, orRoll, orPitch, orYaw);
+        orientation.setRPY(updateVector[StateMemberRoll] ? orRoll : 0.0,
+                           updateVector[StateMemberPitch] ? orPitch : 0.0,
+                           updateVector[StateMemberYaw] ? orYaw : 0.0);
+
         // 2. robot_localization lets users configure which variables from the sensor should be
         //    fused with the filter. This is specified at the sensor level. However, the data
         //    may go through transforms before being fused with the state estimate. In that case,
@@ -1212,13 +1229,14 @@ namespace RobotLocalization
           debugStream_ << "------ RosFilter::prepareTwist (" << topicName << ") ------\n";
         }
 
-        // 1. Get the measurement into a tf-friendly transform (twist) object
-        tf::Vector3 twistLin(msg->twist.twist.linear.x,
-                             msg->twist.twist.linear.y,
-                             msg->twist.twist.linear.z);
-        tf::Vector3 twistRot(msg->twist.twist.angular.x,
-                             msg->twist.twist.angular.y,
-                             msg->twist.twist.angular.z);
+        // 1. Get the measurement into a tf-friendly transform (twist) object. Zero out
+        // values we don't want to use.
+        tf::Vector3 twistLin(updateVector[StateMemberVx] ? msg->twist.twist.linear.x : 0.0,
+                             updateVector[StateMemberVy] ? msg->twist.twist.linear.y : 0.0,
+                             updateVector[StateMemberVz] ? msg->twist.twist.linear.z : 0.0);
+        tf::Vector3 twistRot(updateVector[StateMemberVroll] ? msg->twist.twist.angular.x : 0.0,
+                             updateVector[StateMemberVpitch] ? msg->twist.twist.angular.y : 0.0,
+                             updateVector[StateMemberVyaw] ? msg->twist.twist.angular.z : 0.0);
 
         // Set relevant header info
         std::string msgFrame = (msg->header.frame_id == "" ? baseLinkFrameName_ : msg->header.frame_id);
