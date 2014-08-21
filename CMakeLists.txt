@@ -51,7 +51,7 @@ target_link_libraries(utm_transform_node ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS filter_base ekf ekf_localization_node
+install(TARGETS filter_base ekf ekf_localization_node utm_transform_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
