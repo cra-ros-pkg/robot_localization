@@ -19,3 +19,7 @@ Changelog for package robot_localization
 * Added UTM transform node and launch file
 * Bug fixes
 
+0.1.4 (2014-08-22)
+-----------
+* Adding utm_transform_node to install targets
+
