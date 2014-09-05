@@ -74,6 +74,12 @@ namespace RobotLocalization
     {
       return a.time_ > b.time_;
     }
+
+    Measurement() :
+      topicName_(""),
+      time_(0)
+    {
+    }
   };
 
   class FilterBase
