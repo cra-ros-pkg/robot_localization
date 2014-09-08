@@ -102,11 +102,13 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
 
     EXPECT_FALSE(derived.getDebug());
 
+    // Now set the stream and do it again
     std::stringstream os;
     derived.setDebug(true, &os);
 
     EXPECT_TRUE(derived.getDebug());
 
+    // Simple get/set checks
     double timeout = 7.4;
     derived.setSensorTimeout(timeout);
     EXPECT_EQ(derived.getSensorTimeout(), timeout);
@@ -159,6 +161,7 @@ TEST (FilterBaseTest, DerivedFilterEnqueue)
     std::vector<int> updateVector(12, true);
     updateVector[5] = false;
 
+    // Ensure that measurements are being placed in the queue correctly
     derived.enqueueMeasurement("odom0",
                                 measurement,
                                 measurementCovariance,
@@ -212,21 +215,28 @@ TEST (FilterBaseTest, MeasurementProcessing)
   meas.updateVector_.resize(12, true);
   meas.time_ = 1000;
 
+  // The filter shouldn't be initializedyet
   EXPECT_FALSE(derived.getInitializedStatus());
 
   derived.processMeasurement(meas);
 
+  // Now it's initialized, and the entire filter state
+  // should be equal to the first state
   EXPECT_TRUE(derived.getInitializedStatus());
   EXPECT_EQ(derived.getState(), measurement);
 
+  // Process a measurement and make sure it updates the
+  // lastMeasurementTime variable
   meas.time_ = 1002;
   derived.processMeasurement(meas);
   EXPECT_EQ(derived.getLastMeasurementTime(), meas.time_);
 
+  // Initialize a new one
   RobotLocalization::FilterDerived2 derived2;
 
   std::vector<int> updateVector(12, 1);
 
+  // Enqueue two measurements and integrate them
   derived2.enqueueMeasurement("odom0",
                               measurement,
                               measurementCovariance,
@@ -242,6 +252,12 @@ TEST (FilterBaseTest, MeasurementProcessing)
   std::map<std::string, Eigen::VectorXd> postUpdateStates;
   derived2.integrateMeasurements(1001, postUpdateStates);
 
+  // Make sure the update times were set correctly
+  EXPECT_TRUE(derived.getInitializedStatus());
+  EXPECT_EQ(derived2.getLastUpdateTime(), 1001);
+  EXPECT_EQ(derived2.getLastMeasurementTime(), 1000);
+
+  // Now enqueue a third and integrate again
   derived2.enqueueMeasurement("odom0",
                               measurement,
                               measurementCovariance,
@@ -249,6 +265,30 @@ TEST (FilterBaseTest, MeasurementProcessing)
                               1002);
 
   derived2.integrateMeasurements(1003, postUpdateStates);
+
+  EXPECT_EQ(derived2.getLastMeasurementTime(), 1002);
+  EXPECT_EQ(derived2.getLastUpdateTime(), 1003);
+
+  // Set the sensor timeout, and then integrate without
+  // enqueueing. This will cause a predict/update cycle
+  // and update the last update and measurement times.
+  derived2.setSensorTimeout(0.5);
+  derived2.integrateMeasurements(1003.52, postUpdateStates);
+  EXPECT_EQ(derived2.getLastUpdateTime(), 1003.50);
+  EXPECT_EQ(derived2.getLastMeasurementTime(), 1002.50);
+
+  // Enqueue a measurement that's in the past and make sure
+  // it doesn't change the last measurement time, but does
+  // change the last update time.
+  derived2.enqueueMeasurement("odom0",
+                              measurement,
+                              measurementCovariance,
+                              updateVector,
+                              1000);
+
+  derived2.integrateMeasurements(1004, postUpdateStates);
+  EXPECT_EQ(derived2.getLastMeasurementTime(), 1002.50);
+  EXPECT_EQ(derived2.getLastUpdateTime(), 1004);
 }
 
 int main(int argc, char **argv)

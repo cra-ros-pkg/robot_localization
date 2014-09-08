@@ -74,6 +74,6 @@ install(DIRECTORY launch/
 catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
 target_link_libraries(filter_base-test filter_base)
 
-#catkin_add_gtest(ekf-test test/test_ekf.cpp)
-#target_link_libraries(ekf-test ekf filter_base)
+catkin_add_gtest(ekf-test test/test_ekf.cpp)
+target_link_libraries(ekf-test ekf filter_base)
 

@@ -52,6 +52,14 @@
 #include <fstream>
 
 // Handy methods for debug output
+std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec)
+{
+  os << "(" << std::setprecision(20) << vec.getX() << " " <<
+        vec.getY() << " " << vec.getZ() << ")\n";
+
+  return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
 {
   tf::Matrix3x3 orientation(trans.getRotation());
@@ -59,9 +67,8 @@ std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
   double roll, pitch, yaw;
   orientation.getRPY(roll, pitch, yaw);
 
-  os << "Origin: (" << std::setprecision(20) << trans.getOrigin().getX() << " " <<
-        trans.getOrigin().getY() << " " << trans.getOrigin().getZ() << ")\n" <<
-        "Rotation (RPY): (" << roll << ", " << pitch << ", " << yaw << ")\n";
+  os << "Origin: " << trans.getOrigin() <<
+        "Rotation (RPY): (" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
 
   return os;
 }
