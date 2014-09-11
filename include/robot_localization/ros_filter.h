@@ -978,6 +978,19 @@ namespace RobotLocalization
 
         tf::Quaternion orientation;
         tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
+
+        // Handle bad (empty) quaternions
+        if(orientation.x() == 0 && orientation.y() == 0 && orientation.z() == 0 && orientation.w() == 0)
+        {
+          orientation.setW(1);
+
+          if(updateVector[StateMemberRoll] || updateVector[StateMemberPitch] || updateVector[StateMemberYaw])
+          {
+            ROS_WARN_STREAM("The " << topicName << " message contains an invalid orientation quaternion, " <<
+                            "but its configuration is such that orientation data is being used.");
+          }
+        }
+
         double orRoll, orPitch, orYaw;
         quatToRPY(orientation, orRoll, orPitch, orYaw);
         orientation.setRPY(updateVector[StateMemberRoll] ? orRoll : 0.0,
