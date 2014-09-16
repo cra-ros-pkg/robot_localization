@@ -174,6 +174,12 @@ namespace RobotLocalization
       //!
       void setDebug(const bool debug, std::ostream *outStream = NULL);
 
+      //! @brief Manually sets the filter's estimate error covariance
+      //!
+      //! @param[in] estimateErrorCovariance - The state to set as the filter's current state
+      //!
+      void setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance);
+
       //! @brief Sets the filter's last measurement time.
       //!
       //! @param[in] lastMeasurementTime - The last measurement time of the filter

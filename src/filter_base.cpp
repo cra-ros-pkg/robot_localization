@@ -133,6 +133,11 @@ namespace RobotLocalization
 
     postUpdateStates.clear();
 
+    if (debug_)
+    {
+      *debugStream_ << measurementQueue_.size() << " measurements in queue.\n";
+    }
+
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
     {
@@ -180,7 +185,7 @@ namespace RobotLocalization
     {
       if (debug_)
       {
-        *debugStream_ << "Filter not yet initialized\n";
+        *debugStream_ << "Filter not yet initialized.\n";
       }
     }
 
@@ -329,6 +334,11 @@ namespace RobotLocalization
     {
       debug_ = false;
     }
+  }
+
+  void FilterBase::setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance)
+  {
+    estimateErrorCovariance_ = estimateErrorCovariance;
   }
 
   void FilterBase::setLastMeasurementTime(const double lastMeasurementTime)

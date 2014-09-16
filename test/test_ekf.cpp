@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-TEST (EkfTest, MeasurementStruct)
+TEST (EkfTest, Measurements)
 {
   RobotLocalization::Ekf ekf;
 
@@ -33,6 +33,7 @@ TEST (EkfTest, MeasurementStruct)
                             postUpdateStates);
 
   EXPECT_EQ(ekf.getState(), measurement);
+  EXPECT_EQ(ekf.getEstimateErrorCovariance(), measurementCovariance);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -51,18 +52,18 @@ TEST (EkfTest, MeasurementStruct)
   ekf.integrateMeasurements(1003,
                             postUpdateStates);
 
-  measurement[0] = -2.1405;
-  measurement[1] = -0.049688;
-  measurement[2] = 4.6518;
-  measurement[3] = 2.7766;
-  measurement[4] = -2.1615;
-  measurement[5] = -1.8823;
-  measurement[6] = 3.7473;
-  measurement[7] = 4.3683;
-  measurement[8] = 5.0664;
-  measurement[9] = 9.2971;
-  measurement[10] = 9.8382;
-  measurement[11] = 11.795;
+  measurement[0] = -2.8975;
+  measurement[1] = -0.42068;
+  measurement[2] = 5.5751;
+  measurement[3] = 2.7582;
+  measurement[4] = -2.0858;
+  measurement[5] = -2.0859;
+  measurement[6] = 3.7596;
+  measurement[7] = 4.3694;
+  measurement[8] = 5.1206;
+  measurement[9] = 9.2408;
+  measurement[10] = 9.8034;
+  measurement[11] = 11.796;
 
   measurement = measurement.eval() - ekf.getState();
 
