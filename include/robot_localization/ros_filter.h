@@ -753,6 +753,7 @@ namespace RobotLocalization
 
         // Set this to the identity and let the message reset it
         measurementCovariance.setIdentity();
+        measurementCovariance *= 1e-6;
 
         // Prepare the pose data (really just using this to transform it into the target frame)
         preparePose(msg, topicName, odomFrameName_, updateVector, false, measurement, measurementCovariance);
@@ -1409,7 +1410,7 @@ namespace RobotLocalization
             debugStream_ << msg->header.frame_id << "->" << targetFrame << " transform:\n" << targetFrameTrans <<
                             "\nAfter applying transform to " << targetFrame << ", update vector is:\n" << updateVector <<
                             "\nAfter applying transform to " << targetFrame << ", measurement is:\n" <<
-                            "Linear: " << twistRot << "\nRotational: " << twistRot << "\n";
+                            "Linear: " << twistLin << "Rotational: " << twistRot << "\n";
           }
 
           // 5. Now rotate the covariance: create an augmented
