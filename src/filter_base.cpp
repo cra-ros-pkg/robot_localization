@@ -65,9 +65,10 @@ namespace RobotLocalization
     // Clear the Jacobian
     transferFunctionJacobian_.setZero();
 
-    // Prepare the invariant parts of the transfer
-    // function
+    // Set the estimate error covariance. It should be small,
+    // as we're fairly certain of our initial state
     estimateErrorCovariance_.setIdentity();
+    estimateErrorCovariance_ *= 1e-6;
 
     // We need the identity for the update equations
     identity_.setIdentity();
@@ -133,6 +134,11 @@ namespace RobotLocalization
 
     postUpdateStates.clear();
 
+    if (debug_)
+    {
+      *debugStream_ << measurementQueue_.size() << " measurements in queue.\n";
+    }
+
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
     {
@@ -180,7 +186,7 @@ namespace RobotLocalization
     {
       if (debug_)
       {
-        *debugStream_ << "Filter not yet initialized\n";
+        *debugStream_ << "Filter not yet initialized.\n";
       }
     }
 
@@ -272,7 +278,23 @@ namespace RobotLocalization
         *debugStream_ << "First measurement. Initializing filter.\n";
       }
 
-      state_ = measurement.measurement_;
+      // Initialize the filter, but only with the values we're using
+      size_t measurementLength = measurement.updateVector_.size();
+      for(size_t i = 0; i < measurementLength; ++i)
+      {
+        state_[i] = (measurement.updateVector_[i] ? measurement.measurement_[i] : state_[i]);
+      }
+
+      // Same for covariance
+      for(size_t i = 0; i < measurementLength; ++i)
+      {
+        for(size_t j = 0; j < measurementLength; ++j)
+        {
+          estimateErrorCovariance_(i, j) = (measurement.updateVector_[i] && measurement.updateVector_[j] ?
+                                            measurement.covariance_(i, j) :
+                                            estimateErrorCovariance_(i, j));
+        }
+      }
 
       initialized_ = true;
     }
@@ -313,6 +335,11 @@ namespace RobotLocalization
     {
       debug_ = false;
     }
+  }
+
+  void FilterBase::setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance)
+  {
+    estimateErrorCovariance_ = estimateErrorCovariance;
   }
 
   void FilterBase::setLastMeasurementTime(const double lastMeasurementTime)
