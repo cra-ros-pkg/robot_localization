@@ -70,11 +70,18 @@ install(DIRECTORY launch/
 ## Testing ##
 #############
 
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ekf_localization.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+# Unit tests
+catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
+target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
 
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+catkin_add_gtest(ekf-test test/test_ekf.cpp)
+target_link_libraries(ekf-test ekf filter_base ${catkin_LIBRARIES})
+
+if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(ekf_localization_node-test-interfaces 
+                    test/test_ekf_localization_node_interfaces.test 
+                    test/test_ekf_localization_node_interfaces.cpp)
+  target_link_libraries(ekf_localization_node-test-interfaces ${catkin_LIBRARIES})
+endif()
+
