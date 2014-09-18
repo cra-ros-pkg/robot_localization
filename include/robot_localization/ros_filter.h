@@ -924,9 +924,20 @@ namespace RobotLocalization
 
                 tfListener_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0), odomBaseLinkTrans);
 
-                // We have a transform from map->base_link. We also have a transform
-                // (provided by something else) from odom->base_link. Use them to
-                // get a transform from map to odom.
+                // We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually
+                // transform data from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, 
+                // whose first two arguments are target frame and source frame, to get a transform
+                // from baseLinkFrameId_->odomFrameId_ (see http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms). 
+                // However, this transform would actually transform data from 
+                // odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the 
+                // mapFrameId_ frame. First, we multiply it by the inverse of the 
+                // mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to 
+                // baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
+                // transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
+                // inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
+                // Long story short: lookupTransform returns the inverse of what you send when you 
+                // broadcast transforms, so be careful.
+                //
                 mapOdomTrans.setData(odomBaseLinkTrans.inverse() * worldBaseLinkTrans.inverse());
                 tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
                 mapOdomTransMsg.header.stamp = filteredPosition.header.stamp;
@@ -1514,17 +1525,6 @@ namespace RobotLocalization
       //!        that this node will calculate and broadcast.
       //!
       std::string worldFrameId_;
-
-      //! @brief tf frame name that is the child frame of the transform
-      //!        that this node will calculate, but *not* necessarily the
-      //!        it will broadcast.
-      //!
-      std::string childFrameIdCalculated_;
-
-      //! @brief tf frame name that is the child frame of the transform
-      //!        that this node will calculate and broadcast
-      //!
-      std::string childFrameIdBroadcast_;
 
       //! @brief Store the last time a message from each topic was received
       //!
