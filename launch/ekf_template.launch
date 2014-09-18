@@ -6,7 +6,7 @@
          the state of the robot, with the state vector being defined as X position, Y position, Z position,
          roll, pitch, yaw, and the respective velocites for those quantities. Accelerations are not used (yet).
          Units for all measurements are assumed to be in meters and radians. By default, the node outputs an
-         Odometry message with the topic name odometry/filtered -->
+         Odometry message with the topic name odometry/filtered. Use the remap tag to change this. -->
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization" clear_params="true">
 
       <!-- The frequency, in Hz, at which the filter will output a position estimate. Note that
@@ -19,6 +19,28 @@
            carry out a predict cycle on the EKF without correcting it. This parameter can be thought of
            as the minimum frequency with which the filter will generate output. -->
       <param name="sensor_timeout" value="0.1"/>  
+
+      <!-- REP-105 (http://www.ros.org/reps/rep-0105.html) specifies three principal coordinate frames: map, 
+           odom, and base_link. base_link is the coordinate frame that is affixed to the robot. The robot's 
+           position in the odom frame will drift over time, but is accurate in the short term and should be 
+           continuous. The odom frame is therefore the best frame for executing local motion plans. The map 
+           frame, like the odom frame, is a world-fixed coordinate frame, and while it contains the most 
+           globally accurate position estimate for your robot, it is subject to discrete jumps, e.g., due to 
+           the fusion of GPS data. Here is how to use the following settings:
+             1. Set the map_frame, odom_frame, and base_link frames to the appropriate frame names for your system.
+                  * If your system does not have a map_frame, just remove it, and make sure "world_frame" is set
+                    to the value of odom_frame.
+             2. If you are fusing continuous position data such as wheel encoder odometry, visual odometry, or IMU data,
+                set "world_frame" to your odom_frame value. This is the default behavior for ekf_localization_node.
+             3. If you are fusing global absolute position data that is subject to discrete jumps (e.g., GPS or position
+                updates from landmark observations) then:
+                  3a. Set your "world_frame" to your map_frame value
+                  3b. MAKE SURE something else is generating the odom->base_link transform. Note that this can even be
+                      another instance of robot_localization! However, that instance should *not* fuse the global data. -->
+      <param name="map_frame" value="map"/>
+      <param name="odom_frame" value="odom"/>
+      <param name="base_link_frame" value="base_link"/>
+      <param name="world_frame" value="odom"/>
 
       <!-- The filter accepts an arbitrary number of inputs from each input message type (Odometry, PoseStamped,
            TwistStamped, Imu). To add a new one, simply append the next number in the sequence to its base name,
@@ -35,11 +57,30 @@
            The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw. Note that not some message
            types lack certain variables. For example, a TwistWithCovarianceStamped message has no pose information, so the first
            six values would be meaningless in that case. -->
-      <rosparam param="odom0_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
-      <rosparam param="odom1_config">[false, false, false, false, false, false, true, false, false, false, false, false]</rosparam>
-      <rosparam param="pose0_config">[true, true, false, false, false, false, false, false, false, false, false, false]</rosparam>
-      <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true]</rosparam>
-      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true]</rosparam>
+      <rosparam param="odom0_config">[false, false, false, 
+                                      false, false, false, 
+                                      true,  false, false, 
+                                      false, false, false]</rosparam>
+
+      <rosparam param="odom1_config">[false, false, false, 
+                                      false, false, false, 
+                                      true,  false, false, 
+                                      false, false, false]</rosparam>
+
+      <rosparam param="pose0_config">[true,  true,  false, 
+                                      false, false, false, 
+                                      false, false, false, 
+                                      false, false, false]</rosparam>
+
+      <rosparam param="twist0_config">[false, false, false, 
+                                       false, false, false, 
+                                       true,  true,  true, 
+                                       true,  true,  true]</rosparam>
+
+      <rosparam param="imu0_config">[false, false, false, 
+                                     true,  true,  true, 
+                                     false, false, false, 
+                                     true,  true,  true]</rosparam>
 
       <!-- The best practice for including new sensors in ekf_localization_node is to pass in velocity measurements and let
            ekf_localization_node integrate them. However, this isn't always feasible, and so ekf_localization (and the other
@@ -58,11 +99,6 @@
            specified by debug_out_file. I hope you like matrices! -->
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="debug_ekf_localization.txt"/>
-
-      <!-- For the tf tree, this specifies the name of the local (odom) and vehicle (base_link) frames. There's 
-           a good chance you can leave these alone, as the default values adhere to the ROS spec. -->
-      <param name="odom_frame" value="odom"/>
-      <param name="base_link_frame" value="base_link"/>
 
       <!-- The process noise covariance matrix can be difficult to tune, and can vary for each application, so it
            is exposed as a configuration parameter. PLEASE NOTE that every value in this matrix *must* be specified
