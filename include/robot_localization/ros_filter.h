@@ -145,8 +145,8 @@ namespace RobotLocalization
           }
 
           message.header.stamp = ros::Time::now();
-          message.header.frame_id = odomFrameName_;
-          message.child_frame_id = baseLinkFrameName_;
+          message.header.frame_id = worldFrameId_;
+          message.child_frame_id = baseLinkFrameId_;
         }
 
         return filter_.getInitializedStatus();
@@ -187,20 +187,58 @@ namespace RobotLocalization
 
         // These params specify the name of the robot's body frame (typically
         // base_link) and odometry frame (typically odom)
-        nhLocal_.param("odom_frame", odomFrameName_, std::string("odom"));
-        nhLocal_.param("base_link_frame", baseLinkFrameName_, std::string("base_link"));
+        nhLocal_.param("map_frame", mapFrameId_, std::string("map"));
+        nhLocal_.param("odom_frame", odomFrameId_, std::string("odom"));
+        nhLocal_.param("base_link_frame", baseLinkFrameId_, std::string("base_link"));
+
+        // These parameters are designed to enforce compliance with REP-105:
+        // http://www.ros.org/reps/rep-0105.html
+        // When fusing absolute position data from sensors such as GPS, the state
+        // estimate can undergo discrete jumps. According to REP-105, we want three
+        // coordinate frames: map, odom, and base_link. The map frame can have
+        // discontinuities, but is the frame with the most accurate position estimate
+        // for the robot and should not suffer from drift. The odom frame drifts over
+        // time, but is guaranteed to be continuous and is accurate enough for local
+        // planning and navigation. The base_link frame is affixed to the robot. The
+        // intention is that some odometry source broadcasts the odom->base_link
+        // transform. The localization software should broadcast map->base_link.
+        // However, tf does not allow multiple parents for a coordinate frame, so
+        // we must *compute* map->base_link, but then use the existing odom->base_link
+        // transform to compute *and broadcast* map->odom.
+        //
+        // robot_localization therefore has two "modes." If your frame_id and
+        // child_frame_id parameters match the map_frame and base_link_frame parameters,
+        // respectively, then robot_localization will assume someone else is broadcasting
+        // odom->base_link, and it will compute map->odom. If your frame_id and
+        // child_frame_id parameters match the odom_frame and base_link frame,
+        // respectively, then robot_localization will simply broadcast that transform,
+        // thereby assuming nothing else is. This allows users to still fuse data
+        // without having a map frame.
+        //
+        // The default is the latter behavior (fusion of odom->base_link)
+        nhLocal_.param("world_frame", worldFrameId_, odomFrameId_);
+
+        ROS_FATAL_COND(mapFrameId_ == odomFrameId_ ||
+                       odomFrameId_ == baseLinkFrameId_ ||
+                       mapFrameId_ == baseLinkFrameId_,
+                       "Invalid frame configuration! The values for map_frame, odom_frame, and base_link_frame must be unique");
 
         // Append tf_prefix if it's specified (@todo: tf2 migration)
-        if (!tfPrefix_.empty() && baseLinkFrameName_.at(0) != '/')
+        if (!tfPrefix_.empty() && baseLinkFrameId_.at(0) != '/')
         {
-          if(baseLinkFrameName_.at(0) != '/')
+          if(mapFrameId_.at(0) != '/')
           {
-            baseLinkFrameName_ = "/" + tfPrefix_ + "/" + baseLinkFrameName_;
+            mapFrameId_ = "/" + tfPrefix_ + "/" + mapFrameId_;
           }
 
-          if(odomFrameName_.at(0) != '/')
+          if(odomFrameId_.at(0) != '/')
           {
-            odomFrameName_ = "/" + tfPrefix_ + "/" + odomFrameName_;
+            odomFrameId_ = "/" + tfPrefix_ + "/" + odomFrameId_;
+          }
+
+          if(baseLinkFrameId_.at(0) != '/')
+          {
+            baseLinkFrameId_ = "/" + tfPrefix_ + "/" + baseLinkFrameId_;
           }
         }
 
@@ -213,7 +251,7 @@ namespace RobotLocalization
         // Debugging writes to file
         if (filter_.getDebug())
         {
-          debugStream_ << "tf_prefix is " << tfPrefix_ << "\n" << "odom_frame is " << odomFrameName_ << "\n" << "base_link_frame is " << baseLinkFrameName_
+          debugStream_ << "tf_prefix is " << tfPrefix_ << "\n" << "odom_frame is " << odomFrameId_ << "\n" << "base_link_frame is " << baseLinkFrameId_
             << "\n" << "frequency is " << frequency_ << "\n" << "sensor_timeout is " << filter_.getSensorTimeout() << "\n";
         }
 
@@ -363,7 +401,7 @@ namespace RobotLocalization
             std::vector<int> updateVec = loadUpdateConfig(poseTopicName);
             topicSubs_.push_back(
               nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, 1,
-                boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, odomFrameName_, updateVec, differential)));
+                boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, updateVec, differential)));
 
             if (filter_.getDebug())
             {
@@ -391,7 +429,7 @@ namespace RobotLocalization
             std::vector<int> updateVec = loadUpdateConfig(twistTopicName);
             topicSubs_.push_back(
               nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, 1,
-                boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameName_, updateVec)));
+                boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, updateVec)));
 
             if (filter_.getDebug())
             {
@@ -556,7 +594,7 @@ namespace RobotLocalization
         // The attitude is going to be the same regardless of the robot's position
         // in the world, and so we're safe to just transform it to base_link.
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, topicName, baseLinkFrameName_, poseUpdateVec, differential);
+        poseCallback(pptr, topicName, baseLinkFrameId_, poseUpdateVec, differential);
 
         std::vector<int> twistUpdateVec(STATE_SIZE, false);
         std::copy(updateVector.begin() + POSITION_V_OFFSET, updateVector.end(), twistUpdateVec.begin() + POSITION_V_OFFSET);
@@ -574,7 +612,7 @@ namespace RobotLocalization
         }
 
         geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-        twistCallback(tptr, topicName, baseLinkFrameName_, twistUpdateVec);
+        twistCallback(tptr, topicName, baseLinkFrameId_, twistUpdateVec);
 
         if (filter_.getDebug())
         {
@@ -605,8 +643,9 @@ namespace RobotLocalization
         geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
         posPtr->header = msg->header;
         posPtr->pose = msg->pose;
+
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, topicName, odomFrameName_, poseUpdateVec, differential);
+        poseCallback(pptr, topicName, worldFrameId_, poseUpdateVec, differential);
 
         // Grab the twist portion of the message and pass it to the twistCallback
         std::vector<int> twistUpdateVec(STATE_SIZE, false);
@@ -616,7 +655,7 @@ namespace RobotLocalization
         twistPtr->header.frame_id = msg->child_frame_id;
         twistPtr->twist = msg->twist;
         geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-        twistCallback(tptr, topicName, baseLinkFrameName_, twistUpdateVec);
+        twistCallback(tptr, topicName, baseLinkFrameId_, twistUpdateVec);
 
         if (filter_.getDebug())
         {
@@ -855,12 +894,19 @@ namespace RobotLocalization
 
         loadParams();
 
-        // Clear out the transform
-        tf::transformTFToMsg(tf::Transform::getIdentity(), odomTrans_.transform);
+        // We may need to broadcast a different transform than
+        // the one we've already calculated.
+        tf::StampedTransform mapOdomTrans;
+        tf::StampedTransform odomBaseLinkTrans;
+        geometry_msgs::TransformStamped mapOdomTransMsg;
+
+        // Clear out the transforms
+        tf::transformTFToMsg(tf::Transform::getIdentity(), worldBaseLinkTransMsg_.transform);
+        tf::transformTFToMsg(tf::Transform::getIdentity(), mapOdomTransMsg.transform);
 
         // Publisher
         ros::Publisher positionPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
-        tf::TransformBroadcaster odomTransformBroadcaster;
+        tf::TransformBroadcaster worldTransformBroadcaster;
 
         ros::Rate loop_rate(frequency_);
 
@@ -873,18 +919,63 @@ namespace RobotLocalization
 
           if (getFilteredOdometryMessage(filteredPosition))
           {
-            odomTrans_.header.stamp = filteredPosition.header.stamp;
-            odomTrans_.header.frame_id = filteredPosition.header.frame_id;
-            odomTrans_.child_frame_id = filteredPosition.child_frame_id;
+            worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp;
+            worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
+            worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
 
-            odomTrans_.transform.translation.x = filteredPosition.pose.pose.position.x;
-            odomTrans_.transform.translation.y = filteredPosition.pose.pose.position.y;
-            odomTrans_.transform.translation.z = filteredPosition.pose.pose.position.z;
-            odomTrans_.transform.rotation = filteredPosition.pose.pose.orientation;
+            worldBaseLinkTransMsg_.transform.translation.x = filteredPosition.pose.pose.position.x;
+            worldBaseLinkTransMsg_.transform.translation.y = filteredPosition.pose.pose.position.y;
+            worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
+            worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
+
+            if(filteredPosition.header.frame_id == odomFrameId_)
+            {
+              worldTransformBroadcaster.sendTransform(worldBaseLinkTransMsg_);
+            }
+            else if(filteredPosition.header.frame_id == mapFrameId_)
+            {
+              try
+              {
+                tf::StampedTransform worldBaseLinkTrans;
+                tf::transformStampedMsgToTF(worldBaseLinkTransMsg_, worldBaseLinkTrans);
+
+                tfListener_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0), odomBaseLinkTrans);
+
+                // We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually
+                // transform data from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, 
+                // whose first two arguments are target frame and source frame, to get a transform
+                // from baseLinkFrameId_->odomFrameId_ (see http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms). 
+                // However, this transform would actually transform data from 
+                // odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the 
+                // mapFrameId_ frame. First, we multiply it by the inverse of the 
+                // mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to 
+                // baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
+                // transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
+                // inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
+                // Long story short: lookupTransform returns the inverse of what you send when you 
+                // broadcast transforms, so be careful.
+                //
+                mapOdomTrans.setData(odomBaseLinkTrans.inverse() * worldBaseLinkTrans.inverse());
+                tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
+                mapOdomTransMsg.header.stamp = filteredPosition.header.stamp;
+                mapOdomTransMsg.header.frame_id = mapFrameId_;
+                mapOdomTransMsg.child_frame_id = odomFrameId_;
+
+                worldTransformBroadcaster.sendTransform(mapOdomTransMsg);
+              }
+              catch(...)
+              {
+                ROS_ERROR_STREAM("Could not obtain transform from " << odomFrameId_ << "->" << baseLinkFrameId_);
+              }
+            }
+            else
+            {
+              ROS_ERROR_STREAM("Odometry message frame_id was " << filteredPosition.header.frame_id <<
+                               ", expected " << mapFrameId_ << " or " << odomFrameId_);
+            }
 
             // Fire off the position and the transform
             positionPub.publish(filteredPosition);
-            odomTransformBroadcaster.sendTransform(odomTrans_);
           }
 
           // The spin will enqueue all the available callbacks
@@ -1082,7 +1173,7 @@ namespace RobotLocalization
         if(differential && previousStates_.count(topicName) == 0)
         {
           tf::Pose prevPose;
-          tf::transformMsgToTF(odomTrans_.transform, prevPose);
+          tf::transformMsgToTF(worldBaseLinkTransMsg_.transform, prevPose);
           previousStates_.insert(std::pair<std::string, tf::Transform>(topicName, prevPose));
         }
 
@@ -1305,7 +1396,7 @@ namespace RobotLocalization
                              updateVector[StateMemberVyaw] ? msg->twist.twist.angular.z : 0.0);
 
         // Set relevant header info
-        std::string msgFrame = (msg->header.frame_id == "" ? baseLinkFrameName_ : msg->header.frame_id);
+        std::string msgFrame = (msg->header.frame_id == "" ? baseLinkFrameId_ : msg->header.frame_id);
 
         // 2. robot_localization lets users configure which variables from the sensor should be
         //    fused with the filter. This is specified at the sensor level. However, the data
@@ -1485,11 +1576,20 @@ namespace RobotLocalization
 
       //! @brief tf frame name for the robot's body frame
       //!
-      std::string baseLinkFrameName_;
+      std::string baseLinkFrameId_;
 
-      //! @brief tf frame name for the robot's odometry (world) frame
+      //! @brief tf frame name for the robot's odometry (world-fixed) frame
       //!
-      std::string odomFrameName_;
+      std::string odomFrameId_;
+
+      //! @brief tf frame name for the robot's map (world-fixed) frame
+      //!
+      std::string mapFrameId_;
+
+      //! @brief tf frame name that is the parent frame of the transform
+      //!        that this node will calculate and broadcast.
+      //!
+      std::string worldFrameId_;
 
       //! @brief Store the last time a message from each topic was received
       //!
@@ -1506,7 +1606,7 @@ namespace RobotLocalization
       //!
       //! To carry out differential integration, we have to (1) transform
       //! that into the target frame (probably the frame specified by
-      //! \p odomFrameName_), (2) "subtract"  the previous measurement from
+      //! \p odomFrameId_), (2) "subtract"  the previous measurement from
       //! the current measurement, and then (3) transform it again by the previous
       //! state estimate. This holds the measurements used for step (2).
       //!
@@ -1517,7 +1617,7 @@ namespace RobotLocalization
       //!
       //! To carry out differential integration, we have to (1) transform
       //! that into the target frame (probably the frame specified by
-      //! \p odomFrameName_), (2)  "subtract" the previous measurement from
+      //! \p odomFrameId_), (2)  "subtract" the previous measurement from
       //! the current measurement, and then (3) transform it again by the previous
       //! state estimate. This holds the measurements used for step (3).
       //!
@@ -1546,7 +1646,7 @@ namespace RobotLocalization
       //! use it as a transform, so this is the most convenient variable to
       //! use as our global "current state" object
       //!
-      geometry_msgs::TransformStamped odomTrans_;
+      geometry_msgs::TransformStamped worldBaseLinkTransMsg_;
 
       //! @brief Transform listener for managing coordinate transforms
       //!
