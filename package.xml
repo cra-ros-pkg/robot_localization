@@ -32,4 +32,6 @@
   <run_depend>cmake_modules</run_depend>
   <run_depend>eigen</run_depend>
   
+  <test_depend>rostest</test_depend>
+  
 </package>
