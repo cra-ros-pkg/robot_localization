@@ -65,9 +65,10 @@ namespace RobotLocalization
     // Clear the Jacobian
     transferFunctionJacobian_.setZero();
 
-    // Prepare the invariant parts of the transfer
-    // function
+    // Set the estimate error covariance. It should be small,
+    // as we're fairly certain of our initial state
     estimateErrorCovariance_.setIdentity();
+    estimateErrorCovariance_ *= 1e-6;
 
     // We need the identity for the update equations
     identity_.setIdentity();
