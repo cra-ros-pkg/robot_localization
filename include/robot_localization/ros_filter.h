@@ -52,6 +52,14 @@
 #include <fstream>
 
 // Handy methods for debug output
+std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec)
+{
+  os << "(" << std::setprecision(20) << vec.getX() << " " <<
+        vec.getY() << " " << vec.getZ() << ")\n";
+
+  return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
 {
   tf::Matrix3x3 orientation(trans.getRotation());
@@ -59,9 +67,8 @@ std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
   double roll, pitch, yaw;
   orientation.getRPY(roll, pitch, yaw);
 
-  os << "Origin: (" << std::setprecision(20) << trans.getOrigin().getX() << " " <<
-        trans.getOrigin().getY() << " " << trans.getOrigin().getZ() << ")\n" <<
-        "Rotation (RPY): (" << roll << ", " << pitch << ", " << yaw << ")\n";
+  os << "Origin: " << trans.getOrigin() <<
+        "Rotation (RPY): (" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
 
   return os;
 }
@@ -668,6 +675,15 @@ namespace RobotLocalization
             {
               // Store the measurement
               filter_.enqueueMeasurement(topicName + "_pose", measurement, measurementCovariance, updateVectorCorrected, msg->header.stamp.toSec());
+
+              if (filter_.getDebug())
+              {
+                debugStream_ << "Enqueued new measurement for " << topicName + "_pose\n";
+              }
+            }
+            else if(filter_.getDebug())
+            {
+              debugStream_ << "Did *not* enqueue measurement for " << topicName + "_pose\n";
             }
           }
           else
@@ -732,9 +748,19 @@ namespace RobotLocalization
         Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
         std::vector<int> updateVector(STATE_SIZE, true);
 
-        // Prepare the pose data for inclusion in the filter
+        // We only measure pose variables, so initialize the vector to 0
+        measurement.setZero();
+
+        // Set this to the identity and let the message reset it
+        measurementCovariance.setIdentity();
+        measurementCovariance *= 1e-6;
+
+        // Prepare the pose data (really just using this to transform it into the target frame)
         preparePose(msg, topicName, odomFrameName_, updateVector, false, measurement, measurementCovariance);
+
+        // Force everything to be reset
         filter_.setState(measurement);
+        filter_.setEstimateErrorCovariance(measurementCovariance);
 
         if (filter_.getDebug())
         {
@@ -958,8 +984,6 @@ namespace RobotLocalization
         poseTmp.frame_id_ = (msg->header.frame_id == "" ? targetFrame : msg->header.frame_id);
         poseTmp.stamp_ = msg->header.stamp;
 
-        tf::poseMsgToTF(msg->pose.pose, poseTmp);
-
         // The selective updating of variables can be a bit tricky, especially
         // when we have differential updating to worry about. Rather than go into
         // the details of why here, suffice it to say that users must, if using
@@ -970,32 +994,60 @@ namespace RobotLocalization
                                       updateVector[StateMemberZ] ? msg->pose.pose.position.z : 0.0));
 
         tf::Quaternion orientation;
-        tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
+
+        // Handle bad (empty) quaternions
+        if(msg->pose.pose.orientation.x == 0 && msg->pose.pose.orientation.y == 0 &&
+           msg->pose.pose.orientation.z == 0 && msg->pose.pose.orientation.w == 0)
+        {
+          orientation.setValue(0.0, 0.0, 0.0, 1.0);
+
+          if(updateVector[StateMemberRoll] || updateVector[StateMemberPitch] || updateVector[StateMemberYaw])
+          {
+            ROS_WARN_STREAM("The " << topicName << " message contains an invalid orientation quaternion, " <<
+                            "but its configuration is such that orientation data is being used.");
+          }
+        }
+        else
+        {
+          tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
+        }
+
         double orRoll, orPitch, orYaw;
         quatToRPY(orientation, orRoll, orPitch, orYaw);
         orientation.setRPY(updateVector[StateMemberRoll] ? orRoll : 0.0,
                            updateVector[StateMemberPitch] ? orPitch : 0.0,
                            updateVector[StateMemberYaw] ? orYaw : 0.0);
 
+        poseTmp.setRotation(orientation);
+
         // 2. robot_localization lets users configure which variables from the sensor should be
-        //    fused with the filter. This is specified at the sensor level. However, the data
-        //    may go through transforms before being fused with the state estimate. In that case,
-        //    we need to know which of the transformed variables came from the pre-transformed
-        //    "approved" variables (i.e., the ones that had "true" in their xxx_config parameter).
-        //    To do this, we create a pose from the original upate vector, which contains only
-        //    zeros and ones. This pose goes through the same transforms as the measurement. The
+        //    fused with the filter. This is specified for whatever frame the input message happens
+        //    to be in. However, the data  may go through transforms before being fused with the state
+        //    estimate. In that case, we need to know which of the transformed variables came from the
+        //    pre-transformed "approved" variables (i.e., the ones that had "true" in their xxx_config
+        //    parameter). To do this, we create a pose from the original upate vector, which contains
+        //    only zeros and ones. This pose goes through the same transforms as the measurement. The
         //    non-zero values that result will be used to modify the updateVector.
-        tf::Pose maskPose;
-        maskPose.setOrigin(tf::Vector3(updateVector[StateMemberX],
+        tf::Pose maskPosePos;
+        tf::Pose maskPoseNeg;
+        maskPosePos.setOrigin(tf::Vector3(updateVector[StateMemberX],
                                        updateVector[StateMemberY],
                                        updateVector[StateMemberZ]));
+
+        maskPoseNeg.setOrigin(-maskPosePos.getOrigin());
 
         tf::Quaternion maskOrientation;
         maskOrientation.setRPY(updateVector[StateMemberRoll],
                                updateVector[StateMemberPitch],
                                updateVector[StateMemberYaw]);
 
-        maskPose.setRotation(maskOrientation);
+        maskPosePos.setRotation(maskOrientation);
+
+        maskOrientation.setRPY(-updateVector[StateMemberRoll],
+                               -updateVector[StateMemberPitch],
+                               -updateVector[StateMemberYaw]);
+
+        maskPoseNeg.setRotation(maskOrientation);
 
         // 3. We'll need to rotate the covariance as well. Create a container and
         // copy over the covariance data
@@ -1073,24 +1125,28 @@ namespace RobotLocalization
 
         if(canTransform)
         {
-          // Apply the target frame transformation to the
-          // pose object and the mask
+          // Apply the target frame transformation to the pose object 
           poseTmp.mult(targetFrameTrans, poseTmp);
-          maskPose.setOrigin(targetFrameTrans.getBasis() * maskPose.getOrigin());
+
+          // Now apply it to the masks, positive first
+          maskPosePos.setOrigin(targetFrameTrans.getBasis() * maskPosePos.getOrigin());
+          maskPoseNeg.setOrigin(targetFrameTrans.getBasis() * maskPoseNeg.getOrigin());
 
           // Store the measurement as a transform for the next value (differential integration)
           curMeasurement = poseTmp;
 
           // Now copy the mask values back into the update vector
-          updateVector[StateMemberX] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getX()) >= 1e-6);
-          updateVector[StateMemberY] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getY()) >= 1e-6);
-          updateVector[StateMemberZ] = 1 * static_cast<int>(::fabs(maskPose.getOrigin().getZ()) >= 1e-6);
+          updateVector[StateMemberX] = static_cast<int>(::fabs(maskPosePos.getOrigin().getX()) >= 1e-6 || ::fabs(maskPoseNeg.getOrigin().getX()) >= 1e-6);
+          updateVector[StateMemberY] = static_cast<int>(::fabs(maskPosePos.getOrigin().getY()) >= 1e-6 || ::fabs(maskPoseNeg.getOrigin().getY()) >= 1e-6);
+          updateVector[StateMemberZ] = static_cast<int>(::fabs(maskPosePos.getOrigin().getZ()) >= 1e-6 || ::fabs(maskPoseNeg.getOrigin().getZ()) >= 1e-6);
 
-          double roll, pitch, yaw;
-          quatToRPY(maskPose.getRotation(), roll, pitch, yaw);
-          updateVector[StateMemberRoll] = 1 * (roll >= 1e-6);
-          updateVector[StateMemberPitch] = 1 * (pitch >= 1e-6);
-          updateVector[StateMemberYaw] = 1 * (yaw >= 1e-6);
+          double rollPos, pitchPos, yawPos;
+          double rollNeg, pitchNeg, yawNeg;
+          quatToRPY(maskPosePos.getRotation(), rollPos, pitchPos, yawPos);
+          quatToRPY(maskPoseNeg.getRotation(), rollNeg, pitchNeg, yawNeg);
+          updateVector[StateMemberRoll] = static_cast<int>(rollPos >= 1e-6 || rollNeg >= 1e-6);
+          updateVector[StateMemberPitch] = static_cast<int>(pitchPos >= 1e-6 || pitchNeg >= 1e-6);
+          updateVector[StateMemberYaw] = static_cast<int>(yawPos >= 1e-6 || yawNeg >= 1e-6);
 
           if(filter_.getDebug())
           {
@@ -1104,94 +1160,104 @@ namespace RobotLocalization
           // If we're in differential mode, we want to make sure
           // we have a previous measurement to work with.
           canTransform = (!differential || previousMeasurements_.count(topicName) > 0);
-          if(differential && canTransform)
+          if(differential)
           {
-            // 4b. If we are carrying out differential integration and
-            // we have a previous measurement for this sensor,then we
-            // need to apply the inverse of that measurement to this new
-            // measurement.
+            if(canTransform)
+            {
+              // 4b. If we are carrying out differential integration and
+              // we have a previous measurement for this sensor,then we
+              // need to apply the inverse of that measurement to this new
+              // measurement.
 
-            // Even if we're not using all of the variables from this sensor,
-            // we need to use the whole measurement to determine the delta
-            // to the new measurement
-            tf::Pose prevMeasurement = previousMeasurements_[topicName];
+              // Even if we're not using all of the variables from this sensor,
+              // we need to use the whole measurement to determine the delta
+              // to the new measurement
+              tf::Pose prevMeasurement = previousMeasurements_[topicName];
 
-            // Determine the position offset by removing the previous measurement.
-            // This will also remove part (nearly all) of this measurement's rotation,
-            // leaving you with a value that can be added (transformed) onto the current
-            // state.
-            poseTmp.setOrigin(prevMeasurement.inverse() * poseTmp.getOrigin());
-            poseTmp.setRotation(poseTmp.getRotation() * prevMeasurement.getRotation().inverse());
+              // Determine the position offset by removing the previous measurement.
+              // This will also remove part (nearly all) of this measurement's rotation,
+              // leaving you with a value that can be added (transformed) onto the current
+              // state.
+              poseTmp.setOrigin(prevMeasurement.inverse() * poseTmp.getOrigin());
+              poseTmp.setRotation(poseTmp.getRotation() * prevMeasurement.getRotation().inverse());
 
-            //poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
+              //poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
+
+              if (filter_.getDebug())
+              {
+                debugStream_ << "Previous measurement:\n" << previousMeasurements_[topicName] <<
+                                "\nAfter removing previous measurement, measurement is:\n" << poseTmp << "\n";
+              }
+
+              // 4c. Now we have the data in the right frame, but we may have more
+              // than one data source for absolute pose information in this frame. This
+              // is why we allow for differential integration. Take the variables
+              // that are integrated differentially, and transform them by essentially
+              // adding them to our current state. This produces a new measurement that
+              // is consistent with our state, even if the original measurement wasn't.
+              tf::Pose prevPose = previousStates_[topicName];
+
+              tf::Vector3 newPosition = prevPose * poseTmp.getOrigin();
+              tf::Quaternion newOrientation = prevPose.getRotation() * poseTmp.getRotation();
+
+              poseTmp.setOrigin(newPosition);
+              poseTmp.setRotation(newOrientation);
+
+              if (filter_.getDebug())
+              {
+                debugStream_ << "Transforming to align with state. State is:\n" << prevPose <<
+                                "\nMeasurement is now:\n" << poseTmp << "\n";
+              }
+            }
+            else if(filter_.getDebug())
+            {
+              debugStream_ << topicName << " has no previous measurements and is being "
+                              "updated differentially. Could not transform this measurement.\n";
+            }
+          }
+
+          if(canTransform)
+          {
+            // 5. Now rotate the covariance: create an augmented
+            // matrix that contains a 3D rotation matrix in the
+            // upper-left and lower-right quadrants, with zeros
+            // elsewhere
+            tf::Matrix3x3 rot(targetFrameTrans.getRotation());
+            Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
+            rot6d.setIdentity();
+
+            for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+            {
+              rot6d(rInd, 0) = rot.getRow(rInd).getX();
+              rot6d(rInd, 1) = rot.getRow(rInd).getY();
+              rot6d(rInd, 2) = rot.getRow(rInd).getZ();
+              rot6d(rInd+POSITION_SIZE, 3) = rot.getRow(rInd).getX();
+              rot6d(rInd+POSITION_SIZE, 4) = rot.getRow(rInd).getY();
+              rot6d(rInd+POSITION_SIZE, 5) = rot.getRow(rInd).getZ();
+            }
+
+            // Rotate the covariance
+            covarianceRotated = rot6d * covarianceRotated.eval() * rot6d.transpose();
 
             if (filter_.getDebug())
             {
-              debugStream_ << "Previous measurement:\n" << previousMeasurements_[topicName] <<
-                              "\nAfter removing previous measurement, measurement is:\n" << poseTmp << "\n";
+              debugStream_ << "Transformed covariance is \n" << covarianceRotated << "\n";
             }
 
-            // 4c. Now we have the data in the right frame, but we may have more
-            // than one data source for absolute pose information in this frame. This
-            // is why we allow for differential integration. Take the variables
-            // that are integrated differentially, and transform them by essentially
-            // adding them to our current state. This produces a new measurement that
-            // is consistent with our state, even if the original measurement wasn't.
-            tf::Pose prevPose = previousStates_[topicName];
+            // 6. Finally, copy everything into our measurement and covariance objects
+            measurement(StateMemberX) = poseTmp.getOrigin().x();
+            measurement(StateMemberY) = poseTmp.getOrigin().y();
+            measurement(StateMemberZ) = poseTmp.getOrigin().z();
 
-            //poseTmp.mult(prevPose, poseTmp);
+            // The filter needs roll, pitch, and yaw values instead of quaternions
+            double roll, pitch, yaw;
+            quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
+            measurement(StateMemberRoll) = roll;
+            measurement(StateMemberPitch) = pitch;
+            measurement(StateMemberYaw) = yaw;
 
-            tf::Vector3 newPosition = prevPose * poseTmp.getOrigin();
-            tf::Quaternion newOrientation = prevPose.getRotation() * poseTmp.getRotation();
-
-            poseTmp.setOrigin(newPosition);
-            poseTmp.setRotation(newOrientation);
-
-            if (filter_.getDebug())
-            {
-              debugStream_ << "Transforming to align with state. State is:\n" << prevPose <<
-                              "\nMeasurement is now:\n" << poseTmp << "\n";
-            }
+            measurementCovariance.block(0, 0, POSE_SIZE, POSE_SIZE) = covarianceRotated.block(0, 0, POSE_SIZE, POSE_SIZE);
           }
-
-          // 5. Now rotate the covariance: create an augmented
-          // matrix that contains a 3D rotation matrix in the
-          // upper-left and lower-right quadrants, with zeros
-          // elsewhere
-          tf::Matrix3x3 rot(targetFrameTrans.getRotation());
-          Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
-          rot6d.setIdentity();
-
-          for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
-          {
-            rot6d(rInd, 0) = rot.getRow(rInd).getX();
-            rot6d(rInd, 1) = rot.getRow(rInd).getY();
-            rot6d(rInd, 2) = rot.getRow(rInd).getZ();
-            rot6d(rInd+POSITION_SIZE, 3) = rot.getRow(rInd).getX();
-            rot6d(rInd+POSITION_SIZE, 4) = rot.getRow(rInd).getY();
-            rot6d(rInd+POSITION_SIZE, 5) = rot.getRow(rInd).getZ();
-          }
-
-          // Rotate the covariance
-          covarianceRotated = rot6d * covarianceRotated.eval() * rot6d.transpose();
-
-          if (filter_.getDebug())
-          {
-            debugStream_ << "Transformed covariance is \n" << covarianceRotated << "\n";
-          }
-
-          // 6. Finally, copy everything into our measurement and covariance objects
-          measurement(StateMemberX) = poseTmp.getOrigin().x();
-          measurement(StateMemberY) = poseTmp.getOrigin().y();
-          measurement(StateMemberZ) = poseTmp.getOrigin().z();
-
-          // The filter needs roll, pitch, and yaw values instead of quaternions
-          quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
-          measurement(StateMemberRoll) = roll;
-          measurement(StateMemberPitch) = pitch;
-          measurement(StateMemberYaw) = yaw;
-
-          measurementCovariance.block(0, 0, POSE_SIZE, POSE_SIZE) = covarianceRotated.block(0, 0, POSE_SIZE, POSE_SIZE);
 
           // Store the measurement so we can remove it
           previousMeasurements_[topicName] = curMeasurement;
@@ -1249,12 +1315,18 @@ namespace RobotLocalization
         //    To do this, we create a pose from the original upate vector, which contains only
         //    zeros and ones. This pose goes through the same transforms as the measurement. The
         //    non-zero values that result will be used to modify the updateVector.
-        tf::Vector3 maskTwistLin(updateVector[StateMemberVx],
-                                 updateVector[StateMemberVy],
-                                 updateVector[StateMemberVz]);
-        tf::Vector3 maskTwistRot(updateVector[StateMemberVroll],
-                                 updateVector[StateMemberVpitch],
-                                 updateVector[StateMemberVyaw]);
+        tf::Vector3 maskTwistLinPos(updateVector[StateMemberVx],
+                                    updateVector[StateMemberVy],
+                                    updateVector[StateMemberVz]);
+        tf::Vector3 maskTwistLinNeg(-updateVector[StateMemberVx],
+                                    -updateVector[StateMemberVy],
+                                    -updateVector[StateMemberVz]);
+        tf::Vector3 maskTwistRotPos(updateVector[StateMemberVroll],
+                                    updateVector[StateMemberVpitch],
+                                    updateVector[StateMemberVyaw]);
+        tf::Vector3 maskTwistRotNeg(-updateVector[StateMemberVroll],
+                                    -updateVector[StateMemberVpitch],
+                                    -updateVector[StateMemberVyaw]);
 
         // 3. We'll need to rotate the covariance as well
         Eigen::MatrixXd covarianceRotated(TWIST_SIZE, TWIST_SIZE);
@@ -1320,23 +1392,25 @@ namespace RobotLocalization
           // as a result of the sensor offset and rotational velocity
           twistRot = targetFrameTrans.getBasis() * twistRot;
           twistLin = targetFrameTrans.getBasis() * twistLin - targetFrameTrans.getOrigin().cross(twistRot);
-          maskTwistRot = targetFrameTrans.getBasis() * maskTwistRot;
-          maskTwistLin = targetFrameTrans.getBasis() * maskTwistLin;
+          maskTwistRotPos = targetFrameTrans.getBasis() * maskTwistRotPos;
+          maskTwistRotNeg = targetFrameTrans.getBasis() * maskTwistRotNeg;
+          maskTwistLinPos = targetFrameTrans.getBasis() * maskTwistLinPos;
+          maskTwistLinNeg = targetFrameTrans.getBasis() * maskTwistLinNeg;
 
           // Now copy the mask values back into the update vector
-          updateVector[StateMemberVx] = 1 * static_cast<int>(::fabs(maskTwistLin.getX()) >= 1e-6);
-          updateVector[StateMemberVy] = 1 * static_cast<int>(::fabs(maskTwistLin.getY()) >= 1e-6);
-          updateVector[StateMemberVz] = 1 * static_cast<int>(::fabs(maskTwistLin.getZ()) >= 1e-6);
-          updateVector[StateMemberVroll] = 1 * static_cast<int>(::fabs(maskTwistRot.getX()) >= 1e-6);
-          updateVector[StateMemberVpitch] = 1 * static_cast<int>(::fabs(maskTwistRot.getY()) >= 1e-6);
-          updateVector[StateMemberVyaw] = 1 * static_cast<int>(::fabs(maskTwistRot.getZ()) >= 1e-6);
+          updateVector[StateMemberVx] = static_cast<int>(::fabs(maskTwistLinPos.getX()) >= 1e-6 || ::fabs(maskTwistLinNeg.getX()) >= 1e-6);
+          updateVector[StateMemberVy] = static_cast<int>(::fabs(maskTwistLinPos.getY()) >= 1e-6 || ::fabs(maskTwistLinNeg.getY()) >= 1e-6);
+          updateVector[StateMemberVz] = static_cast<int>(::fabs(maskTwistLinPos.getZ()) >= 1e-6 || ::fabs(maskTwistLinNeg.getZ()) >= 1e-6);
+          updateVector[StateMemberVroll] = static_cast<int>(::fabs(maskTwistRotPos.getX()) >= 1e-6 || ::fabs(maskTwistRotNeg.getX()) >= 1e-6);
+          updateVector[StateMemberVpitch] = static_cast<int>(::fabs(maskTwistRotPos.getY()) >= 1e-6 || ::fabs(maskTwistRotNeg.getY()) >= 1e-6);
+          updateVector[StateMemberVyaw] = static_cast<int>(::fabs(maskTwistRotPos.getZ()) >= 1e-6 || ::fabs(maskTwistRotNeg.getZ()) >= 1e-6);
 
           if(filter_.getDebug())
           {
             debugStream_ << msg->header.frame_id << "->" << targetFrame << " transform:\n" << targetFrameTrans <<
                             "\nAfter applying transform to " << targetFrame << ", update vector is:\n" << updateVector <<
                             "\nAfter applying transform to " << targetFrame << ", measurement is:\n" <<
-                            "Linear: " << twistRot << "\nRotational: " << twistRot << "\n";
+                            "Linear: " << twistLin << "Rotational: " << twistRot << "\n";
           }
 
           // 5. Now rotate the covariance: create an augmented
