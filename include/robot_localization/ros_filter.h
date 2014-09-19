@@ -795,7 +795,7 @@ namespace RobotLocalization
         measurementCovariance *= 1e-6;
 
         // Prepare the pose data (really just using this to transform it into the target frame)
-        preparePose(msg, topicName, odomFrameName_, updateVector, false, measurement, measurementCovariance);
+        preparePose(msg, topicName, odomFrameId_, updateVector, false, measurement, measurementCovariance);
 
         // Force everything to be reset
         filter_.setState(measurement);
