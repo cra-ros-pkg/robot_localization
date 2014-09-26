@@ -1079,10 +1079,10 @@ namespace RobotLocalization
         // when we have differential updating to worry about. Rather than go into
         // the details of why here, suffice it to say that users must, if using
         // selective updating, be *very* careful about which variables they exclude
-        // from the measurement.
-        poseTmp.setOrigin(tf::Vector3(updateVector[StateMemberX] ? msg->pose.pose.position.x : 0.0,
-                                      updateVector[StateMemberY] ? msg->pose.pose.position.y : 0.0,
-                                      updateVector[StateMemberZ] ? msg->pose.pose.position.z : 0.0));
+        // from the measurement
+        poseTmp.setOrigin(tf::Vector3(msg->pose.pose.position.x,
+                                      msg->pose.pose.position.y,
+                                      msg->pose.pose.position.z));
 
         tf::Quaternion orientation;
 
@@ -1102,12 +1102,6 @@ namespace RobotLocalization
         {
           tf::quaternionMsgToTF(msg->pose.pose.orientation, orientation);
         }
-
-        double orRoll, orPitch, orYaw;
-        quatToRPY(orientation, orRoll, orPitch, orYaw);
-        orientation.setRPY(updateVector[StateMemberRoll] ? orRoll : 0.0,
-                           updateVector[StateMemberPitch] ? orPitch : 0.0,
-                           updateVector[StateMemberYaw] ? orYaw : 0.0);
 
         poseTmp.setRotation(orientation);
 
@@ -1235,9 +1229,9 @@ namespace RobotLocalization
           double rollNeg, pitchNeg, yawNeg;
           quatToRPY(maskPosePos.getRotation(), rollPos, pitchPos, yawPos);
           quatToRPY(maskPoseNeg.getRotation(), rollNeg, pitchNeg, yawNeg);
-          updateVector[StateMemberRoll] = static_cast<int>(rollPos >= 1e-6 || rollNeg >= 1e-6);
-          updateVector[StateMemberPitch] = static_cast<int>(pitchPos >= 1e-6 || pitchNeg >= 1e-6);
-          updateVector[StateMemberYaw] = static_cast<int>(yawPos >= 1e-6 || yawNeg >= 1e-6);
+          updateVector[StateMemberRoll] = static_cast<int>(::fabs(rollPos) >= 1e-6 || ::fabs(rollNeg) >= 1e-6);
+          updateVector[StateMemberPitch] = static_cast<int>(::fabs(pitchPos) >= 1e-6 || ::fabs(pitchNeg) >= 1e-6);
+          updateVector[StateMemberYaw] = static_cast<int>(::fabs(yawPos) >= 1e-6 || ::fabs(yawNeg) >= 1e-6);
 
           if(filter_.getDebug())
           {
