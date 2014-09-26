@@ -83,5 +83,10 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ekf_localization_node_interfaces.test 
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(ekf_localization_node-test-interfaces ${catkin_LIBRARIES})
+
+  add_rostest_gtest(ekf_localization_node-test-bag1
+                    test/test_ekf_localization_node_test_bag1.test 
+                    test/test_ekf_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(ekf_localization_node-test-bag1 ${catkin_LIBRARIES})
 endif()
 
