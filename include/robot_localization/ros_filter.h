@@ -710,7 +710,7 @@ namespace RobotLocalization
             std::vector<int> updateVectorCorrected = updateVector;
 
             // Prepare the pose data for inclusion in the filter
-            if (preparePose(msg, topicName + "_pose", targetFrame, updateVectorCorrected, differential, measurement, measurementCovariance))
+            if (preparePose(msg, topicName + "_pose", targetFrame, updateVectorCorrected, differential, lastMessageTimes_[topicName], measurement, measurementCovariance))
             {
               // Store the measurement
               filter_.enqueueMeasurement(topicName + "_pose", measurement, measurementCovariance, updateVectorCorrected, msg->header.stamp.toSec());
@@ -795,7 +795,7 @@ namespace RobotLocalization
         measurementCovariance *= 1e-6;
 
         // Prepare the pose data (really just using this to transform it into the target frame)
-        preparePose(msg, topicName, odomFrameId_, updateVector, false, measurement, measurementCovariance);
+        preparePose(msg, topicName, odomFrameId_, updateVector, false, ros::Time(0), measurement, measurementCovariance);
 
         // Force everything to be reset
         filter_.setState(measurement);
@@ -1057,6 +1057,7 @@ namespace RobotLocalization
                        const std::string &targetFrame,
                        std::vector<int> &updateVector,
                        const bool differential,
+                       const ros::Time &lastMeasurementTime,
                        Eigen::VectorXd &measurement,
                        Eigen::MatrixXd &measurementCovariance)
       {
@@ -1259,14 +1260,48 @@ namespace RobotLocalization
               // to the new measurement
               tf::Pose prevMeasurement = previousMeasurements_[topicName];
 
-              // Determine the position offset by removing the previous measurement.
-              // This will also remove part (nearly all) of this measurement's rotation,
-              // leaving you with a value that can be added (transformed) onto the current
-              // state.
-              poseTmp.setOrigin(prevMeasurement.inverse() * poseTmp.getOrigin());
-              poseTmp.setRotation(poseTmp.getRotation() * prevMeasurement.getRotation().inverse());
+              // Determine the pose delta by removing the previous measurement.
+              poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
 
-              //poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
+              /*
+               * TAM: two options here: we can just add the difference between
+               * this measurement and the previous one to our current state so
+               * as to generate a new measurement, or we can create a velocity
+               * and feed it to prepareTwist. Not sure which is better, although
+               * there are some issues with accuracy when the former method is
+               * chosen. Needs more investigation.
+              double dt = msg->header.stamp.toSec() - lastMeasurementTime.toSec();
+              double xVel = poseTmp.getOrigin().getX() / dt;
+              double yVel = poseTmp.getOrigin().getY() / dt;
+              double zVel = poseTmp.getOrigin().getZ() / dt;
+
+              double rollVel = 0;
+              double pitchVel = 0;
+              double yawVel = 0;
+
+              quatToRPY(poseTmp.getRotation(), rollVel, pitchVel, yawVel);
+              rollVel /= dt;
+              pitchVel /= dt;
+              yawVel /= dt;
+
+              geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
+              twistPtr->header = msg->header;
+              twistPtr->header.frame_id = baseLinkFrameId_;
+              twistPtr->twist.twist.linear.x = xVel;
+              twistPtr->twist.twist.linear.y = yVel;
+              twistPtr->twist.twist.linear.z = zVel;
+              twistPtr->twist.twist.angular.x = rollVel;
+              twistPtr->twist.twist.angular.y = pitchVel;
+              twistPtr->twist.twist.angular.z = yawVel;
+              std::vector<int> twistUpdateVec(STATE_SIZE, false);
+              std::copy(updateVector.begin() + POSITION_OFFSET, updateVector.begin() + POSE_SIZE, twistUpdateVec.begin() + POSITION_V_OFFSET);
+              std::copy(twistUpdateVec.begin(), twistUpdateVec.end(), updateVector.begin());
+              geometry_msgs::TwistWithCovarianceStampedConstPtr ptr(twistPtr);
+
+              prepareTwist(ptr, topicName + "_twist", twistPtr->header.frame_id, updateVector, measurement, measurementCovariance);
+              previousMeasurements_[topicName] = curMeasurement;
+              return canTransform;
+              */
 
               if (filter_.getDebug())
               {
@@ -1282,11 +1317,8 @@ namespace RobotLocalization
               // is consistent with our state, even if the original measurement wasn't.
               tf::Pose prevPose = previousStates_[topicName];
 
-              tf::Vector3 newPosition = prevPose * poseTmp.getOrigin();
-              tf::Quaternion newOrientation = prevPose.getRotation() * poseTmp.getRotation();
-
-              poseTmp.setOrigin(newPosition);
-              poseTmp.setRotation(newOrientation);
+              // "Add" this measurement to the previous pose
+              poseTmp.setData(prevPose * poseTmp);
 
               if (filter_.getDebug())
               {
