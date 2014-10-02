@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
-find_package(catkin REQUIRED COMPONENTS roscpp tf std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules)
+find_package(catkin REQUIRED COMPONENTS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules)
 find_package(Eigen REQUIRED)
 
 ###################################
@@ -16,7 +16,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES filter_base ekf
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
+  CATKIN_DEPENDS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
   DEPENDS Eigen
 )
 
@@ -83,5 +83,20 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ekf_localization_node_interfaces.test 
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(ekf_localization_node-test-interfaces ${catkin_LIBRARIES})
+
+  add_rostest_gtest(ekf_localization_node-test-bag1
+                    test/test_ekf_localization_node_test_bag1.test 
+                    test/test_ekf_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(ekf_localization_node-test-bag1 ${catkin_LIBRARIES})
+
+  add_rostest_gtest(ekf_localization_node-test-bag2
+                    test/test_ekf_localization_node_test_bag2.test 
+                    test/test_ekf_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(ekf_localization_node-test-bag2 ${catkin_LIBRARIES})
+
+  add_rostest_gtest(ekf_localization_node-test-bag3
+                    test/test_ekf_localization_node_test_bag3.test 
+                    test/test_ekf_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(ekf_localization_node-test-bag3 ${catkin_LIBRARIES})
 endif()
 
