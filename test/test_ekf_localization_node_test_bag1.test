@@ -4,12 +4,14 @@
      we can at least test, even if it doesn't match up with what the real robot did when this was collected. -->
 
 <launch>
+
     <param name="/use_sim_time" value="true" />
 
-    <node pkg="tf" type="static_transform_publisher" name="wheel_odometry_odom" args="0 0 0 0 0 0 wheel_odometry odom 20" />
+    <node pkg="tf" type="static_transform_publisher" name="wheel_odometry_odom" args="0 0 0 0 0 0 odom wheel_odometry 20" />
     <node pkg="tf" type="static_transform_publisher" name="mustang_base_xsens" args="0 0 0 0 0 3.141592654 mustang_base xsens_sensor 20" />
+    <node pkg="tf" type="static_transform_publisher" name="ref_imu_imu" args="0 0 0 0 0 0 mustang_base ref_imu 20" />
 
-    <node pkg="rosbag" type="play" name="rosbagplay" args="$(find robot_localization)/test/test1.bag --clock -d 2" required="true"/>
+    <node pkg="rosbag" type="play" name="rosbagplay" args="$(find robot_localization)/test/test1.bag --clock -d 5" required="true"/>
 
     <node name="ekf_localization_node_test_bag_test1" pkg="robot_localization" type="ekf_localization_node" clear_params="true">
 
@@ -28,7 +30,7 @@
       <param name="world_frame" value="odom"/>
 
       <rosparam param="odom0_config">[true, true, true, 
-                                      false, false, true, 
+                                      false, false, false, 
                                       false, false, false, 
                                       false, false, false]</rosparam>
 
@@ -56,9 +58,6 @@
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ekf_navigation.txt"/>
 
-      <param name="odom_frame" value="odom"/>
-      <param name="base_link_frame" value="mustang_base"/>
-
       <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -75,9 +74,10 @@
     </node>
 
     <test test-name="ekf_localization_node_test_bag1_t" pkg="robot_localization" type="ekf_localization_node-test-bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="12.8"/>
-      <param name="final_y" value="-1.1"/>
-      <param name="final_z" value="-21.8"/>
+      <param name="final_x" value="-0.8230"/>
+      <param name="final_y" value="0.6571"/>
+      <param name="final_z" value="-3.8045"/>
+      <param name="tolerance" value="0.3805"/>
     </test>
 
 </launch>

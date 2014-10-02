@@ -21,10 +21,12 @@ TEST (BagTest, PoseCheck)
   double finalX;
   double finalY;
   double finalZ;
+  double tolerance;
 
   nhLocal.getParam("final_x", finalX);
   nhLocal.getParam("final_y", finalY);
   nhLocal.getParam("final_z", finalZ);
+  nhLocal.getParam("tolerance", tolerance);
 
   ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
 
@@ -38,7 +40,7 @@ TEST (BagTest, PoseCheck)
   double yDiff = filtered_.pose.pose.position.y - finalY;
   double zDiff = filtered_.pose.pose.position.z - finalZ;
 
-  EXPECT_LT(::sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff), 2.0);
+  EXPECT_LT(::sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff), tolerance);
 }
 
 int main(int argc, char **argv)
