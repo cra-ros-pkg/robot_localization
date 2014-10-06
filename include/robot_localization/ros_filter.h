@@ -1526,12 +1526,12 @@ namespace RobotLocalization
 
         // 1. Get the measurement into a tf-friendly transform (twist) object. Zero out
         // values we don't want to use.
-        tf::Vector3 twistLin(updateVector[StateMemberVx] ? msg->twist.twist.linear.x : 0.0,
-                             updateVector[StateMemberVy] ? msg->twist.twist.linear.y : 0.0,
-                             updateVector[StateMemberVz] ? msg->twist.twist.linear.z : 0.0);
-        tf::Vector3 twistRot(updateVector[StateMemberVroll] ? msg->twist.twist.angular.x : 0.0,
-                             updateVector[StateMemberVpitch] ? msg->twist.twist.angular.y : 0.0,
-                             updateVector[StateMemberVyaw] ? msg->twist.twist.angular.z : 0.0);
+        tf::Vector3 twistLin(msg->twist.twist.linear.x,
+                             msg->twist.twist.linear.y,
+                             msg->twist.twist.linear.z);
+        tf::Vector3 twistRot(msg->twist.twist.angular.x,
+                             msg->twist.twist.angular.y,
+                             msg->twist.twist.angular.z);
 
         // Set relevant header info
         std::string msgFrame = (msg->header.frame_id == "" ? baseLinkFrameId_ : msg->header.frame_id);
