@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/gps_transform.h"
+#include "robot_localization/navsat_transform.h"
 #include "robot_localization/filter_common.h"
 
 #include <tf/tfMessage.h>
@@ -42,7 +42,7 @@
 
 namespace RobotLocalization
 {
-  GpsTransform::GpsTransform() :
+  NavSatTransform::NavSatTransform() :
     magneticDeclination_(0),
     utmOdomTfYaw_(0),
     rollOffset_(0),
@@ -58,19 +58,19 @@ namespace RobotLocalization
     latestUtmCovariance_.resize(POSE_SIZE, POSE_SIZE);
   }
 
-  GpsTransform::~GpsTransform()
+  NavSatTransform::~NavSatTransform()
   {
 
   }
 
-  void GpsTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
+  void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
     tf::poseMsgToTF(msg->pose.pose, latestOdomPose_);
     odomFrameId_ = msg->header.frame_id;
     hasOdom_ = true;
   }
 
-  void GpsTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
+  void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
   {
     hasGps_ = (msg->status.status != sensor_msgs::NavSatStatus::STATUS_NO_FIX &&
                !std::isnan(msg->altitude) &&
@@ -100,13 +100,13 @@ namespace RobotLocalization
     }
   }
 
-  void GpsTransform::imuCallback(const sensor_msgs::ImuConstPtr& msg)
+  void NavSatTransform::imuCallback(const sensor_msgs::ImuConstPtr& msg)
   {
     tf::quaternionMsgToTF(msg->orientation, latestOrientation_);
     hasImu_ = true;
   }
 
-  void GpsTransform::computeTransform()
+  void NavSatTransform::computeTransform()
   {
     // Only do this if:
     // 1. We haven't computed the odom_frame->utm_frame transform before
@@ -177,7 +177,7 @@ namespace RobotLocalization
     }
   }
 
-  bool GpsTransform::prepareGpsOdometry(nav_msgs::Odometry &gpsOdom)
+  bool NavSatTransform::prepareGpsOdometry(nav_msgs::Odometry &gpsOdom)
   {
     bool newData = false;
 
@@ -229,7 +229,7 @@ namespace RobotLocalization
     return newData;
   }
 
-  void GpsTransform::run()
+  void NavSatTransform::run()
   {
     ros::Time::init();
 
@@ -239,9 +239,9 @@ namespace RobotLocalization
     ros::NodeHandle nhPriv("~");
 
     // Subscribe to the messages we need
-    ros::Subscriber odomSub = nh.subscribe("odometry/filtered", 1, &GpsTransform::odomCallback, this);
-    ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &GpsTransform::gpsFixCallback, this);
-    ros::Subscriber imuSub = nh.subscribe("imu/data", 1, &GpsTransform::imuCallback, this);
+    ros::Subscriber odomSub = nh.subscribe("odometry/filtered", 1, &NavSatTransform::odomCallback, this);
+    ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
+    ros::Subscriber imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
 
     ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
 

@@ -42,17 +42,17 @@
 
 namespace RobotLocalization
 {
-  class GpsTransform
+  class NavSatTransform
   {
     public:
 
       //! @brief Constructor
       //!
-      GpsTransform();
+      NavSatTransform();
 
       //! @brief Destructor
       //!
-      ~GpsTransform();
+      ~NavSatTransform();
 
       //! @brief Main run loop
       //!
