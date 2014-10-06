@@ -1,0 +1,52 @@
+<!-- Launch file for gps_transform_node -->
+
+<!-- 
+     This node requires three inputs:
+     (1) A sensor_msgs/Imu message with a magnetometer-based absolute heading (yaw).
+     (2) A nav_msgs/Odometry message that contains the robot's current position estimate in the frame specified by its start
+         location. This should just be the output of robot_localization.
+     (3) A sensor_msgs/NavSatfix message that contains the robot's current raw GPS position, along with relevant meta data
+         regarding fix quality.
+
+     The output of this node is an odometry message that contains the GPS data transformed into the robot's world coordinate
+     frame (i.e., the frame specified by input (2)'s frame_id).
+-->
+
+<launch>
+
+    <node pkg="robot_localization" type="gps_transform_node" name="gps_transform_node" respawn="true" output="screen">
+
+      <!-- Enter the magnetic declination for your location. If you don't
+           know it, see http://www.ngdc.noaa.gov/geomag-web/ (make sure to
+           convert the value to radians). -->
+      <param name="magnetic_declination_radians" value="0"/>
+
+      <!-- On level ground, your IMU should read 0 for roll. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="roll_offset" value="0"/>
+
+      <!-- On level ground, your IMU should read 0 for pitch. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="pitch_offset" value="0"/>
+
+      <!-- Your IMU should read 0 for yaw at *magnetic* north. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="yaw_offset" value="0"/>
+
+      <!-- If this is true, the transform is continually updated so that anyone
+           using the transform can zero out the altitude values. -->
+      <param name="zero_altitude" value="false"/>
+
+      <!-- Placeholders for input remapping. Set your topic names as the "to" values.
+        <remap from="/imu/data" to="" />
+        <remap from="/odometry/filtered to="" />
+        <remap from="/gps/fix" to="" />
+      -->
+
+      <!-- Placeholders for output remapping.
+        <remap from="/odometry/gps to="" />
+      -->
+
+    </node>
+
+</launch>
