@@ -2,16 +2,21 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-x.1.1 (2014-04-11)
+1.1.5 (2014-10-07)
 ------------------
-* Added cmake_modules dependency for Eigen support, and added include to silence boost::signals warning from tf include
+* Changed initial estimate error covariance to be much smaller
+* Fixed some debug output
+* Added test suite
+* Better compliance with REP-105
+* Fixed differential measurement handling
+* Implemented message filters
+* Added navsat_transform_node
 
-x.1.2 (2014-04-11)
+1.1.4 (2014-08-22)
 ------------------
-* Updated covariance correction formulation to "Joseph form" to improve filter stability.
-* Implemented new versioning scheme.
+* Adding utm_transform_node to install targets
 
-x.1.3 (2014-06-22)
+1.1.3 (2014-06-22)
 ------------------
 * Some changes to ease GPS integration
 * Addition of differential integration of pose data
@@ -19,7 +24,12 @@ x.1.3 (2014-06-22)
 * Added UTM transform node and launch file
 * Bug fixes
 
-x.1.4 (2014-08-22)
+1.1.2 (2014-04-11)
 ------------------
-* Adding utm_transform_node to install targets
+* Updated covariance correction formulation to "Joseph form" to improve filter stability.
+* Implemented new versioning scheme.
+
+1.1.1 (2014-04-11)
+------------------
+* Added cmake_modules dependency for Eigen support, and added include to silence boost::signals warning from tf include
 
