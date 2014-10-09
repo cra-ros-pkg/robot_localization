@@ -55,6 +55,8 @@ namespace RobotLocalization
     if (getDebug())
     {
       *debugStream_ << "---------------------- Ekf::correct ----------------------\n";
+      *debugStream_ << "State is:\n";
+      *debugStream_ << state_ << "\n";
       *debugStream_ << "Measurement is:\n";
       *debugStream_ << measurement.measurement_ << "\n";
       *debugStream_ << "Measurement covariance is:\n";
@@ -152,7 +154,7 @@ namespace RobotLocalization
 
         if (getDebug())
         {
-          *debugStream_ << "WARNING: measurement had very small error covariance for index " << i << ". Adding some noise to maintain filter stability.\n";
+          *debugStream_ << "WARNING: measurement had very small error covariance for index " << updateIndices[i] << ". Adding some noise to maintain filter stability.\n";
         }
       }
     }
@@ -219,8 +221,6 @@ namespace RobotLocalization
       *debugStream_ << state_ << "\n";
       *debugStream_ << "Corrected full estimate error covariance is:\n";
       *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "Last measurement time is:\n";
-      *debugStream_ << std::setprecision(20) << lastMeasurementTime_ << "\n";
       *debugStream_ << "\n---------------------- /Ekf::correct ----------------------\n";
     }
   }
@@ -375,8 +375,6 @@ namespace RobotLocalization
     {
       *debugStream_ << "Predicted estimate error covariance is:\n";
       *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "Last measurement time is:\n";
-      *debugStream_ << std::setprecision(20) << lastMeasurementTime_ << "\n";
       *debugStream_ << "\n--------------------- /Ekf::predict ----------------------\n";
     }
   }

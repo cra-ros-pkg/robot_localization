@@ -38,6 +38,7 @@
 #include <ostream>
 #include <vector>
 #include <set>
+#include <map>
 #include <queue>
 
 namespace RobotLocalization
@@ -50,24 +51,35 @@ namespace RobotLocalization
   //!
   struct Measurement
   {
-      // The measurement and its associated covariance
-      Eigen::VectorXd measurement_;
-      Eigen::MatrixXd covariance_;
+    // The topic name for this measurement. Needed
+    // for capturing previous state values for new
+    // measurements.
+    std::string topicName_;
 
-      // This defines which variables within this measurement
-      // actually get passed into the filter. std::vector<bool>
-      // is generally frowned upon, so we use ints.
-      std::vector<int> updateVector_;
+    // The measurement and its associated covariance
+    Eigen::VectorXd measurement_;
+    Eigen::MatrixXd covariance_;
 
-      // The real-valued time, in seconds, since some epoch
-      // (presumably the start of execution, but any will do)
-      double time_;
+    // This defines which variables within this measurement
+    // actually get passed into the filter. std::vector<bool>
+    // is generally frowned upon, so we use ints.
+    std::vector<int> updateVector_;
 
-      // We want earlier times to have greater priority
-      bool operator()(const Measurement &a, const Measurement &b)
-      {
-        return a.time_ > b.time_;
-      }
+    // The real-valued time, in seconds, since some epoch
+    // (presumably the start of execution, but any will do)
+    double time_;
+
+    // We want earlier times to have greater priority
+    bool operator()(const Measurement &a, const Measurement &b)
+    {
+      return a.time_ > b.time_;
+    }
+
+    Measurement() :
+      topicName_(""),
+      time_(0)
+    {
+    }
   };
 
   class FilterBase
@@ -89,7 +101,8 @@ namespace RobotLocalization
       //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
       //! @param[in] time - The time of arrival (in seconds)
       //!
-      virtual void enqueueMeasurement(const Eigen::VectorXd &measurement,
+      virtual void enqueueMeasurement(const std::string &topicName,
+                                      const Eigen::VectorXd &measurement,
                                       const Eigen::MatrixXd &measurementCovariance,
                                       const std::vector<int> &updateVector,
                                       const double time);
@@ -98,7 +111,8 @@ namespace RobotLocalization
       //!
       //! @param[in] currentTime - The time at which to carry out integration (the current time)
       //!
-      virtual void integrateMeasurements(double currentTime);
+      virtual void integrateMeasurements(double currentTime,
+                                         std::map<std::string, Eigen::VectorXd> &postUpdateStates);
 
       //! @brief Gets the value of the debug_ variable.
       //!
@@ -159,6 +173,12 @@ namespace RobotLocalization
       //! false, outStream is ignored.
       //!
       void setDebug(const bool debug, std::ostream *outStream = NULL);
+
+      //! @brief Manually sets the filter's estimate error covariance
+      //!
+      //! @param[in] estimateErrorCovariance - The state to set as the filter's current state
+      //!
+      void setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance);
 
       //! @brief Sets the filter's last measurement time.
       //!

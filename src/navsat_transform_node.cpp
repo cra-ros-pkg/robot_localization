@@ -30,18 +30,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ros_filter_types.h>
+#include "robot_localization/navsat_transform.h"
 
 #include <ros/ros.h>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "ekf_navigation_node");
+  ros::init(argc, argv, "navsat_transform_node");
 
-  RobotLocalization::RosEkf ekf;
+  RobotLocalization::NavSatTransform trans;
 
-  ekf.run();
+  trans.run();
 
   return 0;
 }
+
 

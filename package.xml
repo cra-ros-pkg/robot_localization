@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>robot_localization</name>
-  <version>2.1.2</version>
+  <version>2.1.4</version>
   <description>The robot_localization package provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
 
   <maintainer email="tmoore@cra.com">Tom Moore</maintainer>
@@ -20,8 +20,10 @@
   <build_depend>nav_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>tf</build_depend>
+  <build_depend>message_filters</build_depend>
   <build_depend>cmake_modules</build_depend>
   <build_depend>eigen</build_depend>
+  <build_depend>gps_common</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
@@ -29,7 +31,10 @@
   <run_depend>nav_msgs</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>tf</run_depend>
+  <run_depend>message_filters</run_depend>
   <run_depend>cmake_modules</run_depend>
   <run_depend>eigen</run_depend>
-  
+
+  <test_depend>rostest</test_depend>
+
 </package>

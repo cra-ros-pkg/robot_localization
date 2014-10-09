@@ -62,9 +62,9 @@ namespace RobotLocalization
   const int STATE_SIZE = 15;
   const int POSITION_OFFSET = StateMemberX;
   const int ORIENTATION_OFFSET = StateMemberRoll;
-  const int LINEAR_VEL_OFFSET = StateMemberVx;
-  const int ROTATIONAL_VEL_OFFSET = StateMemberVroll;
-  const int LINEAR_ACC_OFFSET = StateMemberAx;
+  const int POSITION_V_OFFSET = StateMemberVx;
+  const int ORIENTATION_V_OFFSET = StateMemberVroll;
+  const int POSITION_A_OFFSET = StateMemberAx;
 
   //! @brief Pose and twist messages each
   //! contain six variables

@@ -1,0 +1,54 @@
+<!-- Launch file for utm_transform_node -->
+
+<!-- 
+     This node requires four inputs:
+     (1) A sensor_msgs/Imu message with a magnetometer-based absolute heading (yaw).
+     (2) A nav_msgs/Odometry message with raw UTM coordinates in it, as is output by the utm_odometry_node of gps_common. 
+         The frame_id of the UTM Odometry message must be unique; i.e., it cannot match the frame_id of your position 
+         estimate Odometry  message (which presumably comes from robot_localization). 
+     (3) A nav_msgs/Odometry message that contains the robot's current position estimate in the frame specified by its start
+         location. This should just be the output of robot_localization.
+     (4) A sensor_msgs/NavSatfix message that contains the robot's current raw GPS position, along with relevant meta data
+         regarding fix quality.
+
+     The output of this node is a tf transform from the frame_id of the UTM Odometry message (input (2)) to the frame_id of the 
+     robot's current Odometry message frame (input (3)). This means the user can simply add input (2) as an Odometry message
+     source for any state estimation node in robot_localization (currently just ekf_localization_node). robot_localization will
+     transform incoming messages into the correct frame before integrating them.
+-->
+
+<launch>
+
+    <node pkg="robot_localization" type="utm_transform_node" name="utm_transform_node" respawn="true" output="screen">
+
+      <!-- Enter the magnetic declination for your location. If you don't
+           know it, see http://www.ngdc.noaa.gov/geomag-web/ (make sure to
+           convert the value to radians). -->
+      <param name="magnetic_declination_radians" value="0"/>
+
+      <!-- On level ground, your IMU should read 0 for roll. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="roll_offset" value="0"/>
+
+      <!-- On level ground, your IMU should read 0 for pitch. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="pitch_offset" value="0"/>
+
+      <!-- Your IMU should read 0 for yaw at *magnetic* north. If it doesn't,
+           enter the offset here (desired_value = offset + sensor_raw_value). -->
+      <param name="yaw_offset" value="0"/>
+
+      <!-- If this is true, the transform is continually updated so that anyone
+           using the transform can zero out the altitude values. -->
+      <param name="zero_altitude" value="false"/>
+
+      <!-- Placeholders for remapping. Set your topic names as the "to" values.
+        <remap from="/imu/data" to="" />
+        <remap from="/odometry/filtered to="" />
+        <remap from="/gps/gps_utm" to="" />
+        <remap from="/gps/fix" to="" />
+      -->
+
+    </node>
+
+</launch>
