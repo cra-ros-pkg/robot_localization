@@ -600,6 +600,7 @@ namespace RobotLocalization
 
         // Load up the process noise covariance (from the launch file/parameter server)
         Eigen::MatrixXd processNoiseCovariance(STATE_SIZE, STATE_SIZE);
+        processNoiseCovariance.setZero();
         XmlRpc::XmlRpcValue processNoiseCovarConfig;
 
         if (nhLocal_.hasParam("process_noise_covariance"))
