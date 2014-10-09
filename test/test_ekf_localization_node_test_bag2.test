@@ -8,7 +8,7 @@
 
     <node name="ekf_localization_node_test_bag_test2" pkg="robot_localization" type="ekf_localization_node" clear_params="true" >
 
-      <param name="frequency" value="30"/>  
+      <param name="frequency" value="50"/>
 
       <param name="sensor_timeout" value="0.1"/>  
 
@@ -58,10 +58,10 @@
     </node>
 
     <test test-name="ekf_localization_node_test_bag2_t" pkg="robot_localization" type="ekf_localization_node-test-bag2" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="0.9541"/>
-      <param name="final_y" value="3.2812"/>
-      <param name="final_z" value="0.7355"/>
-      <param name="tolerance" value="0.10"/>
+      <param name="final_x" value="0.9508"/>
+      <param name="final_y" value="3.2924"/>
+      <param name="final_z" value="0.7356"/>
+      <param name="tolerance" value="0.15"/>
     </test>
 
 </launch>

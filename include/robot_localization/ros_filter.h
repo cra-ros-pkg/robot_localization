@@ -63,21 +63,30 @@ typedef boost::shared_ptr< tf::MessageFilter<sensor_msgs::Imu> > imuMFPtr;
 // Handy methods for debug output
 std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec)
 {
-  os << "(" << std::setprecision(20) << vec.getX() << " " <<
-        vec.getY() << " " << vec.getZ() << ")\n";
+  os << "(" << std::setprecision(20) << vec.getX() << " " << vec.getY() << " " << vec.getZ() << ")\n";
 
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
 {
-  tf::Matrix3x3 orientation(trans.getRotation());
-
   double roll, pitch, yaw;
-  orientation.getRPY(roll, pitch, yaw);
+  tf::Matrix3x3 orTmp(trans.getRotation());
+  orTmp.getRPY(roll, pitch, yaw);
 
   os << "Origin: " << trans.getOrigin() <<
         "Rotation (RPY): (" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const tf::Quaternion &quat)
+{
+  double roll, pitch, yaw;
+  tf::Matrix3x3 orTmp(quat);
+  orTmp.getRPY(roll, pitch, yaw);
+
+  os << "(" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
 
   return os;
 }
@@ -1878,7 +1887,9 @@ namespace RobotLocalization
 
             if(filter_.getDebug())
             {
-              debugStream_ << "After removing acceleration due to gravity, acceleration is " << accTmp << "\n";
+              debugStream_ << "Orientation is " << curAttitude;
+              debugStream_ << "Acceleration due to gravity is " << rotNorm;
+              debugStream_ << "After removing acceleration due to gravity, acceleration is " << accTmp;
             }
           }
 
