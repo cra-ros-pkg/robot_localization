@@ -20,6 +20,11 @@
            as the minimum frequency with which the filter will generate output. -->
       <param name="sensor_timeout" value="0.1"/>  
 
+      <!-- If this is set to true, no 3D information will be used in your state estimate. Use this if you
+           are operating in a planar environment and want to ignore the effect of small variations in the
+           ground plane that might otherwise be detected by, for example, an IMU. -->
+      <param name="two_d_mode" value="false"/>
+
       <!-- REP-105 (http://www.ros.org/reps/rep-0105.html) specifies three principal coordinate frames: map, 
            odom, and base_link. base_link is the coordinate frame that is affixed to the robot. The robot's 
            position in the odom frame will drift over time, but is accurate in the short term and should be 
