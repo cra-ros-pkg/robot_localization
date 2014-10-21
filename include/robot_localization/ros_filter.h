@@ -265,6 +265,9 @@ namespace RobotLocalization
         nhLocal_.param("sensor_timeout", sensorTimeout, 1.0 / frequency_);
         filter_.setSensorTimeout(sensorTimeout);
 
+        // Determine if we're in 2D mode
+        nhLocal_.param("two_d_mode", twoDMode_, false);
+
         // Debugging writes to file
         if (filter_.getDebug())
         {
@@ -618,6 +621,41 @@ namespace RobotLocalization
 
           filter_.setProcessNoiseCovariance(processNoiseCovariance);
         }
+      }
+
+      //! @brief Method for zeroing out 3D variables within measurements
+      //! @param[out] measurement - The measurement whose 3D variables will be zeroed out
+      //! @param[out] measurementCovariance - The covariance of the measurement
+      //! @param[out] updateVector - The boolean update vector of the measurement
+      //!
+      //! If we're in 2D mode, then for every measurement from every sensor, we call this.
+      //! It sets the 3D variables to 0, gives those variables tiny variances, and sets
+      //! their updateVector values to 1.
+      //!
+      void forceTwoD(Eigen::VectorXd &measurement,
+                     Eigen::MatrixXd &measurementCovariance,
+                     std::vector<int> &updateVector)
+      {
+        measurement(StateMemberZ) = 0.0;
+        measurement(StateMemberRoll) = 0.0;
+        measurement(StateMemberPitch) = 0.0;
+        measurement(StateMemberVz) = 0.0;
+        measurement(StateMemberVroll) = 0.0;
+        measurement(StateMemberVpitch) = 0.0;
+
+        measurementCovariance(StateMemberZ, StateMemberZ) = 1e-6;
+        measurementCovariance(StateMemberRoll, StateMemberRoll) = 1e-6;
+        measurementCovariance(StateMemberPitch, StateMemberPitch) = 1e-6;
+        measurementCovariance(StateMemberVz, StateMemberVz) = 1e-6;
+        measurementCovariance(StateMemberVroll, StateMemberVroll) = 1e-6;
+        measurementCovariance(StateMemberVpitch, StateMemberVpitch) = 1e-6;
+
+        updateVector[StateMemberZ] = 1;
+        updateVector[StateMemberRoll] = 1;
+        updateVector[StateMemberPitch] = 1;
+        updateVector[StateMemberVz] = 1;
+        updateVector[StateMemberVroll] = 1;
+        updateVector[StateMemberVpitch] = 1;
       }
 
       //! @brief Callback method for receiving all IMU messages
@@ -1488,6 +1526,11 @@ namespace RobotLocalization
             measurement(StateMemberYaw) = yaw;
 
             measurementCovariance.block(0, 0, POSE_SIZE, POSE_SIZE) = covarianceRotated.block(0, 0, POSE_SIZE, POSE_SIZE);
+
+            if(twoDMode_)
+            {
+              forceTwoD(measurement, measurementCovariance, updateVector);
+            }
           }
         }
         else if(filter_.getDebug())
@@ -1649,6 +1692,11 @@ namespace RobotLocalization
 
           // Copy the covariances
           measurementCovariance.block(POSITION_V_OFFSET, POSITION_V_OFFSET, TWIST_SIZE, TWIST_SIZE) = covarianceRotated.block(0, 0, TWIST_SIZE, TWIST_SIZE);
+
+          if(twoDMode_)
+          {
+            forceTwoD(measurement, measurementCovariance, updateVector);
+          }
         }
         else if(filter_.getDebug())
         {
@@ -1674,6 +1722,14 @@ namespace RobotLocalization
         tf::Matrix3x3 orTmp(quat);
         orTmp.getRPY(roll, pitch, yaw);
       }
+
+      //! @brief Whether or not we're in 2D mode
+      //!
+      //! If this is true, the filter binds all 3D variables (Z,
+      //! roll, pitch, and their respective velocities) to 0 for
+      //! every measurement.
+      //!
+      bool twoDMode_;
 
       //! @brief The frequency of the run loop
       //!
