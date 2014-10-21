@@ -19,6 +19,8 @@
 
       <param name="sensor_timeout" value="0.1"/>  
 
+      <param name="two_d_mode" value="false"/>
+
       <param name="odom0" value="/wheel_odometry"/>
       <param name="odom1" value="/stereo_odometer/odometry"/>
       <param name="imu0" value="/xsens/imu_data"/>
