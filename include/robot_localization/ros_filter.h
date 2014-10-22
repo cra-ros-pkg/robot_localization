@@ -190,7 +190,7 @@ namespace RobotLocalization
         bool debug;
         nhLocal_.param("debug", debug, false);
 
-        nhLocal_.param("remove_acceleration_normal_force", removeAccNormalForce_, true);
+        nhLocal_.param("remove_gravitational_acceleration", removeGravitationalAcc_, true);
 
         if (debug)
         {
@@ -1873,7 +1873,7 @@ namespace RobotLocalization
         {
           // We don't know if the user has already handled the removal
           // of normal forces, so we use a parameter
-          if(removeAccNormalForce_)
+          if(removeGravitationalAcc_)
           {
             tf::Vector3 normAcc(0, 0, 9.80665);
             tf::Quaternion curAttitude;
@@ -1962,7 +1962,7 @@ namespace RobotLocalization
       //! @brief If including acceleration, whether or not we remove
       //! acceleration due to gravity
       //!
-      bool removeAccNormalForce_;
+      bool removeGravitationalAcc_;
 
       //! @brief The frequency of the run loop
       //!

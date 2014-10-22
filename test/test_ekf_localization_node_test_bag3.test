@@ -36,6 +36,8 @@
       <param name="odom0_differential" value="false"/>
       <param name="imu0_differential" value="true"/>
 
+      <param name="remove_gravitational_acceleration" value="true"/>
+
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ekf_navigation.txt"/>
 
@@ -58,10 +60,10 @@
     </node>
 
     <test test-name="ekf_localization_node_test_bag3_t" pkg="robot_localization" type="ekf_localization_node-test-bag3" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.0698"/>
-      <param name="final_y" value="0.5245"/>
-      <param name="final_z" value="-0.4286"/>
-      <param name="tolerance" value="1.25"/>
+      <param name="final_x" value="0.2166"/>
+      <param name="final_y" value="-0.5613"/>
+      <param name="final_z" value="-0.1473"/>
+      <param name="tolerance" value="0.7946"/>
     </test>
 
 </launch>

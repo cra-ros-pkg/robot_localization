@@ -59,6 +59,8 @@
       <param name="imu0_differential" value="true"/>
       <param name="imu1_differential" value="true"/>
 
+      <param name="remove_gravitational_acceleration" value="true"/>
+
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ekf_navigation.txt"/>
 
@@ -81,10 +83,10 @@
     </node>
 
     <test test-name="ekf_localization_node_test_bag1_t" pkg="robot_localization" type="ekf_localization_node-test-bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.8230"/>
-      <param name="final_y" value="0.6571"/>
-      <param name="final_z" value="-3.8045"/>
-      <param name="tolerance" value="0.3805"/>
+      <param name="final_x" value="-0.8508"/>
+      <param name="final_y" value="0.6743"/>
+      <param name="final_z" value="-3.7926"/>
+      <param name="tolerance" value="0.3777"/>
     </test>
 
 </launch>
