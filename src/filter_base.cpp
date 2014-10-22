@@ -100,6 +100,9 @@ namespace RobotLocalization
     processNoiseCovariance_(StateMemberVroll, StateMemberVroll) = 0.002;
     processNoiseCovariance_(StateMemberVpitch, StateMemberVpitch) = 0.002;
     processNoiseCovariance_(StateMemberVyaw, StateMemberVyaw) = 0.004;
+    processNoiseCovariance_(StateMemberAx, StateMemberAx) = 0.01;
+    processNoiseCovariance_(StateMemberAy, StateMemberAy) = 0.01;
+    processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.01;
   }
 
   FilterBase::~FilterBase()
