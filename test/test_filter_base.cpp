@@ -1,4 +1,5 @@
 #include "robot_localization/filter_base.h"
+#include "robot_localization/filter_common.h"
 
 #include <Eigen/Dense>
 
@@ -94,7 +95,9 @@ TEST (FilterBaseTest, MeasurementStruct)
 
 TEST (FilterBaseTest, DerivedFilterGetSet)
 {
-    RobotLocalization::FilterDerived derived;
+    using namespace RobotLocalization;
+
+    FilterDerived derived;
 
     // With the ostream argument as NULL,
     // the debug flag will remain false.
@@ -121,10 +124,10 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
     derived.setLastMeasurementTime(lastMeasTime);
     EXPECT_EQ(derived.getLastMeasurementTime(), lastMeasTime);
 
-    Eigen::MatrixXd pnCovar(12, 12);
-    for(size_t i = 0; i < 12; ++i)
+    Eigen::MatrixXd pnCovar(STATE_SIZE, STATE_SIZE);
+    for(size_t i = 0; i < STATE_SIZE; ++i)
     {
-      for(size_t j = 0; j < 12; ++j)
+      for(size_t j = 0; j < STATE_SIZE; ++j)
       {
         pnCovar(i, j) = static_cast<double>(i * j);
       }
@@ -132,7 +135,7 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
     derived.setProcessNoiseCovariance(pnCovar);
     EXPECT_EQ(derived.getProcessNoiseCovariance(), pnCovar);
 
-    Eigen::VectorXd state(12);
+    Eigen::VectorXd state(STATE_SIZE);
     derived.setState(state);
     EXPECT_EQ(derived.getState(), state);
 
@@ -141,24 +144,26 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
 
 TEST (FilterBaseTest, DerivedFilterEnqueue)
 {
-    RobotLocalization::FilterDerived derived;
+    using namespace RobotLocalization;
 
-    Eigen::VectorXd measurement(12);
-    for(size_t i = 0; i < 12; ++i)
+    FilterDerived derived;
+
+    Eigen::VectorXd measurement(STATE_SIZE);
+    for(size_t i = 0; i < STATE_SIZE; ++i)
     {
       measurement[i] = static_cast<double>(i);
     }
 
-    Eigen::MatrixXd measurementCovariance(12, 12);
-    for(size_t i = 0; i < 12; ++i)
+    Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
+    for(size_t i = 0; i < STATE_SIZE; ++i)
     {
-      for(size_t j = 0; j < 12; ++j)
+      for(size_t j = 0; j < STATE_SIZE; ++j)
       {
         measurementCovariance(i, j) = static_cast<double>(i * j);
       }
     }
 
-    std::vector<int> updateVector(12, true);
+    std::vector<int> updateVector(STATE_SIZE, true);
     updateVector[5] = false;
 
     // Ensure that measurements are being placed in the queue correctly
@@ -169,7 +174,7 @@ TEST (FilterBaseTest, DerivedFilterEnqueue)
                                 1000);
 
     std::priority_queue<RobotLocalization::Measurement, std::vector<RobotLocalization::Measurement>, RobotLocalization::Measurement> measQueue = derived.getMeasurementQueue();
-    RobotLocalization::Measurement meas = measQueue.top();
+    Measurement meas = measQueue.top();
     EXPECT_EQ(meas.measurement_, measurement);
     EXPECT_EQ(meas.covariance_, measurementCovariance);
     EXPECT_EQ(meas.updateVector_, updateVector);
@@ -190,20 +195,22 @@ TEST (FilterBaseTest, DerivedFilterEnqueue)
 
 TEST (FilterBaseTest, MeasurementProcessing)
 {
-  RobotLocalization::FilterDerived2 derived;
+  using namespace RobotLocalization;
 
-  RobotLocalization::Measurement meas;
+  FilterDerived2 derived;
 
-  Eigen::VectorXd measurement(12);
-  for(size_t i = 0; i < 12; ++i)
+  Measurement meas;
+
+  Eigen::VectorXd measurement(STATE_SIZE);
+  for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurement[i] = 0.1 * static_cast<double>(i);
   }
 
-  Eigen::MatrixXd measurementCovariance(12, 12);
-  for(size_t i = 0; i < 12; ++i)
+  Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
+  for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    for(size_t j = 0; j < 12; ++j)
+    for(size_t j = 0; j < STATE_SIZE; ++j)
     {
       measurementCovariance(i, j) = 0.1 * static_cast<double>(i * j);
     }
@@ -212,7 +219,7 @@ TEST (FilterBaseTest, MeasurementProcessing)
   meas.topicName_ = "odomTest";
   meas.measurement_ = measurement;
   meas.covariance_ = measurementCovariance;
-  meas.updateVector_.resize(12, true);
+  meas.updateVector_.resize(STATE_SIZE, true);
   meas.time_ = 1000;
 
   // The filter shouldn't be initializedyet
@@ -232,9 +239,9 @@ TEST (FilterBaseTest, MeasurementProcessing)
   EXPECT_EQ(derived.getLastMeasurementTime(), meas.time_);
 
   // Initialize a new one
-  RobotLocalization::FilterDerived2 derived2;
+  FilterDerived2 derived2;
 
-  std::vector<int> updateVector(12, 1);
+  std::vector<int> updateVector(STATE_SIZE, 1);
 
   // Enqueue two measurements and integrate them
   derived2.enqueueMeasurement("odom0",
