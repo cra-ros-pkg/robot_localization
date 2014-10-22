@@ -84,23 +84,23 @@ target_link_libraries(ekf-test ekf filter_base ${catkin_LIBRARIES})
 
 if (CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
-  add_rostest_gtest(ekf_localization_node-test-interfaces 
-                    test/test_ekf_localization_node_interfaces.test 
+  add_rostest_gtest(ekf_localization_node-test-interfaces
+                    test/test_ekf_localization_node_interfaces.test
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(ekf_localization_node-test-interfaces ${catkin_LIBRARIES})
 
   add_rostest_gtest(ekf_localization_node-test-bag1
-                    test/test_ekf_localization_node_test_bag1.test 
+                    test/test_ekf_localization_node_test_bag1.test
                     test/test_ekf_localization_node_bag_pose_tester.cpp)
   target_link_libraries(ekf_localization_node-test-bag1 ${catkin_LIBRARIES})
 
   add_rostest_gtest(ekf_localization_node-test-bag2
-                    test/test_ekf_localization_node_test_bag2.test 
+                    test/test_ekf_localization_node_test_bag2.test
                     test/test_ekf_localization_node_bag_pose_tester.cpp)
   target_link_libraries(ekf_localization_node-test-bag2 ${catkin_LIBRARIES})
 
   add_rostest_gtest(ekf_localization_node-test-bag3
-                    test/test_ekf_localization_node_test_bag3.test 
+                    test/test_ekf_localization_node_test_bag3.test
                     test/test_ekf_localization_node_bag_pose_tester.cpp)
   target_link_libraries(ekf_localization_node-test-bag3 ${catkin_LIBRARIES})
 endif()
