@@ -1,24 +1,27 @@
 #include "robot_localization/ekf.h"
+#include "robot_localization/filter_common.h"
 
 #include <gtest/gtest.h>
 
+using namespace RobotLocalization;
+
 TEST (EkfTest, Measurements)
 {
-  RobotLocalization::Ekf ekf;
+  Ekf ekf;
 
-  Eigen::VectorXd measurement(12);
-  for(size_t i = 0; i < 12; ++i)
+  Eigen::VectorXd measurement(STATE_SIZE);
+  for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurement[i] = i;
   }
 
-  Eigen::MatrixXd measurementCovariance(12, 12);
-  for(size_t i = 0; i < 12; ++i)
+  Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
+  for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurementCovariance(i, i) = 0.5;
   }
 
-  std::vector<int> updateVector(12, true);
+  std::vector<int> updateVector(STATE_SIZE, true);
 
   // Ensure that measurements are being placed in the queue correctly
   ekf.enqueueMeasurement("odom0",
@@ -44,7 +47,7 @@ TEST (EkfTest, Measurements)
   measurement2 *= 2.0;
 
   ekf.enqueueMeasurement("odom0",
-                         measurement,
+                         measurement2,
                          measurementCovariance,
                          updateVector,
                          1002);
@@ -52,22 +55,25 @@ TEST (EkfTest, Measurements)
   ekf.integrateMeasurements(1003,
                             postUpdateStates);
 
-  measurement[0] = -2.8975;
-  measurement[1] = -0.42068;
-  measurement[2] = 5.5751;
-  measurement[3] = 2.7582;
-  measurement[4] = -2.0858;
-  measurement[5] = -2.0859;
-  measurement[6] = 3.7596;
-  measurement[7] = 4.3694;
-  measurement[8] = 5.1206;
-  measurement[9] = 9.2408;
-  measurement[10] = 9.8034;
-  measurement[11] = 11.796;
+  measurement[0] = -4.5198;
+  measurement[1] = 0.14655;
+  measurement[2] = 9.4514;
+  measurement[3] = -2.8688;
+  measurement[4] = -2.2672;
+  measurement[5] = 0.12861;
+  measurement[6] = 15.481;
+  measurement[7] = 17.517;
+  measurement[8] = 19.587;
+  measurement[9] = 9.8351;
+  measurement[10] = 12.73;
+  measurement[11] = 13.87;
+  measurement[12] = 10.978;
+  measurement[13] = 12.008;
+  measurement[14] = 13.126;
 
   measurement = measurement.eval() - ekf.getState();
 
-  for(size_t i = 0; i < 12; ++i)
+  for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
   }
