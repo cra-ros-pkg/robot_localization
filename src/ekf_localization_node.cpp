@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ros_filter_types.h>
+#include "robot_localization/ros_filter_types.h"
 
 #include <ros/ros.h>
 

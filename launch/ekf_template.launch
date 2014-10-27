@@ -36,7 +36,8 @@
                   * If your system does not have a map_frame, just remove it, and make sure "world_frame" is set
                     to the value of odom_frame.
              2. If you are fusing continuous position data such as wheel encoder odometry, visual odometry, or IMU data,
-                set "world_frame" to your odom_frame value. This is the default behavior for ekf_localization_node.
+                set "world_frame" to your odom_frame value. This is the default behavior for robot_localization's state 
+                estimation nodes.
              3. If you are fusing global absolute position data that is subject to discrete jumps (e.g., GPS or position
                 updates from landmark observations) then:
                   3a. Set your "world_frame" to your map_frame value
@@ -87,13 +88,13 @@
                                      false, false, false, 
                                      true,  true,  true]</rosparam>
 
-      <!-- The best practice for including new sensors in ekf_localization_node is to pass in velocity measurements and let
-           ekf_localization_node integrate them. However, this isn't always feasible, and so ekf_localization (and the other
-           nodes in robot_localization) support fusion of absolute measurements. If you have more than one sensor providing
-           absolute measurements, however, you will quickly run into problems, as the sensors will inevitably diverge from
-           one another, causing the filter to jump back and forth rapidly. To combat this situation, you can set the sensor's
-           differential parameter to true. This will carry out differential integration of the sensor data, i.e., it will 
-           repeatedly integrate the difference between a given measurement and the previous measurement from that sensor. 
+      <!-- The best practice for including new sensors in robot_localization's state estimation nodes is to pass in velocity 
+           measurements and let the nodoes integrate them. However, this isn't always feasible, and so the state estimation
+           nodes support fusion of absolute measurements. If you have more than one sensor providing absolute measurements, 
+           however, you will quickly run into problems, as the sensors will inevitably diverge from one another, causing the 
+           filter to jump back and forth rapidly. To combat this situation, you can set the sensor's differential parameter 
+           to true. This will carry out differential integration of the sensor data, i.e., it will repeatedly integrate the 
+           difference between a given measurement and the previous measurement from that sensor. 
            NOTE: this only applies to sensors that provide absolute measurements, so Twist messages are not supported. -->
       <param name="odom0_differential" value="true"/>
       <param name="odom1_differential" value="false"/>

@@ -33,8 +33,8 @@
 #ifndef RobotLocalization_RosFilter_h
 #define RobotLocalization_RosFilter_h
 
-#include <robot_localization/filter_common.h>
-#include <robot_localization/filter_base.h>
+#include "robot_localization/filter_common.h"
+#include "robot_localization/filter_base.h"
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -102,8 +102,9 @@ namespace RobotLocalization
       //! The RosFilter constructor makes sure that anyone using
       //! this template is doing so with the correct object type
       //!
-      RosFilter() :
-          nhLocal_("~")
+      RosFilter(std::vector<double> args = std::vector<double>()) :
+          nhLocal_("~"),
+          filter_(args)
       {
         // Ensure that anyone who uses this template uses the right
         // kind of template parameter type

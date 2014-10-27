@@ -31,7 +31,7 @@
  */
 
 #include "robot_localization/filter_common.h"
-#include "robot_localization/ekf.h"
+#include "robot_localization/ukf.h"
 
 #include <XmlRpcException.h>
 
@@ -39,22 +39,50 @@
 #include <iomanip>
 #include <limits>
 
+#include <Eigen/Cholesky>
+
+#include <iostream>
+
+#include <assert.h>
+
 namespace RobotLocalization
 {
-  Ekf::Ekf(std::vector<double>) :
+  Ukf::Ukf(std::vector<double> args) :
     FilterBase() // Must initialize filter base!
   {
+    assert(args.size() == 3);
+
+    double alpha = args[0];
+    double kappa = args[1];
+    double beta = args[2];
+
+    size_t sigmaCount = (STATE_SIZE << 1) + 1;
+    sigmaPoints_.resize(sigmaCount, Eigen::VectorXd(STATE_SIZE));
+
+    // Prepare constants
+    lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
+
+    stateWeights_.resize(sigmaCount);
+    covarWeights_.resize(sigmaCount);
+
+    stateWeights_[0] = lambda_ / (STATE_SIZE + lambda_);
+    covarWeights_[0] = stateWeights_[0] + (1 - (alpha * alpha) + beta);
+    for(size_t i = 1; i < sigmaCount; ++i)
+    {
+      stateWeights_[i] =  1 / (2 * (STATE_SIZE + lambda_));
+      covarWeights_[i] = stateWeights_[i];
+    }
   }
 
-  Ekf::~Ekf()
+  Ukf::~Ukf()
   {
   }
 
-  void Ekf::correct(const Measurement &measurement)
+  void Ukf::correct(const Measurement &measurement)
   {
     if (getDebug())
     {
-      *debugStream_ << "---------------------- Ekf::correct ----------------------\n";
+      *debugStream_ << "---------------------- Ukf::correct ----------------------\n";
       *debugStream_ << "State is:\n";
       *debugStream_ << state_ << "\n";
       *debugStream_ << "Measurement is:\n";
@@ -106,9 +134,15 @@ namespace RobotLocalization
     Eigen::VectorXd stateSubset(updateSize);                             // x (in most literature)
     Eigen::VectorXd measurementSubset(updateSize);                       // z
     Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize); // R
-    Eigen::MatrixXd stateToMeasurementSubset(updateSize, state_.rows()); // H
-    Eigen::MatrixXd kalmanGainSubset(state_.rows(), updateSize);         // K
+    Eigen::MatrixXd stateToMeasurementSubset(updateSize, STATE_SIZE);    // H
+    Eigen::MatrixXd kalmanGainSubset(STATE_SIZE, updateSize);            // K
     Eigen::VectorXd innovationSubset(updateSize);                        // z - Hx
+    Eigen::VectorXd predictedMeasurement(updateSize);
+    Eigen::VectorXd sigmaDiff(updateSize);
+    Eigen::MatrixXd predictedMeasCovar(updateSize, updateSize);
+    Eigen::MatrixXd crossCovar(STATE_SIZE, updateSize);
+
+    std::vector<Eigen::VectorXd> sigmaPointMeasurements(sigmaPoints_.size(), Eigen::VectorXd(updateSize));
 
     stateSubset.setZero();
     measurementSubset.setZero();
@@ -116,6 +150,9 @@ namespace RobotLocalization
     stateToMeasurementSubset.setZero();
     kalmanGainSubset.setZero();
     innovationSubset.setZero();
+    predictedMeasurement.setZero();
+    predictedMeasCovar.setZero();
+    crossCovar.setZero();
 
     // Now build the sub-matrices from the full-sized matrices
     for (size_t i = 0; i < updateSize; ++i)
@@ -178,12 +215,27 @@ namespace RobotLocalization
       *debugStream_ << stateToMeasurementSubset << "\n";
     }
 
-    // (1) Compute the Kalman gain: K = (PH') / (HPH' + R)
-    Eigen::MatrixXd pht = estimateErrorCovariance_ * stateToMeasurementSubset.transpose();
-    kalmanGainSubset = pht * (stateToMeasurementSubset * pht + measurementCovarianceSubset).inverse();
+    // (1) Generate sigma points, use them to generate a predicted measurement
+    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
+      predictedMeasurement += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
+    }
 
-    // (2) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
-    innovationSubset = (measurementSubset - stateSubset);
+    // (2) Use the sigma point measurements and predicted measurement to compute a predicted
+    // measurement covariance matrix P_zz and a state/measurement cross-covariance matrix P_xz.
+    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
+      predictedMeasCovar += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      crossCovar += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
+    }
+
+    // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
+    kalmanGainSubset = crossCovar * (predictedMeasCovar + measurementCovarianceSubset).inverse();
+
+    // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
+    innovationSubset = (measurementSubset - predictedMeasurement);
 
     // Wrap angles in the innovation
     for (size_t i = 0; i < updateSize; ++i)
@@ -203,12 +255,9 @@ namespace RobotLocalization
 
     state_ = state_ + kalmanGainSubset * innovationSubset;
 
-    // (3) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
-    Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
-    estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_.eval() * gainResidual.transpose() +
-        kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
+    // (5) Compute the new estimate error covariance P = P - (K * P_zz * K')
+    estimateErrorCovariance_ = estimateErrorCovariance_.eval() - (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
 
-    // Handle wrapping of angles
     wrapStateAngles();
 
     if (getDebug())
@@ -221,15 +270,15 @@ namespace RobotLocalization
       *debugStream_ << state_ << "\n";
       *debugStream_ << "Corrected full estimate error covariance is:\n";
       *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n---------------------- /Ekf::correct ----------------------\n";
+      *debugStream_ << "\n---------------------- /Ukf::correct ----------------------\n";
     }
   }
 
-  void Ekf::predict(const double delta)
+  void Ukf::predict(const double delta)
   {
     if (getDebug())
     {
-      *debugStream_ << "---------------------- Ekf::predict ----------------------\n";
+      *debugStream_ << "---------------------- Ukf::predict ----------------------\n";
       *debugStream_ << "delta is " << delta << "\n";
       *debugStream_ << "state is " << state_ << "\n";
     }
@@ -278,107 +327,53 @@ namespace RobotLocalization
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
 
-    // Prepare the transfer function Jacobian. This function is analytically derived from the
-    // transfer function.
-    double xCoeff = 0.0;
-    double yCoeff = 0.0;
-    double zCoeff = 0.0;
-    double oneHalfATSquared = 0.5 * delta * delta;
+    // (1) Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
+    weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
 
-    yCoeff = cy * sp * cr + sy * sr;
-    zCoeff = -cy * sp * sr + sy * cr;
-    double dF0dr = (yCoeff * yVel + zCoeff * zVel) * delta +
-                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    // (2) Compute sigma points
 
-    xCoeff = -cy * sp;
-    yCoeff = cy * cp * sr;
-    zCoeff = cy * cp * cr;
-    double dF0dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    // First sigma point is the current state
+    sigmaPoints_[0] = transferFunction_ * state_;
 
-    xCoeff = -sy * cp;
-    yCoeff = -sy * sp * sr - cy * cr;
-    zCoeff = -sy * sp * cr + cy * sr;
-    double dF0dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    yCoeff = sy * sp * cr - cy * sr;
-    zCoeff = -sy * sp * sr - cy * cr;
-    double dF1dr = (yCoeff * yVel + zCoeff * zVel) * delta +
-                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    xCoeff = -sy * sp;
-    yCoeff = sy * cp * sr;
-    zCoeff = sy * cp * cr;
-    double dF1dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    xCoeff = cy * cp;
-    yCoeff = cy * sp * sr - sy * cr;
-    zCoeff = cy * sp * cr + sy * sr;
-    double dF1dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    yCoeff = cp * cr;
-    zCoeff = -cp * sr;
-    double dF2dr = (yCoeff * yVel + zCoeff * zVel) * delta +
-                   (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    xCoeff = -cp;
-    yCoeff = -sp * sr;
-    zCoeff = -sp * cr;
-    double dF2dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-
-    // Much of the transfer function Jacobian is identical to the transfer function
-    transferFunctionJacobian_ = transferFunction_;
-    transferFunctionJacobian_(StateMemberX, StateMemberRoll) = dF0dr;
-    transferFunctionJacobian_(StateMemberX, StateMemberPitch) = dF0dp;
-    transferFunctionJacobian_(StateMemberX, StateMemberYaw) = dF0dy;
-    transferFunctionJacobian_(StateMemberY, StateMemberRoll) = dF1dr;
-    transferFunctionJacobian_(StateMemberY, StateMemberPitch) = dF1dp;
-    transferFunctionJacobian_(StateMemberY, StateMemberYaw) = dF1dy;
-    transferFunctionJacobian_(StateMemberZ, StateMemberRoll) = dF2dr;
-    transferFunctionJacobian_(StateMemberZ, StateMemberPitch) = dF2dp;
-
-    if (getDebug())
+    // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
+    // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
+    for(size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
     {
-      *debugStream_ << "Transfer function is:\n";
-      *debugStream_ << transferFunction_ << "\n";
-      *debugStream_ << "Transfer function Jacobian is:\n";
-      *debugStream_ << transferFunctionJacobian_ << "\n";
-      *debugStream_ << "Process noise covariance is " << "\n";
-      *debugStream_ << processNoiseCovariance_ << "\n";
-      *debugStream_ << "Current state is:\n";
-      *debugStream_ << state_ << "\n";
+      sigmaPoints_[sigmaInd + 1] = transferFunction_ * (state_ + weightedCovarSqrt_.col(sigmaInd));
+      sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = transferFunction_ * (state_ - weightedCovarSqrt_.col(sigmaInd));
     }
 
-    // (1) Project the state forward: x = Ax (really, x = f(x))
-    state_ = transferFunction_ * state_;
+    // (3) Sum the weighted sigma points to generate a new state prediction
+    state_.setZero();
+    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      state_ += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
+    }
 
-    // Handle wrapping
+    // (4) Now us the sigma points and the predicted state to compute a predicted covariance
+    estimateErrorCovariance_.setZero();
+    Eigen::VectorXd sigmaDiff(STATE_SIZE);
+    for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
+      estimateErrorCovariance_ += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+    }
+
+    // (5) Not strictly in the theoretical UKF formulation, but necessary here
+    // to ensure that we actually incorporate the processNoiseCovariance_
+    estimateErrorCovariance_ += delta * processNoiseCovariance_;
+
+    // Keep the angles bounded
     wrapStateAngles();
 
     if (getDebug())
     {
       *debugStream_ << "Predicted state is:\n";
       *debugStream_ << state_ << "\n";
-      *debugStream_ << "Current estimate error covariance is:\n";
-      *debugStream_ << estimateErrorCovariance_ << "\n";
-    }
-
-    // (2) Project the error forward: P = J * P * J' + Q
-    estimateErrorCovariance_ = (transferFunctionJacobian_ * estimateErrorCovariance_ * transferFunctionJacobian_.transpose())
-      + (processNoiseCovariance_ * delta);
-
-    if (getDebug())
-    {
       *debugStream_ << "Predicted estimate error covariance is:\n";
       *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n--------------------- /Ekf::predict ----------------------\n";
+      *debugStream_ << "\n--------------------- /Ukf::predict ----------------------\n";
     }
   }
 
 }
-
-
