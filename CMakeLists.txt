@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
-find_package(catkin REQUIRED COMPONENTS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules gps_common)
+find_package(catkin REQUIRED COMPONENTS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules gps_common message_generation)
 find_package(Eigen REQUIRED)
 
 add_definitions(-DEIGEN_NO_DEBUG)
@@ -15,10 +15,21 @@ add_definitions(-DEIGEN_NO_DEBUG)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+add_service_files(
+  FILES
+  SetPose.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  std_msgs
+)
+
 catkin_package(
   INCLUDE_DIRS include ${gps_common_INCLUDE_DIRS}
   LIBRARIES filter_base ekf
-  CATKIN_DEPENDS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules
+  CATKIN_DEPENDS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules message_runtime
   DEPENDS Eigen
 )
 
@@ -29,6 +40,7 @@ catkin_package(
 include_directories(include ${catkin_INCLUDE_DIRS} ${gps_common_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
 add_library(filter_base src/filter_base.cpp)
+add_dependencies(filter_base robot_localization_gencpp)
 add_library(ekf src/ekf.cpp)
 add_library(ukf src/ukf.cpp)
 add_library(navsat_transform src/navsat_transform.cpp)

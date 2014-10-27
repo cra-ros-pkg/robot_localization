@@ -35,6 +35,7 @@
 
 #include "robot_localization/filter_common.h"
 #include "robot_localization/filter_base.h"
+#include "robot_localization/SetPose.h"
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -293,6 +294,9 @@ namespace RobotLocalization
 
         // Create a subscriber for manually setting/resetting pose
         setPoseSub_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("set_pose", 1, &RosFilter<Filter>::setPoseCallback, this);
+
+        // Create a service for manually setting/resetting pose
+        setPoseSrv_ = nh_.advertiseService("set_pose", &RosFilter<Filter>::setPoseSrvCallback, this);
 
         // Init the last last measurement time so we don't get a huge initial delta
         filter_.setLastMeasurementTime(ros::Time::now().toSec());
@@ -906,6 +910,21 @@ namespace RobotLocalization
           debugStream_ << "\n----- /RosFilter::poseCallback (" << topicName << ") ------\n";
         }
       }
+
+      //! @brief Service callback for manually setting/resetting the internal pose estimate
+      //! @param[in] request - custom service request with pose information
+      //! @param[out] response - N/A
+      //! @return boolean true if successful, false if not
+      bool setPoseSrvCallback(robot_localization::SetPose::Request& request, 
+          robot_localization::SetPose::Response& response)
+      {
+        geometry_msgs::PoseWithCovarianceStamped::Ptr msg;
+        msg = boost::make_shared<geometry_msgs::PoseWithCovarianceStamped>(request.pose);
+        setPoseCallback(msg);
+        return true;
+      }
+
+
 
       //! @brief Callback method for manually setting/resetting the internal pose estimate
       //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -2113,6 +2132,12 @@ namespace RobotLocalization
       //! @brief Subscribes to the set_pose topic (usually published from rviz) - a geometry_msgs/PoseWithCovarianceStamped
       //!
       ros::Subscriber setPoseSub_;
+
+
+      //! @brief Service that allows another node to change the current state and recieve a confirmation- a geometry_msgs/PoseWithCovarianceStamped
+      //!
+      ros::ServiceServer setPoseSrv_;
+
 
       //! @brief Node handle
       //!
