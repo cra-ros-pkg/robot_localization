@@ -67,8 +67,10 @@ namespace RobotLocalization
 
     stateWeights_[0] = lambda_ / (STATE_SIZE + lambda_);
     covarWeights_[0] = stateWeights_[0] + (1 - (alpha * alpha) + beta);
+    sigmaPoints_[0].setZero();
     for(size_t i = 1; i < sigmaCount; ++i)
     {
+      sigmaPoints_[i].setZero();
       stateWeights_[i] =  1 / (2 * (STATE_SIZE + lambda_));
       covarWeights_[i] = stateWeights_[i];
     }
@@ -262,6 +264,10 @@ namespace RobotLocalization
 
     if (getDebug())
     {
+      *debugStream_ << "Predicated measurement covariance is:\n";
+      *debugStream_ << predictedMeasCovar << "\n";
+      *debugStream_ << "Cross covariance is:\n";
+      *debugStream_ << crossCovar << "\n";
       *debugStream_ << "Kalman gain subset is:\n";
       *debugStream_ << kalmanGainSubset << "\n";
       *debugStream_ << "Innovation:\n";
