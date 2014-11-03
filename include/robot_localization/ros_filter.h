@@ -915,7 +915,7 @@ namespace RobotLocalization
       //! @param[in] request - custom service request with pose information
       //! @param[out] response - N/A
       //! @return boolean true if successful, false if not
-      bool setPoseSrvCallback(robot_localization::SetPose::Request& request, 
+      bool setPoseSrvCallback(robot_localization::SetPose::Request& request,
           robot_localization::SetPose::Response& response)
       {
         geometry_msgs::PoseWithCovarianceStamped::Ptr msg;
@@ -1207,20 +1207,20 @@ namespace RobotLocalization
                 tfListener_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0), odomBaseLinkTrans);
 
                 // We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually
-                // transform data from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, 
+                // transform data from baseLinkFrameId_->mapFrameId_. We then used lookupTransform,
                 // whose first two arguments are target frame and source frame, to get a transform
-                // from baseLinkFrameId_->odomFrameId_ (see http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms). 
-                // However, this transform would actually transform data from 
-                // odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the 
-                // mapFrameId_ frame. First, we multiply it by the inverse of the 
-                // mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to 
+                // from baseLinkFrameId_->odomFrameId_ (see http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms).
+                // However, this transform would actually transform data from
+                // odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
+                // mapFrameId_ frame. First, we multiply it by the inverse of the
+                // mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
                 // baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
                 // transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
                 // inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
-                // Long story short: lookupTransform returns the inverse of what you send when you 
+                // Long story short: lookupTransform returns the inverse of what you send when you
                 // broadcast transforms, so be careful.
                 //
-                mapOdomTrans.setData(odomBaseLinkTrans.inverse() * worldBaseLinkTrans.inverse());
+                mapOdomTrans.setData(worldBaseLinkTrans * odomBaseLinkTrans);
                 tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
                 mapOdomTransMsg.header.stamp = filteredPosition.header.stamp;
                 mapOdomTransMsg.header.frame_id = mapFrameId_;
@@ -1519,7 +1519,7 @@ namespace RobotLocalization
 
         if(canTransform)
         {
-          // Apply the target frame transformation to the pose object 
+          // Apply the target frame transformation to the pose object
           poseTmp.mult(targetFrameTrans, poseTmp);
 
           // Now apply it to the masks, positive first
