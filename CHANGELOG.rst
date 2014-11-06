@@ -3,7 +3,7 @@ Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 2.1.6 (2014-11-06)
------------
+------------------
 * Added unscented Kalman filter (UKF) localization node
 * Fixed map->odom tf calculation
 * Acceleration data from IMUs is now used in computing the state estimate
