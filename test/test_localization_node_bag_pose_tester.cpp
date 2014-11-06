@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
 
-  ros::init(argc, argv, "ekf_navigation_node-bag-pose-tester");
+  ros::init(argc, argv, "localization_node-bag-pose-tester");
   ros::Time::init();
 
   // Give ekf_localization_node time to initialize
