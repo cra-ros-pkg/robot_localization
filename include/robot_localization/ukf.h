@@ -42,7 +42,7 @@
 
 namespace RobotLocalization
 {
-  //! @brief Extended Kalman filter class
+  //! @brief Unscented Kalman filter class
   //!
   //! Implementation of an unscenter Kalman filter (UKF). This
   //! class derives from FilterBase and overrides the predict()
