@@ -73,7 +73,7 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS filter_base ekf ekf_localization_node utm_transform_node navsat_transform_node
+install(TARGETS filter_base ekf ekf_localization_node ukf ukf_localization_node utm_transform_node navsat_transform navsat_transform_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

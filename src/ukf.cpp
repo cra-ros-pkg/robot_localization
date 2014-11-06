@@ -48,7 +48,8 @@
 namespace RobotLocalization
 {
   Ukf::Ukf(std::vector<double> args) :
-    FilterBase() // Must initialize filter base!
+    FilterBase(), // Must initialize filter base!
+    uncorrected_(true)
   {
     assert(args.size() == 3);
 
@@ -91,6 +92,28 @@ namespace RobotLocalization
       *debugStream_ << measurement.measurement_ << "\n";
       *debugStream_ << "Measurement covariance is:\n";
       *debugStream_ << measurement.covariance_ << "\n";
+    }
+
+    // In our implementation, it may be that after we call predict once, we call correct
+    // several times in succession (multiple measurements with different time stamps). In
+    // that event, the sigma points need to be updated to reflect the current state.
+    if(!uncorrected_)
+    {
+      // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
+      weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
+
+      // Compute sigma points
+
+      // First sigma point is the current state
+      sigmaPoints_[0] = state_;
+
+      // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
+      // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
+      for(size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+      {
+        sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
+        sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
+      }
     }
 
     // We don't want to update everything, so we need to build matrices that only update
@@ -262,6 +285,9 @@ namespace RobotLocalization
 
     wrapStateAngles();
 
+    // Mark that we need to re-compute sigma points for successive corrections
+    uncorrected_ = false;
+
     if (getDebug())
     {
       *debugStream_ << "Predicated measurement covariance is:\n";
@@ -336,7 +362,8 @@ namespace RobotLocalization
     // (1) Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
     weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
 
-    // (2) Compute sigma points
+    // (2) Compute sigma points *and* pass them through the transfer function to save
+    // the extra loop
 
     // First sigma point is the current state
     sigmaPoints_[0] = transferFunction_ * state_;
@@ -371,6 +398,9 @@ namespace RobotLocalization
 
     // Keep the angles bounded
     wrapStateAngles();
+
+    // Mark that we can keep these sigma points
+    uncorrected_ = true;
 
     if (getDebug())
     {

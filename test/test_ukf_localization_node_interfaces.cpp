@@ -34,13 +34,13 @@ void resetFilter()
     pose.header.seq++;
     ros::spinOnce();
 
-    poseChanged = (filtered_.pose.pose.position.x == pose.pose.pose.position.x) &&
-                  (filtered_.pose.pose.position.y == pose.pose.pose.position.y) &&
-                  (filtered_.pose.pose.position.z == pose.pose.pose.position.z) &&
-                  (filtered_.pose.pose.orientation.x == pose.pose.pose.orientation.x) &&
-                  (filtered_.pose.pose.orientation.y == pose.pose.pose.orientation.y) &&
-                  (filtered_.pose.pose.orientation.z == pose.pose.pose.orientation.z) &&
-                  (filtered_.pose.pose.orientation.w == pose.pose.pose.orientation.w);
+    poseChanged = (::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.position.y - pose.pose.pose.position.y) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.orientation.x - pose.pose.pose.orientation.x) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.orientation.y - pose.pose.pose.orientation.y) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.orientation.z - pose.pose.pose.orientation.z) < 1e-6) &&
+                  (::fabs(filtered_.pose.pose.orientation.w - pose.pose.pose.orientation.w) < 1e-6);
 
     ros::Duration(0.1).sleep();
   }
@@ -91,13 +91,12 @@ TEST (InterfacesTest, OdomPoseBasicIO)
 
 
   // Now check the values from the callback
-  EXPECT_EQ(filtered_.pose.pose.position.x, odom.pose.pose.position.x);
-  EXPECT_EQ(filtered_.pose.pose.position.y, 0); // Configuration for this variable for this sensor is false
-  EXPECT_EQ(filtered_.pose.pose.position.z, odom.pose.pose.position.z);
-
-  EXPECT_LT(filtered_.pose.covariance[0], 0.5);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x), 1e-6);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 1e-6); // Configuration for this variable for this sensor is false
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z), 1e-6);
+  EXPECT_LT(filtered_.pose.covariance[0], 1.0);
   EXPECT_LT(filtered_.pose.covariance[7], 0.25); // Configuration for this variable for this sensor is false
-  EXPECT_LT(filtered_.pose.covariance[14], 0.5);
+  EXPECT_LT(filtered_.pose.covariance[14], 1.0);
 
   resetFilter();
 }
@@ -163,7 +162,6 @@ TEST (InterfacesTest, OdomTwistBasicIO)
     odom.header.seq++;
   }
 
-  //std::cerr << filtered_;
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 0.2);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 0.5), 0.2);
 
@@ -320,13 +318,13 @@ TEST (InterfacesTest, OdomDifferentialIO)
     odomPub.publish(odom);
     ros::spinOnce();
 
-    EXPECT_EQ(filtered_.pose.pose.position.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.w, 1);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.z), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.x), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.y), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.z), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.w - 1), 1e-6);
 
     ros::Duration(0.1).sleep();
 
@@ -355,13 +353,13 @@ TEST (InterfacesTest, OdomDifferentialIO)
 
     ros::spinOnce();
 
-    poseChanged = (::fabs(filtered_.pose.pose.position.x - 1) < 1e-4) &&
-                  (::fabs(filtered_.pose.pose.position.y - 2) < 1e-4) &&
-                  (::fabs(filtered_.pose.pose.position.z + 3) < 1e-4) &&
-                  (filtered_.pose.pose.orientation.x == 0) &&
-                  (filtered_.pose.pose.orientation.y == 0) &&
-                  (filtered_.pose.pose.orientation.z == 0) &&
-                  (filtered_.pose.pose.orientation.w == 1);
+    poseChanged = (::fabs(filtered_.pose.pose.position.x - 1) < 1e-3) &&
+                  (::fabs(filtered_.pose.pose.position.y - 2) < 1e-3) &&
+                  (::fabs(filtered_.pose.pose.position.z + 3) < 1e-3) &&
+                  (::fabs(filtered_.pose.pose.orientation.x) < 1e-5) &&
+                  (::fabs(filtered_.pose.pose.orientation.y) < 1e-5) &&
+                  (::fabs(filtered_.pose.pose.orientation.z) < 1e-5) &&
+                  (::fabs(filtered_.pose.pose.orientation.w - 1) < 1e-5);
 
     ros::Duration(0.1).sleep();
     odom.header.seq++;
@@ -408,13 +406,13 @@ TEST (InterfacesTest, PoseDifferentialIO)
     pose.header.seq++;
     ros::spinOnce();
 
-    EXPECT_EQ(filtered_.pose.pose.position.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.w, 1);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.z), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.x), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.y), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.z), 1e-6);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.w - 1), 1e-6);
 
     ros::Duration(0.1).sleep();
   }

@@ -89,10 +89,10 @@
     </node>
 
     <test test-name="ukf_localization_node_test_bag1_t" pkg="robot_localization" type="ukf_localization_node-test-bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.8508"/>
-      <param name="final_y" value="0.6743"/>
-      <param name="final_z" value="-3.7926"/>
-      <param name="tolerance" value="0.3777"/>
+      <param name="final_x" value="-0.9271"/>
+      <param name="final_y" value="0.6951"/>
+      <param name="final_z" value="-3.7758"/>
+      <param name="tolerance" value="0.6155"/>
     </test>
 
 </launch>

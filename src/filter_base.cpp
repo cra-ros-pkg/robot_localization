@@ -258,7 +258,7 @@ namespace RobotLocalization
 
       if (debug_)
       {
-        *debugStream_ << "Filter is already initialized. Carrying out EKF loop...\n";
+        *debugStream_ << "Filter is already initialized. Carrying out predict/correct loop...\n";
         *debugStream_ << "Measurement time is " << std::setprecision(20) << measurement.time_ <<
                          ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n";
       }

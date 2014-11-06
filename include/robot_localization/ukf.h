@@ -113,6 +113,11 @@ namespace RobotLocalization
       //!
       double lambda_;
 
+      //! @brief Used to determine if we need to re-compute the sigma
+      //! points when carrying out multiple corrections
+      //!
+      bool uncorrected_;
+
   };
 }
 
