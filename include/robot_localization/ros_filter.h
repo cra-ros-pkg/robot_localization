@@ -33,9 +33,9 @@
 #ifndef RobotLocalization_RosFilter_h
 #define RobotLocalization_RosFilter_h
 
-#include <robot_localization/filter_common.h>
-#include <robot_localization/filter_base.h>
-#include <robot_localization/SetPose.h>
+#include "robot_localization/filter_common.h"
+#include "robot_localization/filter_base.h"
+#include "robot_localization/SetPose.h"
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -47,7 +47,6 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
-
 
 #include <XmlRpcException.h>
 
@@ -104,8 +103,9 @@ namespace RobotLocalization
       //! The RosFilter constructor makes sure that anyone using
       //! this template is doing so with the correct object type
       //!
-      RosFilter() :
-          nhLocal_("~")
+      RosFilter(std::vector<double> args = std::vector<double>()) :
+          nhLocal_("~"),
+          filter_(args)
       {
         // Ensure that anyone who uses this template uses the right
         // kind of template parameter type
@@ -873,12 +873,12 @@ namespace RobotLocalization
 
               if (filter_.getDebug())
               {
-                debugStream_ << "Enqueued new measurement for " << topicName + "_pose\n";
+                debugStream_ << "Enqueued new measurement for " << topicName << "_pose\n";
               }
             }
             else if(filter_.getDebug())
             {
-              debugStream_ << "Did *not* enqueue measurement for " << topicName + "_pose\n";
+              debugStream_ << "Did *not* enqueue measurement for " << topicName << "_pose\n";
             }
           }
           else
@@ -1030,8 +1030,12 @@ namespace RobotLocalization
 
               if (filter_.getDebug())
               {
-                debugStream_ << "Enqueued new measurement for " << topicName + "_twist\n";
+                debugStream_ << "Enqueued new measurement for " << topicName << "_twist\n";
               }
+            }
+            else if(filter_.getDebug())
+            {
+              debugStream_ << "Did *not* enqueue measurement for " << topicName << "_twist\n";
             }
           }
           else
@@ -1116,8 +1120,12 @@ namespace RobotLocalization
 
               if (filter_.getDebug())
               {
-                debugStream_ << "Enqueued new measurement for " << topicName + "_acceleration\n";
+                debugStream_ << "Enqueued new measurement for " << topicName << "_acceleration\n";
               }
+            }
+            else if(filter_.getDebug())
+            {
+              debugStream_ << "Did *not* enqueue measurement for " << topicName << "_acceleration\n";
             }
           }
           else
@@ -1206,19 +1214,21 @@ namespace RobotLocalization
 
                 tfListener_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0), odomBaseLinkTrans);
 
-                // We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually
-                // transform data from baseLinkFrameId_->mapFrameId_. We then used lookupTransform,
-                // whose first two arguments are target frame and source frame, to get a transform
-                // from baseLinkFrameId_->odomFrameId_ (see http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms).
-                // However, this transform would actually transform data from
-                // odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
+                // First, see these two references:
+                // http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
+                // http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
+                // We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually transform
+                // a given pose from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, whose
+                // first two arguments are target frame and source frame, to get a transform from
+                // baseLinkFrameId_->odomFrameId_. However, this transform would actually transform data
+                // from odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
                 // mapFrameId_ frame. First, we multiply it by the inverse of the
                 // mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
                 // baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
                 // transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
                 // inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
-                // Long story short: lookupTransform returns the inverse of what you send when you
-                // broadcast transforms, so be careful.
+                // However, if we want other users to be able to do the same, we need to broadcast
+                // the inverse of that entire transform.
                 //
                 mapOdomTrans.setData(worldBaseLinkTrans * odomBaseLinkTrans);
                 tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
@@ -1268,7 +1278,10 @@ namespace RobotLocalization
             previousStates_[mapIt->first] = trans;
           }
 
-          loop_rate.sleep();
+          if(!loop_rate.sleep())
+          {
+            ROS_WARN_STREAM("Failed to meet update rate! Try decreasing the rate, limiting sensor output frequency, or limiting the number of sensors.");
+          }
         }
       }
 
@@ -1514,7 +1527,6 @@ namespace RobotLocalization
 
         // 4a. Get the target frame transformation
         tf::StampedTransform targetFrameTrans;
-
         bool canTransform = lookupTransformSafe(targetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
 
         if(canTransform)
@@ -1779,10 +1791,8 @@ namespace RobotLocalization
         // 4. We need to transform this into the target frame (probably base_link)
         // It's unlikely that we'll get a velocity measurement in another frame, but
         // we have to handle the situation.
-        bool canTransform = true;
         tf::StampedTransform targetFrameTrans;
-
-        lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
+        bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
 
         if(canTransform)
         {

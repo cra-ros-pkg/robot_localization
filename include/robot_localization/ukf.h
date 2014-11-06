@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RobotLocalization_Ekf_h
-#define RobotLocalization_Ekf_h
+#ifndef RobotLocalization_Ukf_h
+#define RobotLocalization_Ukf_h
 
 #include "robot_localization/filter_base.h"
 
@@ -42,28 +42,35 @@
 
 namespace RobotLocalization
 {
-  //! @brief Extended Kalman filter class
+  //! @brief Unscented Kalman filter class
   //!
-  //! Implementation of an extended Kalman filter (EKF). This
+  //! Implementation of an unscenter Kalman filter (UKF). This
   //! class derives from FilterBase and overrides the predict()
   //! and correct() methods in keeping with the discrete time
-  //! EKF algorithm.
+  //! UKF algorithm. The algorithm was derived from the UKF
+  //! Wikipedia article at
+  //! (http://en.wikipedia.org/wiki/Kalman_filter#Unscented_Kalman_filter)
+  //! ...and this paper:
+  //! J. J. LaViola, Jr., “A comparison of unscented and extended Kalman
+  //! filtering for estimating quaternion motion,” in Proc. American Control
+  //! Conf., Denver, CO, June 4–6, 2003, pp. 2435–2440
+  //! Obtained here: http://www.cs.ucf.edu/~jjl/pubs/laviola_acc2003.pdf
   //!
-  class Ekf: public FilterBase
+  class Ukf: public FilterBase
   {
     public:
 
-      //! @brief Constructor for the Ekf class
+      //! @brief Constructor for the Ukf class
       //!
-      //! @param[in] args - Generic argument container (not used here, but
-      //! needed so that the ROS filters can pass arbitrary arguments to
-      //! templated filter types.
+      //! @param[in] args - Generic argument container. It is assumed
+      //! that args[0] constains the alpha parameter, args[1] contains
+      //! the kappa parameter, and args[2] contains the beta parameter.
       //!
-      Ekf(std::vector<double> args = std::vector<double>());
+      Ukf(std::vector<double> args);
 
-      //! @brief Destructor for the Ekf class
+      //! @brief Destructor for the Ukf class
       //!
-      ~Ekf();
+      ~Ukf();
 
     protected:
 
@@ -81,6 +88,35 @@ namespace RobotLocalization
       //! @param[in] delta - The time step over which to predict.
       //!
       void predict(const double delta);
+
+      //! @brief The UKF sigma points
+      //!
+      //! Used to sample possible next states during prediction.
+      //!
+      std::vector<Eigen::VectorXd> sigmaPoints_;
+
+      //! @brief This matrix is used to generate the sigmaPoints_
+      //!
+      Eigen::MatrixXd weightedCovarSqrt_;
+
+      //! @brief The weights associated with each sigma point when generating
+      //! a new state
+      //!
+      std::vector<double> stateWeights_;
+
+      //! @brief The weights associated with each sigma point when calculating
+      //! a predicted estimateErrorCovariance_
+      //!
+      std::vector<double> covarWeights_;
+
+      //! @brief Used in weight generation for the sigma points
+      //!
+      double lambda_;
+
+      //! @brief Used to determine if we need to re-compute the sigma
+      //! points when carrying out multiple corrections
+      //!
+      bool uncorrected_;
 
   };
 }
