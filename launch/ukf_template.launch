@@ -1,4 +1,4 @@
-<!-- Launch file for ekf_localization_node -->
+<!-- Launch file for ukf_localization_node -->
 
 <launch>
 
@@ -7,7 +7,7 @@
          roll, pitch, yaw, and the respective velocites for those quantities. Accelerations are not used (yet).
          Units for all measurements are assumed to be in meters and radians. By default, the node outputs an
          Odometry message with the topic name odometry/filtered. Use the remap tag to change this. -->
-    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization" clear_params="true">
+    <node pkg="robot_localization" type="ukf_localization_node" name="ukf_localization" clear_params="true">
 
       <!-- The frequency, in Hz, at which the filter will output a position estimate. Note that
            the filter will not begin computation until it receives at least one message from
@@ -16,7 +16,7 @@
       <param name="frequency" value="30"/>  
 
       <!-- The period, in seconds, after which we consider a sensor to have timed out. In this event, we
-           carry out a predict cycle on the EKF without correcting it. This parameter can be thought of
+           carry out a predict cycle on the UKF without correcting it. This parameter can be thought of
            as the minimum frequency with which the filter will generate output. -->
       <param name="sensor_timeout" value="0.1"/>  
 
@@ -108,7 +108,7 @@
       <!-- Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file
            specified by debug_out_file. I hope you like matrices! -->
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf_localization.txt"/>
+      <param name="debug_out_file"  value="debug_ukf_localization.txt"/>
 
       <!-- The process noise covariance matrix can be difficult to tune, and can vary for each application, so it
            is exposed as a configuration parameter. PLEASE NOTE that every value in this matrix *must* be specified
@@ -126,6 +126,18 @@
                                                   0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0,
                                                   0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0,
                                                   0.0, 0.0, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.004]</rosparam>
+
+      <!-- UKF-specific parameters. For more information, see the original UKF paper by Eric A. Wan and Rudolph van der Merwe, or
+           check out the Wikipedia page at http://en.wikipedia.org/wiki/Kalman_filter#Unscented_Kalman_filter -->
+
+      <!-- The alpha and kappa variables control the spread of the sigma points. Unless you are familiar with
+           UKFs, it's probably a good idea to leave these alone. -->
+      <param name="alpha" value="0.001"/> 
+      <param name="kappa" value="0"/> 
+
+      <!-- The beta variable relates to the distribution of the state vector. Again, it's probably best to leave
+           this alone if you're uncertain. -->
+      <param name="beta" value="2"/>
 
     </node>
 	 
