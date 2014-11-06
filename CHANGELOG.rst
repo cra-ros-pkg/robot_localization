@@ -2,6 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.1.6 (2014-11-06)
+------------------
+* Added unscented Kalman filter (UKF) localization node
+* Fixed map->odom tf calculation
+* Acceleration data from IMUs is now used in computing the state estimate
+* Added 2D mode
+
 1.1.5 (2014-10-07)
 ------------------
 * Changed initial estimate error covariance to be much smaller
