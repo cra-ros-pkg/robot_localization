@@ -107,8 +107,8 @@
       <param name="imu0_differential" value="false"/>
 
       <!-- If we're including accelerations in our state estimate, then we'll probably want to remove any acceleration that
-           is due to gravity. If you don't want to, then set this to false. -->
-      <param name="remove_gravitational_acceleration" value="true"/>
+           is due to gravity for each IMU. If you don't want to, then set this to false. -->
+      <param name="imu0_remove_gravitational_acceleration" value="true"/>
 
       <!-- Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file
            specified by debug_out_file. I hope you like matrices! -->

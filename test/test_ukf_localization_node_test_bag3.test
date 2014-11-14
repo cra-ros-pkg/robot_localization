@@ -38,7 +38,7 @@
       <param name="odom0_differential" value="false"/>
       <param name="imu0_differential" value="true"/>
 
-      <param name="remove_gravitational_acceleration" value="true"/>
+      <param name="imu0_remove_gravitational_acceleration" value="true"/>
 
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ukf_navigation.txt"/>

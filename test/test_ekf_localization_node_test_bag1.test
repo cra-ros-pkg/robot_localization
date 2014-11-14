@@ -61,7 +61,8 @@
       <param name="imu0_differential" value="true"/>
       <param name="imu1_differential" value="true"/>
 
-      <param name="remove_gravitational_acceleration" value="true"/>
+      <param name="imu0_remove_gravitational_acceleration" value="true"/>
+      <param name="imu1_remove_gravitational_acceleration" value="true"/>
 
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ekf_navigation.txt"/>
