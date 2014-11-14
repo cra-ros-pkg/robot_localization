@@ -192,8 +192,6 @@ namespace RobotLocalization
         bool debug;
         nhLocal_.param("debug", debug, false);
 
-        nhLocal_.param("remove_gravitational_acceleration", removeGravitationalAcc_, true);
-
         if (debug)
         {
           std::string debugOutFile;
@@ -573,6 +571,17 @@ namespace RobotLocalization
             std::string imuTopic;
             nhLocal_.getParam(imuTopicName, imuTopic);
 
+            bool removeGravAcc = false;
+            if(!nhLocal_.getParam(imuTopicName + "_remove_gravitational_acceleration", removeGravAcc))
+            {
+              // Handle deprecated method
+              nhLocal_.param("remove_gravitational_acceleration", removeGravAcc, false);
+
+              ROS_WARN_STREAM("Detected deprecated parameter remove_gravitational_acceleration. Please specify this " <<
+                              "parameter for each IMU, e.g., " << imuTopicName + "_remove_gravitational_acceleration");
+            }
+            removeGravitationalAcc_[imuTopicName + "_acceleration"] = removeGravAcc;
+
             // Now pull in its boolean update vector configuration and differential
             // update configuration (as this contains pose information)
             std::vector<int> updateVec = loadUpdateConfig(imuTopicName);
@@ -602,7 +611,6 @@ namespace RobotLocalization
             twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
             twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTopicName, baseLinkFrameId_, twistUpdateVec));
             twistMessageFilters_[imuTopicName + "_twist"] = twistFilPtr;
-
 
             imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, 1));
             accelFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::accelerationCallback, this, _1, imuTopicName, baseLinkFrameId_, accelUpdateVec));
@@ -1954,7 +1962,7 @@ namespace RobotLocalization
         {
           // We don't know if the user has already handled the removal
           // of normal forces, so we use a parameter
-          if(removeGravitationalAcc_)
+          if(removeGravitationalAcc_[topicName])
           {
             tf::Vector3 normAcc(0, 0, 9.80665);
             tf::Quaternion curAttitude;
@@ -2048,10 +2056,10 @@ namespace RobotLocalization
       //!
       bool twoDMode_;
 
-      //! @brief If including acceleration, whether or not we remove
-      //! acceleration due to gravity
+      //! @brief If including acceleration for each IMU input,
+      //! whether or not we remove acceleration due to gravity
       //!
-      bool removeGravitationalAcc_;
+      std::map<std::string, bool> removeGravitationalAcc_;
 
       //! @brief The frequency of the run loop
       //!
