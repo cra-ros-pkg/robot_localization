@@ -1,4 +1,4 @@
-<!-- Launch file for gps_transform_node -->
+<!-- Launch file for navsat_transform_node -->
 
 <!-- 
      This node requires three inputs:
