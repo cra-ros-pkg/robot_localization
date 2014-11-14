@@ -60,6 +60,10 @@ namespace RobotLocalization
 
     private:
 
+      //! @brief Whether or not we broadcast the UTM transform
+      //!
+      bool broadcastUtmTransform_;
+
       //! @brief Parameter that specifies the magnetic decliation for the robot's
       //! environment.
       //!
@@ -100,6 +104,13 @@ namespace RobotLocalization
       //!
       bool gpsUpdated_;
 
+      //! @brief Timestamp of the latest good GPS message
+      //!
+      //! We assign this value to the timestamp of the odometry
+      //! message that we output
+      //!
+      ros::Time gpsUpdateTime_;
+
       //! @brief IMU's roll offset
       //!
       //! On level ground, your IMU should read 0 roll. If it
@@ -133,11 +144,11 @@ namespace RobotLocalization
       //!
       //! This will just match whatever your odometry message has
       //!
-      std::string odomFrameId_;
+      std::string worldFrameId_;
 
       //! @brief Latest odometry data
       //!
-      tf::Pose latestOdomPose_;
+      tf::Pose latestWorldPose_;
 
       //! @brief Latest GPS data, stored as UTM coords
       //!
@@ -153,7 +164,7 @@ namespace RobotLocalization
 
       //! @brief Holds the UTM->odom transform
       //!
-      tf::Transform utmOdomTransform_;
+      tf::Transform utmWorldTransform_;
 
       //! @brief Callback for the odom data
       //!
