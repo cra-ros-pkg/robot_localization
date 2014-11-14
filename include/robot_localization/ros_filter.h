@@ -687,6 +687,7 @@ namespace RobotLocalization
         measurement(StateMemberVz) = 0.0;
         measurement(StateMemberVroll) = 0.0;
         measurement(StateMemberVpitch) = 0.0;
+        measurement(StateMemberAz) = 0.0;
 
         measurementCovariance(StateMemberZ, StateMemberZ) = 1e-6;
         measurementCovariance(StateMemberRoll, StateMemberRoll) = 1e-6;
@@ -694,6 +695,7 @@ namespace RobotLocalization
         measurementCovariance(StateMemberVz, StateMemberVz) = 1e-6;
         measurementCovariance(StateMemberVroll, StateMemberVroll) = 1e-6;
         measurementCovariance(StateMemberVpitch, StateMemberVpitch) = 1e-6;
+        measurementCovariance(StateMemberAz, StateMemberAz) = 1e-6;
 
         updateVector[StateMemberZ] = 1;
         updateVector[StateMemberRoll] = 1;
@@ -701,6 +703,7 @@ namespace RobotLocalization
         updateVector[StateMemberVz] = 1;
         updateVector[StateMemberVroll] = 1;
         updateVector[StateMemberVpitch] = 1;
+        updateVector[StateMemberAz] = 1;
       }
 
       //! @brief Callback method for receiving all IMU messages
