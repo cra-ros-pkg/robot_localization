@@ -1,4 +1,4 @@
-<!-- Launch file for gps_transform_node -->
+<!-- Launch file for navsat_transform_node -->
 
 <!-- 
      This node requires three inputs:
@@ -33,9 +33,12 @@
            enter the offset here (desired_value = offset + sensor_raw_value). -->
       <param name="yaw_offset" value="0"/>
 
-      <!-- If this is true, the transform is continually updated so that anyone
-           using the transform can zero out the altitude values. -->
+      <!-- If this is true, the altitude is set to 0 in the output odometry message -->
       <param name="zero_altitude" value="false"/>
+
+      <!-- If this is true, the transform world_frame->utm transform is broadcast
+           for use by other nodes. -->
+      <param name="broadcast_utm_transform" value="false"/>
 
       <!-- Placeholders for input remapping. Set your topic names as the "to" values.
         <remap from="/imu/data" to="" />
