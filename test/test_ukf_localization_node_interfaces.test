@@ -8,6 +8,8 @@
 
       <param name="sensor_timeout" value="0.1"/>  
 
+      <param name="two_d_mode" value="false"/>
+
       <param name="odom0" value="/odom_input0"/>
       <param name="odom1" value="/odom_input1"/>
       <param name="odom2" value="/odom_input2"/>
