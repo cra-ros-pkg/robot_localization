@@ -34,6 +34,7 @@
 #include "robot_localization/filter_common.h"
 
 #include <tf/tfMessage.h>
+#include <tf/transform_broadcaster.h>
 
 // This header is from the gps_common package
 // by Ken Tossell. We use it to convert the
@@ -48,12 +49,13 @@ namespace RobotLocalization
     rollOffset_(0),
     pitchOffset_(0),
     yawOffset_(0),
+    broadcastUtmTransform_(false),
     hasOdom_(false),
     hasGps_(false),
     hasImu_(false),
     transformGood_(false),
     gpsUpdated_(false),
-    odomFrameId_("odom")
+    worldFrameId_("odom")
  {
     latestUtmCovariance_.resize(POSE_SIZE, POSE_SIZE);
   }
@@ -65,8 +67,8 @@ namespace RobotLocalization
 
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
-    tf::poseMsgToTF(msg->pose.pose, latestOdomPose_);
-    odomFrameId_ = msg->header.frame_id;
+    tf::poseMsgToTF(msg->pose.pose, latestWorldPose_);
+    worldFrameId_ = msg->header.frame_id;
     hasOdom_ = true;
   }
 
@@ -84,7 +86,6 @@ namespace RobotLocalization
       std::string zone;
       gps_common::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, zone);
       latestUtmPose_.setOrigin(tf::Vector3(utmX, utmY, msg->altitude));
-
       latestUtmCovariance_.setZero();
 
       // Copy the measurement's covariance matrix so that we can rotate it later
@@ -96,6 +97,7 @@ namespace RobotLocalization
         }
       }
 
+      gpsUpdateTime_ = msg->header.stamp;
       gpsUpdated_ = true;
     }
   }
@@ -146,29 +148,29 @@ namespace RobotLocalization
       tf::Pose utmPoseWithOrientation;
       utmPoseWithOrientation.setOrigin(latestUtmPose_.getOrigin());
       utmPoseWithOrientation.setRotation(imuQuat);
-      utmOdomTransform_.mult(latestOdomPose_, utmPoseWithOrientation.inverse());
+      utmWorldTransform_.mult(latestWorldPose_, utmPoseWithOrientation.inverse());
 
       double roll = 0;
       double pitch = 0;
       double yaw = 0;
-      mat.setRotation(latestOdomPose_.getRotation());
+      mat.setRotation(latestWorldPose_.getRotation());
       mat.getRPY(roll, pitch, yaw);
 
-      ROS_INFO_STREAM("Latest odometry pose is: " << std::fixed <<
-                      "\nPosition: (" << latestOdomPose_.getOrigin().getX() << ", " <<
-                                         latestOdomPose_.getOrigin().getY() << ", " <<
-                                         latestOdomPose_.getOrigin().getZ() << ")" <<
+      ROS_INFO_STREAM("Latest world frame pose is: " << std::fixed <<
+                      "\nPosition: (" << latestWorldPose_.getOrigin().getX() << ", " <<
+                                         latestWorldPose_.getOrigin().getY() << ", " <<
+                                         latestWorldPose_.getOrigin().getZ() << ")" <<
                       "\nOrientation: (" << roll << ", " <<
                                             pitch << ", " <<
                                             yaw << ")");
 
-      mat.setRotation(utmOdomTransform_.getRotation());
+      mat.setRotation(utmWorldTransform_.getRotation());
       mat.getRPY(roll, pitch, yaw);
 
-      ROS_INFO_STREAM("UTM to odom transform is " << std::fixed <<
-                       "\nPosition: (" << utmOdomTransform_.getOrigin().getX() << ", " <<
-                                          utmOdomTransform_.getOrigin().getY() << ", " <<
-                                          utmOdomTransform_.getOrigin().getZ() << ")" <<
+      ROS_INFO_STREAM("World frame->utm transform is " << std::fixed <<
+                       "\nPosition: (" << utmWorldTransform_.getOrigin().getX() << ", " <<
+                                          utmWorldTransform_.getOrigin().getY() << ", " <<
+                                          utmWorldTransform_.getOrigin().getZ() << ")" <<
                        "\nOrientation: (" << roll << ", " <<
                                              pitch << ", " <<
                                              yaw << ")");
@@ -185,11 +187,11 @@ namespace RobotLocalization
     {
       tf::Pose transformedUtm;
 
-      transformedUtm.mult(utmOdomTransform_, latestUtmPose_);
+      transformedUtm.mult(utmWorldTransform_, latestUtmPose_);
       transformedUtm.setRotation(tf::Quaternion::getIdentity());
 
       // Rotate the covariance as well
-      tf::Matrix3x3 rot(utmOdomTransform_.getRotation());
+      tf::Matrix3x3 rot(utmWorldTransform_.getRotation());
       Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
       rot6d.setIdentity();
 
@@ -219,7 +221,8 @@ namespace RobotLocalization
         }
       }
 
-      gpsOdom.header.frame_id = odomFrameId_;
+      gpsOdom.header.frame_id = worldFrameId_;
+      gpsOdom.header.stamp = gpsUpdateTime_;
 
       // Mark this GPS as used
       gpsUpdated_ = false;
@@ -250,8 +253,13 @@ namespace RobotLocalization
     nhPriv.getParam("roll_offset", rollOffset_);
     nhPriv.getParam("pitch_offset", pitchOffset_);
     nhPriv.getParam("yaw_offset", yawOffset_);
+    nhPriv.param("broadcast_utm_transform", broadcastUtmTransform_, false);
     nhPriv.param("zero_altitude", zeroAltitude_, false);
     nhPriv.param("frequency", frequency, 10.0);
+
+    tf::TransformBroadcaster utmBroadcaster;
+    tf::StampedTransform utmTransformStamped;
+    utmTransformStamped.child_frame_id_ = "utm";
 
     ros::Rate rate(frequency);
     while(ros::ok())
@@ -275,6 +283,16 @@ namespace RobotLocalization
         if(prepareGpsOdometry(gpsOdom))
         {
           gpsOdomPub.publish(gpsOdom);
+        }
+
+        // Send out the UTM transform in case anyone
+        // else would like to use it.
+        if(transformGood_ && broadcastUtmTransform_)
+        {
+          utmTransformStamped.setData(utmWorldTransform_);
+          utmTransformStamped.frame_id_ = worldFrameId_;
+          utmTransformStamped.stamp_ = ros::Time::now();
+          utmBroadcaster.sendTransform(utmTransformStamped);
         }
       }
 
