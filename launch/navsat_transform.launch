@@ -14,7 +14,7 @@
 
 <launch>
 
-    <node pkg="robot_localization" type="gps_transform_node" name="gps_transform_node" respawn="true" output="screen">
+    <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true" output="screen">
 
       <!-- Enter the magnetic declination for your location. If you don't
            know it, see http://www.ngdc.noaa.gov/geomag-web/ (make sure to

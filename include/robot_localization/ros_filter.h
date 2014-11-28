@@ -1542,6 +1542,9 @@ namespace RobotLocalization
 
         if(canTransform)
         {
+          // Store the measurement as a transform for the next value (differential integration)
+          curMeasurement = poseTmp;
+
           // Apply the target frame transformation to the pose object
           poseTmp.mult(targetFrameTrans, poseTmp);
 
@@ -1571,9 +1574,6 @@ namespace RobotLocalization
 
           poseTmp.frame_id_ = targetFrame;
 
-          // Store the measurement as a transform for the next value (differential integration)
-          curMeasurement = poseTmp;
-
           // If we're in differential mode, we want to make sure
           // we have a previous measurement to work with.
           canTransform = (!differential || previousMeasurements_.count(topicName) > 0);
@@ -1590,6 +1590,7 @@ namespace RobotLocalization
               // we need to use the whole measurement to determine the delta
               // to the new measurement
               tf::Pose prevMeasurement = previousMeasurements_[topicName];
+              prevMeasurement.mult(targetFrameTrans, prevMeasurement);
 
               // Determine the pose delta by removing the previous measurement.
               poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
@@ -1599,7 +1600,7 @@ namespace RobotLocalization
                * this measurement and the previous one to our current state so
                * as to generate a new measurement, or we can create a velocity
                * and feed it to prepareTwist. Not sure which is better, so sticking
-              double dt = msg->header.stamp.toSec() - lastMeasurementTime.toSec();
+              double dt = msg->header.stamp.toSec() - lastMessageTimes_[get_regular_topic_name].toSec();
               double xVel = poseTmp.getOrigin().getX() / dt;
               double yVel = poseTmp.getOrigin().getY() / dt;
               double zVel = poseTmp.getOrigin().getZ() / dt;
