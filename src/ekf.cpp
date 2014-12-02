@@ -59,6 +59,8 @@ namespace RobotLocalization
       *debugStream_ << state_ << "\n";
       *debugStream_ << "Measurement is:\n";
       *debugStream_ << measurement.measurement_ << "\n";
+      *debugStream_ << "Measurement topic name is:\n";
+      *debugStream_ << measurement.topicName_ << "\n";
       *debugStream_ << "Measurement covariance is:\n";
       *debugStream_ << measurement.covariance_ << "\n";
     }
