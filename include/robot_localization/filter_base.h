@@ -94,25 +94,12 @@ namespace RobotLocalization
       //!
       ~FilterBase();
 
-      //! @brief Adds a measurement to the queue of measurements to be processed
+      //! @brief Carries out the correct step in the predict/update cycle. This method
+      //! must be implemented by subclasses.
       //!
-      //! @param[in] measurement - The measurement to enqueue
-      //! @param[in] measurementCovariance - The covariance of the measurement
-      //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
-      //! @param[in] time - The time of arrival (in seconds)
+      //! @param[in] measurement - The measurement to fuse with the state estimate
       //!
-      virtual void enqueueMeasurement(const std::string &topicName,
-                                      const Eigen::VectorXd &measurement,
-                                      const Eigen::MatrixXd &measurementCovariance,
-                                      const std::vector<int> &updateVector,
-                                      const double time);
-
-      //! @brief Processes all measurements in the measurement queue, in temporal order
-      //!
-      //! @param[in] currentTime - The time at which to carry out integration (the current time)
-      //!
-      virtual void integrateMeasurements(double currentTime,
-                                         std::map<std::string, Eigen::VectorXd> &postUpdateStates);
+      virtual void correct(const Measurement &measurement) = 0;
 
       //! @brief Gets the value of the debug_ variable.
       //!
@@ -140,13 +127,21 @@ namespace RobotLocalization
 
       //! @brief Gets the filter's last update time
       //!
-      //! @return The time at which we last updated the filter
+      //! @return The time at which we last updated the filter,
+      //! which can occur even when we don't receive measurements
       //!
       double getLastUpdateTime();
 
+      //! @brief Gets the filter's predicted state, i.e., the
+      //! state estimate before correct() is called.
+      //!
+      //! @return A constant reference to the predicted state
+      //!
+      const Eigen::VectorXd& getPredictedState();
+
       //! @brief Gets the filter's process noise covariance
       //!
-      //! @return A copy of the process noise covariance
+      //! @return A constant reference to the process noise covariance
       //!
       const Eigen::MatrixXd& getProcessNoiseCovariance();
 
@@ -158,9 +153,23 @@ namespace RobotLocalization
 
       //! @brief Gets the filter state
       //!
-      //! @return A copy of the current state
+      //! @return A constant reference to the current state
       //!
       const Eigen::VectorXd& getState();
+
+      //! @brief Carries out the predict step in the predict/update cycle.
+      //! Projects the state and error matrices forward using a model of
+      //! the vehicle's motion. This method must be implemented by subclasses.
+      //!
+      //! @param[in] delta - The time step over which to predict.
+      //!
+      virtual void predict(const double delta) = 0;
+
+      //! @brief Does some final preprocessing, carries out the predict/update cycle
+      //!
+      //! @param[in] measurement - The measurement object to fuse into the filter
+      //!
+      virtual void processMeasurement(const Measurement &measurement);
 
       //! @brief Sets the filter into debug mode
       //!
@@ -218,51 +227,94 @@ namespace RobotLocalization
       //!
       void setState(const Eigen::VectorXd &state);
 
-    protected:
-
-      //! @brief Carries out the correct step in the predict/update cycle. This method
-      //! must be implemented by subclasses.
-      //!
-      //! @param[in] measurement - The measurement to fuse with the state estimate
-      //!
-      virtual void correct(const Measurement &measurement) = 0;
-
-      //! @brief Carries out the predict step in the predict/update cycle.
-      //! Projects the state and error matrices forward using a model of
-      //! the vehicle's motion. This method must be implemented by subclasses.
-      //!
-      //! @param[in] delta - The time step over which to predict.
-      //!
-      virtual void predict(const double delta) = 0;
-
-      //! @brief Does some final preprocessing, carries out the predict/update cycle
-      //!
-      //! @param[in] measurement - The measurement object to fuse into the filter
-      //!
-      virtual void processMeasurement(const Measurement &measurement);
-
       //! @brief Ensures a given time delta is valid (helps with bag file playback issues)
       //!
       //! @param[in] delta - The time delta, in seconds, to validate
       //!
       void validateDelta(double &delta);
 
-      //! @brief Keeps the state angles to reasonable values
+    protected:
+
+      //! @brief Keeps the state Euler angles in the range [-pi, pi]
       //!
       virtual void wrapStateAngles();
 
-      //! @brief Whether or not we've received any measurements
+      //! @brief Covariance matrices can be incredibly unstable. We can
+      //! add a small value to it at each iteration to help maintain its
+      //! positive-definite property.
       //!
-      bool initialized_;
+      Eigen::MatrixXd covarianceEpsilon_;
 
       //! @brief Used for outputting debug messages
       //!
       std::ostream *debugStream_;
 
+      //! @brief This matrix stores the total error in our position
+      //! estimate (the state_ variable).
+      //!
+      Eigen::MatrixXd estimateErrorCovariance_;
+
+      //! @brief We need the identity for a few operations. Better to store it.
+      //!
+      Eigen::MatrixXd identity_;
+
+      //! @brief Whether or not we've received any measurements
+      //!
+      bool initialized_;
+
+      //! @brief Tracks the time the filter was last updated using a measurement.
+      //!
+      //! This value is used to monitor sensor readings with respect to the sensorTimeout_.
+      //! We also use it to compute the time delta values for our prediction step.
+      //!
+      double lastMeasurementTime_;
+
+      //! @brief Used for tracking the latest update time as determined
+      //! by this class.
+      //!
+      //! We assume that this class may receive measurements that occurred in the past,
+      //! as may happen with sensors distributed on different machines on a network. This
+      //! variable tracks when the filter was updated with respect to the executable in
+      //! which this class was instantiated. We use this to determine if we have experienced
+      //! a sensor timeout, i.e., if we haven't received any sensor data in a long time.
+      //!
+      double lastUpdateTime_;
+
+      //! @brief Commonly used circle constant
+      //!
+      const double pi_;
+
+      //! @brief Holds the last predicted state of the filter
+      //!
+      Eigen::VectorXd predictedState_;
+
+      //! @brief As we move through the world, we follow a predict/update
+      //! cycle. If one were to imagine a scenario where all we did was make
+      //! predictions without correcting, the error in our position estimate
+      //! would grow without bound. This error is stored in the
+      //! stateEstimateCovariance_ matrix. However, this matrix doesn't answer
+      //! the question of *how much* our error should grow for each time step.
+      //! That's where the processNoiseCovariance matrix comes in. When we
+      //! make a prediction using the transfer function, we add this matrix
+      //! (times deltaT) to the state estimate covariance matrix.
+      //!
+      Eigen::MatrixXd processNoiseCovariance_;
+
+      //! @brief The updates to the filter - both predict and correct - are driven
+      //! by measurements. If we get a gap in measurements for some reason, we want
+      //! the filter to continue estimating. When this gap occurs, as specified by
+      //! this timeout, we will continue to call predict() at the filter's frequency.
+      //!
+      double sensorTimeout_;
+
       //! @brief This is the robot's state vector, which is what we are trying to
       //! filter. The values in this vector are what get reported by the node.
       //!
       Eigen::VectorXd state_;
+
+      //! @brief True circle constant (http://www.tauday.com/tau-manifesto)
+      //!
+      const double tau_;
 
       //! @brief The Kalman filter transfer function
       //!
@@ -288,72 +340,6 @@ namespace RobotLocalization
       //! matrix with respect to each state variable.
       //!
       Eigen::MatrixXd transferFunctionJacobian_;
-
-      //! @brief This matrix stores the total error in our position
-      //! estimate (the state_ variable).
-      //!
-      Eigen::MatrixXd estimateErrorCovariance_;
-
-      //! @brief Covariance matrices can be incredibly unstable. We can
-      //! add a small value to it at each iteration to help maintain its
-      //! positive-definite property.
-      //!
-      Eigen::MatrixXd covarianceEpsilon_;
-
-      //! @brief As we move through the world, we follow a predict/update
-      //! cycle. If one were to imagine a scenario where all we did was make
-      //! predictions without correcting, the error in our position estimate
-      //! would grow without bound. This error is stored in the
-      //! stateEstimateCovariance_ matrix. However, this matrix doesn't answer
-      //! the question of *how much* our error should grow for each time step.
-      //! That's where the processNoiseCovariance matrix comes in. When we
-      //! make a prediction using the transfer function, we add this matrix
-      //! (times deltaT) to the state estimate covariance matrix.
-      //!
-      Eigen::MatrixXd processNoiseCovariance_;
-
-      //! @brief We need the identity for a few operations. Better to store it.
-      //!
-      Eigen::MatrixXd identity_;
-
-      //! @brief The updates to the filter - both predict and correct - are driven
-      //! by measurements. If we get a gap in measurements for some reason, we want
-      //! the filter to continue estimating. When this gap occurs, as specified by
-      //! this timeout, we will continue to call predict() at the filter's frequency.
-      //!
-      double sensorTimeout_;
-
-      //! @brief Commonly used constants
-      //!
-      const double pi_;
-
-      const double tau_;
-
-      //! @brief We process measurements based on their timestamp.
-      //!
-      //! In the events that messages come in asynchronously and with no
-      //! guarantee on order, we can use this to ensure that they are
-      //! processed in sequence.
-      //!
-      std::priority_queue<Measurement, std::vector<Measurement>, Measurement> measurementQueue_;
-
-      //! @brief Used for tracking the latest update time as determined
-      //! by this class.
-      //!
-      //! We assume that this class may receive measurements that occurred in the past,
-      //! as may happen with sensors distributed on different machines on a network. This
-      //! variable tracks when the filter was updated with respect to the executable in
-      //! which this class was instantiated. We use this to determine if we have experienced
-      //! a sensor timeout, i.e., if we haven't received any sensor data in a long time.
-      //!
-      double lastUpdateTime_;
-
-      //! @brief Tracks the time the filter was last updated using a measurement.
-      //!
-      //! This value is used to monitor sensor readings with respect to the sensorTimeout_.
-      //! We also use it to compute the time delta values for our prediction step.
-      //!
-      double lastMeasurementTime_;
 
     private:
 
