@@ -1,9 +1,20 @@
-#include "robot_localization/ukf.h"
-#include "robot_localization/filter_common.h"
-
+#include "robot_localization/ros_filter_types.h"
 #include <gtest/gtest.h>
 
 using namespace RobotLocalization;
+
+class RosUkfPassThrough : public RosUkf
+{
+  public:
+    RosUkfPassThrough(std::vector<double> args) : RosUkf(args)
+    {
+    }
+
+    Ukf getFilter()
+    {
+      return filter_;
+    }
+};
 
 TEST (UkfTest, Measurements)
 {
@@ -11,7 +22,8 @@ TEST (UkfTest, Measurements)
   args.push_back(0.001);
   args.push_back(0);
   args.push_back(2);
-  Ukf ukf(args);
+
+  RosUkfPassThrough ukf(args);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
@@ -28,19 +40,18 @@ TEST (UkfTest, Measurements)
   std::vector<int> updateVector(STATE_SIZE, true);
 
   // Ensure that measurements are being placed in the queue correctly
+  ros::Time time;
+  time.fromSec(1000);
   ukf.enqueueMeasurement("odom0",
                          measurement,
                          measurementCovariance,
                          updateVector,
-                         1000);
+                         time);
 
-  std::map<std::string, Eigen::VectorXd> postUpdateStates;
+  ukf.integrateMeasurements(1001);
 
-  ukf.integrateMeasurements(1001,
-                            postUpdateStates);
-
-  EXPECT_EQ(ukf.getState(), measurement);
-  EXPECT_EQ(ukf.getEstimateErrorCovariance(), measurementCovariance);
+  EXPECT_EQ(ukf.getFilter().getState(), measurement);
+  EXPECT_EQ(ukf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -50,14 +61,14 @@ TEST (UkfTest, Measurements)
 
   measurement2 *= 2.0;
 
+  time.fromSec(1002);
   ukf.enqueueMeasurement("odom0",
                          measurement2,
                          measurementCovariance,
                          updateVector,
-                         1002);
+                         time);
 
-  ukf.integrateMeasurements(1003,
-                            postUpdateStates);
+  ukf.integrateMeasurements(1003);
 
   measurement[0] = -5.5142;
   measurement[1] = -0.91698;
@@ -75,7 +86,7 @@ TEST (UkfTest, Measurements)
   measurement[13] = 11.5;
   measurement[14] = 12.5;
 
-  measurement = measurement.eval() - ukf.getState();
+  measurement = measurement.eval() - ukf.getFilter().getState();
 
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
@@ -85,6 +96,8 @@ TEST (UkfTest, Measurements)
 
 int main(int argc, char **argv)
 {
+  ros::init(argc, argv, "ukf");
+
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
