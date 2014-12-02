@@ -1,13 +1,25 @@
-#include "robot_localization/ekf.h"
-#include "robot_localization/filter_common.h"
+#include "robot_localization/ros_filter_types.h"
 
 #include <gtest/gtest.h>
 
 using namespace RobotLocalization;
 
+class RosEkfPassThrough : public RosEkf
+{
+  public:
+    RosEkfPassThrough()
+    {
+    }
+
+    Ekf getFilter()
+    {
+      return filter_;
+    }
+};
+
 TEST (EkfTest, Measurements)
 {
-  Ekf ekf;
+  RosEkfPassThrough ekf;
 
   Eigen::VectorXd measurement(STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
@@ -24,19 +36,20 @@ TEST (EkfTest, Measurements)
   std::vector<int> updateVector(STATE_SIZE, true);
 
   // Ensure that measurements are being placed in the queue correctly
+  ros::Time time;
+  time.fromSec(1000);
   ekf.enqueueMeasurement("odom0",
                          measurement,
                          measurementCovariance,
                          updateVector,
-                         1000);
+                         time);
 
   std::map<std::string, Eigen::VectorXd> postUpdateStates;
 
-  ekf.integrateMeasurements(1001,
-                            postUpdateStates);
+  ekf.integrateMeasurements(1001);
 
-  EXPECT_EQ(ekf.getState(), measurement);
-  EXPECT_EQ(ekf.getEstimateErrorCovariance(), measurementCovariance);
+  EXPECT_EQ(ekf.getFilter().getState(), measurement);
+  EXPECT_EQ(ekf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -46,14 +59,14 @@ TEST (EkfTest, Measurements)
 
   measurement2 *= 2.0;
 
+  time.fromSec(1002);
   ekf.enqueueMeasurement("odom0",
                          measurement2,
                          measurementCovariance,
                          updateVector,
-                         1002);
+                         time);
 
-  ekf.integrateMeasurements(1003,
-                            postUpdateStates);
+  ekf.integrateMeasurements(1003);
 
   measurement[0] = -4.5198;
   measurement[1] = 0.14655;
@@ -71,7 +84,7 @@ TEST (EkfTest, Measurements)
   measurement[13] = 12.008;
   measurement[14] = 13.126;
 
-  measurement = measurement.eval() - ekf.getState();
+  measurement = measurement.eval() - ekf.getFilter().getState();
 
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
@@ -81,6 +94,8 @@ TEST (EkfTest, Measurements)
 
 int main(int argc, char **argv)
 {
+  ros::init(argc, argv, "ekf");
+
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

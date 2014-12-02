@@ -65,8 +65,6 @@ namespace RobotLocalization
       //!
       ~Ekf();
 
-    protected:
-
       //! @brief Carries out the correct step in the predict/update cycle.
       //!
       //! @param[in] measurement - The measurement to fuse with our estimate
