@@ -72,8 +72,6 @@ namespace RobotLocalization
       //!
       ~Ukf();
 
-    protected:
-
       //! @brief Carries out the correct step in the predict/update cycle.
       //!
       //! @param[in] measurement - The measurement to fuse with our estimate
@@ -88,6 +86,8 @@ namespace RobotLocalization
       //! @param[in] delta - The time step over which to predict.
       //!
       void predict(const double delta);
+
+    protected:
 
       //! @brief The UKF sigma points
       //!
