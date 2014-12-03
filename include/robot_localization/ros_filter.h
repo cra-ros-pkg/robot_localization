@@ -615,12 +615,14 @@ namespace RobotLocalization
             poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, 1));
             std::string odomPoseTopicName = odomTopicName + "_pose";
             poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential));
+            poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
             poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
             differential_[odomPoseTopicName] = differential;
 
             twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
             std::string odomTwistTopicName = odomTopicName + "_twist";
             twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec));
+            twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
             twistMessageFilters_[odomTwistTopicName] = twistFilPtr;
 
             if(filter_.getDebug())
@@ -699,6 +701,7 @@ namespace RobotLocalization
             subPtr->subscribe(nh_, poseTopic, 1);
             poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, 1));
             filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential));
+            filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
             poseTopicSubs_.push_back(subPtr);
             poseMessageFilters_[poseTopicName] = filPtr;
             differential_[poseTopicName] = differential;
@@ -735,6 +738,7 @@ namespace RobotLocalization
             subPtr->subscribe(nh_, twistTopic, 1);
             twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, 1));
             filPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, twistUpdateVec));
+            filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
             twistTopicSubs_.push_back(subPtr);
             twistMessageFilters_[twistTopicName] = filPtr;
 
@@ -839,17 +843,20 @@ namespace RobotLocalization
             poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
             std::string imuPoseTopicName = imuTopicName + "_pose";
             poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential));
+            poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
             poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
             differential_[imuPoseTopicName] = differential;
 
             twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
             std::string imuTwistTopicName = imuTopicName + "_twist";
             twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec));
+            twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
             twistMessageFilters_[imuTwistTopicName] = twistFilPtr;
 
             imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, 1));
             std::string imuAccelTopicName = imuTopicName + "_acceleration";
             accelFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::accelerationCallback, this, _1, imuAccelTopicName, baseLinkFrameId_, accelUpdateVec));
+            accelFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformImuFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
             accelerationMessageFilters_[imuAccelTopicName] = accelFilPtr;
 
             if (filter_.getDebug())
@@ -1334,6 +1341,84 @@ namespace RobotLocalization
         setPoseCallback(msg);
 
         return true;
+      }
+
+      std::string tfFailureReasonString(const tf::FilterFailureReason reason)
+      {
+        std::string retVal;
+
+        switch(reason)
+        {
+          case tf::filter_failure_reasons::OutTheBack:
+            retVal = std::string("The timestamp on the message is more than the cache length earlier than the newest data in the transform cache");
+            break;
+          case tf::filter_failure_reasons::EmptyFrameID:
+            retVal = std::string("The message frame_id is empty");
+            break;
+          case tf::filter_failure_reasons::Unknown:
+          default:
+            retVal = std::string("No transform exists from source to target frame");
+            break;
+        }
+
+        return retVal;
+      }
+
+      //! @brief Callback method for reporting failed Twist message transforms
+      //! @param[in] msg - The ROS stamped twist with covariance message that failed
+      //! @param[in] reason - The reason for failure
+      //! @param[in] topicName - The name of the twist topic
+      //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
+      //!
+      void transformTwistFailureCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
+                                         const tf::FilterFailureReason reason,
+                                         const std::string &topicName,
+                                         const std::string &targetFrame)
+      {
+        if(filter_.getDebug())
+        {
+          debugStream_ << "WARNING: failed to transform from " << msg->header.frame_id <<
+                          "->" << targetFrame << " for " << topicName << " message received at " <<
+                          msg->header.stamp << ". " << tfFailureReasonString(reason) << ".\n";
+        }
+      }
+
+      //! @brief Callback method for reporting failed Pose message transforms
+      //! @param[in] msg - The ROS stamped pose with covariance message that failed
+      //! @param[in] reason - The reason for failure
+      //! @param[in] topicName - The name of the pose topic
+      //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
+      //!
+      void transformPoseFailureCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
+                                        const tf::FilterFailureReason reason,
+                                        const std::string &topicName,
+                                        const std::string &targetFrame)
+      {
+        if(filter_.getDebug())
+        {
+          debugStream_ << "WARNING: failed to transform from " << msg->header.frame_id <<
+                          "->" << targetFrame << " for " << topicName << " message received at " <<
+                          msg->header.stamp << ". " << tfFailureReasonString(reason) << ".\n";
+        }
+      }
+
+      //! @brief Callback method for reporting failed IMU message transforms
+      //! @param[in] msg - The ROS IMU message that failed
+      //! @param[in] reason - The reason for failure
+      //! @param[in] topicName - The name of the IMU topic
+      //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
+      //!
+      void transformImuFailureCallback(const sensor_msgs::Imu::ConstPtr &msg,
+                                       const tf::FilterFailureReason reason,
+                                       const std::string &topicName,
+                                       const std::string &targetFrame)
+      {
+        if(filter_.getDebug())
+        {
+          debugStream_ << "WARNING: failed to transform from " << msg->header.frame_id <<
+                          "->" << targetFrame << " for " << topicName << " message received at " <<
+                          msg->header.stamp << ". " << tfFailureReasonString(reason) << ".\n";
+        }
       }
 
       //! @brief Callback method for receiving all twist messages
