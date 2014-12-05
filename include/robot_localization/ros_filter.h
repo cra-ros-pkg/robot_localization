@@ -2246,7 +2246,7 @@ namespace RobotLocalization
       //! @param[in] stateTF - The state to convert
       //! @param[out] state - The converted state
       //!
-      void TFtoState(const Eigen::VectorXd &state, tf::Transform &stateTF)
+      void TFtoState(const tf::Transform &stateTF, Eigen::VectorXd &state)
       {
         state(StateMemberX) = stateTF.getOrigin().getX();
         state(StateMemberY) = stateTF.getOrigin().getY();
