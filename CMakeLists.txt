@@ -97,17 +97,21 @@ install(DIRECTORY launch/
 catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
 target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
 
-# EKF unit tests
-catkin_add_gtest(ekf-test test/test_ekf.cpp)
-target_link_libraries(ekf-test ekf filter_base ${catkin_LIBRARIES})
-
-# UKF Unit tests
-catkin_add_gtest(ukf-test test/test_ukf.cpp)
-target_link_libraries(ukf-test ukf filter_base ${catkin_LIBRARIES})
-
 if (CATKIN_ENABLE_TESTING)
 
   #### EKF TESTS #####
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(ekf-test
+                    test/test_ekf.test
+                    test/test_ekf.cpp)
+  target_link_libraries(ekf-test ekf filter_base ${catkin_LIBRARIES})
+
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(ukf-test
+                    test/test_ukf.test
+                    test/test_ukf.cpp)
+  target_link_libraries(ukf-test ukf filter_base ${catkin_LIBRARIES})
+
   find_package(rostest REQUIRED)
   add_rostest_gtest(ekf_localization_node-test-interfaces
                     test/test_ekf_localization_node_interfaces.test
