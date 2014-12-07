@@ -257,52 +257,57 @@ namespace RobotLocalization
     }
 
     // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
-    kalmanGainSubset = crossCovar * (predictedMeasCovar + measurementCovarianceSubset).inverse();
+    Eigen::MatrixXd invInnovCov  = (predictedMeasCovar + measurementCovarianceSubset).inverse();
+    kalmanGainSubset = crossCovar * invInnovCov;
 
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
     innovationSubset = (measurementSubset - predictedMeasurement);
 
-    // Wrap angles in the innovation
-    for (size_t i = 0; i < updateSize; ++i)
+    // (5) Check Mahalanobis distance of innovation
+    if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisTh_))
     {
-      if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
+      // Wrap angles in the innovation
+      for (size_t i = 0; i < updateSize; ++i)
       {
-        if (innovationSubset(i) < -pi_)
+        if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
         {
-          innovationSubset(i) += tau_;
-        }
-        else if (innovationSubset(i) > pi_)
-        {
-          innovationSubset(i) -= tau_;
+          if (innovationSubset(i) < -pi_)
+          {
+            innovationSubset(i) += tau_;
+          }
+          else if (innovationSubset(i) > pi_)
+          {
+            innovationSubset(i) -= tau_;
+          }
         }
       }
-    }
 
-    state_ = state_ + kalmanGainSubset * innovationSubset;
+      state_ = state_ + kalmanGainSubset * innovationSubset;
 
-    // (5) Compute the new estimate error covariance P = P - (K * P_zz * K')
-    estimateErrorCovariance_ = estimateErrorCovariance_.eval() - (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
+      estimateErrorCovariance_ = estimateErrorCovariance_.eval() - (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
 
-    wrapStateAngles();
+      wrapStateAngles();
 
-    // Mark that we need to re-compute sigma points for successive corrections
-    uncorrected_ = false;
+      // Mark that we need to re-compute sigma points for successive corrections
+      uncorrected_ = false;
 
-    if (getDebug())
-    {
-      *debugStream_ << "Predicated measurement covariance is:\n";
-      *debugStream_ << predictedMeasCovar << "\n";
-      *debugStream_ << "Cross covariance is:\n";
-      *debugStream_ << crossCovar << "\n";
-      *debugStream_ << "Kalman gain subset is:\n";
-      *debugStream_ << kalmanGainSubset << "\n";
-      *debugStream_ << "Innovation:\n";
-      *debugStream_ << innovationSubset << "\n\n";
-      *debugStream_ << "Corrected full state is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Corrected full estimate error covariance is:\n";
-      *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n---------------------- /Ukf::correct ----------------------\n";
+      if (getDebug())
+      {
+        *debugStream_ << "Predicated measurement covariance is:\n";
+        *debugStream_ << predictedMeasCovar << "\n";
+        *debugStream_ << "Cross covariance is:\n";
+        *debugStream_ << crossCovar << "\n";
+        *debugStream_ << "Kalman gain subset is:\n";
+        *debugStream_ << kalmanGainSubset << "\n";
+        *debugStream_ << "Innovation:\n";
+        *debugStream_ << innovationSubset << "\n\n";
+        *debugStream_ << "Corrected full state is:\n";
+        *debugStream_ << state_ << "\n";
+        *debugStream_ << "Corrected full estimate error covariance is:\n";
+        *debugStream_ << estimateErrorCovariance_ << "\n";
+        *debugStream_ << "\n---------------------- /Ukf::correct ----------------------\n";
+      }
     }
   }
 
