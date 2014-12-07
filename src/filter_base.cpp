@@ -333,7 +333,35 @@ namespace RobotLocalization
       state_(StateMemberYaw) -= tau_;
     }
   }
+
+  bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
+                                             const Eigen::MatrixXd &invCovariance,
+                                             const double nsigmas)
+  {
+    double sqMahalanobis = innovation.dot(invCovariance * innovation);
+    double threshold = nsigmas*nsigmas;
+
+    if (sqMahalanobis >= threshold)
+    {
+      if (getDebug())
+      {
+        *debugStream_ << "Innovation mahalanobis distance test failed. Squared Mahalanobis is\n";
+        *debugStream_ << sqMahalanobis << "\n";
+        *debugStream_ << "threshold was:\n";
+        *debugStream_ << threshold << "\n";
+        *debugStream_ << "Innovation:\n";
+        *debugStream_ << innovation << "\n";
+        *debugStream_ << "Inv covariance:\n";
+        *debugStream_ << invCovariance << "\n";
+      }
+      return false;
+    }
+
+    return true;
+  }
 }
+
+
 
 std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
 {
