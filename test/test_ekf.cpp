@@ -1,5 +1,5 @@
 #include "robot_localization/ros_filter_types.h"
-
+#include <limits>
 #include <gtest/gtest.h>
 
 using namespace RobotLocalization;
@@ -42,6 +42,7 @@ TEST (EkfTest, Measurements)
                          measurement,
                          measurementCovariance,
                          updateVector,
+                         std::numeric_limits<double>::max(),
                          time);
 
   std::map<std::string, Eigen::VectorXd> postUpdateStates;
@@ -64,6 +65,7 @@ TEST (EkfTest, Measurements)
                          measurement2,
                          measurementCovariance,
                          updateVector,
+                         std::numeric_limits<double>::max(),
                          time);
 
   ekf.integrateMeasurements(1003);

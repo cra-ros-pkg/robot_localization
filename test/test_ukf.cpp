@@ -1,4 +1,5 @@
 #include "robot_localization/ros_filter_types.h"
+#include <limits>
 #include <gtest/gtest.h>
 
 using namespace RobotLocalization;
@@ -46,6 +47,7 @@ TEST (UkfTest, Measurements)
                          measurement,
                          measurementCovariance,
                          updateVector,
+                         std::numeric_limits<double>::max(),
                          time);
 
   ukf.integrateMeasurements(1001);
@@ -66,6 +68,7 @@ TEST (UkfTest, Measurements)
                          measurement2,
                          measurementCovariance,
                          updateVector,
+                         std::numeric_limits<double>::max(),
                          time);
 
   ukf.integrateMeasurements(1003);

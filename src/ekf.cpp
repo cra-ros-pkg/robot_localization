@@ -38,7 +38,6 @@
 #include <sstream>
 #include <iomanip>
 #include <limits>
-
 namespace RobotLocalization
 {
   Ekf::Ekf(std::vector<double>) :
@@ -181,49 +180,54 @@ namespace RobotLocalization
     }
 
     // (1) Compute the Kalman gain: K = (PH') / (HPH' + R)
-    Eigen::MatrixXd pht = estimateErrorCovariance_ * stateToMeasurementSubset.transpose();
-    kalmanGainSubset = pht * (stateToMeasurementSubset * pht + measurementCovarianceSubset).inverse();
+    Eigen::MatrixXd pht      = estimateErrorCovariance_ * stateToMeasurementSubset.transpose();
+    Eigen::MatrixXd hphrInv  = (stateToMeasurementSubset * pht + measurementCovarianceSubset).inverse();
+    kalmanGainSubset = pht * hphrInv;
 
-    // (2) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
     innovationSubset = (measurementSubset - stateSubset);
-
-    // Wrap angles in the innovation
-    for (size_t i = 0; i < updateSize; ++i)
+    
+    // (2) Check Mahalanobis distance between mapped measurement and state.
+    if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisTh_))
     {
-      if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
+      // (3) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
+      // Wrap angles in the innovation
+      for (size_t i = 0; i < updateSize; ++i)
       {
-        if (innovationSubset(i) < -pi_)
+        if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
         {
-          innovationSubset(i) += tau_;
-        }
-        else if (innovationSubset(i) > pi_)
-        {
-          innovationSubset(i) -= tau_;
+          if (innovationSubset(i) < -pi_)
+          {
+            innovationSubset(i) += tau_;
+          }
+          else if (innovationSubset(i) > pi_)
+          {
+            innovationSubset(i) -= tau_;
+          }
         }
       }
-    }
-
-    state_ = state_ + kalmanGainSubset * innovationSubset;
-
-    // (3) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
-    Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
-    estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_.eval() * gainResidual.transpose() +
-        kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
-
-    // Handle wrapping of angles
-    wrapStateAngles();
-
-    if (getDebug())
-    {
-      *debugStream_ << "Kalman gain subset is:\n";
-      *debugStream_ << kalmanGainSubset << "\n";
-      *debugStream_ << "Innovation:\n";
-      *debugStream_ << innovationSubset << "\n\n";
-      *debugStream_ << "Corrected full state is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Corrected full estimate error covariance is:\n";
-      *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n---------------------- /Ekf::correct ----------------------\n";
+        
+      state_ = state_ + kalmanGainSubset * innovationSubset;
+        
+      // (4) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
+      Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
+      estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_.eval() * gainResidual.transpose() +
+          kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
+      
+      // Handle wrapping of angles
+      wrapStateAngles();
+      
+      if (getDebug())
+      {
+        *debugStream_ << "Kalman gain subset is:\n";
+        *debugStream_ << kalmanGainSubset << "\n";
+        *debugStream_ << "Innovation:\n";
+        *debugStream_ << innovationSubset << "\n\n";
+        *debugStream_ << "Corrected full state is:\n";
+        *debugStream_ << state_ << "\n";
+        *debugStream_ << "Corrected full estimate error covariance is:\n";
+        *debugStream_ << estimateErrorCovariance_ << "\n";
+        *debugStream_ << "\n---------------------- /Ekf::correct ----------------------\n";
+      }
     }
   }
 
