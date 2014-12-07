@@ -40,6 +40,7 @@
 #include <set>
 #include <map>
 #include <queue>
+#include <limits>
 
 namespace RobotLocalization
 {
@@ -69,6 +70,9 @@ namespace RobotLocalization
     // (presumably the start of execution, but any will do)
     double time_;
 
+    // The Mahalanobis distance threshold in number of sigmas
+    double mahalanobisTh_;
+
     // We want earlier times to have greater priority
     bool operator()(const Measurement &a, const Measurement &b)
     {
@@ -77,7 +81,8 @@ namespace RobotLocalization
 
     Measurement() :
       topicName_(""),
-      time_(0)
+      time_(0),
+      mahalanobisTh_(std::numeric_limits<double>::max())
     {
     }
   };
@@ -85,7 +90,6 @@ namespace RobotLocalization
   class FilterBase
   {
     public:
-
       //! @brief Constructor for the FilterBase class
       //!
       FilterBase();
@@ -238,6 +242,12 @@ namespace RobotLocalization
       //! @brief Keeps the state Euler angles in the range [-pi, pi]
       //!
       virtual void wrapStateAngles();
+
+      //! @brief Tests if innovation is within N-sigmas of covariance. Returns true if passed the test.
+      //!
+      virtual bool checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
+                                             const Eigen::MatrixXd &invCovariance,
+                                             const double nsigmas);
 
       //! @brief Covariance matrices can be incredibly unstable. We can
       //! add a small value to it at each iteration to help maintain its
