@@ -71,7 +71,7 @@ namespace RobotLocalization
     double time_;
 
     // The Mahalanobis distance threshold in number of sigmas
-    double mahalanobisTh_;
+    double mahalanobisThresh_;
 
     // We want earlier times to have greater priority
     bool operator()(const Measurement &a, const Measurement &b)
@@ -82,7 +82,7 @@ namespace RobotLocalization
     Measurement() :
       topicName_(""),
       time_(0),
-      mahalanobisTh_(std::numeric_limits<double>::max())
+      mahalanobisThresh_(std::numeric_limits<double>::max())
     {
     }
   };

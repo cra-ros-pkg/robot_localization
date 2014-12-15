@@ -1,6 +1,8 @@
 <!-- Launch file for ekf_localization_node_bag-test2 -->
 
 <launch>
+    <arg name="output_final_position" default="false" />
+    <arg name="output_location" default="test.txt" />
 
     <param name="/use_sim_time" value="true" />
 
@@ -62,10 +64,12 @@
     </node>
 
     <test test-name="ekf_localization_node_test_bag2_t" pkg="robot_localization" type="ekf_localization_node-test-bag2" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="0.9551"/>
-      <param name="final_y" value="3.2983"/>
-      <param name="final_z" value="0.7363"/>
-      <param name="tolerance" value="0.0612"/>
+      <param name="final_x" value="0.9554"/>
+      <param name="final_y" value="3.2950"/>
+      <param name="final_z" value="0.7351"/>
+      <param name="tolerance" value="0.0618"/>
+      <param name="output_final_position" value="$(arg output_final_position)"/>
+      <param name="output_location" value="$(arg output_location)"/>
     </test>
 
 </launch>
