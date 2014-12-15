@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <fstream>
 
 #include <tf/tf.h>
 
@@ -18,15 +19,19 @@ TEST (BagTest, PoseCheck)
   ros::NodeHandle nh;
   ros::NodeHandle nhLocal("~");
 
-  double finalX;
-  double finalY;
-  double finalZ;
-  double tolerance;
+  double finalX = 0;
+  double finalY = 0;
+  double finalZ = 0;
+  double tolerance = 0;
+  bool outputFinalPosition = false;
+  std::string finalPositionFile;
 
   nhLocal.getParam("final_x", finalX);
   nhLocal.getParam("final_y", finalY);
   nhLocal.getParam("final_z", finalZ);
   nhLocal.getParam("tolerance", tolerance);
+  nhLocal.param("output_final_position", outputFinalPosition, false);
+  nhLocal.param("output_location", finalPositionFile, std::string("test.txt"));
 
   ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
 
@@ -34,6 +39,21 @@ TEST (BagTest, PoseCheck)
   {
     ros::spinOnce();
     ros::Duration(0.0333333).sleep();
+  }
+
+  if(outputFinalPosition)
+  {
+    try
+    {
+      std::ofstream posOut;
+      posOut.open(finalPositionFile.c_str(), std::ofstream::app);
+      posOut << filtered_.pose.pose.position.x << " " << filtered_.pose.pose.position.y << " " << filtered_.pose.pose.position.z << std::endl;
+      posOut.close();
+    }
+    catch(...)
+    {
+      ROS_ERROR_STREAM("Unable to open output file.\n");
+    }
   }
 
   double xDiff = filtered_.pose.pose.position.x - finalX;

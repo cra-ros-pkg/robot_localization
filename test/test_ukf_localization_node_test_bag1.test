@@ -4,6 +4,8 @@
      we can at least test, even if it doesn't match up with what the real robot did when this was collected. -->
 
 <launch>
+    <arg name="output_final_position" default="false" />
+    <arg name="output_location" default="test.txt" />
 
     <param name="/use_sim_time" value="true" />
 
@@ -90,10 +92,12 @@
     </node>
 
     <test test-name="ukf_localization_node_test_bag1_t" pkg="robot_localization" type="ukf_localization_node-test-bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.9271"/>
-      <param name="final_y" value="0.6951"/>
-      <param name="final_z" value="-3.7758"/>
-      <param name="tolerance" value="0.6155"/>
+      <param name="final_x" value="-0.8915"/>
+      <param name="final_y" value="0.6859"/>
+      <param name="final_z" value="-3.7865"/>
+      <param name="tolerance" value="0.6862"/>
+      <param name="output_final_position" value="$(arg output_final_position)"/>
+      <param name="output_location" value="$(arg output_location)"/>
     </test>
 
 </launch>
