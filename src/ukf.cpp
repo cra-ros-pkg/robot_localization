@@ -264,7 +264,7 @@ namespace RobotLocalization
     innovationSubset = (measurementSubset - predictedMeasurement);
 
     // (5) Check Mahalanobis distance of innovation
-    if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisTh_))
+    if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
       // Wrap angles in the innovation
       for (size_t i = 0; i < updateSize; ++i)
