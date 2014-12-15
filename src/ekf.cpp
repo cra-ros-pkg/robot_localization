@@ -187,7 +187,7 @@ namespace RobotLocalization
     innovationSubset = (measurementSubset - stateSubset);
     
     // (2) Check Mahalanobis distance between mapped measurement and state.
-    if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisTh_))
+    if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisThresh_))
     {
       // (3) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
       // Wrap angles in the innovation
