@@ -52,6 +52,7 @@
 
 #include <Eigen/Dense>
 
+#include <numeric>
 #include <fstream>
 
 // Some typedefs for message filter shared pointers
@@ -367,44 +368,56 @@ namespace RobotLocalization
         // As with the odometry message, we can separate out the pose- and twist-related variables
         // in the IMU message and pass them to the pose and twist callbacks (filters)
 
-        // Extract the pose (orientation) data, pass it to its filter
-        geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
-        posPtr->header = msg->header;
-        posPtr->pose.pose.orientation = msg->orientation;
-
-        // Copy the covariance for roll, pitch, and yaw
-        for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+        std::string imuPoseTopicName = topicName + "_pose";
+        if(poseMessageFilters_.count(imuPoseTopicName) > 0)
         {
-          for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+          // Extract the pose (orientation) data, pass it to its filter
+          geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
+          posPtr->header = msg->header;
+          posPtr->pose.pose.orientation = msg->orientation;
+
+          // Copy the covariance for roll, pitch, and yaw
+          for (size_t i = 0; i < ORIENTATION_SIZE; i++)
           {
-            posPtr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] = msg->orientation_covariance[ORIENTATION_SIZE * i + j];
+            for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+            {
+              posPtr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] = msg->orientation_covariance[ORIENTATION_SIZE * i + j];
+            }
           }
+
+          geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
+          poseMessageFilters_[imuPoseTopicName]->add(pptr);
         }
 
-        geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseMessageFilters_[topicName + "_pose"]->add(pptr);
-
-        // Repeat for velocity
-        geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
-        twistPtr->header = msg->header;
-        twistPtr->twist.twist.angular = msg->angular_velocity;
-
-        // Copy the covariance
-        for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+        std::string imuTwistTopicName = topicName + "_twist";
+        if(twistMessageFilters_.count(imuTwistTopicName) > 0)
         {
-          for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+          // Repeat for velocity
+          geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
+          twistPtr->header = msg->header;
+          twistPtr->twist.twist.angular = msg->angular_velocity;
+
+          // Copy the covariance
+          for (size_t i = 0; i < ORIENTATION_SIZE; i++)
           {
-            twistPtr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] = msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
+            for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+            {
+              twistPtr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] = msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
+            }
           }
+
+          geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
+          twistMessageFilters_[imuTwistTopicName]->add(tptr);
         }
 
-        geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-        twistMessageFilters_[topicName + "_twist"]->add(tptr);
-
-        // We still need to handle the acceleration data, but we don't
-        // actually have a good container message for it, so just pass
-        // the IMU message on through a message filter.
-        accelerationMessageFilters_[topicName + "_acceleration"]->add(msg);
+        std::string imuAccelTopicName = topicName + "_acceleration";
+        if(accelerationMessageFilters_.count(imuAccelTopicName) > 0)
+        {
+          // We still need to handle the acceleration data, but we don't
+          // actually have a good container message for it, so just pass
+          // the IMU message on through a message filter.
+          accelerationMessageFilters_[imuAccelTopicName]->add(msg);
+        }
 
         if (filter_.getDebug())
         {
@@ -753,28 +766,45 @@ namespace RobotLocalization
             std::vector<int> twistUpdateVec = updateVec;
             std::fill(twistUpdateVec.begin() + POSITION_OFFSET, twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
 
+            int poseUpdateSum = std::accumulate(poseUpdateVec.begin(), poseUpdateVec.end(), 0);
+            int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
+
             // Store the odometry topic subscribers so they dont go out of scope. Also,
             // odometry data has both pose and twist data, each with their own frame_id.
             // The odometry data gets broken up and passed into callbacks for pose and
             // twist data, so we need to create message filters for them, and then
             // manually add the pose and twist messages after we extract them from the
             // odometry message.
-            odomTopicSubs_.push_back(
-                  nh_.subscribe<nav_msgs::Odometry>(odomTopic, 1,
-                                                    boost::bind(&RosFilter<Filter>::odometryCallback, this, _1, odomTopicName, updateVec, differential)));
 
-            poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, 1));
-            std::string odomPoseTopicName = odomTopicName + "_pose";
-            poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
-            poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
-            poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
-            differential_[odomPoseTopicName] = differential;
+            if(poseUpdateSum + twistUpdateSum > 0)
+            {
+              odomTopicSubs_.push_back(
+                    nh_.subscribe<nav_msgs::Odometry>(odomTopic, 1,
+                                                      boost::bind(&RosFilter<Filter>::odometryCallback, this, _1, odomTopicName, updateVec, differential)));
+            }
+            else
+            {
+              ROS_WARN_STREAM("Warning: " << odomTopic << " is listed as an input topic, but all update variables are false");
+            }
 
-            twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
-            std::string odomTwistTopicName = odomTopicName + "_twist";
-            twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
-            twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
-            twistMessageFilters_[odomTwistTopicName] = twistFilPtr;
+            if(poseUpdateSum > 0)
+            {
+              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, 1));
+              std::string odomPoseTopicName = odomTopicName + "_pose";
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
+              poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
+              poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
+              differential_[odomPoseTopicName] = differential;
+            }
+
+            if(twistUpdateSum > 0)
+            {
+              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              std::string odomTwistTopicName = odomTopicName + "_twist";
+              twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
+              twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
+              twistMessageFilters_[odomTwistTopicName] = twistFilPtr;
+            }
 
             if(filter_.getDebug())
             {
@@ -851,15 +881,24 @@ namespace RobotLocalization
             std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET, poseUpdateVec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
             std::fill(poseUpdateVec.begin() + POSITION_A_OFFSET, poseUpdateVec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
-            // Create and store message filter subscriber objects and message filters
-            poseMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>());
-            subPtr->subscribe(nh_, poseTopic, 1);
-            poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, 1));
-            filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
-            filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
-            poseTopicSubs_.push_back(subPtr);
-            poseMessageFilters_[poseTopicName] = filPtr;
-            differential_[poseTopicName] = differential;
+            int poseUpdateSum = std::accumulate(poseUpdateVec.begin(), poseUpdateVec.end(), 0);
+
+            if(poseUpdateSum > 0)
+            {
+              // Create and store message filter subscriber objects and message filters
+              poseMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>());
+              subPtr->subscribe(nh_, poseTopic, 1);
+              poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, 1));
+              filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
+              filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
+              poseTopicSubs_.push_back(subPtr);
+              poseMessageFilters_[poseTopicName] = filPtr;
+              differential_[poseTopicName] = differential;
+            }
+            else
+            {
+              ROS_WARN_STREAM("Warning: " << poseTopic << " is listed as an input topic, but all pose update variables are false");
+            }
 
             if (filter_.getDebug())
             {
@@ -891,14 +930,23 @@ namespace RobotLocalization
             std::vector<int> twistUpdateVec = updateVec;
             std::fill(twistUpdateVec.begin() + POSITION_OFFSET, twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
 
-            // Create and store subscriptions and message filters
-            twistMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>());
-            subPtr->subscribe(nh_, twistTopic, 1);
-            twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, 1));
-            filPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
-            filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
-            twistTopicSubs_.push_back(subPtr);
-            twistMessageFilters_[twistTopicName] = filPtr;
+            int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
+
+            if(twistUpdateSum > 0)
+            {
+              // Create and store subscriptions and message filters
+              twistMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>());
+              subPtr->subscribe(nh_, twistTopic, 1);
+              twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, 1));
+              filPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
+              filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
+              twistTopicSubs_.push_back(subPtr);
+              twistMessageFilters_[twistTopicName] = filPtr;
+            }
+            else
+            {
+              ROS_WARN_STREAM("Warning: " << twistTopic << " is listed as an input topic, but all twist update variables are false");
+            }
 
             if (filter_.getDebug())
             {
@@ -1004,30 +1052,50 @@ namespace RobotLocalization
             std::fill(accelUpdateVec.begin() + POSITION_OFFSET, accelUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
             std::fill(accelUpdateVec.begin() + POSITION_V_OFFSET, accelUpdateVec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
 
-            // Create and store subscriptions and message filters as with odometry data
-            imuTopicSubs_.push_back(
-                  nh_.subscribe<sensor_msgs::Imu>(imuTopic, 1,
-                                                  boost::bind(&RosFilter<Filter>::imuCallback, this, _1, imuTopicName, updateVec, differential)));
+            int poseUpdateSum = std::accumulate(poseUpdateVec.begin(), poseUpdateVec.end(), 0);
+            int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
+            int accelUpdateSum = std::accumulate(accelUpdateVec.begin(), accelUpdateVec.end(), 0);
 
-            // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
-            poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
-            std::string imuPoseTopicName = imuTopicName + "_pose";
-            poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
-            poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
-            poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
-            differential_[imuPoseTopicName] = differential;
+            if(poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
+            {
+              // Create and store subscriptions and message filters as with odometry data
+              imuTopicSubs_.push_back(
+                    nh_.subscribe<sensor_msgs::Imu>(imuTopic, 1,
+                                                    boost::bind(&RosFilter<Filter>::imuCallback, this, _1, imuTopicName, updateVec, differential)));
+            }
+            else
+            {
+              ROS_WARN_STREAM("Warning: " << imuTopic << " is listed as an input topic, but all its update variables are false");
+            }
 
-            twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
-            std::string imuTwistTopicName = imuTopicName + "_twist";
-            twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, angVelMahalanobisThresh));
-            twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
-            twistMessageFilters_[imuTwistTopicName] = twistFilPtr;
+            if(poseUpdateSum > 0)
+            {
+              // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
+              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              std::string imuPoseTopicName = imuTopicName + "_pose";
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
+              poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
+              poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
+              differential_[imuPoseTopicName] = differential;
+            }
 
-            imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, 1));
-            std::string imuAccelTopicName = imuTopicName + "_acceleration";
-            accelFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::accelerationCallback, this, _1, imuAccelTopicName, baseLinkFrameId_, accelUpdateVec, accelMahalanobisThresh));
-            accelFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformImuFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
-            accelerationMessageFilters_[imuAccelTopicName] = accelFilPtr;
+            if(twistUpdateSum > 0)
+            {
+              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              std::string imuTwistTopicName = imuTopicName + "_twist";
+              twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, angVelMahalanobisThresh));
+              twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
+              twistMessageFilters_[imuTwistTopicName] = twistFilPtr;
+            }
+
+            if(accelUpdateSum > 0)
+            {
+              imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, 1));
+              std::string imuAccelTopicName = imuTopicName + "_acceleration";
+              accelFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::accelerationCallback, this, _1, imuAccelTopicName, baseLinkFrameId_, accelUpdateVec, accelMahalanobisThresh));
+              accelFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformImuFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
+              accelerationMessageFilters_[imuAccelTopicName] = accelFilPtr;
+            }
 
             if (filter_.getDebug())
             {
@@ -1109,22 +1177,31 @@ namespace RobotLocalization
                           "Odometry message:\n" << *msg;
         }
 
-        // Grab the pose portion of the message and pass it to the poseCallback
-        geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
-        posPtr->header = msg->header;
-        posPtr->pose = msg->pose; // Entire pose object, also copies covariance
+        std::string odomPoseTopicName = topicName + "_pose";
+        if(poseMessageFilters_.count(odomPoseTopicName) > 0)
+        {
+          // Grab the pose portion of the message and pass it to the poseCallback
+          geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
+          posPtr->header = msg->header;
+          posPtr->pose = msg->pose; // Entire pose object, also copies covariance
 
-        geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseMessageFilters_[topicName + "_pose"]->add(pptr);
+          geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
+          poseMessageFilters_[odomPoseTopicName]->add(pptr);
+        }
 
-        // Grab the twist portion of the message and pass it to the twistCallback
-        geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
-        twistPtr->header = msg->header;
-        twistPtr->header.frame_id = msg->child_frame_id;
-        twistPtr->twist = msg->twist; // Entire twist object, also copies covariance
+        std::string odomTwistTopicName = topicName + "_twist";
+        if(twistMessageFilters_.count(odomTwistTopicName) > 0)
+        {
+          // Grab the twist portion of the message and pass it to the twistCallback
+          geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
+          twistPtr->header = msg->header;
+          twistPtr->header.frame_id = msg->child_frame_id;
+          twistPtr->twist = msg->twist; // Entire twist object, also copies covariance
 
-        geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-        twistMessageFilters_[topicName + "_twist"]->add(tptr);
+
+          geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
+          twistMessageFilters_[odomTwistTopicName]->add(tptr);
+        }
 
         if (filter_.getDebug())
         {
