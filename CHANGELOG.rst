@@ -2,6 +2,15 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.1.7 (2015-01-05)
+------------------
+* Added some checks to eliminate unnecessary callbacks
+* Updated launch file templates
+* Added measurement outlier rejection
+* Added failure callbacks for tf message filters
+* Added optional broadcast of world_frame->utm transform for navsat_transform_node
+* Bug fixes for differential mode and handling of Z acceleration in 2D mode
+
 1.1.6 (2014-11-06)
 ------------------
 * Added unscented Kalman filter (UKF) localization node
