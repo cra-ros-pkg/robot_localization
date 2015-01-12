@@ -119,6 +119,10 @@
            is due to gravity for each IMU. If you don't want to, then set this to false. Defaults to false if unspecified. -->
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
 
+      <!-- If you're having trouble, try setting this to true, and then use rqt_console to see diagnostic information
+           about your data and settings. -->
+      <param name="print_diagnostics" value="false"/>
+
       <!-- ======== ADVANCED PARAMETERS ======== -->
 
       <!-- If your data is subject to outliers, use these threshold settings, expressed as Mahalanobis distances, to control

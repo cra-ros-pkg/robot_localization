@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_common.h"
 #include "robot_localization/ukf.h"
+#include "robot_localization/filter_common.h"
 
 #include <XmlRpcException.h>
 
@@ -83,16 +83,10 @@ namespace RobotLocalization
 
   void Ukf::correct(const Measurement &measurement)
   {
-    if (getDebug())
-    {
-      *debugStream_ << "---------------------- Ukf::correct ----------------------\n";
-      *debugStream_ << "State is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Measurement is:\n";
-      *debugStream_ << measurement.measurement_ << "\n";
-      *debugStream_ << "Measurement covariance is:\n";
-      *debugStream_ << measurement.covariance_ << "\n";
-    }
+    FB_DEBUG("---------------------- Ukf::correct ----------------------\n" <<
+             "State is:\n" << state_ <<
+             "\nMeasurement is:\n" << measurement.measurement_ <<
+             "\nMeasurement covariance is:\n" << measurement.covariance_ << "\n");
 
     // In our implementation, it may be that after we call predict once, we call correct
     // several times in succession (multiple measurements with different time stamps). In
@@ -128,17 +122,11 @@ namespace RobotLocalization
         // Handle nan and inf values in measurements
         if (std::isnan(measurement.measurement_(i)))
         {
-          if (getDebug())
-          {
-            *debugStream_ << "Value at index " << i << " was nan. Excluding from update.\n";
-          }
+          FB_DEBUG("Value at index " << i << " was nan. Excluding from update.\n");
         }
         else if (std::isinf(measurement.measurement_(i)))
         {
-          if (getDebug())
-          {
-            *debugStream_ << "Value at index " << i << " was inf. Excluding from update.\n";
-          }
+          FB_DEBUG("Value at index " << i << " was inf. Excluding from update.\n");
         }
         else
         {
@@ -147,11 +135,7 @@ namespace RobotLocalization
       }
     }
 
-    if (getDebug())
-    {
-      *debugStream_ << "Update indices are:\n";
-      *debugStream_ << updateIndices << "\n";
-    }
+    FB_DEBUG("Update indices are:\n" << updateIndices << "\n");
 
     size_t updateSize = updateIndices.size();
 
@@ -195,11 +179,9 @@ namespace RobotLocalization
       // the absolute value.
       if (measurementCovarianceSubset(i, i) < 0)
       {
-        if (getDebug())
-        {
-          *debugStream_ << "WARNING: Negative covariance for index " << i << " of measurement (value is" << measurementCovarianceSubset(i, i)
-            << "). Using absolute value...\n";
-        }
+        FB_DEBUG("WARNING: Negative covariance for index " << i <<
+                 " of measurement (value is" << measurementCovarianceSubset(i, i) <<
+                 "). Using absolute value...\n");
 
         measurementCovarianceSubset(i, i) = ::fabs(measurementCovarianceSubset(i, i));
       }
@@ -210,14 +192,13 @@ namespace RobotLocalization
       // the Kalman gain computation will blow up. Really, no
       // measurement can be completely without error, so add a small
       // amount in that case.
-      if (measurementCovarianceSubset(i, i) < 1e-6)
+      if (measurementCovarianceSubset(i, i) < 1e-12)
       {
-        measurementCovarianceSubset(i, i) = 1e-6;
+        measurementCovarianceSubset(i, i) = 1e-12;
 
-        if (getDebug())
-        {
-          *debugStream_ << "WARNING: measurement had very small error covariance for index " << updateIndices[i] << ". Adding some noise to maintain filter stability.\n";
-        }
+        FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
+                 updateIndices[i] <<
+                 ". Adding some noise to maintain filter stability.\n");
       }
     }
 
@@ -228,17 +209,10 @@ namespace RobotLocalization
       stateToMeasurementSubset(i, updateIndices[i]) = 1;
     }
 
-    if (getDebug())
-    {
-      *debugStream_ << "Current state subset is:\n";
-      *debugStream_ << stateSubset << "\n";
-      *debugStream_ << "Measurement subset is:\n";
-      *debugStream_ << measurementSubset << "\n";
-      *debugStream_ << "Measurement covariance subset is:\n";
-      *debugStream_ << measurementCovarianceSubset << "\n";
-      *debugStream_ << "State-to-measurement subset is:\n";
-      *debugStream_ << stateToMeasurementSubset << "\n";
-    }
+    FB_DEBUG("Current state subset is:\n" << stateSubset <<
+             "\nMeasurement subset is:\n" << measurementSubset <<
+             "\nMeasurement covariance subset is:\n" << measurementCovarianceSubset <<
+             "\nState-to-measurement subset is:\n" << stateToMeasurementSubset << "\n");
 
     // (1) Generate sigma points, use them to generate a predicted measurement
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
@@ -292,33 +266,21 @@ namespace RobotLocalization
       // Mark that we need to re-compute sigma points for successive corrections
       uncorrected_ = false;
 
-      if (getDebug())
-      {
-        *debugStream_ << "Predicated measurement covariance is:\n";
-        *debugStream_ << predictedMeasCovar << "\n";
-        *debugStream_ << "Cross covariance is:\n";
-        *debugStream_ << crossCovar << "\n";
-        *debugStream_ << "Kalman gain subset is:\n";
-        *debugStream_ << kalmanGainSubset << "\n";
-        *debugStream_ << "Innovation:\n";
-        *debugStream_ << innovationSubset << "\n\n";
-        *debugStream_ << "Corrected full state is:\n";
-        *debugStream_ << state_ << "\n";
-        *debugStream_ << "Corrected full estimate error covariance is:\n";
-        *debugStream_ << estimateErrorCovariance_ << "\n";
-        *debugStream_ << "\n---------------------- /Ukf::correct ----------------------\n";
-      }
+      FB_DEBUG("Predicated measurement covariance is:\n" << predictedMeasCovar <<
+               "\nCross covariance is:\n" << crossCovar <<
+               "\nKalman gain subset is:\n" << kalmanGainSubset <<
+               "\nInnovation:\n" << innovationSubset <<
+               "\nCorrected full state is:\n" << state_ <<
+               "\nCorrected full estimate error covariance is:\n" << estimateErrorCovariance_ <<
+               "\n\n---------------------- /Ukf::correct ----------------------\n");
     }
   }
 
   void Ukf::predict(const double delta)
   {
-    if (getDebug())
-    {
-      *debugStream_ << "---------------------- Ukf::predict ----------------------\n";
-      *debugStream_ << "delta is " << delta << "\n";
-      *debugStream_ << "state is " << state_ << "\n";
-    }
+    FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
+             "delta is " << delta <<
+             "\nstate is " << state_ << "\n");
 
     double roll = state_(StateMemberRoll);
     double pitch = state_(StateMemberPitch);
@@ -407,14 +369,9 @@ namespace RobotLocalization
     // Mark that we can keep these sigma points
     uncorrected_ = true;
 
-    if (getDebug())
-    {
-      *debugStream_ << "Predicted state is:\n";
-      *debugStream_ << state_ << "\n";
-      *debugStream_ << "Predicted estimate error covariance is:\n";
-      *debugStream_ << estimateErrorCovariance_ << "\n";
-      *debugStream_ << "\n--------------------- /Ukf::predict ----------------------\n";
-    }
+    FB_DEBUG("Predicted state is:\n" << state_ <<
+             "\nPredicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
+             "\n\n--------------------- /Ukf::predict ----------------------\n");
   }
 
 }

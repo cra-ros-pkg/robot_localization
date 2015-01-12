@@ -36,7 +36,7 @@
       <param name="pose0_differential" value="false"/>
       <param name="pose1_differential" value="true"/>
 
-      <param name="twist0_differential" value="false"/>
+      <param name="print_diagnostics" value="false"/>
 
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ekf_navigation.txt"/>
