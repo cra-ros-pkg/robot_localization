@@ -42,6 +42,8 @@
 #include <queue>
 #include <limits>
 
+#define FB_DEBUG(msg) if(getDebug()) { *debugStream_ << msg; }
+
 namespace RobotLocalization
 {
   //! @brief Structure used for storing and comparing measurements

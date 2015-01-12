@@ -66,6 +66,8 @@
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
       <param name="imu1_remove_gravitational_acceleration" value="true"/>
 
+      <param name="print_diagnostics" value="false"/>
+
       <param name="debug"           value="false"/>
       <param name="debug_out_file"  value="ukf_navigation.txt"/>
 

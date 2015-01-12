@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
-#include "robot_localization/ekf.h"
 
 #include <sstream>
 #include <iomanip>
@@ -158,10 +158,7 @@ namespace RobotLocalization
 
   void FilterBase::processMeasurement(const Measurement &measurement)
   {
-    if (debug_)
-    {
-      *debugStream_ << "------ FilterBase::processMeasurement ------\n";
-    }
+    FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
 
     double delta = 0.0;
 
@@ -173,12 +170,9 @@ namespace RobotLocalization
       // Determine how much time has passed since our last measurement
       delta = measurement.time_ - lastMeasurementTime_;
 
-      if (debug_)
-      {
-        *debugStream_ << "Filter is already initialized. Carrying out predict/correct loop...\n";
-        *debugStream_ << "Measurement time is " << std::setprecision(20) << measurement.time_ <<
-                         ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n";
-      }
+      FB_DEBUG("Filter is already initialized. Carrying out predict/correct loop...\n"
+               "Measurement time is " << std::setprecision(20) << measurement.time_ <<
+               ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n");
 
       // Only want to carry out a prediction if it's
       // forward in time. Otherwise, just correct.
@@ -196,10 +190,7 @@ namespace RobotLocalization
     }
     else
     {
-      if (debug_)
-      {
-        *debugStream_ << "First measurement. Initializing filter.\n";
-      }
+      FB_DEBUG("First measurement. Initializing filter.\n");
 
       // Initialize the filter, but only with the values we're using
       size_t measurementLength = measurement.updateVector_.size();
@@ -234,10 +225,7 @@ namespace RobotLocalization
       lastMeasurementTime_ = measurement.time_;
     }
 
-    if (debug_)
-    {
-      *debugStream_ << "\n----- /FilterBase::processMeasurement ------\n";
-    }
+    FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
   }
 
   void FilterBase::setDebug(const bool debug, std::ostream *outStream)
@@ -295,10 +283,7 @@ namespace RobotLocalization
     // This handles issues with ROS time when use_sim_time is on and we're playing from bags.
     if (delta > 100000.0)
     {
-      if (debug_)
-      {
-        *debugStream_ << "Delta was very large. Suspect playing from bag file. Setting to 0.01\n";
-      }
+      FB_DEBUG("Delta was very large. Suspect playing from bag file. Setting to 0.01\n");
 
       delta = 0.01;
     }
@@ -343,17 +328,11 @@ namespace RobotLocalization
 
     if (sqMahalanobis >= threshold)
     {
-      if (getDebug())
-      {
-        *debugStream_ << "Innovation mahalanobis distance test failed. Squared Mahalanobis is\n";
-        *debugStream_ << sqMahalanobis << "\n";
-        *debugStream_ << "threshold was:\n";
-        *debugStream_ << threshold << "\n";
-        *debugStream_ << "Innovation:\n";
-        *debugStream_ << innovation << "\n";
-        *debugStream_ << "Inv covariance:\n";
-        *debugStream_ << invCovariance << "\n";
-      }
+      FB_DEBUG("Innovation mahalanobis distance test failed. Squared Mahalanobis is: " << sqMahalanobis << "\n" <<
+               "Threshold is: " << threshold << "\n" <<
+               "Innovation is: " << innovation << "\n" <<
+               "Innovation covariance is:" << invCovariance << "\n");
+
       return false;
     }
 
@@ -427,4 +406,3 @@ std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec)
 
   return os;
 }
-
