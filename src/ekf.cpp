@@ -56,7 +56,7 @@ namespace RobotLocalization
              "State is:\n" << state_ << "\n"
              "Topic is:\n" << measurement.topicName_ << "\n"
              "Measurement is:\n" << measurement.measurement_ << "\n"
-             "Measurement topic name is:\n" << measurement.topicName_ << "\n"
+             "Measurement topic name is:\n" << measurement.topicName_ << "\n\n"
              "Measurement covariance is:\n" << measurement.covariance_ << "\n");
 
     // We don't want to update everything, so we need to build matrices that only update
@@ -210,6 +210,9 @@ namespace RobotLocalization
     double xVel = state_(StateMemberVx);
     double yVel = state_(StateMemberVy);
     double zVel = state_(StateMemberVz);
+    double rollVel = state_(StateMemberVroll);
+    double pitchVel = state_(StateMemberVpitch);
+    double yawVel = state_(StateMemberVyaw);
     double xAcc = state_(StateMemberAx);
     double yAcc = state_(StateMemberAy);
     double zAcc = state_(StateMemberAz);
@@ -241,9 +244,15 @@ namespace RobotLocalization
     transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
     transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
     transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = delta;
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = delta;
+    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
+    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
+    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
+    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
+    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
+    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
+    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
+    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
+    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
@@ -259,46 +268,54 @@ namespace RobotLocalization
     zCoeff = -cy * sp * sr + sy * cr;
     double dF0dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF3dr = (yCoeff * rollVel + zCoeff * yawVel) * delta;
 
     xCoeff = -cy * sp;
     yCoeff = cy * cp * sr;
     zCoeff = cy * cp * cr;
     double dF0dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF3dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -sy * cp;
     yCoeff = -sy * sp * sr - cy * cr;
     zCoeff = -sy * sp * cr + cy * sr;
     double dF0dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF3dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = sy * sp * cr - cy * sr;
     zCoeff = -sy * sp * sr - cy * cr;
     double dF1dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF4dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -sy * sp;
     yCoeff = sy * cp * sr;
     zCoeff = sy * cp * cr;
     double dF1dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF4dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = cy * cp;
     yCoeff = cy * sp * sr - sy * cr;
     zCoeff = cy * sp * cr + sy * sr;
     double dF1dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF4dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = cp * cr;
     zCoeff = -cp * sr;
     double dF2dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+    double dF5dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -cp;
     yCoeff = -sp * sr;
     zCoeff = -sp * cr;
     double dF2dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared; 
+    double dF5dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transferFunctionJacobian_ = transferFunction_;
@@ -310,6 +327,14 @@ namespace RobotLocalization
     transferFunctionJacobian_(StateMemberY, StateMemberYaw) = dF1dy;
     transferFunctionJacobian_(StateMemberZ, StateMemberRoll) = dF2dr;
     transferFunctionJacobian_(StateMemberZ, StateMemberPitch) = dF2dp;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberRoll) = dF3dr;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberPitch) = dF3dp;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberYaw) = dF3dy;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberRoll) = dF4dr;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberPitch) = dF4dp;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberYaw) = dF4dy;
+    transferFunctionJacobian_(StateMemberYaw, StateMemberRoll) = dF5dr;
+    transferFunctionJacobian_(StateMemberYaw, StateMemberPitch) = dF5dp;
 
     FB_DEBUG("Transfer function is:\n" << transferFunction_ <<
              "\nTransfer function Jacobian is:\n" << transferFunctionJacobian_ <<
