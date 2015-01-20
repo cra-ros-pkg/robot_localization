@@ -268,54 +268,54 @@ namespace RobotLocalization
     zCoeff = -cy * sp * sr + sy * cr;
     double dF0dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF3dr = (yCoeff * rollVel + zCoeff * yawVel) * delta;
+    double dF6dr = 1 + (yCoeff * rollVel + zCoeff * yawVel) * delta;
 
     xCoeff = -cy * sp;
     yCoeff = cy * cp * sr;
     zCoeff = cy * cp * cr;
     double dF0dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF3dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF6dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -sy * cp;
     yCoeff = -sy * sp * sr - cy * cr;
     zCoeff = -sy * sp * cr + cy * sr;
     double dF0dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF3dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF6dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = sy * sp * cr - cy * sr;
     zCoeff = -sy * sp * sr - cy * cr;
     double dF1dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF4dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF7dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -sy * sp;
     yCoeff = sy * cp * sr;
     zCoeff = sy * cp * cr;
     double dF1dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF4dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF7dp = 1 + (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = cy * cp;
     yCoeff = cy * sp * sr - sy * cr;
     zCoeff = cy * sp * cr + sy * sr;
     double dF1dy = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF4dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF7dy = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = cp * cr;
     zCoeff = -cp * sr;
     double dF2dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF5dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF8dr = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -cp;
     yCoeff = -sp * sr;
     zCoeff = -sp * cr;
     double dF2dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                    (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared; 
-    double dF5dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dF8dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transferFunctionJacobian_ = transferFunction_;
@@ -327,14 +327,14 @@ namespace RobotLocalization
     transferFunctionJacobian_(StateMemberY, StateMemberYaw) = dF1dy;
     transferFunctionJacobian_(StateMemberZ, StateMemberRoll) = dF2dr;
     transferFunctionJacobian_(StateMemberZ, StateMemberPitch) = dF2dp;
-    transferFunctionJacobian_(StateMemberRoll, StateMemberRoll) = dF3dr;
-    transferFunctionJacobian_(StateMemberRoll, StateMemberPitch) = dF3dp;
-    transferFunctionJacobian_(StateMemberRoll, StateMemberYaw) = dF3dy;
-    transferFunctionJacobian_(StateMemberPitch, StateMemberRoll) = dF4dr;
-    transferFunctionJacobian_(StateMemberPitch, StateMemberPitch) = dF4dp;
-    transferFunctionJacobian_(StateMemberPitch, StateMemberYaw) = dF4dy;
-    transferFunctionJacobian_(StateMemberYaw, StateMemberRoll) = dF5dr;
-    transferFunctionJacobian_(StateMemberYaw, StateMemberPitch) = dF5dp;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberRoll) = dF6dr;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberPitch) = dF6dp;
+    transferFunctionJacobian_(StateMemberRoll, StateMemberYaw) = dF6dy;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberRoll) = dF7dr;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberPitch) = dF7dp;
+    transferFunctionJacobian_(StateMemberPitch, StateMemberYaw) = dF7dy;
+    transferFunctionJacobian_(StateMemberYaw, StateMemberRoll) = dF8dr;
+    transferFunctionJacobian_(StateMemberYaw, StateMemberPitch) = dF8dp;
 
     FB_DEBUG("Transfer function is:\n" << transferFunction_ <<
              "\nTransfer function Jacobian is:\n" << transferFunctionJacobian_ <<

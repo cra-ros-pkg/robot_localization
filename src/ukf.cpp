@@ -285,12 +285,6 @@ namespace RobotLocalization
     double roll = state_(StateMemberRoll);
     double pitch = state_(StateMemberPitch);
     double yaw = state_(StateMemberYaw);
-    double xVel = state_(StateMemberVx);
-    double yVel = state_(StateMemberVy);
-    double zVel = state_(StateMemberVz);
-    double xAcc = state_(StateMemberAx);
-    double yAcc = state_(StateMemberAy);
-    double zAcc = state_(StateMemberAz);
 
     // We'll need these trig calculations a lot.
     double cr = cos(roll);
@@ -319,9 +313,15 @@ namespace RobotLocalization
     transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
     transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
     transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = delta;
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = delta;
+    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
+    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
+    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
+    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
+    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
+    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
+    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
+    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
+    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
