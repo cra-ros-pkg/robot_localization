@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -671,6 +671,9 @@ namespace RobotLocalization
             }
             ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
+            std::string odomTopic;
+            nhLocal_.getParam(odomTopicName, odomTopic);
+
             // Check for pose rejection threshold
             double poseMahalanobisThresh;
             nhLocal_.param(odomTopicName + std::string("_pose_rejection_threshold"), poseMahalanobisThresh, std::numeric_limits<double>::max());
@@ -678,9 +681,6 @@ namespace RobotLocalization
             // Check for twist rejection threshold
             double twistMahalanobisThresh;
             nhLocal_.param(odomTopicName + std::string("_twist_rejection_threshold"), twistMahalanobisThresh, std::numeric_limits<double>::max());
-
-            std::string odomTopic;
-            nhLocal_.getParam(odomTopicName, odomTopic);
 
             // Now pull in its boolean update vector configuration. Create separate vectors for pose
             // and twist data, and then zero out the opposite values in each vector (no pose data in
@@ -701,10 +701,13 @@ namespace RobotLocalization
             // manually add the pose and twist messages after we extract them from the
             // odometry message.
 
+            int odomQueueSize = 1;
+            nhLocal_.param(odomTopicName + "_queue_size", odomQueueSize, 1);
+
             if(poseUpdateSum + twistUpdateSum > 0)
             {
               odomTopicSubs_.push_back(
-                    nh_.subscribe<nav_msgs::Odometry>(odomTopic, 1,
+                    nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
                                                       boost::bind(&RosFilter<Filter>::odometryCallback, this, _1, odomTopicName)));
             }
             else
@@ -714,7 +717,7 @@ namespace RobotLocalization
 
             if(poseUpdateSum > 0)
             {
-              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, 1));
+              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, odomQueueSize));
               std::string odomPoseTopicName = odomTopicName + "_pose";
               poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, "", poseUpdateVec, differential, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
@@ -733,7 +736,7 @@ namespace RobotLocalization
 
             if(twistUpdateSum > 0)
             {
-              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, odomQueueSize));
               std::string odomTwistTopicName = odomTopicName + "_twist";
               twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
               twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
@@ -799,12 +802,15 @@ namespace RobotLocalization
             }
             ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
+            std::string poseTopic;
+            nhLocal_.getParam(poseTopicName, poseTopic);
+
             // Check for pose rejection threshold
             double poseMahalanobisThresh;
             nhLocal_.param(poseTopicName + std::string("_rejection_threshold"), poseMahalanobisThresh, std::numeric_limits<double>::max());
 
-            std::string poseTopic;
-            nhLocal_.getParam(poseTopicName, poseTopic);
+            int poseQueueSize = 1;
+            nhLocal_.param(poseTopicName + "_queue_size", poseQueueSize, 1);
 
             // Pull in the sensor's config, zero out values that are invalid for the pose type
             std::vector<int> updateVec = loadUpdateConfig(poseTopicName);
@@ -818,8 +824,8 @@ namespace RobotLocalization
             {
               // Create and store message filter subscriber objects and message filters
               poseMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>());
-              subPtr->subscribe(nh_, poseTopic, 1);
-              poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, 1));
+              subPtr->subscribe(nh_, poseTopic, poseQueueSize);
+              poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, poseQueueSize));
               filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
               filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
               poseTopicSubs_.push_back(subPtr);
@@ -856,11 +862,15 @@ namespace RobotLocalization
 
           if (moreParams)
           {
+            std::string twistTopic;
+            nhLocal_.getParam(twistTopicName, twistTopic);
+
             // Check for twist rejection threshold
             double twistMahalanobisThresh;
             nhLocal_.param(twistTopicName + std::string("_rejection_threshold"), twistMahalanobisThresh, std::numeric_limits<double>::max());
-            std::string twistTopic;
-            nhLocal_.getParam(twistTopicName, twistTopic);
+
+            int twistQueueSize = 1;
+            nhLocal_.param(twistTopicName + "_queue_size", twistQueueSize, 1);
 
             // Pull in the sensor's config, zero out values that are invalid for the twist type
             std::vector<int> updateVec = loadUpdateConfig(twistTopicName);
@@ -873,8 +883,8 @@ namespace RobotLocalization
             {
               // Create and store subscriptions and message filters
               twistMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>());
-              subPtr->subscribe(nh_, twistTopic, 1);
-              twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, 1));
+              subPtr->subscribe(nh_, twistTopic, twistQueueSize);
+              twistMFPtr filPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(*subPtr, tfListener_, baseLinkFrameId_, twistQueueSize));
               filPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, twistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
               filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
               twistTopicSubs_.push_back(subPtr);
@@ -944,7 +954,10 @@ namespace RobotLocalization
             }
             ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
-             // Check for pose rejection threshold
+            std::string imuTopic;
+            nhLocal_.getParam(imuTopicName, imuTopic);
+
+            // Check for pose rejection threshold
             double poseMahalanobisThresh;
             nhLocal_.param(imuTopicName + std::string("_pose_rejection_threshold"), poseMahalanobisThresh, std::numeric_limits<double>::max());
 
@@ -955,9 +968,6 @@ namespace RobotLocalization
             // Check for acceleration rejection threshold
             double accelMahalanobisThresh;
             nhLocal_.param(imuTopicName + std::string("_linear_acceleration_rejection_threshold"), accelMahalanobisThresh, std::numeric_limits<double>::max());
-
-            std::string imuTopic;
-            nhLocal_.getParam(imuTopicName, imuTopic);
 
             bool removeGravAcc = false;
             if(!nhLocal_.getParam(imuTopicName + "_remove_gravitational_acceleration", removeGravAcc))
@@ -990,11 +1000,14 @@ namespace RobotLocalization
             int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
             int accelUpdateSum = std::accumulate(accelUpdateVec.begin(), accelUpdateVec.end(), 0);
 
+            int imuQueueSize = 1;
+            nhLocal_.param(imuTopicName + "_queue_size", imuQueueSize, 1);
+
             if(poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
             {
               // Create and store subscriptions and message filters as with odometry data
               imuTopicSubs_.push_back(
-                    nh_.subscribe<sensor_msgs::Imu>(imuTopic, 1,
+                    nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
                                                     boost::bind(&RosFilter<Filter>::imuCallback, this, _1, imuTopicName)));
             }
             else
@@ -1005,7 +1018,7 @@ namespace RobotLocalization
             if(poseUpdateSum > 0)
             {
               // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
-              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuPoseTopicName = imuTopicName + "_pose";
               poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
@@ -1021,7 +1034,7 @@ namespace RobotLocalization
 
             if(twistUpdateSum > 0)
             {
-              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, 1));
+              twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuTwistTopicName = imuTopicName + "_twist";
               twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, angVelMahalanobisThresh));
               twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
@@ -1030,7 +1043,7 @@ namespace RobotLocalization
 
             if(accelUpdateSum > 0)
             {
-              imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, 1));
+              imuMFPtr accelFilPtr(new tf::MessageFilter<sensor_msgs::Imu>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuAccelTopicName = imuTopicName + "_acceleration";
               accelFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::accelerationCallback, this, _1, imuAccelTopicName, baseLinkFrameId_, accelUpdateVec, accelMahalanobisThresh));
               accelFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformImuFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
