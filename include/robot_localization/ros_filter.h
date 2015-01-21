@@ -2067,7 +2067,7 @@ namespace RobotLocalization
               // 5d. Fill out the velocity data in the message
               geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
               twistPtr->header = msg->header;
-              twistPtr->header.frame_id = worldFrameId_;
+              twistPtr->header.frame_id = baseLinkFrameId_;
               twistPtr->twist.twist.linear.x = xVel;
               twistPtr->twist.twist.linear.y = yVel;
               twistPtr->twist.twist.linear.z = zVel;
