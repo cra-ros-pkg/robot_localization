@@ -67,10 +67,11 @@ namespace RobotLocalization
     // Clear the Jacobian
     transferFunctionJacobian_.setZero();
 
-    // Set the estimate error covariance. It should be small,
-    // as we're fairly certain of our initial state
+    // Set the estimate error covariance. We want our measurements
+    // to be accepted rapidly when the filter starts, so we should
+    // initialize the state's covariance with large values.
     estimateErrorCovariance_.setIdentity();
-    estimateErrorCovariance_ *= 1e-6;
+    estimateErrorCovariance_ *= 1e-9;
 
     // We need the identity for the update equations
     identity_.setIdentity();

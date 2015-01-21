@@ -192,9 +192,9 @@ namespace RobotLocalization
       // the Kalman gain computation will blow up. Really, no
       // measurement can be completely without error, so add a small
       // amount in that case.
-      if (measurementCovarianceSubset(i, i) < 1e-12)
+      if (measurementCovarianceSubset(i, i) < 1e-9)
       {
-        measurementCovarianceSubset(i, i) = 1e-12;
+        measurementCovarianceSubset(i, i) = 1e-9;
 
         FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
                  updateIndices[i] <<

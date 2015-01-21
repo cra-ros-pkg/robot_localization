@@ -1609,15 +1609,15 @@ namespace RobotLocalization
         }
       }
 
-      void copyCovariance(Eigen::MatrixXd &covariance,
-                          const double *arr,
+      void copyCovariance(const Eigen::MatrixXd &covariance,
+                          double *arr,
                           const size_t dimension)
       {
         for (size_t i = 0; i < dimension; i++)
         {
           for (size_t j = 0; j < dimension; j++)
           {
-            covariance(i, j) = arr[dimension * i + j];
+            arr[dimension * i + j] = covariance(i, j);
           }
         }
       }
@@ -1758,12 +1758,9 @@ namespace RobotLocalization
         //    To do this, we create a pose from the original upate vector, which contains only
         //    zeros and ones. This pose goes through the same transforms as the measurement. The
         //    non-zero values that result will be used to modify the updateVector.
-        tf::Vector3 maskAccLinPos(updateVector[StateMemberAx],
-                                  updateVector[StateMemberAy],
-                                  updateVector[StateMemberAz]);
-        tf::Vector3 maskAccLinNeg(-updateVector[StateMemberAx],
-                                  -updateVector[StateMemberAy],
-                                  -updateVector[StateMemberAz]);
+        tf::Matrix3x3 maskAcc(updateVector[StateMemberAx], 0, 0,
+                              0, updateVector[StateMemberAy], 0,
+                              0, 0, updateVector[StateMemberAz]);
 
         // 3. We'll need to rotate the covariance as well
         Eigen::MatrixXd covarianceRotated(ACCELERATION_SIZE, ACCELERATION_SIZE);
@@ -1778,10 +1775,8 @@ namespace RobotLocalization
         // 4. We need to transform this into the target frame (probably base_link)
         // It's unlikely that we'll get a velocity measurement in another frame, but
         // we have to handle the situation.
-        bool canTransform = true;
         tf::StampedTransform targetFrameTrans;
-
-        lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
+        bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
 
         if(canTransform)
         {
@@ -1811,13 +1806,16 @@ namespace RobotLocalization
           // to be something like accTmp = targetFrameTrans.getBasis() * accTmp - targetFrameTrans.getOrigin().cross(rotation_acceleration);
           // We can get rotational acceleration by differentiating the rotational velocity (if it's available)
           accTmp = targetFrameTrans.getBasis() * accTmp;
-          maskAccLinPos = targetFrameTrans.getBasis() * maskAccLinPos;
-          maskAccLinNeg = targetFrameTrans.getBasis() * maskAccLinNeg;
+          maskAcc = targetFrameTrans.getBasis() * maskAcc;
 
-          // Now copy the mask values back into the update vector
-          updateVector[StateMemberAx] = static_cast<int>(::fabs(maskAccLinPos.getX()) >= 1e-6 || ::fabs(maskAccLinNeg.getX()) >= 1e-6);
-          updateVector[StateMemberAy] = static_cast<int>(::fabs(maskAccLinPos.getY()) >= 1e-6 || ::fabs(maskAccLinNeg.getY()) >= 1e-6);
-          updateVector[StateMemberAz] = static_cast<int>(::fabs(maskAccLinPos.getZ()) >= 1e-6 || ::fabs(maskAccLinNeg.getZ()) >= 1e-6);
+          // Now use the mask values to determinme which update vector values should true
+          updateVector[StateMemberAx] = static_cast<int>(maskAcc.getRow(StateMemberAx - POSITION_A_OFFSET).length() >= 1e-6);
+          updateVector[StateMemberAy] = static_cast<int>(maskAcc.getRow(StateMemberAy - POSITION_A_OFFSET).length() >= 1e-6);
+          updateVector[StateMemberAz] = static_cast<int>(maskAcc.getRow(StateMemberAz - POSITION_A_OFFSET).length() >= 1e-6);
+
+          RF_DEBUG(msg->header.frame_id << "->" << targetFrame << " transform:\n" << targetFrameTrans <<
+                   "\nAfter applying transform to " << targetFrame << ", update vector is:\n" << updateVector <<
+                   "\nAfter applying transform to " << targetFrame << ", measurement is:\n" << accTmp << "\n");
 
           // 5. Now rotate the covariance: create an augmented
           // matrix that contains a 3D rotation matrix in the
@@ -1846,6 +1844,12 @@ namespace RobotLocalization
 
           // Copy the covariances
           measurementCovariance.block(POSITION_A_OFFSET, POSITION_A_OFFSET, ACCELERATION_SIZE, ACCELERATION_SIZE) = covarianceRotated.block(0, 0, ACCELERATION_SIZE, ACCELERATION_SIZE);
+
+          // 7. If we're in 2D mode, handle that.
+          if(twoDMode_)
+          {
+            forceTwoD(measurement, measurementCovariance, updateVector);
+          }
         }
         else
         {
@@ -2077,11 +2081,14 @@ namespace RobotLocalization
 
               // 5e. Now rotate the previous covariance for this measurement to get it
               // into the target frame, and add the current measurement's rotated covariance
-              // to the previous measurement's rotated covariance, and divide by the time
-              // delta. Place the resultant covariance in the twist message.
-              Eigen::MatrixXd prevCovarRotated = rot6d * previousMeasurementCovariances_[topicName].eval() * rot6d.transpose();
-              covarianceRotated = (covarianceRotated.eval() + prevCovarRotated) / dt;
+              // to the previous measurement's rotated covariance, and multiply by the time delta.
+              Eigen::MatrixXd prevCovarRotated = rot6d * previousMeasurementCovariances_[topicName] * rot6d.transpose();
+              covarianceRotated = (covarianceRotated.eval() + prevCovarRotated) * dt;
               copyCovariance(covarianceRotated, &(twistPtr->twist.covariance[0]), POSE_SIZE);
+
+              RF_DEBUG("Previous measurement covariance:\n" << previousMeasurementCovariances_[topicName] <<
+                       "\nPrevious measurement covariance rotated:\n" << prevCovarRotated <<
+                       "\nFinal twist covariance:\n" << covarianceRotated << "\n");
 
               // Now pass this on to prepareTwist, which will convert it to the required frame
               success = prepareTwist(ptr, topicName + "_twist", twistPtr->header.frame_id, updateVector, measurement, measurementCovariance);
