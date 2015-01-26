@@ -719,7 +719,7 @@ namespace RobotLocalization
             {
               poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, odomQueueSize));
               std::string odomPoseTopicName = odomTopicName + "_pose";
-              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, "", poseUpdateVec, differential, poseMahalanobisThresh));
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
               poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
 
@@ -1020,7 +1020,7 @@ namespace RobotLocalization
               // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
               poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuPoseTopicName = imuTopicName + "_pose";
-              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, worldFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, "", poseUpdateVec, differential, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
               poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
 
