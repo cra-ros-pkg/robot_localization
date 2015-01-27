@@ -1959,7 +1959,7 @@ namespace RobotLocalization
 
         RF_DEBUG("Final target frame for " << topicName << " is " << finalTargetFrame << "\n");
 
-        poseTmp.frame_id_ = finalTargetFrame;
+        poseTmp.frame_id_ = msg->header.frame_id;
         poseTmp.stamp_ = msg->header.stamp;
 
         // Fill out the position data
