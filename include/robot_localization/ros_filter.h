@@ -1115,6 +1115,52 @@ namespace RobotLocalization
 
           filter_.setProcessNoiseCovariance(processNoiseCovariance);
         }
+
+        // Load up the process noise covariance (from the launch file/parameter server)
+        Eigen::MatrixXd initialEstimateErrorCovariance(STATE_SIZE, STATE_SIZE);
+        initialEstimateErrorCovariance.setZero();
+        XmlRpc::XmlRpcValue estimateErrorCovarConfig;
+
+        if (nhLocal_.hasParam("initial_estimate_covariance"))
+        {
+          try
+          {
+            nhLocal_.getParam("initial_estimate_covariance", estimateErrorCovarConfig);
+
+            ROS_ASSERT(estimateErrorCovarConfig.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+            int matSize = initialEstimateErrorCovariance.rows();
+
+            for (int i = 0; i < matSize; i++)
+            {
+              for (int j = 0; j < matSize; j++)
+              {
+                try
+                {
+                  std::ostringstream stream;
+                  stream << estimateErrorCovarConfig[matSize * i + j];
+
+
+                  initialEstimateErrorCovariance(i, j) = estimateErrorCovarConfig[matSize * i + j];
+                }
+                catch(XmlRpc::XmlRpcException &e)
+                {
+                  std::string beans = estimateErrorCovarConfig[matSize * i + j];
+                  std::cerr << "it's a string!\n";
+                }
+              }
+            }
+
+            RF_DEBUG("Initial estimate error covariance is:\n" << initialEstimateErrorCovariance);
+          }
+          catch (XmlRpc::XmlRpcException &e)
+          {
+            ROS_ERROR_STREAM(
+              "ERROR reading sensor config: " << e.getMessage() << " for initial_estimate_covariance (type: " << estimateErrorCovarConfig.getType() << ")");
+          }
+
+          filter_.setEstimateErrorCovariance(initialEstimateErrorCovariance);
+        }
       }
 
       //! @brief Callback method for receiving all odometry messages
