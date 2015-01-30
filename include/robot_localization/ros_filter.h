@@ -1160,7 +1160,7 @@ namespace RobotLocalization
               }
             }
 
-            RF_DEBUG("Process noise covariance is:\n" << processNoiseCovariance);
+            RF_DEBUG("Process noise covariance is:\n" << processNoiseCovariance << "\n");
           }
           catch (XmlRpc::XmlRpcException &e)
           {
@@ -1211,7 +1211,7 @@ namespace RobotLocalization
               }
             }
 
-            RF_DEBUG("Initial estimate error covariance is:\n" << initialEstimateErrorCovariance);
+            RF_DEBUG("Initial estimate error covariance is:\n" << initialEstimateErrorCovariance << "\n");
           }
           catch (XmlRpc::XmlRpcException &e)
           {
