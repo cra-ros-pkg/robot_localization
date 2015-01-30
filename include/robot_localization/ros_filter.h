@@ -592,14 +592,15 @@ namespace RobotLocalization
         nhLocal_.param("two_d_mode", twoDMode_, false);
 
         // Debugging writes to file
-        RF_DEBUG("tf_prefix is " << tfPrefix_ << "\n" <<
-                 "map_frame is " << mapFrameId_ << "\n" <<
-                 "odom_frame is " << odomFrameId_ << "\n" <<
-                 "base_link_frame is " << baseLinkFrameId_ << "\n" <<
-                 "world_frame is " << worldFrameId_ << "\n" <<
-                 "frequency is " << frequency_ << "\n" <<
-                 "sensor_timeout is " << filter_.getSensorTimeout() << "\n" <<
-                 "two_d_mode is " << (twoDMode_ ? "true" : "false") << "\n");
+        RF_DEBUG("tf_prefix is " << tfPrefix_ <<
+                 "\nmap_frame is " << mapFrameId_ <<
+                 "\nodom_frame is " << odomFrameId_ <<
+                 "\nbase_link_frame is " << baseLinkFrameId_ <<
+                 "\nworld_frame is " << worldFrameId_ <<
+                 "\nfrequency is " << frequency_ <<
+                 "\nsensor_timeout is " << filter_.getSensorTimeout() <<
+                 "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
+                 "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
         // Create a subscriber for manually setting/resetting pose
         setPoseSub_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("set_pose", 1, &RosFilter<Filter>::setPoseCallback, this);
@@ -743,7 +744,13 @@ namespace RobotLocalization
               twistMessageFilters_[odomTwistTopicName] = twistFilPtr;
             }
 
-            RF_DEBUG("Subscribed to " << odomTopic << "\n");
+            RF_DEBUG("Subscribed to " << odomTopic << " (" << odomTopicName << ")\n\t" <<
+                     odomTopicName << "_differential is " << (differential ? "true" : "false") << "\n\t" <<
+                     odomTopicName << "_pose_rejection_threshold is " << poseMahalanobisThresh << "\n\t" <<
+                     odomTopicName << "_twist_rejection_threshold is " << twistMahalanobisThresh << "\n\t" <<
+                     odomTopicName << "_queue_size is " << odomQueueSize << "\n\t" <<
+                     odomTopicName << " pose update vector is " << poseUpdateVec << "\n\t"<<
+                     odomTopicName << " twist update vector is " << twistUpdateVec << "\n");
           }
         } while (moreParams);
 
@@ -796,7 +803,7 @@ namespace RobotLocalization
                 }
                 catch(...)
                 {
-
+                  ROS_ERROR_STREAM("Unable to read differential setting for " << poseTopicName);
                 }
               }
             }
@@ -813,8 +820,7 @@ namespace RobotLocalization
             nhLocal_.param(poseTopicName + "_queue_size", poseQueueSize, 1);
 
             // Pull in the sensor's config, zero out values that are invalid for the pose type
-            std::vector<int> updateVec = loadUpdateConfig(poseTopicName);
-            std::vector<int> poseUpdateVec = updateVec;
+            std::vector<int> poseUpdateVec = loadUpdateConfig(poseTopicName);
             std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET, poseUpdateVec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
             std::fill(poseUpdateVec.begin() + POSITION_A_OFFSET, poseUpdateVec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
@@ -846,7 +852,11 @@ namespace RobotLocalization
               ROS_WARN_STREAM("Warning: " << poseTopic << " is listed as an input topic, but all pose update variables are false");
             }
 
-            RF_DEBUG("Subscribed to " << poseTopic << "\n");
+            RF_DEBUG("Subscribed to " << poseTopic << " (" << poseTopicName << ")\n\t" <<
+                     poseTopicName << "_differential is " << (differential ? "true" : "false") << "\n\t" <<
+                     poseTopicName << "_rejection_threshold is " << poseMahalanobisThresh << "\n\t" <<
+                     poseTopicName << "_queue_size is " << poseQueueSize << "\n\t" <<
+                     poseTopicName << " update vector is " << poseUpdateVec << "\n");
           }
         } while (moreParams);
 
@@ -873,8 +883,7 @@ namespace RobotLocalization
             nhLocal_.param(twistTopicName + "_queue_size", twistQueueSize, 1);
 
             // Pull in the sensor's config, zero out values that are invalid for the twist type
-            std::vector<int> updateVec = loadUpdateConfig(twistTopicName);
-            std::vector<int> twistUpdateVec = updateVec;
+            std::vector<int> twistUpdateVec = loadUpdateConfig(twistTopicName);
             std::fill(twistUpdateVec.begin() + POSITION_OFFSET, twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
 
             int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
@@ -895,7 +904,10 @@ namespace RobotLocalization
               ROS_WARN_STREAM("Warning: " << twistTopic << " is listed as an input topic, but all twist update variables are false");
             }
 
-            RF_DEBUG("Subscribed to " << twistTopic << "\n");
+            RF_DEBUG("Subscribed to " << twistTopic << " (" << twistTopicName << ")\n\t" <<
+                     twistTopicName << "_rejection_threshold is " << twistMahalanobisThresh << "\n\t" <<
+                     twistTopicName << "_queue_size is " << twistQueueSize << "\n\t" <<
+                     twistTopicName << " update vector is " << twistUpdateVec << "\n");
           }
         } while (moreParams);
 
@@ -961,9 +973,25 @@ namespace RobotLocalization
             double poseMahalanobisThresh;
             nhLocal_.param(imuTopicName + std::string("_pose_rejection_threshold"), poseMahalanobisThresh, std::numeric_limits<double>::max());
 
-            // Check for angular velocity rejection threshold
-            double angVelMahalanobisThresh;
-            nhLocal_.param(imuTopicName + std::string("_angular_velocity_rejection_threshold"), angVelMahalanobisThresh, std::numeric_limits<double>::max());
+            // Check for angular velocity rejection threshold. Handle deprecated name.
+            double twistMahalanobisThresh;
+            std::string correctImuTwistRejectionName = imuTopicName + std::string("_twist_rejection_threshold");
+            std::string deprecatedImuTwistRejectionName = imuTopicName + std::string("_angular_velocity_rejection_threshold");
+            if(nhLocal_.hasParam(correctImuTwistRejectionName))
+            {
+              nhLocal_.param(correctImuTwistRejectionName, twistMahalanobisThresh, std::numeric_limits<double>::max());
+            }
+            else if(nhLocal_.hasParam(deprecatedImuTwistRejectionName))
+            {
+              nhLocal_.param(deprecatedImuTwistRejectionName, twistMahalanobisThresh, std::numeric_limits<double>::max());
+
+              ROS_WARN_STREAM("Detected deprecated parameter " << deprecatedImuTwistRejectionName << ". Please use " <<
+                              correctImuTwistRejectionName << " intstead.");
+            }
+            else
+            {
+              twistMahalanobisThresh = std::numeric_limits<double>::max();
+            }
 
             // Check for acceleration rejection threshold
             double accelMahalanobisThresh;
@@ -1036,7 +1064,7 @@ namespace RobotLocalization
             {
               twistMFPtr twistFilPtr(new tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuTwistTopicName = imuTopicName + "_twist";
-              twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, angVelMahalanobisThresh));
+              twistFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
               twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
               twistMessageFilters_[imuTwistTopicName] = twistFilPtr;
             }
@@ -1050,7 +1078,16 @@ namespace RobotLocalization
               accelerationMessageFilters_[imuAccelTopicName] = accelFilPtr;
             }
 
-            RF_DEBUG("Subscribed to " << imuTopic << "\n");
+            RF_DEBUG("Subscribed to " << imuTopic << " (" << imuTopicName << ")\n\t" <<
+                     imuTopicName << "_differential is " << (differential ? "true" : "false") << "\n\t" <<
+                     imuTopicName << "_pose_rejection_threshold is " << poseMahalanobisThresh << "\n\t" <<
+                     imuTopicName << "_twist_rejection_threshold is " << twistMahalanobisThresh << "\n\t" <<
+                     imuTopicName << "_linear_acceleration_rejection_threshold is " << accelMahalanobisThresh << "\n\t" <<
+                     imuTopicName << "_remove_gravitational_acceleration is " << (removeGravAcc ? "true" : "false") << "\n\t" <<
+                     imuTopicName << "_queue_size is " << imuQueueSize << "\n\t" <<
+                     imuTopicName << " pose update vector is " << poseUpdateVec << "\n\t"<<
+                     imuTopicName << " twist update vector is " << twistUpdateVec << "\n\t" <<
+                     imuTopicName << " acceleration update vector is " << accelUpdateVec << "\n");
           }
         } while (moreParams);
 
@@ -1061,7 +1098,8 @@ namespace RobotLocalization
           {
             if(absPoseVarCounts[static_cast<StateMembers>(stateVar)] > 1)
             {
-              RL_DIAGNOSTIC(absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] << " absolute pose inputs detected for " <<
+              RL_DIAGNOSTIC(absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
+                            " absolute pose inputs detected for " <<
                             stateVariableNames_[stateVar] << ". This may result in oscillations.");
             }
           }
@@ -1101,7 +1139,24 @@ namespace RobotLocalization
             {
               for (int j = 0; j < matSize; j++)
               {
-                processNoiseCovariance(i, j) = processNoiseCovarConfig[matSize * i + j];
+                try
+                {
+                  // These matrices can cause problems if all the types
+                  // aren't specified with decimal points. Handle that
+                  // using string streams.
+                  std::ostringstream ostr;
+                  ostr << processNoiseCovarConfig[matSize * i + j];
+                  std::istringstream istr(ostr.str());
+                  istr >> processNoiseCovariance(i, j);
+                }
+                catch(XmlRpc::XmlRpcException &e)
+                {
+                  throw e;
+                }
+                catch(...)
+                {
+                  throw;
+                }
               }
             }
 
@@ -1137,16 +1192,21 @@ namespace RobotLocalization
               {
                 try
                 {
-                  std::ostringstream stream;
-                  stream << estimateErrorCovarConfig[matSize * i + j];
-
-
-                  initialEstimateErrorCovariance(i, j) = estimateErrorCovarConfig[matSize * i + j];
+                  // These matrices can cause problems if all the types
+                  // aren't specified with decimal points. Handle that
+                  // using string streams.
+                  std::ostringstream ostr;
+                  ostr << estimateErrorCovarConfig[matSize * i + j];
+                  std::istringstream istr(ostr.str());
+                  istr >> initialEstimateErrorCovariance(i, j);
                 }
                 catch(XmlRpc::XmlRpcException &e)
                 {
-                  std::string beans = estimateErrorCovarConfig[matSize * i + j];
-                  std::cerr << "it's a string!\n";
+                  throw e;
+                }
+                catch(...)
+                {
+                  throw;
                 }
               }
             }
@@ -1156,7 +1216,12 @@ namespace RobotLocalization
           catch (XmlRpc::XmlRpcException &e)
           {
             ROS_ERROR_STREAM(
-              "ERROR reading sensor config: " << e.getMessage() << " for initial_estimate_covariance (type: " << estimateErrorCovarConfig.getType() << ")");
+              "ERROR reading initial_estimate_covariance (type: " << estimateErrorCovarConfig.getType() << "): " << e.getMessage());
+          }
+          catch(...)
+          {
+            ROS_ERROR_STREAM(
+              "ERROR reading initial_estimate_covariance (type: " << estimateErrorCovarConfig.getType() << ")");
           }
 
           filter_.setEstimateErrorCovariance(initialEstimateErrorCovariance);
