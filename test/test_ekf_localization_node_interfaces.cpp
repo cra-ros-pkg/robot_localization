@@ -1,3 +1,5 @@
+#include "robot_localization/SetPose.h"
+
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -13,38 +15,30 @@ nav_msgs::Odometry filtered_;
 void resetFilter()
 {
   ros::NodeHandle nh;
-  ros::Publisher setPosePub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/set_pose", 5);
+  ros::ServiceClient client = nh.serviceClient<robot_localization::SetPose>("/set_pose");
 
   bool poseChanged = false;
 
-  geometry_msgs::PoseWithCovarianceStamped pose;
-  pose.pose.pose.orientation.w = 1;
-  pose.header.frame_id = "odom";
+  robot_localization::SetPose setPose;
+  setPose.request.pose.pose.pose.orientation.w = 1;
+  setPose.request.pose.header.frame_id = "odom";
   for(size_t ind = 0; ind < 36; ind+=7)
   {
-    pose.pose.covariance[ind] = 1e-6;
+    setPose.request.pose.pose.covariance[ind] = 1e-6;
   }
 
-  // Make sure the pose reset worked. Test will timeout
-  // if this fails.
-  while(!poseChanged)
-  {
-    pose.header.stamp = ros::Time::now();
-    setPosePub.publish(pose);
-    pose.header.seq++;
-    ros::spinOnce();
-
-    poseChanged = (filtered_.pose.pose.position.x == pose.pose.pose.position.x) &&
-                  (filtered_.pose.pose.position.y == pose.pose.pose.position.y) &&
-                  (filtered_.pose.pose.position.z == pose.pose.pose.position.z) &&
-                  (filtered_.pose.pose.orientation.x == pose.pose.pose.orientation.x) &&
-                  (filtered_.pose.pose.orientation.y == pose.pose.pose.orientation.y) &&
-                  (filtered_.pose.pose.orientation.z == pose.pose.pose.orientation.z) &&
-                  (filtered_.pose.pose.orientation.w == pose.pose.pose.orientation.w);
-
-    ros::Duration(0.1).sleep();
-  }
-
+  setPose.request.pose.header.stamp = ros::Time::now();
+  client.call(setPose);
+  setPose.request.pose.header.seq++;
+  ros::spinOnce();
+/*
+  poseChanged = (filtered_.pose.pose.position.x == setPose.request.pose.pose.pose.position.x) &&
+                (filtered_.pose.pose.position.y == setPose.request.pose.pose.pose.position.y) &&
+                (filtered_.pose.pose.position.z == setPose.request.pose.pose.pose.position.z) &&
+                (filtered_.pose.pose.orientation.x == setPose.request.pose.pose.pose.orientation.x) &&
+                (filtered_.pose.pose.orientation.y == setPose.request.pose.pose.pose.orientation.y) &&
+                (filtered_.pose.pose.orientation.z == setPose.request.pose.pose.pose.orientation.z) &&
+                (filtered_.pose.pose.orientation.w == setPose.request.pose.pose.pose.orientation.w);*/
 }
 
 void filterCallback(const nav_msgs::OdometryConstPtr &msg)

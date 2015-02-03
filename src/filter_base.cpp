@@ -337,10 +337,6 @@ namespace RobotLocalization
       return false;
     }
 
-    // TAM: REMOVE!
-    FB_DEBUG("Squared Mahalanobis is: " << sqMahalanobis << "\n" <<
-             "Threshold is: " << threshold << "\n" << "\n");
-
     return true;
   }
 }

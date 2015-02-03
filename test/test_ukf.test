@@ -2,6 +2,6 @@
 
 <launch>
 
-    <test test-name="ukf_t" pkg="robot_localization" type="ukf-test" clear_params="true" time-limit="100.0" />
+    <test test-name="test_ukf" pkg="robot_localization" type="test_ukf" clear_params="true" time-limit="100.0" />
 
 </launch>

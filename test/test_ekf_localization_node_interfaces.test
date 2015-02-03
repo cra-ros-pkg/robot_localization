@@ -1,8 +1,8 @@
-<!-- Launch file for ekf_localization_node_test-interfaces -->
+<!-- Launch file for test_ekf_localization_node_interfaces-->
 
 <launch>
 
-    <node name="ekf_localization_node_test_interfaces_rl" pkg="robot_localization" type="ekf_localization_node" clear_params="true">
+    <node name="test_ekf_localization_node_interfaces_ekf" pkg="robot_localization" type="ekf_localization_node" clear_params="true">
 
       <param name="frequency" value="30"/>  
 
@@ -39,7 +39,7 @@
       <param name="print_diagnostics" value="false"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="ekf_navigation.txt"/>
+      <param name="debug_out_file"  value="debug_ekf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
@@ -62,6 +62,6 @@
 
     </node>
 
-    <test test-name="ekf_localization_node_test_interfaces_t" pkg="robot_localization" type="ekf_localization_node-test-interfaces" clear_params="true" time-limit="100.0" />
+    <test test-name="test_ekf_localization_node_interfaces_int" pkg="robot_localization" type="test_ekf_localization_node_interfaces" clear_params="true" time-limit="100.0" />
 
 </launch>
