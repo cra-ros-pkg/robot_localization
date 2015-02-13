@@ -31,8 +31,10 @@
 
       <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
 
-      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true, true, true, true]</rosparam>
-      <rosparam param="imu1_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="imu1_config">[false, false, false, false, false, false, false, false, false, true, true, true, false, false, false]</rosparam>
+      <rosparam param="imu2_config">[false, false, false, false, false, false, false, false, false, false, false, false, true, true, true]</rosparam>
+      <rosparam param="imu3_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
 
       <!-- Differential setting is off for this test -->
       <param name="odom0_differential" value="false"/>
@@ -42,10 +44,15 @@
       <param name="pose0_differential" value="false"/>
       <param name="pose1_differential" value="true"/>
 
+      <param name="imu0_differential" value="false"/>
+      <param name="imu1_differential" value="false"/>
+      <param name="imu2_differential" value="false"/>
+      <param name="imu3_differential" value="true"/>
+
       <param name="print_diagnostics" value="false"/>
 
-      <param name="debug"           value="true"/>
-      <param name="debug_out_file"  value="/home/tmoore/Desktop/wtf.txt"/>
+      <param name="debug"           value="false"/>
+      <param name="debug_out_file"  value="debug_ekf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
