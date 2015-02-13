@@ -19,6 +19,9 @@
 
       <param name="twist0" value="/twist_input0"/>
 
+      <param name="imu0" value="/imu_input0"/>
+      <param name="imu1" value="/imu_input1"/>
+
       <rosparam param="odom0_config">[true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="odom1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="odom2_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
@@ -27,6 +30,9 @@
       <rosparam param="pose1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
 
       <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
+
+      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, true, true, true, true, true, true]</rosparam>
+      <rosparam param="imu1_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
 
       <!-- Differential setting is off for this test -->
       <param name="odom0_differential" value="false"/>
@@ -38,8 +44,8 @@
 
       <param name="print_diagnostics" value="false"/>
 
-      <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf.txt"/>
+      <param name="debug"           value="true"/>
+      <param name="debug_out_file"  value="/home/tmoore/Desktop/wtf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
@@ -62,6 +68,6 @@
 
     </node>
 
-    <test test-name="test_ekf_localization_node_interfaces_int" pkg="robot_localization" type="test_ekf_localization_node_interfaces" clear_params="true" time-limit="100.0" />
+    <test test-name="test_ekf_localization_node_interfaces_int" pkg="robot_localization" type="test_ekf_localization_node_interfaces" clear_params="true" time-limit="1000.0" />
 
 </launch>

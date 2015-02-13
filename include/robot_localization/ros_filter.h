@@ -43,6 +43,8 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/message_filter.h>
@@ -448,17 +450,16 @@ namespace RobotLocalization
           {
             double projectTime = filter_.getSensorTimeout() * std::floor(lastUpdateDelta / filter_.getSensorTimeout());
 
-            RF_DEBUG("Sensor timeout! Last measurement was " << std::setprecision(10) <<
-                     filter_.getLastMeasurementTime() << ", current time is " <<
-                     currentTime << ", delta is " << lastUpdateDelta <<
-                     ", projection time is " << projectTime << "\n");
+            RF_DEBUG("Sensor timeout! Last update time was " << filter_.getLastUpdateTime() <<
+                     ", current time is " <<currentTime <<
+                     ", delta is " << lastUpdateDelta << "\n");
 
-            filter_.validateDelta(projectTime);
-            filter_.predict(projectTime);
+            filter_.validateDelta(lastUpdateDelta);
+            filter_.predict(lastUpdateDelta);
 
             // Update the last measurement time and last update time
-            filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + projectTime);
-            filter_.setLastUpdateTime(filter_.getLastUpdateTime() + projectTime);
+            filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
+            filter_.setLastUpdateTime(filter_.getLastUpdateTime() + lastUpdateDelta);
           }
         }
         else
@@ -749,8 +750,8 @@ namespace RobotLocalization
                      odomTopicName << "_pose_rejection_threshold is " << poseMahalanobisThresh << "\n\t" <<
                      odomTopicName << "_twist_rejection_threshold is " << twistMahalanobisThresh << "\n\t" <<
                      odomTopicName << "_queue_size is " << odomQueueSize << "\n\t" <<
-                     odomTopicName << " pose update vector is " << poseUpdateVec << "\n\t"<<
-                     odomTopicName << " twist update vector is " << twistUpdateVec << "\n");
+                     odomTopicName << " pose update vector is " << poseUpdateVec << "\t"<<
+                     odomTopicName << " twist update vector is " << twistUpdateVec);
           }
         } while (moreParams);
 
@@ -856,7 +857,7 @@ namespace RobotLocalization
                      poseTopicName << "_differential is " << (differential ? "true" : "false") << "\n\t" <<
                      poseTopicName << "_rejection_threshold is " << poseMahalanobisThresh << "\n\t" <<
                      poseTopicName << "_queue_size is " << poseQueueSize << "\n\t" <<
-                     poseTopicName << " update vector is " << poseUpdateVec << "\n");
+                     poseTopicName << " update vector is " << poseUpdateVec);
           }
         } while (moreParams);
 
@@ -907,7 +908,7 @@ namespace RobotLocalization
             RF_DEBUG("Subscribed to " << twistTopic << " (" << twistTopicName << ")\n\t" <<
                      twistTopicName << "_rejection_threshold is " << twistMahalanobisThresh << "\n\t" <<
                      twistTopicName << "_queue_size is " << twistQueueSize << "\n\t" <<
-                     twistTopicName << " update vector is " << twistUpdateVec << "\n");
+                     twistTopicName << " update vector is " << twistUpdateVec);
           }
         } while (moreParams);
 
@@ -1048,7 +1049,7 @@ namespace RobotLocalization
               // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
               poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuPoseTopicName = imuTopicName + "_pose";
-              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, "", poseUpdateVec, differential, poseMahalanobisThresh));
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
               poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
 
@@ -1085,9 +1086,9 @@ namespace RobotLocalization
                      imuTopicName << "_linear_acceleration_rejection_threshold is " << accelMahalanobisThresh << "\n\t" <<
                      imuTopicName << "_remove_gravitational_acceleration is " << (removeGravAcc ? "true" : "false") << "\n\t" <<
                      imuTopicName << "_queue_size is " << imuQueueSize << "\n\t" <<
-                     imuTopicName << " pose update vector is " << poseUpdateVec << "\n\t"<<
-                     imuTopicName << " twist update vector is " << twistUpdateVec << "\n\t" <<
-                     imuTopicName << " acceleration update vector is " << accelUpdateVec << "\n");
+                     imuTopicName << " pose update vector is " << poseUpdateVec << "\t"<<
+                     imuTopicName << " twist update vector is " << twistUpdateVec << "\t" <<
+                     imuTopicName << " acceleration update vector is " << accelUpdateVec);
           }
         } while (moreParams);
 
@@ -1467,6 +1468,13 @@ namespace RobotLocalization
         previousMeasurements_.clear();
         previousMeasurementCovariances_.clear();
 
+        // Clear out the measurement queue, so that we don't immediately undo our
+        // reset.
+        while(!measurementQueue_.empty())
+        {
+          measurementQueue_.pop();
+        }
+
         // We want the preparePose method to succeed with its transforms, so
         // we need to act like we've had previous measurements for this sensor.
         tf::Transform empty;
@@ -1487,12 +1495,16 @@ namespace RobotLocalization
         measurementCovariance.setIdentity();
         measurementCovariance *= 1e-6;
 
-        // Prepare the pose data (really just using this to transform it into the target frame)
+        // Prepare the pose data (really just using this to transform it into the target frame).
+        // Twist data is going to get zeroed out.
         preparePose(msg, topicName, odomFrameId_, false, updateVector, measurement, measurementCovariance);
 
-        // Force everything to be reset
+        // For the state
         filter_.setState(measurement);
         filter_.setEstimateErrorCovariance(measurementCovariance);
+
+        filter_.setLastMeasurementTime(ros::Time::now().toSec());
+        filter_.setLastUpdateTime(ros::Time::now().toSec());
 
         RF_DEBUG("\n------ /RosFilter::setPoseCallback ------\n");
       }
