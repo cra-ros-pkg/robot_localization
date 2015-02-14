@@ -57,7 +57,7 @@ void filterCallback(const nav_msgs::OdometryConstPtr &msg)
   filtered_ = *msg;
   stateUpdated_ = true;
 }
-/*
+
 TEST (InterfacesTest, OdomPoseBasicIO)
 {
   stateUpdated_ = false;
@@ -138,7 +138,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   ros::spinOnce();
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x), 0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 1.0);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
   resetFilter();
 
@@ -348,7 +348,7 @@ TEST (InterfacesTest, TwistBasicIO)
   ros::spinOnce();
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x), 0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 1.0);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
   resetFilter();
 
@@ -524,7 +524,7 @@ TEST (InterfacesTest, ImuPoseBasicIO)
 
   resetFilter();
 }
-*/
+
 TEST (InterfacesTest, ImuTwistBasicIO)
 {
   ros::NodeHandle nh;
@@ -537,21 +537,18 @@ TEST (InterfacesTest, ImuTwistBasicIO)
 
   for(size_t ind = 0; ind < 9; ind+=4)
   {
-    imu.orientation_covariance[ind] = 1e-6;
+    imu.angular_velocity_covariance[ind] = 1e-6;
   }
 
   imu.header.frame_id = "base_link";
 
-  // Make sure the pose reset worked. Test will timeout
-  // if this fails.
   ros::Rate loopRate(50);
   for(size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
-    ros::spinOnce();
-
     loopRate.sleep();
+    ros::spinOnce();
 
     imu.header.seq++;
   }
@@ -561,14 +558,15 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   tf::Matrix3x3 mat(quat);
   double r, p, y;
   mat.getRPY(r, p, y);
-  std::cerr << "TAM: " << r << "\n";
-  EXPECT_LT(::fabs(r - M_PI / 2.0), 0.1);
+
+  // Tolerances may seem loose, but the initial state covariances
+  // are tiny, so the filter is sluggish to accept velocity data
+  EXPECT_LT(::fabs(r - M_PI / 2.0), 0.7);
   EXPECT_LT(::fabs(p), 0.1);
   EXPECT_LT(::fabs(y), 0.1);
 
-  EXPECT_LT(filtered_.pose.covariance[21], 0.5);
-  EXPECT_LT(filtered_.pose.covariance[28], 0.25);
-  EXPECT_LT(filtered_.pose.covariance[35], 0.5);
+  EXPECT_LT(filtered_.twist.covariance[21], 1e-3);
+  EXPECT_LT(filtered_.pose.covariance[21], 0.1);
 
   resetFilter();
 
@@ -582,9 +580,8 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
-    ros::spinOnce();
-
     loopRate.sleep();
+    ros::spinOnce();
 
     imu.header.seq++;
   }
@@ -594,8 +591,11 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   mat.setRotation(quat);
   mat.getRPY(r, p, y);
   EXPECT_LT(::fabs(r), 0.1);
-  EXPECT_LT(::fabs(p + M_PI / 2.0), 0.1);
+  EXPECT_LT(::fabs(p + M_PI / 2.0), 0.7);
   EXPECT_LT(::fabs(y), 0.1);
+
+  EXPECT_LT(filtered_.twist.covariance[28], 1e-3);
+  EXPECT_LT(filtered_.pose.covariance[28], 0.1);
 
   resetFilter();
 
@@ -609,9 +609,8 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
-    ros::spinOnce();
-
     loopRate.sleep();
+    ros::spinOnce();
 
     imu.header.seq++;
   }
@@ -622,7 +621,10 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   mat.getRPY(r, p, y);
   EXPECT_LT(::fabs(r), 0.1);
   EXPECT_LT(::fabs(p), 0.1);
-  EXPECT_LT(::fabs(y + M_PI / 4.0), 0.1);
+  EXPECT_LT(::fabs(y - M_PI / 4.0), 0.7);
+
+  EXPECT_LT(filtered_.twist.covariance[35], 1e-3);
+  EXPECT_LT(filtered_.pose.covariance[35], 0.1);
 
   resetFilter();
 }
@@ -634,13 +636,14 @@ TEST (InterfacesTest, ImuAccBasicIO)
   ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
 
   sensor_msgs::Imu imu;
+  imu.header.frame_id = "base_link";
   imu.linear_acceleration_covariance[0] = 1e-6;
   imu.linear_acceleration_covariance[4] = 1e-6;
   imu.linear_acceleration_covariance[8] = 1e-6;
 
-  imu.linear_acceleration.x = 0.1;
-  imu.linear_acceleration.y = -0.1;
-  imu.linear_acceleration.z = 0.1;
+  imu.linear_acceleration.x = 1;
+  imu.linear_acceleration.y = -1;
+  imu.linear_acceleration.z = 1;
 
   // Move with constant acceleration for 1 second,
   // then check our velocity.
@@ -649,16 +652,15 @@ TEST (InterfacesTest, ImuAccBasicIO)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
-    ros::spinOnce();
-
     loopRate.sleep();
+    ros::spinOnce();
 
     imu.header.seq++;
   }
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.1);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.1);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.1);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.4);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.4);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.4);
 
   imu.linear_acceleration.x = 0.0;
   imu.linear_acceleration.y = 0.0;
@@ -671,16 +673,17 @@ TEST (InterfacesTest, ImuAccBasicIO)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
-    ros::spinOnce();
-
     loopRate.sleep();
+    ros::spinOnce();
 
     imu.header.seq++;
   }
 
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.0), 0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.0), 0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.0), 0.1);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.3);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.3);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.3);
+
+  resetFilter();
 }
 
 TEST (InterfacesTest, OdomDifferentialIO)
@@ -835,6 +838,110 @@ TEST (InterfacesTest, PoseDifferentialIO)
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1), 0.2);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 2), 0.4);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z + 3), 0.6);
+
+  resetFilter();
+}
+
+TEST (InterfacesTest, ImuDifferentialIO)
+{
+  ros::NodeHandle nh;
+  ros::Publisher imu0Pub = nh.advertise<sensor_msgs::Imu>("/imu_input0", 5);
+  ros::Publisher imu1Pub = nh.advertise<sensor_msgs::Imu>("/imu_input1", 5);
+  ros::Publisher imuPub = nh.advertise<sensor_msgs::Imu>("/imu_input3", 5);
+  ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
+
+  sensor_msgs::Imu imu;
+  imu.header.frame_id = "base_link";
+  tf::Quaternion quat;
+  const double roll = M_PI/2.0;
+  const double pitch = -M_PI;
+  const double yaw = -M_PI/4.0;
+  quat.setRPY(roll, pitch, yaw);
+  tf::quaternionTFToMsg(quat, imu.orientation);
+
+  imu.orientation_covariance[0] = 0.02;
+  imu.orientation_covariance[4] = 0.02;
+  imu.orientation_covariance[8] = 0.02;
+
+  imu.angular_velocity_covariance[0] = 0.02;
+  imu.angular_velocity_covariance[4] = 0.02;
+  imu.angular_velocity_covariance[8] = 0.02;
+
+  size_t setCount = 0;
+  while(setCount++ < 10)
+  {
+    imu.header.stamp = ros::Time::now();
+    imu0Pub.publish(imu); // Use this to move the absolute orientation
+    imu1Pub.publish(imu); // Use this to keep velocities at 0
+    ros::spinOnce();
+
+    ros::Duration(0.1).sleep();
+
+    imu.header.seq++;
+  }
+
+  size_t zeroCount = 0;
+  while(zeroCount++ < 10)
+  {
+    imu.header.stamp = ros::Time::now();
+    imuPub.publish(imu);
+    ros::spinOnce();
+
+    ros::Duration(0.1).sleep();
+
+    imu.header.seq++;
+  }
+
+  double rollFinal = roll;
+  double pitchFinal = pitch;
+  double yawFinal = yaw;
+
+  // Move the orientation slowly, and see if we
+  // can push it to 0
+  ros::Rate loopRate(20);
+  for(size_t i = 0; i < 100; ++i)
+  {
+    yawFinal -= 0.01 * (3.0 * M_PI/4.0);
+
+    quat.setRPY(rollFinal, pitchFinal, yawFinal);
+
+    tf::quaternionTFToMsg(quat, imu.orientation);
+    imu.header.stamp = ros::Time::now();
+    imuPub.publish(imu);
+    ros::spinOnce();
+
+    loopRate.sleep();
+
+    imu.header.seq++;
+  }
+  ros::spinOnce();
+
+  // Move the orientation slowly, and see if we
+  // can push it to 0
+  loopRate = ros::Rate(20);
+  for(size_t i = 0; i < 100; ++i)
+  {
+    rollFinal += 0.01 * (M_PI/2.0);
+
+    quat.setRPY(rollFinal, pitchFinal, yawFinal);
+
+    tf::quaternionTFToMsg(quat, imu.orientation);
+    imu.header.stamp = ros::Time::now();
+    imuPub.publish(imu);
+    ros::spinOnce();
+
+    loopRate.sleep();
+
+    imu.header.seq++;
+  }
+  ros::spinOnce();
+
+  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
+  tf::Matrix3x3 mat(quat);
+  mat.getRPY(rollFinal, pitchFinal, yawFinal);
+  EXPECT_LT(::fabs(rollFinal), 0.2);
+  EXPECT_LT(::fabs(pitchFinal), 0.2);
+  EXPECT_LT(::fabs(yawFinal), 0.2);
 
   resetFilter();
 }

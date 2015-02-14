@@ -21,6 +21,8 @@
 
       <param name="imu0" value="/imu_input0"/>
       <param name="imu1" value="/imu_input1"/>
+      <param name="imu2" value="/imu_input2"/>
+      <param name="imu3" value="/imu_input3"/>
 
       <rosparam param="odom0_config">[true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="odom1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
@@ -51,8 +53,8 @@
 
       <param name="print_diagnostics" value="false"/>
 
-      <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf.txt"/>
+      <param name="debug"           value="true"/>
+      <param name="debug_out_file"  value="/home/tmoore/Desktop/debug_ekf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
