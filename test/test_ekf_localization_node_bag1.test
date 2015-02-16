@@ -57,10 +57,15 @@
                                      false, false, false,
                                      false, false, false]</rosparam>
 
-      <param name="odom0_differential" value="true"/>
+      <param name="odom0_differential" value="false"/>
       <param name="odom1_differential" value="false"/>
-      <param name="imu0_differential" value="true"/>
+      <param name="imu0_differential" value="false"/>
       <param name="imu1_differential" value="true"/>
+
+      <param name="odom0_queue_size" value="10"/>
+      <param name="odom1_queue_size" value="10"/>
+      <param name="imu0_queue_size" value="10"/>
+      <param name="imu1_queue_size" value="10"/>
 
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
       <param name="imu1_remove_gravitational_acceleration" value="true"/>
@@ -89,10 +94,10 @@
     </node>
 
     <test test-name="test_ekf_localization_node_bag1_pose" pkg="robot_localization" type="test_ekf_localization_node_bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.8572"/>
-      <param name="final_y" value="0.6383"/>
-      <param name="final_z" value="-3.7965"/>
-      <param name="tolerance" value="0.3873"/>
+      <param name="final_x" value="38.966"/>
+      <param name="final_y" value="2.1327"/>
+      <param name="final_z" value="0.00076583"/>
+      <param name="tolerance" value="0.015839"/>
       <param name="output_final_position" value="$(arg output_final_position)"/>
       <param name="output_location" value="$(arg output_location)"/>
     </test>

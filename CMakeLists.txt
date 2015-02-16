@@ -115,10 +115,10 @@ if (CATKIN_ENABLE_TESTING)
    #                 test/test_localization_node_bag_pose_tester.cpp)
   #target_link_libraries(test_ekf_localization_node_bag1 ${catkin_LIBRARIES})
 
-  #add_rostest_gtest(test_ekf_localization_node_bag2
-  #                  test/test_ekf_localization_node_bag2.test
-  #                  test/test_localization_node_bag_pose_tester.cpp)
-  #target_link_libraries(test_ekf_localization_node_bag2 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ekf_localization_node_bag2
+                    test/test_ekf_localization_node_bag2.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag2 ${catkin_LIBRARIES})
 
  # add_rostest_gtest(test_ekf_localization_node_bag3
  #                   test/test_ekf_localization_node_bag3.test
