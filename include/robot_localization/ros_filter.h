@@ -446,10 +446,8 @@ namespace RobotLocalization
           // If we get a large delta, then continuously predict until
           if(lastUpdateDelta >= filter_.getSensorTimeout())
           {
-            double projectTime = filter_.getSensorTimeout() * std::floor(lastUpdateDelta / filter_.getSensorTimeout());
-
             RF_DEBUG("Sensor timeout! Last update time was " << filter_.getLastUpdateTime() <<
-                     ", current time is " <<currentTime <<
+                     ", current time is " << currentTime <<
                      ", delta is " << lastUpdateDelta << "\n");
 
             filter_.validateDelta(lastUpdateDelta);
