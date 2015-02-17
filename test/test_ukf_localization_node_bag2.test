@@ -50,7 +50,7 @@
       <param name="print_diagnostics" value="false"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf.txt"/>
+      <param name="debug_out_file"  value="debug_ukf.txt"/>
 
       <rosparam param="process_noise_covariance">[0.03, 0,    0,   0,    0,    0,    0,     0,     0,    0,     0,     0,     0,    0,    0,
                                                   0,    0.03, 0,   0,    0,    0,    0,     0,     0,    0,     0,     0,     0,    0,    0,

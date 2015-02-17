@@ -71,7 +71,7 @@
       <param name="imu1_remove_gravitational_acceleration" value="true"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf.txt"/>
+      <param name="debug_out_file"  value="debug_ukf.txt"/>
 
       <param name="print_diagnostics" value="true"/>
 

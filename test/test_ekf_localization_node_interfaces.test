@@ -53,8 +53,8 @@
 
       <param name="print_diagnostics" value="false"/>
 
-      <param name="debug"           value="true"/>
-      <param name="debug_out_file"  value="/home/tmoore/Desktop/debug_ekf.txt"/>
+      <param name="debug"           value="false"/>
+      <param name="debug_out_file"  value="debug_ekf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
