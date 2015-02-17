@@ -91,9 +91,9 @@ TEST (InterfacesTest, OdomPoseBasicIO)
   }
 
   // Now check the values from the callback
-  EXPECT_DOUBLE_EQ(filtered_.pose.pose.position.x, odom.pose.pose.position.x);
-  EXPECT_DOUBLE_EQ(filtered_.pose.pose.position.y, 0); // Configuration for this variable for this sensor is false
-  EXPECT_DOUBLE_EQ(filtered_.pose.pose.position.z, odom.pose.pose.position.z);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x), 0.01);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.01); // Configuration for this variable for this sensor is false
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z), 0.01);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7], 0.25); // Configuration for this variable for this sensor is false
@@ -720,13 +720,13 @@ TEST (InterfacesTest, OdomDifferentialIO)
     odomPub.publish(odom);
     ros::spinOnce();
 
-    EXPECT_EQ(filtered_.pose.pose.position.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.w, 1);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.z), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.x), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.y), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.z), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.w - 1), 0.01);
 
     ros::Duration(0.1).sleep();
 
@@ -797,13 +797,13 @@ TEST (InterfacesTest, PoseDifferentialIO)
     posePub.publish(pose);
     ros::spinOnce();
 
-    EXPECT_EQ(filtered_.pose.pose.position.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.position.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.x, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.y, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.z, 0);
-    EXPECT_EQ(filtered_.pose.pose.orientation.w, 1);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.position.z), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.x), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.y), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.z), 0.01);
+    EXPECT_LT(::fabs(filtered_.pose.pose.orientation.w - 1), 0.01);
 
     ros::Duration(0.1).sleep();
 

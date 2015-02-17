@@ -110,20 +110,20 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces ${catkin_LIBRARIES})
 
-  #add_rostest_gtest(test_ekf_localization_node_bag1
-   #                 test/test_ekf_localization_node_bag1.test
-   #                 test/test_localization_node_bag_pose_tester.cpp)
-  #target_link_libraries(test_ekf_localization_node_bag1 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ekf_localization_node_bag1
+                    test/test_ekf_localization_node_bag1.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag1 ${catkin_LIBRARIES})
 
   add_rostest_gtest(test_ekf_localization_node_bag2
                     test/test_ekf_localization_node_bag2.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag2 ${catkin_LIBRARIES})
 
- # add_rostest_gtest(test_ekf_localization_node_bag3
- #                   test/test_ekf_localization_node_bag3.test
- #                   test/test_localization_node_bag_pose_tester.cpp)
- # target_link_libraries(test_ekf_localization_node_bag3 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ekf_localization_node_bag3
+                    test/test_ekf_localization_node_bag3.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag3 ${catkin_LIBRARIES})
 
   #### UKF TESTS #####
   add_rostest_gtest(test_ukf
@@ -131,25 +131,25 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ukf.cpp)
   target_link_libraries(test_ukf ukf filter_base ${catkin_LIBRARIES})
 
-  #add_rostest_gtest(test_ukf_localization_node_interfaces
-  #                  test/test_ukf_localization_node_interfaces.test
-  #                  test/test_ukf_localization_node_interfaces.cpp)
-  #target_link_libraries(test_ukf_localization_node_interfaces ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ukf_localization_node_interfaces
+                    test/test_ukf_localization_node_interfaces.test
+                    test/test_ukf_localization_node_interfaces.cpp)
+  target_link_libraries(test_ukf_localization_node_interfaces ${catkin_LIBRARIES})
 
- # add_rostest_gtest(test_ukf_localization_node_bag1
-   #                 test/test_ukf_localization_node_bag1.test
-   #                 test/test_localization_node_bag_pose_tester.cpp)
-  #target_link_libraries(test_ukf_localization_node_bag1 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ukf_localization_node_bag1
+                    test/test_ukf_localization_node_bag1.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag1 ${catkin_LIBRARIES})
 
-  #add_rostest_gtest(test_ukf_localization_node_bag2
-  #                  test/test_ukf_localization_node_bag2.test
-  #                  test/test_localization_node_bag_pose_tester.cpp)
-  #target_link_libraries(test_ukf_localization_node_bag2 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ukf_localization_node_bag2
+                    test/test_ukf_localization_node_bag2.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag2 ${catkin_LIBRARIES})
 
-  #add_rostest_gtest(test_ukf_localization_node_bag3
-  #                  test/test_ukf_localization_node_bag3.test
-   #                 test/test_localization_node_bag_pose_tester.cpp)
-  #target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES})
+  add_rostest_gtest(test_ukf_localization_node_bag3
+                    test/test_ukf_localization_node_bag3.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES})
 
 endif()
 
