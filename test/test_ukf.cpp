@@ -11,7 +11,7 @@ class RosUkfPassThrough : public RosUkf
     {
     }
 
-    Ukf getFilter()
+    Ukf &getFilter()
     {
       return filter_;
     }
@@ -26,16 +26,21 @@ TEST (UkfTest, Measurements)
 
   RosUkfPassThrough ukf(args);
 
+  Eigen::MatrixXd initialCovar(15, 15);
+  initialCovar.setIdentity();
+  initialCovar *= 0.5;
+  ukf.getFilter().setEstimateErrorCovariance(initialCovar);
+
   Eigen::VectorXd measurement(STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    measurement[i] = i;
+    measurement[i] = i * 0.01 * STATE_SIZE;
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    measurementCovariance(i, i) = 0.5;
+    measurementCovariance(i, i) = 1e9;
   }
 
   std::vector<int> updateVector(STATE_SIZE, true);
@@ -63,6 +68,11 @@ TEST (UkfTest, Measurements)
 
   measurement2 *= 2.0;
 
+  for(size_t i = 0; i < STATE_SIZE; ++i)
+  {
+    measurementCovariance(i, i) = 1e-9;
+  }
+
   time.fromSec(1002);
   ukf.enqueueMeasurement("odom0",
                          measurement2,
@@ -73,24 +83,7 @@ TEST (UkfTest, Measurements)
 
   ukf.integrateMeasurements(1003);
 
-  measurement[0] = -5.5142;
-  measurement[1] = -0.91698;
-  measurement[2] = 10.304;
-  measurement[3] = -2.1372;
-  measurement[4] = 0.36284;
-  measurement[5] = 2.8628;
-  measurement[6] = 15.535;
-  measurement[7] = 16.659;
-  measurement[8] = 18.634;
-  measurement[9] = 9.0708;
-  measurement[10] = 10.071;
-  measurement[11] = 11.071;
-  measurement[12] = 10.5;
-  measurement[13] = 11.5;
-  measurement[14] = 12.5;
-
-  measurement = measurement.eval() - ukf.getFilter().getState();
-
+  measurement = measurement2.eval() - ukf.getFilter().getState();
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
