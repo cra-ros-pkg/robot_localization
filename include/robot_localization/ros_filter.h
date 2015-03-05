@@ -579,6 +579,11 @@ namespace RobotLocalization
           }
         }
 
+        // Transform future dating
+        double offsetTmp;
+        nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
+        tfTimeOffset_.fromSec(offsetTmp);
+
         // Update frequency and sensor timeout
         double sensorTimeout;
         nhLocal_.param("frequency", frequency_, 30.0);
@@ -628,46 +633,6 @@ namespace RobotLocalization
             // Determine if we want to integrate this sensor differentially
             bool differential;
             nhLocal_.param(odomTopicName + std::string("_differential"), differential, false);
-
-            ////////// HANDLE DEPRECATED DIFFERENTIAL SETTING //////////
-            if(!differential)
-            {
-              XmlRpc::XmlRpcValue diffConfig;
-
-              if (nhLocal_.hasParam(odomTopicName + std::string("_differential")))
-              {
-                try
-                {
-                  nhLocal_.getParam(odomTopicName + std::string("_differential"), diffConfig);
-
-                  if(diffConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
-                  {
-                    ROS_WARN_STREAM("Per-variable configuration of differential settings is deprecated. " <<
-                                    "Please set the value for " << odomTopicName << std::string("_differential") <<
-                                    " to \"true\" or \"false.\"");
-
-                    // If any of the variables is true, make the whole sensor differential
-                    for (int i = 0; i < diffConfig.size() && !differential; i++)
-                    {
-                      // The double cast looks strange, but we'll get exceptions if we
-                      // remove the cast to bool. vector<bool> is discouraged, so updateVector
-                      // uses integers
-                      differential = differential || static_cast<int>(static_cast<bool>(diffConfig[i]));
-                    }
-
-                    if(differential)
-                    {
-                      ROS_WARN_STREAM("Setting " << odomTopicName << std::string("_differential") << " to true");
-                    }
-                  }
-                }
-                catch(...)
-                {
-
-                }
-              }
-            }
-            ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
             // Determine if we want to integrate this sensor relatively
             bool relative;
@@ -769,46 +734,6 @@ namespace RobotLocalization
           {
             bool differential;
             nhLocal_.param(poseTopicName + std::string("_differential"), differential, false);
-
-            ////////// HANDLE DEPRECATED DIFFERENTIAL SETTING //////////
-            if(!differential)
-            {
-              XmlRpc::XmlRpcValue diffConfig;
-
-              if (nhLocal_.hasParam(poseTopicName + std::string("_differential")))
-              {
-                try
-                {
-                  nhLocal_.getParam(poseTopicName + std::string("_differential"), diffConfig);
-
-                  if(diffConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
-                  {
-                    ROS_WARN_STREAM("Per-variable configuration of differential settings is deprecated. " <<
-                                    "Please set the value for " << poseTopicName << std::string("_differential") <<
-                                    " to \"true\" or \"false.\"");
-
-                    // If any of the variables is true, make the whole sensor differential
-                    for (int i = 0; i < diffConfig.size() && !differential; i++)
-                    {
-                      // The double cast looks strange, but we'll get exceptions if we
-                      // remove the cast to bool. vector<bool> is discouraged, so updateVector
-                      // uses integers
-                      differential = differential || static_cast<int>(static_cast<bool>(diffConfig[i]));
-                    }
-
-                    if(differential)
-                    {
-                      ROS_WARN_STREAM("Setting " << poseTopicName << std::string("_differential") << " to true");
-                    }
-                  }
-                }
-                catch(...)
-                {
-                  ROS_ERROR_STREAM("Unable to read differential setting for " << poseTopicName);
-                }
-              }
-            }
-            ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
             // Determine if we want to integrate this sensor relatively
             bool relative;
@@ -930,46 +855,6 @@ namespace RobotLocalization
           {
             bool differential;
             nhLocal_.param(imuTopicName + std::string("_differential"), differential, false);
-
-            ////////// HANDLE DEPRECATED DIFFERENTIAL SETTING //////////
-            if(!differential)
-            {
-              XmlRpc::XmlRpcValue diffConfig;
-
-              if (nhLocal_.hasParam(imuTopicName + std::string("_differential")))
-              {
-                try
-                {
-                  nhLocal_.getParam(imuTopicName + std::string("_differential"), diffConfig);
-
-                  if(diffConfig.getType() == XmlRpc::XmlRpcValue::TypeArray)
-                  {
-                    ROS_WARN_STREAM("Per-variable configuration of differential settings is deprecated. " <<
-                                    "Please set the value for " << imuTopicName << std::string("_differential") <<
-                                    " to \"true\" or \"false.\"");
-
-                    // If any of the variables is true, make the whole sensor differential
-                    for (int i = 0; i < diffConfig.size() && !differential; i++)
-                    {
-                      // The double cast looks strange, but we'll get exceptions if we
-                      // remove the cast to bool. vector<bool> is discouraged, so updateVector
-                      // uses integers
-                      differential = differential || static_cast<int>(static_cast<bool>(diffConfig[i]));
-                    }
-
-                    if(differential)
-                    {
-                      ROS_WARN_STREAM("Setting " << imuTopicName << std::string("_differential") << " to true");
-                    }
-                  }
-                }
-                catch(...)
-                {
-
-                }
-              }
-            }
-            ////////// END DEPRECATED DIFFERENTIAL SETTING //////////
 
             // Determine if we want to integrate this sensor relatively
             bool relative;
@@ -1385,7 +1270,7 @@ namespace RobotLocalization
 
           if (getFilteredOdometryMessage(filteredPosition))
           {
-            worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp;
+            worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
             worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
             worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
 
@@ -2580,6 +2465,10 @@ namespace RobotLocalization
       //! @brief tf prefix
       //!
       std::string tfPrefix_;
+
+      //! @brief For future (or past) dating the world_frame->base_link_frame transform
+      //!
+      ros::Duration tfTimeOffset_;
 
       //! @brief Vector to hold our twist message filters so they don't go out of scope.
       //!
