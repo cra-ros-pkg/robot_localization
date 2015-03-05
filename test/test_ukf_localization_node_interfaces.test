@@ -2,11 +2,11 @@
 
 <launch>
 
-    <node name="ukf_localization_node_test_interfaces_rl" pkg="robot_localization" type="ukf_localization_node" clear_params="true">
+    <node name="test_ukf_localization_node_interfaces_ukf" pkg="robot_localization" type="ukf_localization_node" clear_params="true">
 
-      <param name="frequency" value="30"/>  
+      <param name="frequency" value="30"/>
 
-      <param name="sensor_timeout" value="0.1"/>  
+      <param name="sensor_timeout" value="0.1"/>
 
       <param name="two_d_mode" value="false"/>
 
@@ -19,6 +19,11 @@
 
       <param name="twist0" value="/twist_input0"/>
 
+      <param name="imu0" value="/imu_input0"/>
+      <param name="imu1" value="/imu_input1"/>
+      <param name="imu2" value="/imu_input2"/>
+      <param name="imu3" value="/imu_input3"/>
+
       <rosparam param="odom0_config">[true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="odom1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
       <rosparam param="odom2_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
@@ -28,6 +33,11 @@
 
       <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
 
+      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="imu1_config">[false, false, false, false, false, false, false, false, false, true, true, true, false, false, false]</rosparam>
+      <rosparam param="imu2_config">[false, false, false, false, false, false, false, false, false, false, false, false, true, true, true]</rosparam>
+      <rosparam param="imu3_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+
       <!-- Differential setting is off for this test -->
       <param name="odom0_differential" value="false"/>
       <param name="odom1_differential" value="true"/>
@@ -36,17 +46,18 @@
       <param name="pose0_differential" value="false"/>
       <param name="pose1_differential" value="true"/>
 
+      <param name="imu0_differential" value="false"/>
+      <param name="imu1_differential" value="false"/>
+      <param name="imu2_differential" value="false"/>
+      <param name="imu3_differential" value="true"/>
+
       <param name="print_diagnostics" value="false"/>
 
       <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="ukf_navigation.txt"/>
+      <param name="debug_out_file"  value="debug_ukf.txt"/>
 
       <param name="odom_frame" value="odom"/>
       <param name="base_link_frame" value="base_link"/>
-
-      <param name="alpha" value="0.001"/> 
-      <param name="kappa" value="0"/> 
-      <param name="beta" value="2"/>
 
       <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -64,8 +75,12 @@
                                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,
                                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01]</rosparam>
 
+      <param name="alpha" value="0.001"/> 
+      <param name="kappa" value="0"/> 
+      <param name="beta" value="2"/>
+
     </node>
 
-    <test test-name="ukf_localization_node_test_interfaces_t" pkg="robot_localization" type="ukf_localization_node-test-interfaces" clear_params="true" time-limit="100.0" />
+    <test test-name="test_ukf_localization_node_interfaces_int" pkg="robot_localization" type="test_ukf_localization_node_interfaces" clear_params="true" time-limit="1000.0" />
 
 </launch>
