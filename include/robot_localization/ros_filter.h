@@ -579,6 +579,10 @@ namespace RobotLocalization
           }
         }
 
+        // Transform future dating
+        double offsetTmp;
+        nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
+        tfTimeOffset_.fromSec(offsetTmp);
 
         // Update frequency and sensor timeout
         double sensorTimeout;
@@ -1266,7 +1270,7 @@ namespace RobotLocalization
 
           if (getFilteredOdometryMessage(filteredPosition))
           {
-            worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp;
+            worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
             worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
             worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
 
@@ -2461,6 +2465,10 @@ namespace RobotLocalization
       //! @brief tf prefix
       //!
       std::string tfPrefix_;
+
+      //! @brief For future (or past) dating the world_frame->base_link_frame transform
+      //!
+      ros::Duration tfTimeOffset_;
 
       //! @brief Vector to hold our twist message filters so they don't go out of scope.
       //!
