@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,10 +67,11 @@ namespace RobotLocalization
     // Clear the Jacobian
     transferFunctionJacobian_.setZero();
 
-    // Set the estimate error covariance. It should be small,
-    // as we're fairly certain of our initial state
+    // Set the estimate error covariance. We want our measurements
+    // to be accepted rapidly when the filter starts, so we should
+    // initialize the state's covariance with large values.
     estimateErrorCovariance_.setIdentity();
-    estimateErrorCovariance_ *= 1e-6;
+    estimateErrorCovariance_ *= 1e-9;
 
     // We need the identity for the update equations
     identity_.setIdentity();
@@ -324,14 +325,14 @@ namespace RobotLocalization
                                              const double nsigmas)
   {
     double sqMahalanobis = innovation.dot(invCovariance * innovation);
-    double threshold = nsigmas*nsigmas;
+    double threshold = nsigmas * nsigmas;
 
     if (sqMahalanobis >= threshold)
     {
       FB_DEBUG("Innovation mahalanobis distance test failed. Squared Mahalanobis is: " << sqMahalanobis << "\n" <<
                "Threshold is: " << threshold << "\n" <<
                "Innovation is: " << innovation << "\n" <<
-               "Innovation covariance is:" << invCovariance << "\n");
+               "Innovation covariance is:\n" << invCovariance << "\n");
 
       return false;
     }
@@ -400,7 +401,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec)
   os << "[";
   for (size_t dim = 0; dim < vec.size(); ++dim)
   {
-    os << std::setiosflags(std::ios::left) << std::setw(12) << (vec[dim] ? "true " : "false");
+    os << std::setiosflags(std::ios::left) << std::setw(3) << (vec[dim] ? "t" : "f");
   }
   os << "]\n";
 

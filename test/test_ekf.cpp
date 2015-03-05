@@ -11,7 +11,7 @@ class RosEkfPassThrough : public RosEkf
     {
     }
 
-    Ekf getFilter()
+    Ekf &getFilter()
     {
       return filter_;
     }
@@ -21,16 +21,21 @@ TEST (EkfTest, Measurements)
 {
   RosEkfPassThrough ekf;
 
+  Eigen::MatrixXd initialCovar(15, 15);
+  initialCovar.setIdentity();
+  initialCovar *= 0.5;
+  ekf.getFilter().setEstimateErrorCovariance(initialCovar);
+
   Eigen::VectorXd measurement(STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    measurement[i] = i;
+    measurement[i] = i * 0.01 * STATE_SIZE;
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    measurementCovariance(i, i) = 0.5;
+    measurementCovariance(i, i) = 1e9;
   }
 
   std::vector<int> updateVector(STATE_SIZE, true);
@@ -45,8 +50,6 @@ TEST (EkfTest, Measurements)
                          std::numeric_limits<double>::max(),
                          time);
 
-  std::map<std::string, Eigen::VectorXd> postUpdateStates;
-
   ekf.integrateMeasurements(1001);
 
   EXPECT_EQ(ekf.getFilter().getState(), measurement);
@@ -60,6 +63,11 @@ TEST (EkfTest, Measurements)
 
   measurement2 *= 2.0;
 
+  for(size_t i = 0; i < STATE_SIZE; ++i)
+  {
+    measurementCovariance(i, i) = 1e-9;
+  }
+
   time.fromSec(1002);
   ekf.enqueueMeasurement("odom0",
                          measurement2,
@@ -70,24 +78,7 @@ TEST (EkfTest, Measurements)
 
   ekf.integrateMeasurements(1003);
 
-  measurement[0] = -5.2475;
-  measurement[1] = -0.16244;
-  measurement[2] = 10.349;
-  measurement[3] = -2.9844;
-  measurement[4] = -2.3317;
-  measurement[5] = -0.0017943;
-  measurement[6] = 14.875;
-  measurement[7] = 16.848;
-  measurement[8] = 18.822;
-  measurement[9] = 10.077;
-  measurement[10] = 12.907;
-  measurement[11] = 14.246;
-  measurement[12] = 10.963;
-  measurement[13] = 11.991;
-  measurement[14] = 13.276;
-
-  measurement = measurement.eval() - ekf.getFilter().getState();
-
+  measurement = measurement2.eval() - ekf.getFilter().getState();
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
