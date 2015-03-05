@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,8 @@
 #include <map>
 #include <queue>
 #include <limits>
+
+#define FB_DEBUG(msg) if(getDebug()) { *debugStream_ << msg; }
 
 namespace RobotLocalization
 {

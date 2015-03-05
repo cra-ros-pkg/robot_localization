@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Charles River Analytics, Inc.
+ * Copyright (c) 2015, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,4 +51,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
