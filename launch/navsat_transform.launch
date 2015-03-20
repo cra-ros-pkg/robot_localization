@@ -40,10 +40,15 @@
            for use by other nodes. -->
       <param name="broadcast_utm_transform" value="false"/>
 
+      <!-- If this is true, all received odometry data is converted back to a lat/lon
+           and published as a NavSatFix message as /gps/filtered. -->
+      <param name="publish_filtered_gps" value="false"/>
+
       <!-- Placeholders for input remapping. Set your topic names as the "to" values.
       <remap from="/imu/data" to="" />
       <remap from="/odometry/filtered" to="" />
       <remap from="/gps/fix" to="" />
+      <remap from="/gps/filtered" to="" />
       -->
 
       <!-- Placeholders for output remapping.
