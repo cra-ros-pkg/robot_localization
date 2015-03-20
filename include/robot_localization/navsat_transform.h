@@ -104,12 +104,26 @@ namespace RobotLocalization
       //!
       bool gpsUpdated_;
 
+      //! @brief Whether or not we have new odometry data
+      //!
+      //! If we're creating filtered GPS messages, then we only
+      //! want to broadcast them when new odometry data arrives.
+      //!
+      bool odomUpdated_;
+
       //! @brief Timestamp of the latest good GPS message
       //!
       //! We assign this value to the timestamp of the odometry
       //! message that we output
       //!
       ros::Time gpsUpdateTime_;
+
+      //! @brief Timestamp of the latest good odometry message
+      //!
+      //! We assign this value to the timestamp of the odometry
+      //! message that we output
+      //!
+      ros::Time odomUpdateTime_;
 
       //! @brief IMU's roll offset
       //!
@@ -140,11 +154,19 @@ namespace RobotLocalization
       //!
       bool zeroAltitude_;
 
+      //! @brief Whether or not we publish filtered GPS messages
+      //!
+      bool publishGps_;
+
       //! @brief Frame ID of the GPS odometry output
       //!
       //! This will just match whatever your odometry message has
       //!
       std::string worldFrameId_;
+
+      //! @brief UTM zone as determined after transforming GPS message
+      //!
+      std::string utmZone_;
 
       //! @brief Latest odometry data
       //!
@@ -158,13 +180,21 @@ namespace RobotLocalization
       //!
       tf::Quaternion latestOrientation_;
 
-      //! @brief Covariane for most recent GPS/UTM data
+      //! @brief Covariance for most recent GPS/UTM data
       //!
       Eigen::MatrixXd latestUtmCovariance_;
+
+      //! @brief Covariance for most recent odometry data
+      //!
+      Eigen::MatrixXd latestOdomCovariance_;
 
       //! @brief Holds the UTM->odom transform
       //!
       tf::Transform utmWorldTransform_;
+
+      //! @brief Holds the odom->UTM transform for filtered GPS broadcast
+      //!
+      tf::Transform utmWorldTransInverse_;
 
       //! @brief Callback for the odom data
       //!
@@ -186,5 +216,9 @@ namespace RobotLocalization
       //! @brief Prepares the GPS odometry message before sending
       //!
       bool prepareGpsOdometry(nav_msgs::Odometry &gpsOdom);
+
+      //! @brief Converts the odometry data back to GPS and broadcasts it
+      //!
+      bool prepareFilteredGps(sensor_msgs::NavSatFix &filteredGps);
   };
 }
