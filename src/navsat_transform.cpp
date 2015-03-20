@@ -44,18 +44,21 @@
 namespace RobotLocalization
 {
   NavSatTransform::NavSatTransform() :
-    magneticDeclination_(0),
-    utmOdomTfYaw_(0),
-    rollOffset_(0),
-    pitchOffset_(0),
-    yawOffset_(0),
+    magneticDeclination_(0.0),
+    utmOdomTfYaw_(0.0),
+    rollOffset_(0.0),
+    pitchOffset_(0.0),
+    yawOffset_(0.0),
     broadcastUtmTransform_(false),
     hasOdom_(false),
     hasGps_(false),
     hasImu_(false),
     transformGood_(false),
     gpsUpdated_(false),
-    worldFrameId_("odom")
+    odomUpdated_(false),
+    publishGps_(false),
+    worldFrameId_("odom"),
+    utmZone_("")
  {
     latestUtmCovariance_.resize(POSE_SIZE, POSE_SIZE);
   }
@@ -70,6 +73,8 @@ namespace RobotLocalization
     tf::poseMsgToTF(msg->pose.pose, latestWorldPose_);
     worldFrameId_ = msg->header.frame_id;
     hasOdom_ = true;
+    odomUpdateTime_ = msg->header.stamp;
+    odomUpdated_ = true;
   }
 
   void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
@@ -83,8 +88,7 @@ namespace RobotLocalization
     {
       double utmX = 0;
       double utmY = 0;
-      std::string zone;
-      gps_common::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, zone);
+      gps_common::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
       latestUtmPose_.setOrigin(tf::Vector3(utmX, utmY, msg->altitude));
       latestUtmCovariance_.setZero();
 
@@ -149,6 +153,8 @@ namespace RobotLocalization
       utmPoseWithOrientation.setOrigin(latestUtmPose_.getOrigin());
       utmPoseWithOrientation.setRotation(imuQuat);
       utmWorldTransform_.mult(latestWorldPose_, utmPoseWithOrientation.inverse());
+
+      utmWorldTransInverse_ = utmWorldTransform_.inverse();
 
       double roll = 0;
       double pitch = 0;
@@ -232,6 +238,61 @@ namespace RobotLocalization
     return newData;
   }
 
+  bool NavSatTransform::prepareFilteredGps(sensor_msgs::NavSatFix &filteredGps)
+  {
+    bool newData = false;
+
+    if(transformGood_ && odomUpdated_)
+    {
+      tf::Pose odomAsUtm;
+
+      odomAsUtm.mult(utmWorldTransInverse_, latestWorldPose_);
+      odomAsUtm.setRotation(tf::Quaternion::getIdentity());
+
+      // Rotate the covariance as well
+      tf::Matrix3x3 rot(utmWorldTransInverse_.getRotation());
+      Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
+      rot6d.setIdentity();
+
+      for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+      {
+        rot6d(rInd, 0) = rot.getRow(rInd).getX();
+        rot6d(rInd, 1) = rot.getRow(rInd).getY();
+        rot6d(rInd, 2) = rot.getRow(rInd).getZ();
+        rot6d(rInd+POSITION_SIZE, 3) = rot.getRow(rInd).getX();
+        rot6d(rInd+POSITION_SIZE, 4) = rot.getRow(rInd).getY();
+        rot6d(rInd+POSITION_SIZE, 5) = rot.getRow(rInd).getZ();
+      }
+
+      // Rotate the covariance
+      latestOdomCovariance_ = rot6d * latestOdomCovariance_.eval() * rot6d.transpose();
+
+      // Now convert the data back to lat/long and place into the message
+      gps_common::UTMtoLL(odomAsUtm.getOrigin().getY(), odomAsUtm.getOrigin().getX(), utmZone_, filteredGps.latitude, filteredGps.longitude);
+      filteredGps.altitude = odomAsUtm.getOrigin().getZ();
+
+      // Copy the measurement's covariance matrix back
+      for (size_t i = 0; i < POSITION_SIZE; i++)
+      {
+        for (size_t j = 0; j < POSITION_SIZE; j++)
+        {
+          filteredGps.position_covariance[POSITION_SIZE * i + j] = latestUtmCovariance_(i, j);
+        }
+      }
+
+      filteredGps.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_KNOWN;
+      filteredGps.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
+      filteredGps.header.frame_id = "gps";
+      filteredGps.header.stamp = gpsUpdateTime_;
+
+      // Mark this GPS as used
+      odomUpdated_ = false;
+      newData = true;
+    }
+
+    return newData;
+  }
+
   void NavSatTransform::run()
   {
     ros::Time::init();
@@ -246,8 +307,6 @@ namespace RobotLocalization
     ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
     ros::Subscriber imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
 
-    ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
-
     // Load the parameters we need
     nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
     nhPriv.getParam("roll_offset", rollOffset_);
@@ -255,7 +314,16 @@ namespace RobotLocalization
     nhPriv.getParam("yaw_offset", yawOffset_);
     nhPriv.param("broadcast_utm_transform", broadcastUtmTransform_, false);
     nhPriv.param("zero_altitude", zeroAltitude_, false);
+    nhPriv.param("publish_filtered_gps", publishGps_, false);
     nhPriv.param("frequency", frequency, 10.0);
+
+    ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
+    ros::Publisher filteredGpsPub;
+
+    if(publishGps_)
+    {
+      filteredGpsPub = nh.advertise<sensor_msgs::NavSatFix>("gps/filtered", 10);
+    }
 
     tf::TransformBroadcaster utmBroadcaster;
     tf::StampedTransform utmTransformStamped;
@@ -272,8 +340,7 @@ namespace RobotLocalization
 
         if(transformGood_)
         {
-          // Once we have the transform, we don't need these
-          odomSub.shutdown();
+          // Once we have the transform, we don't need the IMU
           imuSub.shutdown();
         }
       }
@@ -283,6 +350,15 @@ namespace RobotLocalization
         if(prepareGpsOdometry(gpsOdom))
         {
           gpsOdomPub.publish(gpsOdom);
+        }
+
+        if(publishGps_)
+        {
+          sensor_msgs::NavSatFix odomGps;
+          if(prepareFilteredGps(odomGps))
+          {
+            filteredGpsPub.publish(odomGps);
+          }
         }
 
         // Send out the UTM transform in case anyone
