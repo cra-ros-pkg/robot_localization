@@ -46,8 +46,6 @@ namespace RobotLocalization
   NavSatTransform::NavSatTransform() :
     magneticDeclination_(0.0),
     utmOdomTfYaw_(0.0),
-    rollOffset_(0.0),
-    pitchOffset_(0.0),
     yawOffset_(0.0),
     broadcastUtmTransform_(false),
     hasOdom_(false),
@@ -134,8 +132,6 @@ namespace RobotLocalization
       // Compute the final yaw value that corrects for the difference between the
       // IMU's heading and the UTM grid's belief of where 0 heading should be (i.e.,
       // along the x-axis)
-      imuRoll += rollOffset_;
-      imuPitch += pitchOffset_;
       imuYaw += (magneticDeclination_ + yawOffset_ + (M_PI / 2.0));
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
@@ -144,7 +140,7 @@ namespace RobotLocalization
 
       // Convert to tf-friendly structures
       tf::Quaternion imuQuat;
-      imuQuat.setRPY(imuRoll, imuPitch, imuYaw);
+      imuQuat.setRPY(0.0, 0.0, imuYaw);
 
       // The transform order will be orig_odom_pos * orig_utm_pos_inverse * cur_utm_pos.
       // Doing it this way will allow us to cope with having non-zero odometry position
@@ -309,8 +305,6 @@ namespace RobotLocalization
 
     // Load the parameters we need
     nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
-    nhPriv.getParam("roll_offset", rollOffset_);
-    nhPriv.getParam("pitch_offset", pitchOffset_);
     nhPriv.getParam("yaw_offset", yawOffset_);
     nhPriv.param("broadcast_utm_transform", broadcastUtmTransform_, false);
     nhPriv.param("zero_altitude", zeroAltitude_, false);
