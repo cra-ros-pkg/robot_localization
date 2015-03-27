@@ -49,8 +49,6 @@ namespace RobotLocalization
     covarianceEpsilon_(STATE_SIZE, STATE_SIZE),
     processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
     identity_(STATE_SIZE, STATE_SIZE),
-    pi_(3.141592653589793),
-    tau_(6.283185307179586),
     debug_(false),
     debugStream_(NULL)
   {
@@ -292,31 +290,31 @@ namespace RobotLocalization
 
   void FilterBase::wrapStateAngles()
   {
-    while (state_(StateMemberRoll) < -pi_)
+    while (state_(StateMemberRoll) < -PI)
     {
-      state_(StateMemberRoll) += tau_;
+      state_(StateMemberRoll) += TAU;
     }
-    while (state_(StateMemberRoll) > pi_)
+    while (state_(StateMemberRoll) > PI)
     {
-      state_(StateMemberRoll) -= tau_;
-    }
-
-    while (state_(StateMemberPitch) < -pi_)
-    {
-      state_(StateMemberPitch) += tau_;
-    }
-    while (state_(StateMemberPitch) > pi_)
-    {
-      state_(StateMemberPitch) -= tau_;
+      state_(StateMemberRoll) -= TAU;
     }
 
-    while (state_(StateMemberYaw) < -pi_)
+    while (state_(StateMemberPitch) < -PI)
     {
-      state_(StateMemberYaw) += tau_;
+      state_(StateMemberPitch) += TAU;
     }
-    while (state_(StateMemberYaw) > pi_)
+    while (state_(StateMemberPitch) > PI)
     {
-      state_(StateMemberYaw) -= tau_;
+      state_(StateMemberPitch) -= TAU;
+    }
+
+    while (state_(StateMemberYaw) < -PI)
+    {
+      state_(StateMemberYaw) += TAU;
+    }
+    while (state_(StateMemberYaw) > PI)
+    {
+      state_(StateMemberYaw) -= TAU;
     }
   }
 

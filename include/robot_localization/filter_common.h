@@ -73,6 +73,10 @@ namespace RobotLocalization
   const int POSITION_SIZE = 3;
   const int ORIENTATION_SIZE = 3;
   const int ACCELERATION_SIZE = 3;
+
+  //! @brief Common variables
+  const double PI = 3.141592653589793;
+  const double TAU = 6.283185307179587;
 }
 
 #endif
