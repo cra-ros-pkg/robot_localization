@@ -69,14 +69,6 @@ namespace RobotLocalization
       //!
       double magneticDeclination_;
 
-      //! @brief Stores the roll we need to compute the transform
-      //!
-      double utmOdomTfRoll_;
-
-      //! @brief Stores the pitch we need to compute the transform
-      //!
-      double utmOdomTfPitch_;
-
       //! @brief Stores the yaw we need to compute the transform
       //!
       double utmOdomTfYaw_;
@@ -124,20 +116,6 @@ namespace RobotLocalization
       //! message that we output
       //!
       ros::Time odomUpdateTime_;
-
-      //! @brief IMU's roll offset
-      //!
-      //! On level ground, your IMU should read 0 roll. If it
-      //! doesn't, this (parameterized) value gives the offset
-      //!
-      double rollOffset_;
-
-      //! @brief IMU's pitch offset
-      //!
-      //! On level ground, your IMU should read 0 pitch. If it
-      //! doesn't, this (parameterized) value gives the offset
-      //!
-      double pitchOffset_;
 
       //! @brief IMU's yaw offset
       //!
