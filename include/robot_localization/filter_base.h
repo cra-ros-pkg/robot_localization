@@ -292,10 +292,6 @@ namespace RobotLocalization
       //!
       double lastUpdateTime_;
 
-      //! @brief Commonly used circle constant
-      //!
-      const double pi_;
-
       //! @brief Holds the last predicted state of the filter
       //!
       Eigen::VectorXd predictedState_;
@@ -323,10 +319,6 @@ namespace RobotLocalization
       //! filter. The values in this vector are what get reported by the node.
       //!
       Eigen::VectorXd state_;
-
-      //! @brief True circle constant (http://www.tauday.com/tau-manifesto)
-      //!
-      const double tau_;
 
       //! @brief The Kalman filter transfer function
       //!

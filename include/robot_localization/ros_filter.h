@@ -291,8 +291,8 @@ namespace RobotLocalization
         if (filter_.getInitializedStatus())
         {
           // Grab our current state and covariance estimates
-          const Eigen::VectorXd state = filter_.getState();
-          const Eigen::MatrixXd estimateErrorCovariance = filter_.getEstimateErrorCovariance();
+          const Eigen::VectorXd &state = filter_.getState();
+          const Eigen::MatrixXd &estimateErrorCovariance = filter_.getEstimateErrorCovariance();
 
           // Convert from roll, pitch, and yaw back to quaternion for
           // orientation values
@@ -686,7 +686,7 @@ namespace RobotLocalization
             {
               poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, worldFrameId_, odomQueueSize));
               std::string odomPoseTopicName = odomTopicName + "_pose";
-              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, relative, poseMahalanobisThresh));
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, odomPoseTopicName, worldFrameId_, poseUpdateVec, differential, relative, false, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
               poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
 
@@ -762,7 +762,7 @@ namespace RobotLocalization
               poseMFSubPtr subPtr(new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>());
               subPtr->subscribe(nh_, poseTopic, poseQueueSize);
               poseMFPtr filPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*subPtr, tfListener_, worldFrameId_, poseQueueSize));
-              filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, relative, poseMahalanobisThresh));
+              filPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, poseTopicName, worldFrameId_, poseUpdateVec, differential, relative, false, poseMahalanobisThresh));
               filPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, poseTopicName, worldFrameId_));
               poseTopicSubs_.push_back(subPtr);
               poseMessageFilters_[poseTopicName] = filPtr;
@@ -942,7 +942,7 @@ namespace RobotLocalization
               // @todo: There's a lot of ambiguity with IMU frames. Should allow a parameter that specifies a target IMU frame.
               poseMFPtr poseFilPtr(new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(tfListener_, baseLinkFrameId_, imuQueueSize));
               std::string imuPoseTopicName = imuTopicName + "_pose";
-              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, relative, poseMahalanobisThresh));
+              poseFilPtr->registerCallback(boost::bind(&RosFilter<Filter>::poseCallback, this, _1, imuPoseTopicName, baseLinkFrameId_, poseUpdateVec, differential, relative, true, poseMahalanobisThresh));
               poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<Filter>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
               poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
 
@@ -1178,6 +1178,7 @@ namespace RobotLocalization
                         const std::vector<int> &updateVector,
                         const bool differential,
                         const bool relative,
+                        const bool imuData,
                         const double mahalanobisThresh)
       {
         RF_DEBUG("------ RosFilter::poseCallback (" << topicName << ") ------\n" <<
@@ -1207,7 +1208,7 @@ namespace RobotLocalization
             std::vector<int> updateVectorCorrected = updateVector;
 
             // Prepare the pose data for inclusion in the filter
-            if (preparePose(msg, topicName, targetFrame, differential, relative, updateVectorCorrected, measurement, measurementCovariance))
+            if (preparePose(msg, topicName, targetFrame, differential, relative, imuData, updateVectorCorrected, measurement, measurementCovariance))
             {
               // Store the measurement. Add a "pose" suffix so we know what kind of measurement
               // we're dealing with when we debug the core filter logic.
@@ -1237,6 +1238,36 @@ namespace RobotLocalization
         }
 
         RF_DEBUG("\n----- /RosFilter::poseCallback (" << topicName << ") ------\n");
+      }
+
+      //! @brief Utility method for converting quaternion to RPY
+      //! @param[in] quat - The quaternion to convert
+      //! @param[out] roll - The converted roll
+      //! @param[out] pitch - The converted pitch
+      //! @param[out] yaw - The converted yaw
+      //!
+      static void quatToRPY(const tf::Quaternion &quat, double &roll, double &pitch, double &yaw)
+      {
+        tf::Matrix3x3 orTmp(quat);
+        orTmp.getRPY(roll, pitch, yaw);
+      }
+
+      //! @brief Utility method keeping RPY angles in the range [-pi, pi]
+      //! @param[in,out] rotation - The rotation to bind
+      //!
+      static double clampRotation(double rotation)
+      {
+        while(rotation > PI)
+        {
+          rotation -= TAU;
+        }
+
+        while(rotation < -PI)
+        {
+          rotation += TAU;
+        }
+
+        return rotation;
       }
 
       //! @brief Main run method
@@ -1384,7 +1415,7 @@ namespace RobotLocalization
 
         // Prepare the pose data (really just using this to transform it into the target frame).
         // Twist data is going to get zeroed out.
-        preparePose(msg, topicName, odomFrameId_, false, false, updateVector, measurement, measurementCovariance);
+        preparePose(msg, topicName, odomFrameId_, false, false, false, updateVector, measurement, measurementCovariance);
 
         // For the state
         filter_.setState(measurement);
@@ -1886,6 +1917,7 @@ namespace RobotLocalization
                        const std::string &targetFrame,
                        const bool differential,
                        const bool relative,
+                       const bool imuData,
                        std::vector<int> &updateVector,
                        Eigen::VectorXd &measurement,
                        Eigen::MatrixXd &measurementCovariance)
@@ -2125,11 +2157,47 @@ namespace RobotLocalization
           }
           else
           {
-            // 6. If we're not handling this differentially, just transform it to the
-            // target frame
+            // 6. If we're not handling this differentially, then transform it to the
+            // target frame. However, the means of transforming this data varies
+            // with the input type. If it's an IMU, we need to do some special processing.
 
-            // Apply the target frame transformation to the pose object
-            poseTmp.mult(targetFrameTrans, poseTmp);
+            if(imuData)
+            {
+              // 6a. For IMU data, we have to first remove all static sensor offsets (note that
+              // here we assume that the transform in question is the transform that defines how
+              // the sensor is mounted on the vehicle; this is not meant for handling NED->ENU
+              // transformations. For now, robot_localization assumes all orientation data is in the
+              // ENU frame.
+
+              // First, convert the transform and measurement rotation to RPY
+              // @todo: There must be a way to handle this with quaternions. Need to look into it.
+              double rollOffset = 0;
+              double pitchOffset = 0;
+              double yawOffset = 0;
+              double roll = 0;
+              double pitch = 0;
+              double yaw = 0;
+              quatToRPY(targetFrameTrans.getRotation(), rollOffset, pitchOffset, yawOffset);
+              quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
+
+              // 6b. Apply the offset (making sure to bound them), and throw them in a vector
+              tf::Vector3 rpyAngles(clampRotation(roll - rollOffset),
+                                    clampRotation(pitch - pitchOffset),
+                                    clampRotation(yaw - yawOffset));
+
+              // 6c. Now we need to rotate the roll and pitch by the yaw offset value.
+              // Imagine a case where an IMU is mounted facing sideways. In that case
+              // pitch for the IMU's world frame is roll for the robot.
+              tf::Matrix3x3 mat;
+              mat.setRPY(0.0, 0.0, yaw);
+              rpyAngles = mat * rpyAngles;
+              poseTmp.getBasis().setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
+            }
+            else
+            {
+              // 6d. Apply the target frame transformation to the pose object. If
+              poseTmp.mult(targetFrameTrans, poseTmp);
+            }
 
             poseTmp.frame_id_ = finalTargetFrame;
 
@@ -2190,9 +2258,18 @@ namespace RobotLocalization
         tf::Vector3 twistLin(msg->twist.twist.linear.x,
                              msg->twist.twist.linear.y,
                              msg->twist.twist.linear.z);
-        tf::Vector3 twistRot(msg->twist.twist.angular.x,
-                             msg->twist.twist.angular.y,
-                             msg->twist.twist.angular.z);
+        tf::Vector3 measTwistRot(msg->twist.twist.angular.x,
+                                 msg->twist.twist.angular.y,
+                                 msg->twist.twist.angular.z);
+
+        // 1a. This sensor may or may not measure rotational velocity. Regardless,
+        // if it measures linear velocity, then later on, we'll need to remove "false"
+        // linear velocity resulting from angular velocity and the translational offset
+        // of the sensor from the vehicle origin.
+        const Eigen::VectorXd &state = filter_.getState();
+        tf::Vector3 stateTwistRot(state(StateMemberVroll),
+                                  state(StateMemberVpitch),
+                                  state(StateMemberVyaw));
 
         // Determine the frame_id of the data
         std::string msgFrame = (msg->header.frame_id == "" ? targetFrame : msg->header.frame_id);
@@ -2220,7 +2297,7 @@ namespace RobotLocalization
         copyCovariance(&(msg->twist.covariance[0]), covarianceRotated, topicName, updateVector, POSITION_V_OFFSET, TWIST_SIZE);
 
         RF_DEBUG("Original measurement as tf object:\nLinear: " << twistLin <<
-                 "Rotational: " << twistRot <<
+                 "Rotational: " << measTwistRot <<
                  "\nOriginal update vector:\n" << updateVector <<
                  "\nOriginal covariance matrix:\n" << covarianceRotated << "\n");
 
@@ -2232,8 +2309,8 @@ namespace RobotLocalization
         {
           // Transform to correct frame. Note that we can get linear velocity
           // as a result of the sensor offset and rotational velocity
-          twistRot = targetFrameTrans.getBasis() * twistRot;
-          twistLin = targetFrameTrans.getBasis() * twistLin - targetFrameTrans.getOrigin().cross(twistRot);
+          measTwistRot = targetFrameTrans.getBasis() * measTwistRot;
+          twistLin = targetFrameTrans.getBasis() * twistLin + targetFrameTrans.getOrigin().cross(stateTwistRot);
           maskLin = targetFrameTrans.getBasis() * maskLin;
           maskRot = targetFrameTrans.getBasis() * maskRot;
 
@@ -2248,7 +2325,7 @@ namespace RobotLocalization
           RF_DEBUG(msg->header.frame_id << "->" << targetFrame << " transform:\n" << targetFrameTrans <<
                    "\nAfter applying transform to " << targetFrame << ", update vector is:\n" << updateVector <<
                    "\nAfter applying transform to " << targetFrame << ", measurement is:\n" <<
-                   "Linear: " << twistLin << "Rotational: " << twistRot << "\n");
+                   "Linear: " << twistLin << "Rotational: " << measTwistRot << "\n");
 
           // 5. Now rotate the covariance: create an augmented
           // matrix that contains a 3D rotation matrix in the
@@ -2277,9 +2354,9 @@ namespace RobotLocalization
           measurement(StateMemberVx) = twistLin.getX();
           measurement(StateMemberVy) = twistLin.getY();
           measurement(StateMemberVz) = twistLin.getZ();
-          measurement(StateMemberVroll) = twistRot.getX();
-          measurement(StateMemberVpitch) = twistRot.getY();
-          measurement(StateMemberVyaw) = twistRot.getZ();
+          measurement(StateMemberVroll) = measTwistRot.getX();
+          measurement(StateMemberVpitch) = measTwistRot.getY();
+          measurement(StateMemberVyaw) = measTwistRot.getZ();
 
           // Copy the covariances
           measurementCovariance.block(POSITION_V_OFFSET, POSITION_V_OFFSET, TWIST_SIZE, TWIST_SIZE) = covarianceRotated.block(0, 0, TWIST_SIZE, TWIST_SIZE);
@@ -2298,18 +2375,6 @@ namespace RobotLocalization
         RF_DEBUG("\n----- /RosFilter::prepareTwist (" << topicName << ") ------\n");
 
         return canTransform;
-      }
-
-      //! @brief Utility method for converting quaternion to RPY
-      //! @param[in] quat - The quaternion to convert
-      //! @param[out] roll - The converted roll
-      //! @param[out] pitch - The converted pitch
-      //! @param[out] yaw - The converted yaw
-      //!
-      inline void quatToRPY(const tf::Quaternion &quat, double &roll, double &pitch, double &yaw)
-      {
-        tf::Matrix3x3 orTmp(quat);
-        orTmp.getRPY(roll, pitch, yaw);
       }
 
       //! @brief Converts our Eigen state vector into a TF transform/pose
