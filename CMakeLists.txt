@@ -39,20 +39,30 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${gps_common_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
+# Library definition
+add_library(filter_utilities src/filter_utilities.cpp)
 add_library(filter_base src/filter_base.cpp)
-add_dependencies(filter_base robot_localization_gencpp)
 add_library(ekf src/ekf.cpp)
 add_library(ukf src/ukf.cpp)
+add_library(ros_filter_utilities src/ros_filter_utilities.cpp)
+add_library(ros_filter src/ros_filter.cpp)
 add_library(navsat_transform src/navsat_transform.cpp)
 
+# Dependencies
+add_dependencies(filter_base robot_localization_gencpp)
+
+# Executables
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
 add_executable(ukf_localization_node src/ukf_localization_node.cpp)
 add_executable(navsat_transform_node src/navsat_transform_node.cpp)
 
+# Linking
+target_link_libraries(filter_base filter_utilities)
 target_link_libraries(ekf filter_base)
 target_link_libraries(ukf filter_base)
-target_link_libraries(ekf_localization_node ekf filter_base ${catkin_LIBRARIES})
-target_link_libraries(ukf_localization_node ukf filter_base ${catkin_LIBRARIES})
+target_link_libraries(ros_filter ekf ukf ros_filter_utilities)
+target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
+target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
 
