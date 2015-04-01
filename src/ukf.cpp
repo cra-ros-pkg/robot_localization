@@ -245,13 +245,14 @@ namespace RobotLocalization
       {
         if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
         {
-          if (innovationSubset(i) < -pi_)
+          while (innovationSubset(i) < -PI)
           {
-            innovationSubset(i) += tau_;
+            innovationSubset(i) += TAU;
           }
-          else if (innovationSubset(i) > pi_)
+
+          while (innovationSubset(i) > PI)
           {
-            innovationSubset(i) -= tau_;
+            innovationSubset(i) -= TAU;
           }
         }
       }
