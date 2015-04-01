@@ -113,7 +113,7 @@ if (CATKIN_ENABLE_TESTING)
   add_rostest_gtest(test_ekf
                     test/test_ekf.test
                     test/test_ekf.cpp)
-  target_link_libraries(test_ekf ekf filter_base ${catkin_LIBRARIES})
+  target_link_libraries(test_ekf ros_filter ekf ${catkin_LIBRARIES})
 
   add_rostest_gtest(test_ekf_localization_node_interfaces
                     test/test_ekf_localization_node_interfaces.test
@@ -139,7 +139,7 @@ if (CATKIN_ENABLE_TESTING)
   add_rostest_gtest(test_ukf
                     test/test_ukf.test
                     test/test_ukf.cpp)
-  target_link_libraries(test_ukf ukf filter_base ${catkin_LIBRARIES})
+  target_link_libraries(test_ukf ros_filter ukf ${catkin_LIBRARIES})
 
   add_rostest_gtest(test_ukf_localization_node_interfaces
                     test/test_ukf_localization_node_interfaces.test
@@ -162,4 +162,3 @@ if (CATKIN_ENABLE_TESTING)
   target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES})
 
 endif()
-

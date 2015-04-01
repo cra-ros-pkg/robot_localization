@@ -1956,7 +1956,7 @@ namespace RobotLocalization
           // 6a. For IMU data, we have to first remove all static sensor offsets (note that
           // here we assume that the transform in question is the transform that defines how
           // the sensor is mounted on the vehicle; this is not meant for handling NED->ENU
-          // transformations. For now, robot_localization assumes all orientation data is in the
+          // transformations). For now, robot_localization assumes all orientation data is in the
           // ENU frame.
 
           // First, convert the transform and measurement rotation to RPY
@@ -1979,7 +1979,7 @@ namespace RobotLocalization
           // Imagine a case where an IMU is mounted facing sideways. In that case
           // pitch for the IMU's world frame is roll for the robot.
           tf::Matrix3x3 mat;
-          mat.setRPY(0.0, 0.0, yaw);
+          mat.setRPY(0.0, 0.0, yawOffset);
           rpyAngles = mat * rpyAngles;
           poseTmp.getBasis().setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
         }
