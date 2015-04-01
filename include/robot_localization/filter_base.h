@@ -33,6 +33,8 @@
 #ifndef RobotLocalization_FilterBase_h
 #define RobotLocalization_FilterBase_h
 
+#include "robot_localization/filter_utilities.h"
+
 #include <Eigen/Dense>
 
 #include <ostream>
@@ -41,8 +43,7 @@
 #include <map>
 #include <queue>
 #include <limits>
-
-#define FB_DEBUG(msg) if(getDebug()) { *debugStream_ << msg; }
+#include <string>
 
 namespace RobotLocalization
 {
@@ -98,7 +99,7 @@ namespace RobotLocalization
 
       //! @brief Destructor for the FilterBase class
       //!
-      ~FilterBase();
+      virtual ~FilterBase();
 
       //! @brief Carries out the correct step in the predict/update cycle. This method
       //! must be implemented by subclasses.
@@ -292,10 +293,6 @@ namespace RobotLocalization
       //!
       double lastUpdateTime_;
 
-      //! @brief Commonly used circle constant
-      //!
-      const double pi_;
-
       //! @brief Holds the last predicted state of the filter
       //!
       Eigen::VectorXd predictedState_;
@@ -323,10 +320,6 @@ namespace RobotLocalization
       //! filter. The values in this vector are what get reported by the node.
       //!
       Eigen::VectorXd state_;
-
-      //! @brief True circle constant (http://www.tauday.com/tau-manifesto)
-      //!
-      const double tau_;
 
       //! @brief The Kalman filter transfer function
       //!
@@ -360,11 +353,5 @@ namespace RobotLocalization
       bool debug_;
   };
 }
-
-// Handy methods for debug output
-std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat);
-std::ostream& operator<<(std::ostream& os, const Eigen::VectorXd &vec);
-std::ostream& operator<<(std::ostream& os, const std::vector<size_t> &vec);
-std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec);
 
 #endif

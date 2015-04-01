@@ -49,6 +49,3 @@ Changelog for package robot_localization
 ------------------
 * Added cmake_modules dependency for Eigen support, and added include to silence boost::signals warning from tf include
 
-
-
-
