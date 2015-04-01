@@ -679,9 +679,9 @@ TEST (InterfacesTest, ImuAccBasicIO)
     imu.header.seq++;
   }
 
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.3);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.3);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.3);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);
 
   resetFilter();
 }

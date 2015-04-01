@@ -94,7 +94,7 @@
       <param name="final_x" value="1.0500"/>
       <param name="final_y" value="3.4955"/>
       <param name="final_z" value="0.7252"/>
-      <param name="tolerance" value="0.0923"/>
+      <param name="tolerance" value="0.1846"/>
       <param name="output_final_position" value="$(arg output_final_position)"/>
       <param name="output_location" value="$(arg output_location)"/>
     </test>
