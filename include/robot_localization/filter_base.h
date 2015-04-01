@@ -33,8 +33,6 @@
 #ifndef RobotLocalization_FilterBase_h
 #define RobotLocalization_FilterBase_h
 
-#include "robot_localization/filter_utilities.h"
-
 #include <Eigen/Dense>
 
 #include <ostream>
@@ -43,7 +41,8 @@
 #include <map>
 #include <queue>
 #include <limits>
-#include <string>
+
+#define FB_DEBUG(msg) if(getDebug()) { *debugStream_ << msg; }
 
 namespace RobotLocalization
 {
@@ -99,7 +98,7 @@ namespace RobotLocalization
 
       //! @brief Destructor for the FilterBase class
       //!
-      virtual ~FilterBase();
+      ~FilterBase();
 
       //! @brief Carries out the correct step in the predict/update cycle. This method
       //! must be implemented by subclasses.
@@ -353,5 +352,11 @@ namespace RobotLocalization
       bool debug_;
   };
 }
+
+// Handy methods for debug output
+std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat);
+std::ostream& operator<<(std::ostream& os, const Eigen::VectorXd &vec);
+std::ostream& operator<<(std::ostream& os, const std::vector<size_t> &vec);
+std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec);
 
 #endif

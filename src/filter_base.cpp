@@ -290,9 +290,32 @@ namespace RobotLocalization
 
   void FilterBase::wrapStateAngles()
   {
-    state_(StateMemberRoll)  = FilterUtilities::clampRotation(state_(StateMemberRoll));
-    state_(StateMemberPitch) = FilterUtilities::clampRotation(state_(StateMemberPitch));
-    state_(StateMemberYaw)   = FilterUtilities::clampRotation(state_(StateMemberYaw));
+    while (state_(StateMemberRoll) < -PI)
+    {
+      state_(StateMemberRoll) += TAU;
+    }
+    while (state_(StateMemberRoll) > PI)
+    {
+      state_(StateMemberRoll) -= TAU;
+    }
+
+    while (state_(StateMemberPitch) < -PI)
+    {
+      state_(StateMemberPitch) += TAU;
+    }
+    while (state_(StateMemberPitch) > PI)
+    {
+      state_(StateMemberPitch) -= TAU;
+    }
+
+    while (state_(StateMemberYaw) < -PI)
+    {
+      state_(StateMemberYaw) += TAU;
+    }
+    while (state_(StateMemberYaw) > PI)
+    {
+      state_(StateMemberYaw) -= TAU;
+    }
   }
 
   bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
@@ -314,4 +337,71 @@ namespace RobotLocalization
 
     return true;
   }
+}
+
+
+
+std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
+{
+  os << "[";
+
+  int rowCount = static_cast<int>(mat.rows());
+
+  for (int row = 0; row < rowCount; ++row)
+  {
+    if (row > 0)
+    {
+      os << " ";
+    }
+
+    for (int col = 0; col < mat.cols(); ++col)
+    {
+      os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << mat(row, col);
+    }
+
+    if (row < rowCount - 1)
+    {
+      os << "\n";
+    }
+  }
+
+  os << "]\n";
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Eigen::VectorXd &vec)
+{
+  os << "[";
+  for (int dim = 0; dim < vec.rows(); ++dim)
+  {
+    os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << vec(dim);
+  }
+  os << "]\n";
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<size_t> &vec)
+{
+  os << "[";
+  for (size_t dim = 0; dim < vec.size(); ++dim)
+  {
+    os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << vec[dim];
+  }
+  os << "]\n";
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec)
+{
+  os << "[";
+  for (size_t dim = 0; dim < vec.size(); ++dim)
+  {
+    os << std::setiosflags(std::ios::left) << std::setw(3) << (vec[dim] ? "t" : "f");
+  }
+  os << "]\n";
+
+  return os;
 }
