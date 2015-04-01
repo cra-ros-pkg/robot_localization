@@ -76,7 +76,7 @@
       <param name="final_x" value="-0.4021"/>
       <param name="final_y" value="-0.2463"/>
       <param name="final_z" value="2.9956"/>
-      <param name="tolerance" value="0.0696"/>
+      <param name="tolerance" value="0.1392"/>
       <param name="output_final_position" value="$(arg output_final_position)"/>
       <param name="output_location" value="$(arg output_location)"/>
     </test>
