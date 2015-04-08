@@ -60,7 +60,8 @@ namespace RobotLocalization
              "Measurement covariance is:\n" << measurement.covariance_ << "\n");
 
     // We don't want to update everything, so we need to build matrices that only update
-    // the measured parts of our state vector
+    // the measured parts of our state vector. Throughout prediction and correction, we
+    // attempt to maximize efficiency in Eigen.
 
     // First, determine how many state vector values we're updating
     std::vector<size_t> updateIndices;
@@ -156,7 +157,7 @@ namespace RobotLocalization
     // (1) Compute the Kalman gain: K = (PH') / (HPH' + R)
     Eigen::MatrixXd pht = estimateErrorCovariance_ * stateToMeasurementSubset.transpose();
     Eigen::MatrixXd hphrInv  = (stateToMeasurementSubset * pht + measurementCovarianceSubset).inverse();
-    kalmanGainSubset = pht * hphrInv;
+    kalmanGainSubset.noalias() = pht * hphrInv;
 
     innovationSubset = (measurementSubset - stateSubset);
     
@@ -181,12 +182,13 @@ namespace RobotLocalization
         }
       }
         
-      state_ = state_ + kalmanGainSubset * innovationSubset;
+      state_.noalias() += kalmanGainSubset * innovationSubset;
         
       // (4) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
-      Eigen::MatrixXd gainResidual = identity_ - kalmanGainSubset * stateToMeasurementSubset;
-      estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_.eval() * gainResidual.transpose() +
-          kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
+      Eigen::MatrixXd gainResidual = identity_;
+      gainResidual.noalias() -= kalmanGainSubset * stateToMeasurementSubset;
+      estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_ * gainResidual.transpose();
+      estimateErrorCovariance_.noalias() += kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
       
       // Handle wrapping of angles
       wrapStateAngles();
@@ -352,8 +354,8 @@ namespace RobotLocalization
              "\nCurrent estimate error covariance is:\n" <<  estimateErrorCovariance_ << "\n");
 
     // (2) Project the error forward: P = J * P * J' + Q
-    estimateErrorCovariance_ = (transferFunctionJacobian_ * estimateErrorCovariance_ * transferFunctionJacobian_.transpose())
-      + (processNoiseCovariance_ * delta);
+    estimateErrorCovariance_ = (transferFunctionJacobian_ * estimateErrorCovariance_ * transferFunctionJacobian_.transpose());
+    estimateErrorCovariance_.noalias() += (processNoiseCovariance_ * delta);
 
     FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
              "\n\n--------------------- /Ekf::predict ----------------------\n");
