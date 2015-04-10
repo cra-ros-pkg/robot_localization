@@ -1262,7 +1262,7 @@ namespace RobotLocalization
 
     // Prepare the pose data (really just using this to transform it into the target frame).
     // Twist data is going to get zeroed out.
-    preparePose(msg, topicName, odomFrameId_, false, false, false, updateVector, measurement, measurementCovariance);
+    preparePose(msg, topicName, worldFrameId_, false, false, false, updateVector, measurement, measurementCovariance);
 
     // For the state
     filter_.setState(measurement);
