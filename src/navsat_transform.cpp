@@ -55,6 +55,7 @@ namespace RobotLocalization
     gpsUpdated_(false),
     odomUpdated_(false),
     publishGps_(false),
+    useOdometryHeading_(false),
     worldFrameId_("odom"),
     utmZone_("")
  {
@@ -73,6 +74,16 @@ namespace RobotLocalization
     hasOdom_ = true;
     odomUpdateTime_ = msg->header.stamp;
     odomUpdated_ = true;
+
+    // Users can optionally use the (potentially fused) heading from
+    // the odometry source, which may have multiple fused sources of
+    // heading data, and so would act as a better heading for the
+    // UTM->world_frame transform.
+    if(useOdometryHeading_ && !transformGood_)
+    {
+      tf::quaternionMsgToTF(msg->pose.pose.orientation, latestOrientation_);
+      hasImu_ = true;
+    }
   }
 
   void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
@@ -279,7 +290,7 @@ namespace RobotLocalization
       filteredGps.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_KNOWN;
       filteredGps.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
       filteredGps.header.frame_id = "gps";
-      filteredGps.header.stamp = gpsUpdateTime_;
+      filteredGps.header.stamp = odomUpdateTime_;
 
       // Mark this GPS as used
       odomUpdated_ = false;
@@ -293,15 +304,11 @@ namespace RobotLocalization
   {
     ros::Time::init();
 
-    double frequency = 10;
+    double frequency = 10.0;
+    double delay = 0.0;
 
     ros::NodeHandle nh;
     ros::NodeHandle nhPriv("~");
-
-    // Subscribe to the messages we need
-    ros::Subscriber odomSub = nh.subscribe("odometry/filtered", 1, &NavSatTransform::odomCallback, this);
-    ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
-    ros::Subscriber imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
 
     // Load the parameters we need
     nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
@@ -309,7 +316,19 @@ namespace RobotLocalization
     nhPriv.param("broadcast_utm_transform", broadcastUtmTransform_, false);
     nhPriv.param("zero_altitude", zeroAltitude_, false);
     nhPriv.param("publish_filtered_gps", publishGps_, false);
+    nhPriv.param("use_odometry_heading", useOdometryHeading_, false);
     nhPriv.param("frequency", frequency, 10.0);
+    nhPriv.param("delay", delay, 0.0);
+
+    // Subscribe to the messages we need
+    ros::Subscriber odomSub = nh.subscribe("odometry/filtered", 1, &NavSatTransform::odomCallback, this);
+    ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
+    ros::Subscriber imuSub;
+
+    if(!useOdometryHeading_)
+    {
+      imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
+    }
 
     ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
     ros::Publisher filteredGpsPub;
@@ -323,6 +342,11 @@ namespace RobotLocalization
     tf::StampedTransform utmTransformStamped;
     utmTransformStamped.child_frame_id_ = "utm";
 
+    // Sleep for the parameterized amount of time, to give
+    // other nodes time to start up (not always necessary)
+    ros::Duration startDelay(delay);
+    startDelay.sleep();
+
     ros::Rate rate(frequency);
     while(ros::ok())
     {
@@ -332,7 +356,7 @@ namespace RobotLocalization
       {
         computeTransform();
 
-        if(transformGood_)
+        if(transformGood_ && !useOdometryHeading_)
         {
           // Once we have the transform, we don't need the IMU
           imuSub.shutdown();
