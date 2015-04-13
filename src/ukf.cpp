@@ -91,6 +91,7 @@ namespace RobotLocalization
     // In our implementation, it may be that after we call predict once, we call correct
     // several times in succession (multiple measurements with different time stamps). In
     // that event, the sigma points need to be updated to reflect the current state.
+    // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
     if(!uncorrected_)
     {
       // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
@@ -231,7 +232,7 @@ namespace RobotLocalization
     }
 
     // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
-    Eigen::MatrixXd invInnovCov  = (predictedMeasCovar + measurementCovarianceSubset).inverse();
+    Eigen::MatrixXd invInnovCov = (predictedMeasCovar + measurementCovarianceSubset).inverse();
     kalmanGainSubset = crossCovar * invInnovCov;
 
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
@@ -257,10 +258,10 @@ namespace RobotLocalization
         }
       }
 
-      state_ = state_ + kalmanGainSubset * innovationSubset;
+      state_.noalias() += kalmanGainSubset * innovationSubset;
 
       // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_ = estimateErrorCovariance_.eval() - (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
 
       wrapStateAngles();
 
