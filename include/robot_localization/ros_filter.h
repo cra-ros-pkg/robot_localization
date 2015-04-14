@@ -353,6 +353,14 @@ namespace RobotLocalization
                         Eigen::VectorXd &measurement,
                         Eigen::MatrixXd &measurementCovariance);
 
+      //! @brief Converts frame_id's to correct form for tf2. It will strip leading slash if there is one.
+      //! If tf_prefix is defined it will create new name tf_prefix/param.
+      //! Example: /odom --> odom  or  /odom --> tfPrefix/odom
+      //! @param[in] param - user defined frame_id with or without leading slash
+      //! @return new name without leading slash or with added tf_prefix
+      //!
+      std::string tf2NameSanitizer(const std::string & param);
+
       //! @brief Vector to hold our acceleration (represented as IMU) message filters so they don't go out of scope.
       //!
       std::map<std::string, imuMFPtr> accelerationMessageFilters_;
