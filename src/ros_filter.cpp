@@ -361,6 +361,25 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  std::string RosFilter<T>::tf2NameSanitizer(const std::string & param )
+  {
+    if(!tfPrefix_.empty())
+    { // tf prefix is set
+      if(param.at(0)=='/')
+        return tfPrefix_ + param;
+      else
+        return tfPrefix_+ "/" + param;
+    }else
+    {
+       // remove leading slash
+       if(param.at(0)=='/')
+        return param.substr(1);
+    }
+    // everything is OK
+    return param;
+  }
+
+  template<typename T>
   void RosFilter<T>::loadParams()
   {
     // For diagnostic purposes, collect information about how many different
@@ -408,12 +427,11 @@ namespace RobotLocalization
     }
 
     // Try to resolve the tf_prefix
-    nh_.param("/tf_prefix", tfPrefix_, std::string(""));
-
-    if (tfPrefix_.empty())
-    {
-      nh_.param("tf_prefix", tfPrefix_, std::string(""));
-    }
+    std::string tf_prefix_path;
+    if (nhLocal_.searchParam("tf_prefix", tf_prefix_path))
+      nhLocal_.getParam(tf_prefix_path, tfPrefix_);
+    else
+      tfPrefix_="";
 
     // These params specify the name of the robot's body frame (typically
     // base_link) and odometry frame (typically odom)
@@ -453,25 +471,10 @@ namespace RobotLocalization
                    mapFrameId_ == baseLinkFrameId_,
                    "Invalid frame configuration! The values for map_frame, odom_frame, and base_link_frame must be unique");
 
-    // Append tf_prefix if it's specified (@todo: tf2 migration)
-    if (!tfPrefix_.empty() && baseLinkFrameId_.at(0) != '/')
-    {
-      if(mapFrameId_.at(0) != '/')
-      {
-        mapFrameId_ = "/" + tfPrefix_ + "/" + mapFrameId_;
-      }
-
-      if(odomFrameId_.at(0) != '/')
-      {
-        odomFrameId_ = "/" + tfPrefix_ + "/" + odomFrameId_;
-      }
-
-      if(baseLinkFrameId_.at(0) != '/')
-      {
-        baseLinkFrameId_ = "/" + tfPrefix_ + "/" + baseLinkFrameId_;
-      }
-    }
-
+    // Append tf_prefix if it's specified - tf2 migration= strip leading slash
+      mapFrameId_ = tf2NameSanitizer(mapFrameId_);
+      odomFrameId_ = tf2NameSanitizer(odomFrameId_);
+      baseLinkFrameId_ = tf2NameSanitizer(baseLinkFrameId_);
     // Transform future dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
