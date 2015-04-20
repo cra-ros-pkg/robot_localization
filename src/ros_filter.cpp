@@ -380,12 +380,12 @@ namespace RobotLocalization
 
     // Same for twist variables
     std::map<StateMembers, int> twistVarCounts;
-    absPoseVarCounts[StateMemberVx] = 0;
-    absPoseVarCounts[StateMemberVy] = 0;
-    absPoseVarCounts[StateMemberVz] = 0;
-    absPoseVarCounts[StateMemberVroll] = 0;
-    absPoseVarCounts[StateMemberVpitch] = 0;
-    absPoseVarCounts[StateMemberVyaw] = 0;
+    twistVarCounts[StateMemberVx] = 0;
+    twistVarCounts[StateMemberVy] = 0;
+    twistVarCounts[StateMemberVz] = 0;
+    twistVarCounts[StateMemberVroll] = 0;
+    twistVarCounts[StateMemberVpitch] = 0;
+    twistVarCounts[StateMemberVyaw] = 0;
 
     // Determine if we'll be printing diagnostic information
     nhLocal_.param("print_diagnostics", printDiagnostics_, true);
@@ -403,7 +403,7 @@ namespace RobotLocalization
         nhLocal_.param("debug_out_file", debugOutFile, std::string("robot_localization_debug.txt"));
         debugStream_.open(debugOutFile.c_str());
 
-        // Make sure we succeeeded
+        // Make sure we succeeded
         if(debugStream_.is_open())
         {
           filter_.setDebug(debug, &debugStream_);
@@ -458,7 +458,7 @@ namespace RobotLocalization
      * odom_frame->base_link_frame transform.
      *
      * The default is the latter behavior (broadcast of odom->base_link).
-     * */
+     */
     nhLocal_.param("world_frame", worldFrameId_, odomFrameId_);
 
     ROS_FATAL_COND(mapFrameId_ == odomFrameId_ ||
@@ -485,7 +485,7 @@ namespace RobotLocalization
       }
     }
 
-    // Transform future dating
+    // Transform future (or past) dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
     tfTimeOffset_.fromSec(offsetTmp);
@@ -505,6 +505,7 @@ namespace RobotLocalization
              "\nodom_frame is " << odomFrameId_ <<
              "\nbase_link_frame is " << baseLinkFrameId_ <<
              "\nworld_frame is " << worldFrameId_ <<
+             "\ntransform_time_offset is " << tfTimeOffset_.toSec() <<
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
@@ -1332,7 +1333,7 @@ namespace RobotLocalization
             mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
 
             tf::transformStampedTFToMsg(mapOdomTrans, mapOdomTransMsg);
-            mapOdomTransMsg.header.stamp = filteredPosition.header.stamp;
+            mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
             mapOdomTransMsg.header.frame_id = mapFrameId_;
             mapOdomTransMsg.child_frame_id = odomFrameId_;
 
