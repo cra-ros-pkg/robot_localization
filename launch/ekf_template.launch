@@ -121,7 +121,7 @@
 
       <!-- If you're having trouble, try setting this to true, and then use rqt_console to see diagnostic information
            about your data and settings. -->
-      <param name="print_diagnostics" value="false"/>
+      <param name="print_diagnostics" value="true"/>
 
       <!-- ======== ADVANCED PARAMETERS ======== -->
 

@@ -41,7 +41,6 @@
 #include <iomanip>
 
 #define RF_DEBUG(msg) if(filter_.getDebug()) { debugStream_ << msg; }
-#define RL_DIAGNOSTIC(msg) if(printDiagnostics_) { ROS_WARN_STREAM_ONCE_NAMED("diagnostic", "DIAGNOSTIC: " << msg); }
 
 // Handy methods for debug output
 std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec);
