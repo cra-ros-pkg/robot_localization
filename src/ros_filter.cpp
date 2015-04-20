@@ -39,10 +39,11 @@ namespace RobotLocalization
 {
   template<typename T>
   RosFilter<T>::RosFilter(std::vector<double> args) :
-      nhLocal_("~"),
+      staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
+      dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       filter_(args),
       frequency_(30.0),
-      printDiagnostics_(false),
+      nhLocal_("~"),
       twoDMode_(false)
   {
     stateVariableNames_.push_back("X");
@@ -60,6 +61,8 @@ namespace RobotLocalization
     stateVariableNames_.push_back("X_ACCELERATION");
     stateVariableNames_.push_back("Y_ACCELERATION");
     stateVariableNames_.push_back("Z_ACCELERATION");
+
+    diagnosticUpdater_.setHardwareID("none");
   }
 
   template<typename T>
@@ -363,9 +366,10 @@ namespace RobotLocalization
   template<typename T>
   void RosFilter<T>::loadParams()
   {
-    // For diagnostic purposes, collect information about how many different
-    // sources are measuring each absolute pose variable and do not have
-    // differential integration enabled.
+    /* For diagnostic purposes, collect information about how many different
+     * sources are measuring each absolute pose variable and do not have
+     * differential integration enabled.
+     */
     std::map<StateMembers, int> absPoseVarCounts;
     absPoseVarCounts[StateMemberX] = 0;
     absPoseVarCounts[StateMemberY] = 0;
@@ -374,8 +378,17 @@ namespace RobotLocalization
     absPoseVarCounts[StateMemberPitch] = 0;
     absPoseVarCounts[StateMemberYaw] = 0;
 
+    // Same for twist variables
+    std::map<StateMembers, int> twistVarCounts;
+    absPoseVarCounts[StateMemberVx] = 0;
+    absPoseVarCounts[StateMemberVy] = 0;
+    absPoseVarCounts[StateMemberVz] = 0;
+    absPoseVarCounts[StateMemberVroll] = 0;
+    absPoseVarCounts[StateMemberVpitch] = 0;
+    absPoseVarCounts[StateMemberVyaw] = 0;
+
     // Determine if we'll be printing diagnostic information
-    nhLocal_.param("print_diagnostics", printDiagnostics_, false);
+    nhLocal_.param("print_diagnostics", printDiagnostics_, true);
 
     // Grab the debug param. If true, the node will produce a LOT of output.
     bool debug;
@@ -572,7 +585,13 @@ namespace RobotLocalization
         }
         else
         {
-          RL_DIAGNOSTIC(odomTopic << " is listed as an input topic, but all update variables are false");
+          std::stringstream stream;
+          stream << odomTopic << " is listed as an input topic, but all update variables are false";
+
+          addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                        odomTopic + "_configuration",
+                        stream.str(),
+                        true);
         }
 
         if(poseUpdateSum > 0)
@@ -583,7 +602,16 @@ namespace RobotLocalization
           poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformPoseFailureCallback, this, _1, _2, odomTopicName, worldFrameId_));
           poseMessageFilters_[odomPoseTopicName] = poseFilPtr;
 
-          if(!differential)
+          if(differential)
+          {
+            twistVarCounts[StateMemberVx] += poseUpdateVec[StateMemberX];
+            twistVarCounts[StateMemberVy] += poseUpdateVec[StateMemberY];
+            twistVarCounts[StateMemberVz] += poseUpdateVec[StateMemberZ];
+            twistVarCounts[StateMemberVroll] += poseUpdateVec[StateMemberRoll];
+            twistVarCounts[StateMemberVpitch] += poseUpdateVec[StateMemberPitch];
+            twistVarCounts[StateMemberVyaw] += poseUpdateVec[StateMemberYaw];
+          }
+          else
           {
             absPoseVarCounts[StateMemberX] += poseUpdateVec[StateMemberX];
             absPoseVarCounts[StateMemberY] += poseUpdateVec[StateMemberY];
@@ -601,6 +629,13 @@ namespace RobotLocalization
           twistFilPtr->registerCallback(boost::bind(&RosFilter<T>::twistCallback, this, _1, odomTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
           twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, odomTopicName, baseLinkFrameId_));
           twistMessageFilters_[odomTwistTopicName] = twistFilPtr;
+
+          twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
+          twistVarCounts[StateMemberVy] += twistUpdateVec[StateMemberVx];
+          twistVarCounts[StateMemberVz] += twistUpdateVec[StateMemberVz];
+          twistVarCounts[StateMemberVroll] += twistUpdateVec[StateMemberVroll];
+          twistVarCounts[StateMemberVpitch] += twistUpdateVec[StateMemberVpitch];
+          twistVarCounts[StateMemberVyaw] += twistUpdateVec[StateMemberVyaw];
         }
 
         RF_DEBUG("Subscribed to " << odomTopic << " (" << odomTopicName << ")\n\t" <<
@@ -660,7 +695,16 @@ namespace RobotLocalization
           poseTopicSubs_.push_back(subPtr);
           poseMessageFilters_[poseTopicName] = filPtr;
 
-          if(!differential)
+          if(differential)
+          {
+            twistVarCounts[StateMemberVx] += poseUpdateVec[StateMemberX];
+            twistVarCounts[StateMemberVy] += poseUpdateVec[StateMemberY];
+            twistVarCounts[StateMemberVz] += poseUpdateVec[StateMemberZ];
+            twistVarCounts[StateMemberVroll] += poseUpdateVec[StateMemberRoll];
+            twistVarCounts[StateMemberVpitch] += poseUpdateVec[StateMemberPitch];
+            twistVarCounts[StateMemberVyaw] += poseUpdateVec[StateMemberYaw];
+          }
+          else
           {
             absPoseVarCounts[StateMemberX] += poseUpdateVec[StateMemberX];
             absPoseVarCounts[StateMemberY] += poseUpdateVec[StateMemberY];
@@ -721,6 +765,13 @@ namespace RobotLocalization
           filPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, twistTopicName, baseLinkFrameId_));
           twistTopicSubs_.push_back(subPtr);
           twistMessageFilters_[twistTopicName] = filPtr;
+
+          twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
+          twistVarCounts[StateMemberVy] += twistUpdateVec[StateMemberVy];
+          twistVarCounts[StateMemberVz] += twistUpdateVec[StateMemberVz];
+          twistVarCounts[StateMemberVroll] += twistUpdateVec[StateMemberVroll];
+          twistVarCounts[StateMemberVpitch] += twistUpdateVec[StateMemberVpitch];
+          twistVarCounts[StateMemberVyaw] += twistUpdateVec[StateMemberVyaw];
         }
         else
         {
@@ -839,7 +890,13 @@ namespace RobotLocalization
           poseFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformPoseFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
           poseMessageFilters_[imuPoseTopicName] = poseFilPtr;
 
-          if(!differential)
+          if(differential)
+          {
+            twistVarCounts[StateMemberVroll] += poseUpdateVec[StateMemberRoll];
+            twistVarCounts[StateMemberVpitch] += poseUpdateVec[StateMemberPitch];
+            twistVarCounts[StateMemberVyaw] += poseUpdateVec[StateMemberYaw];
+          }
+          else
           {
             absPoseVarCounts[StateMemberRoll] += poseUpdateVec[StateMemberRoll];
             absPoseVarCounts[StateMemberPitch] += poseUpdateVec[StateMemberPitch];
@@ -854,6 +911,10 @@ namespace RobotLocalization
           twistFilPtr->registerCallback(boost::bind(&RosFilter<T>::twistCallback, this, _1, imuTwistTopicName, baseLinkFrameId_, twistUpdateVec, twistMahalanobisThresh));
           twistFilPtr->registerFailureCallback(boost::bind(&RosFilter<T>::transformTwistFailureCallback, this, _1, _2, imuTopicName, baseLinkFrameId_));
           twistMessageFilters_[imuTwistTopicName] = twistFilPtr;
+
+          twistVarCounts[StateMemberVroll] += twistUpdateVec[StateMemberVroll];
+          twistVarCounts[StateMemberVpitch] += twistUpdateVec[StateMemberVpitch];
+          twistVarCounts[StateMemberVyaw] += twistUpdateVec[StateMemberVyaw];
         }
 
         if(accelUpdateSum > 0)
@@ -878,16 +939,76 @@ namespace RobotLocalization
       }
     } while (moreParams);
 
-    // Warn users about multiple non-differential input sources
+    /* Warn users about:
+    *    1. Multiple non-differential input sources
+    *    2. No absolute measurements of orientations variables
+    *    3. No absolute *or* relative measurements of position variables
+    */
     if(printDiagnostics_)
     {
       for(int stateVar = StateMemberX; stateVar <= StateMemberYaw; ++stateVar)
       {
         if(absPoseVarCounts[static_cast<StateMembers>(stateVar)] > 1)
         {
-          RL_DIAGNOSTIC(absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
-                        " absolute pose inputs detected for " <<
-                        stateVariableNames_[stateVar] << ". This may result in oscillations.");
+          std::stringstream stream;
+          stream <<  absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
+              " absolute pose inputs detected for " << stateVariableNames_[stateVar] <<
+              ". This may result in oscillations. Please ensure that your variances for each "
+              "measured variable are set appropriately.";
+
+          addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                        stateVariableNames_[stateVar] + "_configuration",
+                        stream.str(),
+                        true);
+        }
+        else if(absPoseVarCounts[static_cast<StateMembers>(stateVar)] == 0)
+        {
+          if(twoDMode_ == false)
+          {
+            if(static_cast<StateMembers>(stateVar) == StateMemberRoll ||
+               static_cast<StateMembers>(stateVar) == StateMemberPitch)
+            {
+              std::stringstream stream;
+              stream << "two_d_mode is false, and " << stateVariableNames_[stateVar] << " is not being measured. "
+                        "This will result in unbounded error growth and erratic filter behavior.";
+
+              addDiagnostic(diagnostic_msgs::DiagnosticStatus::ERROR,
+                            stateVariableNames_[stateVar] + "_configuration",
+                            stream.str(),
+                            true);
+            }
+          }
+
+          if(static_cast<StateMembers>(stateVar) == StateMemberYaw)
+          {
+            std::stringstream stream;
+            stream << stateVariableNames_[stateVar] << " is not being measured. This will result "
+                      "in unbounded error growth and erratic filter behavior.";
+
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::ERROR,
+                          stateVariableNames_[stateVar] + "_configuration",
+                          stream.str(),
+                          true);
+          }
+
+          if((static_cast<StateMembers>(stateVar) == StateMemberX &&
+              twistVarCounts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
+             (static_cast<StateMembers>(stateVar) == StateMemberY &&
+              twistVarCounts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
+             (static_cast<StateMembers>(stateVar) == StateMemberZ &&
+              twistVarCounts[static_cast<StateMembers>(StateMemberVz)] == 0))
+          {
+            std::stringstream stream;
+            stream << "Neither " << stateVariableNames_[stateVar] << " nor its "
+                      "velocity is being measured. This will result in unbounded "
+                      "error growth and erratic filter behavior.";
+
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::ERROR,
+                          stateVariableNames_[stateVar] + "_configuration",
+                          stream.str(),
+                          true);
+          }
+
         }
       }
     }
@@ -1127,11 +1248,27 @@ namespace RobotLocalization
 
     loadParams();
 
+    if(printDiagnostics_)
+    {
+      diagnosticUpdater_.add("Filter diagnostic updater", this, &RosFilter<T>::aggregateDiagnostics);
+    }
+
+    // Set up the frequency diagnostic
+    double minFrequency = frequency_ - 2;
+    double maxFrequency = frequency_ + 2;
+    diagnostic_updater::HeaderlessTopicDiagnostic freqDiag("odometry/filtered",
+                                                           diagnosticUpdater_,
+                                                           diagnostic_updater::FrequencyStatusParam(&minFrequency,
+                                                                                                    &maxFrequency,
+                                                                                                    0.1, 10));
+
     // We may need to broadcast a different transform than
     // the one we've already calculated.
     tf::StampedTransform mapOdomTrans;
     tf::StampedTransform odomBaseLinkTrans;
     geometry_msgs::TransformStamped mapOdomTransMsg;
+    ros::Time curTime;
+    ros::Time lastDiagTime = ros::Time::now();
 
     // Clear out the transforms
     tf::transformTFToMsg(tf::Transform::getIdentity(), worldBaseLinkTransMsg_.transform);
@@ -1214,13 +1351,30 @@ namespace RobotLocalization
 
         // Fire off the position and the transform
         positionPub.publish(filteredPosition);
+
+        if(printDiagnostics_)
+        {
+          freqDiag.tick();
+        }
       }
 
       // The spin will enqueue all the available callbacks
       ros::spinOnce();
 
       // Now we'll integrate any measurements we've received
+      ros::Time curTime = ros::Time::now();
       integrateMeasurements(ros::Time::now().toSec());
+
+      /* Diagnostics can behave strangely when playing back from bag
+       * files and using simulated time, so we have to check for
+       * time suddenly moving backwards as well as the standard
+       * timeout criterion before publishing. */
+      double diagDuration = (curTime - lastDiagTime).toSec();
+      if(printDiagnostics_ && (diagDuration >= diagnosticUpdater_.getPeriod() || diagDuration < 0.0))
+      {
+        diagnosticUpdater_.force_update();
+        lastDiagTime = curTime;
+      }
 
       if(!loop_rate.sleep())
       {
@@ -1427,6 +1581,76 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  void RosFilter<T>::addDiagnostic(const int errLevel,
+                                   const std::string &topicAndClass,
+                                   const std::string &message,
+                                   const bool staticDiag)
+  {
+    if(staticDiag)
+    {
+      staticDiagnostics_[topicAndClass] = message;
+      staticDiagErrorLevel_ = std::max(staticDiagErrorLevel_, errLevel);
+    }
+    else
+    {
+      dynamicDiagnostics_[topicAndClass] = message;
+      dynamicDiagErrorLevel_ = std::max(dynamicDiagErrorLevel_, errLevel);
+    }
+  }
+
+  template<typename T>
+  void RosFilter<T>::aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper)
+  {
+    wrapper.clear();
+    wrapper.clearSummary();
+
+    int maxErrLevel = std::max(staticDiagErrorLevel_, dynamicDiagErrorLevel_);
+
+    // Report the overall status
+    switch(maxErrLevel)
+    {
+      case diagnostic_msgs::DiagnosticStatus::ERROR:
+        wrapper.summary(maxErrLevel,
+                        "Erroneous data or settings detected for a robot_localization state estimation node.");
+        break;
+      case diagnostic_msgs::DiagnosticStatus::WARN:
+        wrapper.summary(maxErrLevel,
+                        "Potentially erroneous data or settings detected for a robot_localization state estimation node.");
+        break;
+      case diagnostic_msgs::DiagnosticStatus::STALE:
+        wrapper.summary(maxErrLevel,
+                        "The state of the robot_localization state estimation node is stale.");
+        break;
+      case diagnostic_msgs::DiagnosticStatus::OK:
+        wrapper.summary(maxErrLevel,
+                        "The robot_localization state estimation node appears to be functioning properly.");
+        break;
+      default:
+        break;
+    }
+
+    // Aggregate all the static messages
+    for(std::map<std::string, std::string>::iterator diagIt = staticDiagnostics_.begin();
+        diagIt != staticDiagnostics_.end();
+        ++diagIt)
+    {
+      wrapper.add(diagIt->first, diagIt->second);
+    }
+
+    // Aggregate all the dynamic messages, then clear them
+    for(std::map<std::string, std::string>::iterator diagIt = dynamicDiagnostics_.begin();
+        diagIt != dynamicDiagnostics_.end();
+        ++diagIt)
+    {
+      wrapper.add(diagIt->first, diagIt->second);
+    }
+    dynamicDiagnostics_.clear();
+
+    // Reset the warning level for the dynamic diagnostic messages
+    dynamicDiagErrorLevel_ = diagnostic_msgs::DiagnosticStatus::OK;
+  }
+
+  template<typename T>
   void RosFilter<T>::copyCovariance(const double *arr,
                                     Eigen::MatrixXd &covariance,
                                     const std::string &topicName,
@@ -1448,22 +1672,40 @@ namespace RobotLocalization
           {
             std::string jVar = stateVariableNames_[offset + j];
 
-            RL_DIAGNOSTIC("For topic " << topicName << ", the covariance at position (" << dimension * i + j <<
-                          "), which corresponds to " << (i == j ? iVar + " variance" : iVar + " and " + jVar + " covariance") <<
-                          ", the value is extremely large (" << covariance(i, j) << "), but the update vector for " <<
-                          (i == j ? iVar : iVar + " and/or " + jVar) << " is set to true. This may produce undesirable results.");
+            std::stringstream stream;
+            stream << "The covariance at position (" << dimension * i + j << "), which corresponds to " <<
+                (i == j ? iVar + " variance" : iVar + " and " + jVar + " covariance") <<
+                ", the value is extremely large (" << covariance(i, j) << "), but the update vector for " <<
+                (i == j ? iVar : iVar + " and/or " + jVar) << " is set to true. This may produce undesirable results.";
+
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                          topicName + "_covariance",
+                          stream.str(),
+                          false);
           }
           else if(updateVector[i] && i == j && covariance(i, j) == 0)
           {
-            RL_DIAGNOSTIC("For topic " << topicName << ", the covariance at position (" << dimension * i + j <<
-                          "), which corresponds to " << iVar << " variance, was zero. This will be replaced with "
-                          "a small value to maintain filter stability, but should be corrected at the message origin node.");
+            std::stringstream stream;
+            stream << "The covariance at position (" << dimension * i + j << "), which corresponds to " <<
+                       iVar << " variance, was zero. This will be replaced with "
+                       "a small value to maintain filter stability, but should be corrected at the message origin node.";
+
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                          topicName + "_covariance",
+                          stream.str(),
+                          false);
           }
           else if(updateVector[i] && i == j && covariance(i, j) < 0)
           {
-            RL_DIAGNOSTIC("For topic " << topicName << ", the covariance at position (" << dimension * i + j <<
-                          "), which corresponds to " << iVar << " variance, was negative. This will be replaced with "
-                          "a small positive value to maintain filter stability, but should be corrected at the message origin node.");
+            std::stringstream stream;
+            stream << "The covariance at position (" << dimension * i + j <<
+                     "), which corresponds to " << iVar << " variance, was negative. This will be replaced with "
+                      "a small positive value to maintain filter stability, but should be corrected at the message origin node.";
+
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                          topicName + "_covariance",
+                          stream.str(),
+                          false);
           }
         }
       }
@@ -1506,7 +1748,7 @@ namespace RobotLocalization
       {
         // The double cast looks strange, but we'll get exceptions if we
         // remove the cast to bool. vector<bool> is discouraged, so updateVector
-        // uses integers
+        // uses integers.
         updateVector[i] = static_cast<int>(static_cast<bool>(topicConfig[i]));
       }
     }
@@ -1685,7 +1927,7 @@ namespace RobotLocalization
       // Copy the covariances
       measurementCovariance.block(POSITION_A_OFFSET, POSITION_A_OFFSET, ACCELERATION_SIZE, ACCELERATION_SIZE) = covarianceRotated.block(0, 0, ACCELERATION_SIZE, ACCELERATION_SIZE);
 
-      // 7. If we're in 2D mode, handle that.
+      // 7. Handle 2D mode
       if(twoDMode_)
       {
         forceTwoD(measurement, measurementCovariance, updateVector);
@@ -1764,8 +2006,14 @@ namespace RobotLocalization
 
       if(updateVector[StateMemberRoll] || updateVector[StateMemberPitch] || updateVector[StateMemberYaw])
       {
-        RL_DIAGNOSTIC("The " << topicName << " message contains an invalid orientation quaternion, " <<
-                      "but its configuration is such that orientation data is being used. Correcting...");
+        std::stringstream stream;
+        stream << "The " << topicName << " message contains an invalid orientation quaternion, " <<
+                  "but its configuration is such that orientation data is being used. Correcting...";
+
+        addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                      topicName + "_orientation",
+                      stream.str(),
+                      false);
       }
     }
     else
