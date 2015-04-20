@@ -48,6 +48,9 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
+#include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 
 #include <XmlRpcException.h>
 
@@ -248,6 +251,21 @@ namespace RobotLocalization
 
     protected:
 
+      //! @brief Adds a diagnostic message to the accumulating map and updates the error level
+      //! @param[in] errLevel - The error level of the diagnostic
+      //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
+      //! @param[in] message - Details of the diagnostic
+      //!
+      void addDiagnostic(const int errLevel,
+                         const std::string &topicAndClass,
+                         const std::string &message,
+                         const bool staticDiag);
+
+      //! @brief Aggregates all diagnostics so they can be published
+      //! @param[in] wrapper - The diagnostic status wrapper to update
+      //!
+      void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper);
+
       //! @brief Utility method for copying covariances from ROS covariance arrays
       //! to Eigen matrices
       //!
@@ -361,9 +379,31 @@ namespace RobotLocalization
       //!
       std::string baseLinkFrameId_;
 
+      //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
+      //! to the configuration parameters.
+      //!
+      //! The values are treated as static and always reported (i.e., this object is never cleared)
+      //!
+      std::map<std::string, std::string> staticDiagnostics_;
+
+      //! @brief This object accumulates dynamic diagnostics, e.g., diagnostics relating
+      //! to sensor data.
+      //!
+      //! The values are considered transient and are cleared at every iteration.
+      //!
+      std::map<std::string, std::string> dynamicDiagnostics_;
+
       //! @brief Used for outputting debug messages
       //!
       std::ofstream debugStream_;
+
+      //! @brief The max (worst) dynamic diagnostic level.
+      //!
+      int dynamicDiagErrorLevel_;
+
+      //! @brief Used for updating the diagnostics
+      //!
+      diagnostic_updater::Updater diagnosticUpdater_;
 
       //! @brief Our filter (EKF, UKF, etc.)
       //!
@@ -448,7 +488,7 @@ namespace RobotLocalization
       //!
       std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
 
-      //! @brief If true, prints diagnostic messages for potential issues
+      //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
       //!
       bool printDiagnostics_;
 
@@ -469,6 +509,10 @@ namespace RobotLocalization
       //! @brief Contains the state vector variable names in string format
       //!
       std::vector<std::string> stateVariableNames_;
+
+      //! @brief The max (worst) static diagnostic level.
+      //!
+      int staticDiagErrorLevel_;
 
       //! @brief Transform listener for managing coordinate transforms
       //!

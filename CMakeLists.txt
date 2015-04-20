@@ -1,7 +1,18 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
-find_package(catkin REQUIRED COMPONENTS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules gps_common message_generation)
+find_package(catkin REQUIRED COMPONENTS
+               roscpp
+               tf
+               message_filters
+               std_msgs
+               geometry_msgs
+               nav_msgs
+               sensor_msgs
+               diagnostic_msgs
+               cmake_modules
+               gps_common
+               message_generation)
 find_package(Eigen REQUIRED)
 
 add_definitions(-DEIGEN_NO_DEBUG)
@@ -9,12 +20,6 @@ add_definitions(-DEIGEN_NO_DEBUG)
 ###################################
 ## catkin specific configuration ##
 ###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
 add_service_files(
   FILES
   SetPose.srv
@@ -29,7 +34,17 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include ${gps_common_INCLUDE_DIRS}
   LIBRARIES filter_base ekf
-  CATKIN_DEPENDS roscpp tf message_filters std_msgs geometry_msgs nav_msgs sensor_msgs cmake_modules message_runtime
+  CATKIN_DEPENDS
+    roscpp
+    tf
+    message_filters
+    std_msgs
+    geometry_msgs
+    nav_msgs
+    sensor_msgs
+    diagnostic_msgs
+    cmake_modules
+    message_runtime
   DEPENDS Eigen
 )
 
@@ -72,18 +87,18 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 ## Install ##
 #############
 
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
 ## Mark executables and/or libraries for installation
-install(TARGETS filter_base ekf ekf_localization_node ukf ukf_localization_node navsat_transform navsat_transform_node
+install(TARGETS
+          filter_utilities
+          filter_base
+          ekf
+          ukf
+          ros_filter_utilities
+          ros_filter
+          ekf_localization_node
+          ukf_localization_node
+          navsat_transform
+          navsat_transform_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
