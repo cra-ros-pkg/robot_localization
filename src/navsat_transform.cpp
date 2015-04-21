@@ -55,7 +55,7 @@ namespace RobotLocalization
     gpsUpdated_(false),
     odomUpdated_(false),
     publishGps_(false),
-    useOdometryHeading_(false),
+    useOdometryYaw_(false),
     worldFrameId_("odom"),
     utmZone_("")
  {
@@ -79,7 +79,7 @@ namespace RobotLocalization
     // the odometry source, which may have multiple fused sources of
     // heading data, and so would act as a better heading for the
     // UTM->world_frame transform.
-    if(useOdometryHeading_ && !transformGood_)
+    if(useOdometryYaw_ && !transformGood_)
     {
       tf::quaternionMsgToTF(msg->pose.pose.orientation, latestOrientation_);
       hasImu_ = true;
@@ -312,11 +312,11 @@ namespace RobotLocalization
 
     // Load the parameters we need
     nhPriv.getParam("magnetic_declination_radians", magneticDeclination_);
-    nhPriv.getParam("yaw_offset", yawOffset_);
+    nhPriv.param("yaw_offset", yawOffset_, 0.0);
     nhPriv.param("broadcast_utm_transform", broadcastUtmTransform_, false);
     nhPriv.param("zero_altitude", zeroAltitude_, false);
     nhPriv.param("publish_filtered_gps", publishGps_, false);
-    nhPriv.param("use_odometry_heading", useOdometryHeading_, false);
+    nhPriv.param("use_odometry_yaw", useOdometryYaw_, false);
     nhPriv.param("frequency", frequency, 10.0);
     nhPriv.param("delay", delay, 0.0);
 
@@ -325,7 +325,7 @@ namespace RobotLocalization
     ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
     ros::Subscriber imuSub;
 
-    if(!useOdometryHeading_)
+    if(!useOdometryYaw_)
     {
       imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
     }
@@ -356,7 +356,7 @@ namespace RobotLocalization
       {
         computeTransform();
 
-        if(transformGood_ && !useOdometryHeading_)
+        if(transformGood_ && !useOdometryYaw_)
         {
           // Once we have the transform, we don't need the IMU
           imuSub.shutdown();

@@ -14,8 +14,6 @@
 
       <param name="sensor_timeout" value="0.1"/>
 
-      <param name="two_d_mode" value="false"/>
-
       <param name="odom0" value="/ardrone/odometry/raw"/>
       <param name="imu0" value="/ardrone/imu"/> 
 
@@ -36,19 +34,10 @@
                                      true, true, true,
                                      false, false, false]</rosparam>
 
-      <!-- Differential setting is off for this test -->
-      <param name="odom0_differential" value="false"/>
-      <param name="imu0_differential" value="false"/>
-
       <param name="odom0_queue_size" value="10"/>
       <param name="imu0_queue_size" value="10"/>
 
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
-
-      <param name="print_diagnostics" value="false"/>
-
-      <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ekf.txt"/>
 
       <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                   0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
