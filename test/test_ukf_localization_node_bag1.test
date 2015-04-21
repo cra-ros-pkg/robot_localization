@@ -21,8 +21,6 @@
 
       <param name="sensor_timeout" value="0.1"/>
 
-      <param name="two_d_mode" value="false"/>
-
       <param name="odom0" value="/wheel_odometry"/>
       <param name="odom1" value="/stereo_odometer/odometry"/>
       <param name="imu0" value="/xsens/imu_data"/>
@@ -57,9 +55,6 @@
                                      false, false, false,
                                      false, false, false]</rosparam>
 
-      <param name="odom0_differential" value="false"/>
-      <param name="odom1_differential" value="false"/>
-      <param name="imu0_differential" value="false"/>
       <param name="imu1_differential" value="true"/>
 
       <param name="odom0_queue_size" value="10"/>
@@ -69,11 +64,6 @@
 
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
       <param name="imu1_remove_gravitational_acceleration" value="true"/>
-
-      <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ukf.txt"/>
-
-      <param name="print_diagnostics" value="true"/>
 
       <param name="alpha" value="0.001"/> 
       <param name="kappa" value="0"/> 
