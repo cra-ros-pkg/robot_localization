@@ -45,11 +45,6 @@
 
       <param name="imu0_remove_gravitational_acceleration" value="true"/>
 
-      <param name="print_diagnostics" value="false"/>
-
-      <param name="debug"           value="false"/>
-      <param name="debug_out_file"  value="debug_ukf.txt"/>
-
       <param name="alpha" value="0.001"/> 
       <param name="kappa" value="0"/> 
       <param name="beta" value="2"/>
