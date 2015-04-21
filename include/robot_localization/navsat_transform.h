@@ -138,7 +138,7 @@ namespace RobotLocalization
 
       //! @brief Whether we get the transform's yaw from the odometry or IMU source
       //!
-      bool useOdometryHeading_;
+      bool useOdometryYaw_;
 
       //! @brief Frame ID of the GPS odometry output
       //!
