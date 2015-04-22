@@ -3,7 +3,8 @@ project(robot_localization)
 
 find_package(catkin REQUIRED COMPONENTS
                roscpp
-               tf
+               tf2
+               tf2_ros
                message_filters
                std_msgs
                geometry_msgs
@@ -37,7 +38,8 @@ catkin_package(
   LIBRARIES filter_base ekf
   CATKIN_DEPENDS
     roscpp
-    tf
+    tf2
+    tf2_ros
     message_filters
     std_msgs
     geometry_msgs

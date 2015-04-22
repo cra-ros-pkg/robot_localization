@@ -44,9 +44,10 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/message_filter.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/message_filter.h>
+#include <tf2/LinearMath/Transform.h>
 #include <message_filters/subscriber.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
@@ -62,9 +63,9 @@
 // Some typedefs for message filter shared pointers
 typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> > poseMFSubPtr;
 typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped> > twistMFSubPtr;
-typedef boost::shared_ptr< tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped> > poseMFPtr;
-typedef boost::shared_ptr< tf::MessageFilter<geometry_msgs::TwistWithCovarianceStamped> > twistMFPtr;
-typedef boost::shared_ptr< tf::MessageFilter<sensor_msgs::Imu> > imuMFPtr;
+typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped> > poseMFPtr;
+typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped> > twistMFPtr;
+typedef boost::shared_ptr< tf2_ros::MessageFilter<sensor_msgs::Imu> > imuMFPtr;
 
 namespace RobotLocalization
 {
@@ -201,7 +202,7 @@ namespace RobotLocalization
       //! @brief Converts tf message filter failures to strings
       //! @param[in] reason - The failure reason object
       //! @return a string explanation of the failure
-      std::string tfFailureReasonString(const tf::FilterFailureReason reason);
+      std::string tfFailureReasonString(const tf2_ros::FilterFailureReason reason);
 
       //! @brief Callback method for reporting failed IMU message transforms
       //! @param[in] msg - The ROS IMU message that failed
@@ -210,7 +211,7 @@ namespace RobotLocalization
       //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
       //!
       void transformImuFailureCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                                       const tf::FilterFailureReason reason,
+                                       const tf2_ros::FilterFailureReason reason,
                                        const std::string &topicName,
                                        const std::string &targetFrame);
 
@@ -221,7 +222,7 @@ namespace RobotLocalization
       //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
       //!
       void transformPoseFailureCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                        const tf::FilterFailureReason reason,
+                                        const tf2_ros::FilterFailureReason reason,
                                         const std::string &topicName,
                                         const std::string &targetFrame);
 
@@ -232,7 +233,7 @@ namespace RobotLocalization
       //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
       //!
       void transformTwistFailureCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                                         const tf::FilterFailureReason reason,
+                                         const tf2_ros::FilterFailureReason reason,
                                          const std::string &topicName,
                                          const std::string &targetFrame);
 
@@ -306,8 +307,8 @@ namespace RobotLocalization
       //! @param[in] targetFrame - The target frame of the desired transform
       //! @param[in] sourceFrame - The source frame of the desired transform
       //! @param[in] time - The time at which we want the transform
-      //! @param[out] targetFrameTrans - The resulting stamped transform object
-      //! @return Sets the value of @p targetFrameTrans and returns true if sucessful,
+      //! @param[out] targetFrameTrans - The resulting transform object
+      //! @return Sets the value of @p targetFrameTrans and returns true if successful,
       //! false otherwise.
       //!
       //! This method attempts to obtain a transform from the @p sourceFrame to the @p
@@ -318,7 +319,7 @@ namespace RobotLocalization
       //! and returns true, otherwise it returns false.
       //!
       bool lookupTransformSafe(const std::string &targetFrame, const std::string &sourceFrame,
-                               const ros::Time &time, tf::StampedTransform &targetFrameTrans);
+                               const ros::Time &time, tf2::Transform &targetFrameTrans);
 
       //! @brief Prepares an IMU message's linear acceleration for integration into the filter
       //! @param[in] msg - The IMU message to prepare
@@ -428,7 +429,7 @@ namespace RobotLocalization
       //! error growth for the variables being fused. With relative measurements, the
       //! vehicle will start with a 0 heading and position, but the measurements are still
       //! fused absolutely.
-      std::map<std::string, tf::Transform> initialMeasurements_;
+      std::map<std::string, tf2::Transform> initialMeasurements_;
 
       //! @brief Store the last time a message from each topic was received
       //!
@@ -482,7 +483,7 @@ namespace RobotLocalization
       //! the current measurement, and then (3) transform it again by the previous
       //! state estimate. This holds the measurements used for step (2).
       //!
-      std::map<std::string, tf::Transform> previousMeasurements_;
+      std::map<std::string, tf2::Transform> previousMeasurements_;
 
       //! @brief We also need the previous covariance matrix for differential data
       //!
@@ -514,9 +515,13 @@ namespace RobotLocalization
       //!
       int staticDiagErrorLevel_;
 
-      //! @brief Transform listener for managing coordinate transforms
+      //! @brief Transform buffer for managing coordinate transforms
       //!
-      tf::TransformListener tfListener_;
+      tf2_ros::Buffer tfBuffer_;
+
+      //! @brief Transform listener for receiving transforms
+      //!
+      tf2_ros::TransformListener tfListener_;
 
       //! @brief tf prefix
       //!
