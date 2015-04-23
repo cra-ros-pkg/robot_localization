@@ -1967,7 +1967,7 @@ namespace RobotLocalization
     RF_DEBUG("------ RosFilter::preparePose (" << topicName << ") ------\n");
 
     // 1. Get the measurement into a tf-friendly transform (pose) object
-    tf2::Transform poseTmp;
+    tf2::Stamped<tf2::Transform> poseTmp;
 
     // This is mostly in support of IMU data: the IMU message has only a single
     // frame_id, but reports its data in two separate frames. We get around this

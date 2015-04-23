@@ -139,7 +139,7 @@ if (CATKIN_ENABLE_TESTING)
   add_rostest_gtest(test_ekf_localization_node_interfaces
                     test/test_ekf_localization_node_interfaces.test
                     test/test_ekf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ekf_localization_node_interfaces filter_base ${catkin_LIBRARIES})
+  target_link_libraries(test_ekf_localization_node_interfaces ${catkin_LIBRARIES})
 
   add_rostest_gtest(test_ekf_localization_node_bag1
                     test/test_ekf_localization_node_bag1.test
