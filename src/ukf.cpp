@@ -219,7 +219,7 @@ namespace RobotLocalization
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
-      predictedMeasurement += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
+      predictedMeasurement.noalias() += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
     }
 
     // (2) Use the sigma point measurements and predicted measurement to compute a predicted
@@ -227,8 +227,8 @@ namespace RobotLocalization
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
-      predictedMeasCovar += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-      crossCovar += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
+      predictedMeasCovar.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      crossCovar.noalias() += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
     }
 
     // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
@@ -349,7 +349,7 @@ namespace RobotLocalization
     state_.setZero();
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
-      state_ += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
+      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
     }
 
     // (4) Now us the sigma points and the predicted state to compute a predicted covariance
@@ -358,12 +358,12 @@ namespace RobotLocalization
     for(size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
     {
       sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
-      estimateErrorCovariance_ += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
     }
 
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
     // to ensure that we actually incorporate the processNoiseCovariance_
-    estimateErrorCovariance_ += delta * processNoiseCovariance_;
+    estimateErrorCovariance_.noalias() += delta * processNoiseCovariance_;
 
     // Keep the angles bounded
     wrapStateAngles();
