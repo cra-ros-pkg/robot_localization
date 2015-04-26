@@ -2,19 +2,18 @@ cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
 find_package(catkin REQUIRED COMPONENTS
-               roscpp
-               tf2
-               tf2_ros
-               message_filters
-               std_msgs
-               geometry_msgs
-               nav_msgs
-               sensor_msgs
-               diagnostic_msgs
-               diagnostic_updater
-               cmake_modules
-               gps_common
-               message_generation)
+  roscpp
+  tf2
+  tf2_ros
+  message_filters
+  std_msgs
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  diagnostic_msgs
+  diagnostic_updater
+  cmake_modules
+  message_generation)
 find_package(Eigen REQUIRED)
 
 add_definitions(-DEIGEN_NO_DEBUG)
@@ -34,7 +33,7 @@ generate_messages(
 )
 
 catkin_package(
-  INCLUDE_DIRS include ${gps_common_INCLUDE_DIRS}
+  INCLUDE_DIRS include
   LIBRARIES filter_base ekf
   CATKIN_DEPENDS
     roscpp
@@ -56,7 +55,7 @@ catkin_package(
 ## Build ##
 ###########
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${gps_common_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
 # Library definition
 add_library(filter_utilities src/filter_utilities.cpp)
@@ -93,16 +92,16 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 
 ## Mark executables and/or libraries for installation
 install(TARGETS
-          filter_utilities
-          filter_base
-          ekf
-          ukf
-          ros_filter_utilities
-          ros_filter
-          ekf_localization_node
-          ukf_localization_node
-          navsat_transform
-          navsat_transform_node
+  filter_utilities
+  filter_base
+  ekf
+  ukf
+  ros_filter_utilities
+  ros_filter
+  ekf_localization_node
+  ukf_localization_node
+  navsat_transform
+  navsat_transform_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -117,6 +116,11 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
   FILES_MATCHING PATTERN "*.launch"
   PATTERN ".svn" EXCLUDE)
+
+install(FILES
+  LICENSE
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##
