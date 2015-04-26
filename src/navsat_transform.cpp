@@ -136,10 +136,24 @@ namespace RobotLocalization
       double imuYaw;
       mat.getRPY(imuRoll, imuPitch, imuYaw);
 
-      // Compute the final yaw value that corrects for the difference between the
-      // IMU's heading and the UTM grid's belief of where 0 heading should be (i.e.,
-      // along the x-axis)
-      imuYaw += (magneticDeclination_ + yawOffset_ + (M_PI / 2.0));
+      /* The IMU's heading was likely originally reported w.r.t. magnetic north.
+       * However, all the nodes in robot_localization assume that orientation data,
+       * including that reported by IMUs, is reported in an ENU frame, with a 0 yaw
+       * value being reported when facing east and increasing counter-clockwise (i.e.,
+       * towards north). Conveniently, this aligns with the UTM grid, where X is east
+       * and Y is north. However, we have two additional considerations:
+       *   1. The IMU may have its non-ENU frame data transformed to ENU, but there's
+       *      a possibility that its data has not been corrected for magnetic
+       *      declination. We need to account for this. A positive magnetic
+       *      declination is counter-clockwise in an ENU frame. Therefore, if
+       *      we have a magnetic declination of N radians, then when the sensor
+       *      is facing a heading of N, it reports 0. Therefore, we need to add
+       *      the declination angle.
+       *   2. To account for any other offsets that may not be accounted for by the
+       *      IMU driver or any interim processing node, we expose a yaw offset that
+       *      lets users work with navsat_transform_node.
+       */
+      imuYaw += (magneticDeclination_ + yawOffset_);
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
                       ", user-specified offset of " << yawOffset_ << ", and fixed offset of " << (M_PI / 2.0) <<
