@@ -32,14 +32,10 @@
 
 #include "robot_localization/navsat_transform.h"
 #include "robot_localization/filter_common.h"
+#include "robot_localization/navsat_conversions.h"
 
 #include <tf/tfMessage.h>
 #include <tf/transform_broadcaster.h>
-
-// This header is from the gps_common package
-// by Ken Tossell. We use it to convert the
-// lat/lon data into UTM data.
-#include <gps_common/conversions.h>
 
 namespace RobotLocalization
 {
@@ -97,7 +93,7 @@ namespace RobotLocalization
     {
       double utmX = 0;
       double utmY = 0;
-      gps_common::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
+      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
       latestUtmPose_.setOrigin(tf::Vector3(utmX, utmY, msg->altitude));
       latestUtmCovariance_.setZero();
 
@@ -275,7 +271,7 @@ namespace RobotLocalization
       latestOdomCovariance_ = rot6d * latestOdomCovariance_.eval() * rot6d.transpose();
 
       // Now convert the data back to lat/long and place into the message
-      gps_common::UTMtoLL(odomAsUtm.getOrigin().getY(), odomAsUtm.getOrigin().getX(), utmZone_, filteredGps.latitude, filteredGps.longitude);
+      NavsatConversions::UTMtoLL(odomAsUtm.getOrigin().getY(), odomAsUtm.getOrigin().getX(), utmZone_, filteredGps.latitude, filteredGps.longitude);
       filteredGps.altitude = odomAsUtm.getOrigin().getZ();
 
       // Copy the measurement's covariance matrix back
