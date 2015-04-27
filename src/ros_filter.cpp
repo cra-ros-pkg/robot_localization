@@ -475,6 +475,7 @@ namespace RobotLocalization
       mapFrameId_ = tf2NameSanitizer(mapFrameId_);
       odomFrameId_ = tf2NameSanitizer(odomFrameId_);
       baseLinkFrameId_ = tf2NameSanitizer(baseLinkFrameId_);
+      worldFrameId_ = tf2NameSanitizer(worldFrameId_);
     // Transform future dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
