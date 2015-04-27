@@ -43,6 +43,7 @@ namespace RobotLocalization
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       filter_(args),
       frequency_(30.0),
+      lastSetPoseTime_(0),
       nhLocal_("~"),
       twoDMode_(false)
   {
@@ -84,6 +85,13 @@ namespace RobotLocalization
                                        const std::vector<int> &updateVector,
                                        const double mahalanobisThresh)
   {
+    // If we've just reset the filter, then we want to ignore any messages
+    // that arrive with an older timestamp
+    if(msg->header.stamp <= lastSetPoseTime_)
+    {
+      return;
+    }
+
     RF_DEBUG("------ RosFilter::accelerationCallback (" << topicName << ") ------\n"
              "Twist message:\n" << *msg);
 
@@ -252,6 +260,13 @@ namespace RobotLocalization
   void RosFilter<T>::imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
                               const std::string &topicName)
   {
+    // If we've just reset the filter, then we want to ignore any messages
+    // that arrive with an older timestamp
+    if(msg->header.stamp <= lastSetPoseTime_)
+    {
+      return;
+    }
+
     RF_DEBUG("------ RosFilter::imuCallback (" << topicName << ") ------\n" <<
              "IMU message:\n" << *msg);
 
@@ -1141,6 +1156,13 @@ namespace RobotLocalization
   void RosFilter<T>::odometryCallback(const nav_msgs::Odometry::ConstPtr &msg,
                                    const std::string &topicName)
   {
+    // If we've just reset the filter, then we want to ignore any messages
+    // that arrive with an older timestamp
+    if(msg->header.stamp <= lastSetPoseTime_)
+    {
+      return;
+    }
+
     RF_DEBUG("------ RosFilter::odometryCallback (" << topicName << ") ------\n" <<
              "Odometry message:\n" << *msg);
 
@@ -1183,6 +1205,13 @@ namespace RobotLocalization
                                const bool imuData,
                                const double mahalanobisThresh)
   {
+    // If we've just reset the filter, then we want to ignore any messages
+    // that arrive with an older timestamp
+    if(msg->header.stamp <= lastSetPoseTime_)
+    {
+      return;
+    }
+
     RF_DEBUG("------ RosFilter::poseCallback (" << topicName << ") ------\n" <<
              "Pose message:\n" << *msg);
 
@@ -1359,7 +1388,8 @@ namespace RobotLocalization
         }
       }
 
-      // The spin will enqueue all the available callbacks
+      // The spin will call all the available callbacks and enqueue
+      // their received measurements
       ros::spinOnce();
 
       // Now we'll integrate any measurements we've received
@@ -1396,12 +1426,16 @@ namespace RobotLocalization
     previousMeasurements_.clear();
     previousMeasurementCovariances_.clear();
 
-    // Clear out the measurement queue, so that we don't immediately undo our
+    // Clear out the measurement queue so that we don't immediately undo our
     // reset.
     while(!measurementQueue_.empty())
     {
       measurementQueue_.pop();
     }
+
+    // Also set the last set pose time, so we ignore all messages
+    // that occur before it
+    lastSetPoseTime_ = msg->header.stamp;
 
     // Set the state vector to the reported pose
     Eigen::VectorXd measurement(STATE_SIZE);
@@ -1523,6 +1557,13 @@ namespace RobotLocalization
                                 const std::vector<int> &updateVector,
                                 const double mahalanobisThresh)
   {
+    // If we've just reset the filter, then we want to ignore any messages
+    // that arrive with an older timestamp
+    if(msg->header.stamp <= lastSetPoseTime_)
+    {
+      return;
+    }
+
     RF_DEBUG("------ RosFilter::twistCallback (" << topicName << ") ------\n"
              "Twist message:\n" << *msg);
 

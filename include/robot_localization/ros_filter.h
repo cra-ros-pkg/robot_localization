@@ -440,6 +440,15 @@ namespace RobotLocalization
       //!
       std::map<std::string, ros::Time> lastMessageTimes_;
 
+      //! @brief Store the last time a message from each topic was received
+      //!
+      //! If we receive a setPose message to reset the filter, we can get in
+      //! strange situations wherein we process the pose reset, but then even
+      //! after another spin cycle or two, we can get a new message with a time
+      //! stamp that is *older* than the setPose message's time stamp. This means
+      //! we have to check the message's time stamp against the lastSetPoseTime_.
+      ros::Time lastSetPoseTime_;
+
       //! @brief tf frame name for the robot's map (world-fixed) frame
       //!
       std::string mapFrameId_;
