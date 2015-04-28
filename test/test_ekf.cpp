@@ -35,7 +35,7 @@ TEST (EkfTest, Measurements)
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
   for(size_t i = 0; i < STATE_SIZE; ++i)
   {
-    measurementCovariance(i, i) = 1e9;
+    measurementCovariance(i, i) = 1e-9;
   }
 
   std::vector<int> updateVector(STATE_SIZE, true);
@@ -54,6 +54,8 @@ TEST (EkfTest, Measurements)
 
   EXPECT_EQ(ekf.getFilter().getState(), measurement);
   EXPECT_EQ(ekf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
+
+  ekf.getFilter().setEstimateErrorCovariance(initialCovar);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
