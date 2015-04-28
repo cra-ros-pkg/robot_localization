@@ -58,10 +58,10 @@
     </node>
 
     <test test-name="test_ekf_localization_node_bag3_pose" pkg="robot_localization" type="test_ekf_localization_node_bag3" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="-0.4850"/>
-      <param name="final_y" value="-0.2445"/>
-      <param name="final_z" value="2.9903"/>
-      <param name="tolerance" value="0.1163"/>
+      <param name="final_x" value="-0.4859"/>
+      <param name="final_y" value="-0.2412"/>
+      <param name="final_z" value="2.9883"/>
+      <param name="tolerance" value="0.1290"/>
       <param name="output_final_position" value="$(arg output_final_position)"/>
       <param name="output_location" value="$(arg output_location)"/>
     </test>
