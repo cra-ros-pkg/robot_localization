@@ -60,6 +60,8 @@ TEST (UkfTest, Measurements)
   EXPECT_EQ(ukf.getFilter().getState(), measurement);
   EXPECT_EQ(ukf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
 
+  ukf.getFilter().setEstimateErrorCovariance(initialCovar);
+
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
   // this is complete, so we'll check the difference and

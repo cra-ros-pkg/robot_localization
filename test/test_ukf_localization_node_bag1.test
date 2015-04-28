@@ -88,10 +88,10 @@
     </node>
 
     <test test-name="test_ukf_localization_node_bag1_pose" pkg="robot_localization" type="test_ukf_localization_node_bag1" clear_params="true" time-limit="1000.0">
-      <param name="final_x" value="38.9605"/>
-      <param name="final_y" value="2.1317"/>
-      <param name="final_z" value="0.0010"/>
-      <param name="tolerance" value="0.0164"/>
+      <param name="final_x" value="38.9388"/>
+      <param name="final_y" value="2.1176"/>
+      <param name="final_z" value="-0.0027"/>
+      <param name="tolerance" value="0.0901"/>
       <param name="output_final_position" value="$(arg output_final_position)"/>
       <param name="output_location" value="$(arg output_location)"/>
     </test>

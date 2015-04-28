@@ -55,6 +55,8 @@ TEST (EkfTest, Measurements)
   EXPECT_EQ(ekf.getFilter().getState(), measurement);
   EXPECT_EQ(ekf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
 
+  ekf.getFilter().setEstimateErrorCovariance(initialCovar);
+
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
   // this is complete, so we'll check the difference and
