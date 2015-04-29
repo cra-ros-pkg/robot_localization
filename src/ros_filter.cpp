@@ -1664,10 +1664,6 @@ namespace RobotLocalization
         wrapper.summary(maxErrLevel,
                         "Potentially erroneous data or settings detected for a robot_localization state estimation node.");
         break;
-      case diagnostic_msgs::DiagnosticStatus::STALE:
-        wrapper.summary(maxErrLevel,
-                        "The state of the robot_localization state estimation node is stale.");
-        break;
       case diagnostic_msgs::DiagnosticStatus::OK:
         wrapper.summary(maxErrLevel,
                         "The robot_localization state estimation node appears to be functioning properly.");
