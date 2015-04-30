@@ -9,7 +9,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include <tf/tf.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 nav_msgs::Odometry filtered_;
 
@@ -484,9 +485,9 @@ TEST (InterfacesTest, ImuPoseBasicIO)
   ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
 
   sensor_msgs::Imu imu;
-  tf::Quaternion quat;
+  tf2::Quaternion quat;
   quat.setRPY(M_PI/4, -M_PI/4, M_PI/2);
-  tf::quaternionTFToMsg(quat, imu.orientation);
+  imu.orientation = tf2::toMsg(quat);
 
   for(size_t ind = 0; ind < 9; ind+=4)
   {
@@ -510,8 +511,8 @@ TEST (InterfacesTest, ImuPoseBasicIO)
   }
 
   // Now check the values from the callback
-  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
-  tf::Matrix3x3 mat(quat);
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
+  tf2::Matrix3x3 mat(quat);
   double r, p, y;
   mat.getRPY(r, p, y);
   EXPECT_LT(::fabs(r - M_PI/4), 0.1);
@@ -532,7 +533,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   ros::Subscriber filteredSub = nh.subscribe("/odometry/filtered", 1, &filterCallback);
 
   sensor_msgs::Imu imu;
-  tf::Quaternion quat;
+  tf2::Quaternion quat;
   imu.angular_velocity.x = (M_PI / 2.0);
 
   for(size_t ind = 0; ind < 9; ind+=4)
@@ -554,8 +555,8 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   }
 
   // Now check the values from the callback
-  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
-  tf::Matrix3x3 mat(quat);
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
+  tf2::Matrix3x3 mat(quat);
   double r, p, y;
   mat.getRPY(r, p, y);
 
@@ -587,7 +588,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   }
 
   // Now check the values from the callback
-  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   mat.setRotation(quat);
   mat.getRPY(r, p, y);
   EXPECT_LT(::fabs(r), 0.1);
@@ -616,7 +617,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   }
 
   // Now check the values from the callback
-  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   mat.setRotation(quat);
   mat.getRPY(r, p, y);
   EXPECT_LT(::fabs(r), 0.1);
@@ -852,12 +853,12 @@ TEST (InterfacesTest, ImuDifferentialIO)
 
   sensor_msgs::Imu imu;
   imu.header.frame_id = "base_link";
-  tf::Quaternion quat;
+  tf2::Quaternion quat;
   const double roll = M_PI/2.0;
   const double pitch = -M_PI;
   const double yaw = -M_PI/4.0;
   quat.setRPY(roll, pitch, yaw);
-  tf::quaternionTFToMsg(quat, imu.orientation);
+  imu.orientation = tf2::toMsg(quat);
 
   imu.orientation_covariance[0] = 0.02;
   imu.orientation_covariance[4] = 0.02;
@@ -905,7 +906,7 @@ TEST (InterfacesTest, ImuDifferentialIO)
 
     quat.setRPY(rollFinal, pitchFinal, yawFinal);
 
-    tf::quaternionTFToMsg(quat, imu.orientation);
+    imu.orientation = tf2::toMsg(quat);
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
     ros::spinOnce();
@@ -925,7 +926,7 @@ TEST (InterfacesTest, ImuDifferentialIO)
 
     quat.setRPY(rollFinal, pitchFinal, yawFinal);
 
-    tf::quaternionTFToMsg(quat, imu.orientation);
+    imu.orientation = tf2::toMsg(quat);
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
     ros::spinOnce();
@@ -936,8 +937,8 @@ TEST (InterfacesTest, ImuDifferentialIO)
   }
   ros::spinOnce();
 
-  tf::quaternionMsgToTF(filtered_.pose.pose.orientation, quat);
-  tf::Matrix3x3 mat(quat);
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
+  tf2::Matrix3x3 mat(quat);
   mat.getRPY(rollFinal, pitchFinal, yawFinal);
   EXPECT_LT(::fabs(rollFinal), 0.2);
   EXPECT_LT(::fabs(pitchFinal), 0.2);
