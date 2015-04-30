@@ -5,8 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <tf/tf.h>
-
 nav_msgs::Odometry filtered_;
 
 void filterCallback(const nav_msgs::OdometryConstPtr &msg)
