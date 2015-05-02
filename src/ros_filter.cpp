@@ -45,6 +45,7 @@ namespace RobotLocalization
       frequency_(30.0),
       lastSetPoseTime_(0),
       nhLocal_("~"),
+      printDiagnostics_(true),
       twoDMode_(false)
   {
     stateVariableNames_.push_back("X");
