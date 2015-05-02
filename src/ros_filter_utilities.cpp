@@ -33,17 +33,17 @@
 #include "robot_localization/ros_filter_utilities.h"
 #include "robot_localization/filter_common.h"
 
-std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec)
+std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec)
 {
   os << "(" << std::setprecision(20) << vec.getX() << " " << vec.getY() << " " << vec.getZ() << ")\n";
 
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat)
+std::ostream& operator<<(std::ostream& os, const tf::Quaternion &quat)
 {
   double roll, pitch, yaw;
-  tf2::Matrix3x3 orTmp(quat);
+  tf::Matrix3x3 orTmp(quat);
   orTmp.getRPY(roll, pitch, yaw);
 
   os << "(" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
@@ -51,7 +51,7 @@ std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat)
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans)
+std::ostream& operator<<(std::ostream& os, const tf::Transform &trans)
 {
   os << "Origin: " << trans.getOrigin() <<
         "Rotation (RPY): " << trans.getRotation();
@@ -63,18 +63,18 @@ namespace RobotLocalization
 {
   namespace RosFilterUtilities
   {
-    void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
+    void quatToRPY(const tf::Quaternion &quat, double &roll, double &pitch, double &yaw)
     {
-      tf2::Matrix3x3 orTmp(quat);
+      tf::Matrix3x3 orTmp(quat);
       orTmp.getRPY(roll, pitch, yaw);
     }
 
-    void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF)
+    void stateToTF(const Eigen::VectorXd &state, tf::Transform &stateTF)
     {
-      stateTF.setOrigin(tf2::Vector3(state(StateMemberX),
-                                     state(StateMemberY),
-                                     state(StateMemberZ)));
-      tf2::Quaternion quat;
+      stateTF.setOrigin(tf::Vector3(state(StateMemberX),
+                                    state(StateMemberY),
+                                    state(StateMemberZ)));
+      tf::Quaternion quat;
       quat.setRPY(state(StateMemberRoll),
                   state(StateMemberPitch),
                   state(StateMemberYaw));
@@ -82,7 +82,7 @@ namespace RobotLocalization
       stateTF.setRotation(quat);
     }
 
-    void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state)
+    void TFtoState(const tf::Transform &stateTF, Eigen::VectorXd &state)
     {
       state(StateMemberX) = stateTF.getOrigin().getX();
       state(StateMemberY) = stateTF.getOrigin().getY();

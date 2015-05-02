@@ -36,8 +36,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 
-#include <tf2/LinearMath/Transform.h>
-#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf/transform_datatypes.h>
 
 #include <Eigen/Dense>
 
@@ -153,15 +152,15 @@ namespace RobotLocalization
 
       //! @brief Latest odometry data
       //!
-      tf2::Transform latestWorldPose_;
+      tf::Pose latestWorldPose_;
 
       //! @brief Latest GPS data, stored as UTM coords
       //!
-      tf2::Transform latestUtmPose_;
+      tf::Pose latestUtmPose_;
 
       //! @brief Latest IMU orientation
       //!
-      tf2::Quaternion latestOrientation_;
+      tf::Quaternion latestOrientation_;
 
       //! @brief Covariance for most recent GPS/UTM data
       //!
@@ -171,17 +170,13 @@ namespace RobotLocalization
       //!
       Eigen::MatrixXd latestOdomCovariance_;
 
-      //! @brief Used for publishing the static world_frame->utm transform
-      //!
-      tf2_ros::StaticTransformBroadcaster utmBroadcaster_;
-
       //! @brief Holds the UTM->odom transform
       //!
-      tf2::Transform utmWorldTransform_;
+      tf::Transform utmWorldTransform_;
 
       //! @brief Holds the odom->UTM transform for filtered GPS broadcast
       //!
-      tf2::Transform utmWorldTransInverse_;
+      tf::Transform utmWorldTransInverse_;
 
       //! @brief Callback for the odom data
       //!

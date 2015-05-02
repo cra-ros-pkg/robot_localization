@@ -33,8 +33,7 @@
 #ifndef RobotLocalization_RosFilterUtilities_h
 #define RobotLocalization_RosFilterUtilities_h
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Transform.h>
+#include <tf/tf.h>
 
 #include <Eigen/Dense>
 
@@ -44,9 +43,9 @@
 #define RF_DEBUG(msg) if(filter_.getDebug()) { debugStream_ << msg; }
 
 // Handy methods for debug output
-std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec);
-std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat);
-std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans);
+std::ostream& operator<<(std::ostream& os, const tf::Vector3 &vec);
+std::ostream& operator<<(std::ostream& os, const tf::Quaternion &quat);
+std::ostream& operator<<(std::ostream& os, const tf::Transform &trans);
 
 namespace RobotLocalization
 {
@@ -58,19 +57,19 @@ namespace RobotLocalization
     //! @param[out] pitch - The converted pitch
     //! @param[out] yaw - The converted yaw
     //!
-    void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw);
+    void quatToRPY(const tf::Quaternion &quat, double &roll, double &pitch, double &yaw);
 
     //! @brief Converts our Eigen state vector into a TF transform/pose
     //! @param[in] state - The state to convert
     //! @param[out] stateTF - The converted state
     //!
-    void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF);
+    void stateToTF(const Eigen::VectorXd &state, tf::Transform &stateTF);
 
     //! @brief Converts a TF transform/pose into our Eigen state vector
     //! @param[in] stateTF - The state to convert
     //! @param[out] state - The converted state
     //!
-    void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state);
+    void TFtoState(const tf::Transform &stateTF, Eigen::VectorXd &state);
   }
 }
 

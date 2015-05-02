@@ -36,8 +36,7 @@ catkin_package(
   LIBRARIES filter_base ekf
   CATKIN_DEPENDS
     roscpp
-    tf2
-    tf2_ros
+    tf
     message_filters
     std_msgs
     geometry_msgs

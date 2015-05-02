@@ -9,9 +9,9 @@
 
     <param name="/use_sim_time" value="true" />
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="wheel_odometry_odom" args="0 0 0 0 0 0 odom wheel_odometry" />
-    <node pkg="tf2_ros" type="static_transform_publisher" name="mustang_base_xsens" args="0 0 0 0 0 3.141592654 mustang_base xsens_sensor" />
-    <node pkg="tf2_ros" type="static_transform_publisher" name="ref_imu_imu" args="0 0 0 0 0 0 mustang_base ref_imu" />
+    <node pkg="tf" type="static_transform_publisher" name="wheel_odometry_odom" args="0 0 0 0 0 0 odom wheel_odometry 20" />
+    <node pkg="tf" type="static_transform_publisher" name="mustang_base_xsens" args="0 0 0 0 0 3.141592654 mustang_base xsens_sensor 20" />
+    <node pkg="tf" type="static_transform_publisher" name="ref_imu_imu" args="0 0 0 0 0 0 mustang_base ref_imu 20" />
 
     <node pkg="rosbag" type="play" name="rosbagplay" args="$(find robot_localization)/test/test1.bag --clock -d 5" required="true"/>
 
