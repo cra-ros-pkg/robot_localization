@@ -34,7 +34,8 @@
 #include "robot_localization/filter_common.h"
 #include "robot_localization/navsat_conversions.h"
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf/tfMessage.h>
+#include <tf/transform_broadcaster.h>
 
 namespace RobotLocalization
 {
@@ -93,7 +94,7 @@ namespace RobotLocalization
       double utmX = 0;
       double utmY = 0;
       NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
-      latestUtmPose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
+      latestUtmPose_.setOrigin(tf::Vector3(utmX, utmY, msg->altitude));
       latestUtmCovariance_.setZero();
 
       // Copy the measurement's covariance matrix so that we can rotate it later
