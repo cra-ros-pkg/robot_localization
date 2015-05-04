@@ -1013,7 +1013,8 @@ namespace RobotLocalization
              (static_cast<StateMembers>(stateVar) == StateMemberY &&
               twistVarCounts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
              (static_cast<StateMembers>(stateVar) == StateMemberZ &&
-              twistVarCounts[static_cast<StateMembers>(StateMemberVz)] == 0))
+              twistVarCounts[static_cast<StateMembers>(StateMemberVz)] == 0 &&
+              twoDMode_ == false))
           {
             std::stringstream stream;
             stream << "Neither " << stateVariableNames_[stateVar] << " nor its "
