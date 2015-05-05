@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   message_filters
   std_msgs
+  geographic_msgs
   geometry_msgs
   nav_msgs
   sensor_msgs
@@ -25,10 +26,12 @@ add_definitions(-DEIGEN_NO_DEBUG)
 add_service_files(
   FILES
   SetPose.srv
+  SetDatum.srv
 )
 
 generate_messages(
   DEPENDENCIES
+  geographic_msgs
   geometry_msgs
   std_msgs
 )
@@ -69,6 +72,7 @@ add_library(navsat_transform src/navsat_transform.cpp)
 
 # Dependencies
 add_dependencies(filter_base robot_localization_gencpp)
+add_dependencies(navsat_transform robot_localization_gencpp)
 
 # Executables
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
