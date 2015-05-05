@@ -134,7 +134,8 @@ namespace RobotLocalization
 
       double utmX = 0;
       double utmY = 0;
-      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
+      std::string utmZoneTmp;
+      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZoneTmp);
       latestUtmPose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
       latestUtmCovariance_.setZero();
 
@@ -157,7 +158,12 @@ namespace RobotLocalization
     double utmX = 0;
     double utmY = 0;
     NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
+
+    ROS_INFO_STREAM("Datum (latitude, longitude, altitude) is (" << std::fixed << msg->latitude << ", " << msg->longitude << ", " << msg->altitude << ")");
+    ROS_INFO_STREAM("Datum UTM coordinate is (" << std::fixed << utmX << ", " << utmY << ")");
+
     transformUtmPose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
+    transformUtmPose_.setRotation(tf2::Quaternion::getIdentity());
     hasTransformGps_ = true;
   }
 
@@ -166,6 +172,11 @@ namespace RobotLocalization
     tf2::fromMsg(msg->pose.pose, transformWorldPose_);
     worldFrameId_ = msg->header.frame_id;
     hasTransformOdom_ = true;
+
+    ROS_INFO_STREAM("Initial odometry position is (" << std::fixed << 
+                    transformWorldPose_.getOrigin().getX() << ", " << 
+                    transformWorldPose_.getOrigin().getY() << ", " << 
+                    transformWorldPose_.getOrigin().getZ() << ")");
 
     // Users can optionally use the (potentially fused) heading from
     // the odometry source, which may have multiple fused sources of
@@ -189,6 +200,13 @@ namespace RobotLocalization
      * that comes here is meant to be used for that purpose. */
     tf2::fromMsg(msg->orientation, transformOrientation_);
     hasTransformImu_ = true;
+
+    double roll, pitch, yaw;
+    tf2::Matrix3x3 mat;
+    mat.setRotation(transformOrientation_);
+    mat.getRPY(roll, pitch, yaw);
+    ROS_INFO_STREAM("Initial orientation roll, pitch, yaw is (" << 
+                    roll << ", " << pitch << ", " << yaw << ")");
   }
 
   void NavSatTransform::computeTransform()
@@ -230,7 +248,7 @@ namespace RobotLocalization
       imuYaw += (magneticDeclination_ + yawOffset_);
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magneticDeclination_ <<
-                      "and user-specified offset of " << yawOffset_ << ". Transform heading factor is now " << imuYaw);
+                      " and user-specified offset of " << yawOffset_ << ". Transform heading factor is now " << imuYaw);
 
       // Convert to tf-friendly structures
       tf2::Quaternion imuQuat;
@@ -431,7 +449,7 @@ namespace RobotLocalization
         nhPriv.getParam("datum", datumConfig);
 
         ROS_ASSERT(datumConfig.getType() == XmlRpc::XmlRpcValue::TypeArray);
-        ROS_ASSERT(datumConfig.size() == 3);
+        ROS_ASSERT(datumConfig.size() == 4);
 
         useManualDatum_ = true;
 
