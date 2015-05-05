@@ -1,0 +1,113 @@
+<!-- Launch file for navsat_transform_node -->
+
+<!--
+     This node needs to know the values of three variables in order to function:
+
+     (1) A world-referenced heading (yaw). The node assumes an ENU standard for heading, with 0 facing east, though
+         it can support any heading.
+     (2) Odometry data that gives the robot's current pose in its own local coordinate frame (typically map or odom)
+     (3) A latitude/longitude/altitude.
+
+     These three items allow us to compute a transform from the global frame to your robot's local frame. There are
+     several means of providing them, though keep in mind that these modes are typically mutually exclusive.
+     (1) World-referenced yaw can be provided by:
+           (a) an IMU in a sensor_msgs/Imu message (topic is /imu/data/)
+           (b) the heading in the nav_msgs/Odometry message in (2) below can be used. To enable this behavior, set
+               the use_odometry_yaw parameter to true, and set the delay parameter to some small value (~3 seconds).
+               Be careful, though: this heading must still be globally referenced, so if your state estimation node
+               always starts with a 0 heading, you CAN NOT use this option.
+           (c) the "datum" service. See below.
+     (2) The odometry data, which needs to have a valid frame_id, can be provided by:
+           (a) a nav_msgs/Odometry message from your robot_localization state estimation node.
+           (b) the "datum" service (all odometry variables are assumed to be 0 in this case). See below.
+     (3) The latitude, longitude, and altitude can be provided by:
+           (a) a sensor_msgs/NavSatFix message
+           (b) the "datum" service
+     (4) Alternatively, at any time, the user can send a robot_localization/SetDatum service message to the "datum" service. 
+         This will manually set the latitude, longitude, altitude, and world-referenced heading, and will assume an odometry 
+         message containing all zeros. This will effectively set the origin at the specified lat-long, with the X-axis
+         aligned with east. The user can set this datum via the "datum" service, or via the launch file. If the wait_for_datum
+         parameter is set to true, then the node will attempt to use the datum parameter. If the parameter is not set, it will
+         wait until it receives a service call.
+
+     The output of this node is an odometry message that contains the GPS data transformed into the robot's world coordinate
+     frame (i.e., the frame specified by input (2)'s frame_id), or the coordinate frame defined by the message sent to the
+     "datum" service.
+-->
+
+<launch>
+
+    <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true" output="screen">
+
+      <!-- Frequency of the main run loop. -->
+      <param name="frequency" value="30"/>
+
+      <!-- Delay time, in seconds, before we calculate the transform from the UTM frame to your
+           world frame. This is especially important if you have use_odometry_yaw set to true.
+           Defaults to 0. -->
+      <param name="delay" value="3"/>
+
+      <!-- PLEASE READ: Like all nodes in robot_localization, this node assumes that your
+           IMU data is reported in the ENU frame. Many IMUs report data in the NED frame,
+           so you'll want to verify that your data is in the correct frame before using it.  -->
+
+      <!-- If your IMU does not account for magnetic declination, enter the value for your
+           location here. If you don't know it, see http://www.ngdc.noaa.gov/geomag-web/
+           (make sure to convert the value to radians). This parameter is mandatory. -->
+      <param name="magnetic_declination_radians" value="0"/>
+
+      <!-- Your IMU's yaw, once the magentic_declination_radians value is added to it, should
+           report 0 when facing east. If it doesn't, enter the offset here. Defaults to 0. -->
+      <param name="yaw_offset" value="0"/>
+
+      <!-- If this is true, the altitude is set to 0 in the output odometry message. Defaults
+           to false. -->
+      <param name="zero_altitude" value="false"/>
+
+      <!-- If this is true, the transform world_frame->utm transform is broadcast
+           for use by other nodes. Defaults to false. -->
+      <param name="broadcast_utm_transform" value="false"/>
+
+      <!-- If this is true, all received odometry data is converted back to a lat/lon
+           and published as a NavSatFix message as /gps/filtered. Defaults to false. -->
+      <param name="publish_filtered_gps" value="false"/>
+
+      <!-- If this is true, the node ignores the IMU data and gets its heading from the
+           odometry source (typically the /odometry/filtered topic coming from one of
+           robot_localization's state estimation nodes). BE CAREFUL when using this!
+           The yaw value in your odometry source *must* be world-referenced, e.g., you
+           cannot use your odometry source for yaw if you have only one source for yaw
+           data and it has its differential or relative parameter set to true. Defaults
+           to false. -->
+      <param name="use_odometry_yaw" value="false"/>
+
+      <!-- If this is true, the node ignores the IMU data and gets its heading from the
+           odometry source (typically the /odometry/filtered topic coming from one of
+           robot_localization's state estimation nodes). BE CAREFUL when using this!
+           The yaw value in your odometry source *must* be world-referenced, e.g., you
+           cannot use your odometry source for yaw if you have only one source for yaw
+           data and it has its differential or relative parameter set to true. Defaults
+           to false. -->
+      <param name="wait_for_datum" value="false"/>
+
+      <!-- Instead of using the first GPS location and IMU-based heading for the
+      local-frame origin, users can specify the origin (datum) using this parameter.
+      The fields in the parameter represent latitude and longitude in decimal degrees,
+      and heading in radians. As navsat_transform_node assumes an ENU standard, a 0
+      heading corresponds to east. -->
+      <rosparam param="datum">[42.376115, -71.147233, 0.0, map]</rosparam>
+
+      <!-- Placeholders for input remapping. Set your topic names as the "to" values.
+      <remap from="/imu/data" to=""/>
+      <remap from="/odometry/filtered" to=""/>
+      <remap from="/gps/fix" to=""/>
+      -->
+
+      <!-- Placeholders for output remapping.
+      <remap from="/odometry/gps" to=""/>
+      <remap from="/gps/filtered" to=""/>
+      -->
+
+    </node>
+
+</launch>
