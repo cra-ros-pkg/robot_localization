@@ -219,6 +219,7 @@ namespace RobotLocalization
       //compute the UTM Zone from the latitude and longitude
       char zone_buf[] = {0, 0, 0, 0};
       sprintf(zone_buf, "%d%c", ZoneNumber, UTMLetterDesignator(Lat));
+      UTMZone = std::string(zone_buf);
 
       eccPrimeSquared = (eccSquared)/(1-eccSquared);
 
