@@ -1810,60 +1810,6 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  bool RosFilter<T>::lookupTransformSafe(const std::string &targetFrame,
-                                         const std::string &sourceFrame,
-                                         const ros::Time &time,
-                                         tf2::Transform &targetFrameTrans)
-  {
-    bool retVal = true;
-
-    // First try to transform the data at the requested time
-    try
-    {
-      tf2::fromMsg(tfBuffer_.lookupTransform(targetFrame, sourceFrame, time).transform,
-                   targetFrameTrans);
-    }
-    catch (tf2::TransformException &ex)
-    {
-      RF_DEBUG("WARNING: Could not obtain transform from " << sourceFrame <<
-               " to " << targetFrame << ". Error was " << ex.what());
-
-      // The issue might be that the transforms that are available are not close
-      // enough temporally to be used. In that case, just use the latest available
-      // transform and warn the user.
-      try
-      {
-        tf2::fromMsg(tfBuffer_.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
-                     targetFrameTrans);
-
-        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
-                                      " was unavailable for the time requested. Using latest instead.\n");
-      }
-      catch(tf2::TransformException &ex)
-      {
-        ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
-                                      " to " << targetFrame << ". Error was " << ex.what() << "\n");
-
-        retVal = false;
-      }
-    }
-
-    // Transforming from a frame id to itself can fail when the tf tree isn't
-    // being broadcast (e.g., for some bag files). This is the only failure that
-    // would throw an exception, so check for this situation before giving up.
-    if(!retVal)
-    {
-      if(targetFrame == sourceFrame)
-      {
-        targetFrameTrans.setIdentity();
-        retVal = true;
-      }
-    }
-
-    return retVal;
-  }
-
-  template<typename T>
   bool RosFilter<T>::prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
                            const std::string &topicName,
                            const std::string &targetFrame,
@@ -1907,7 +1853,11 @@ namespace RobotLocalization
     // It's unlikely that we'll get a velocity measurement in another frame, but
     // we have to handle the situation.
     tf2::Transform targetFrameTrans;
-    bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
+    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                                targetFrame,
+                                                                msgFrame,
+                                                                msg->header.stamp,
+                                                                targetFrameTrans);
 
     if(canTransform)
     {
@@ -1994,14 +1944,14 @@ namespace RobotLocalization
 
   template<typename T>
   bool RosFilter<T>::preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                              const std::string &topicName,
-                              const std::string &targetFrame,
-                              const bool differential,
-                              const bool relative,
-                              const bool imuData,
-                              std::vector<int> &updateVector,
-                              Eigen::VectorXd &measurement,
-                              Eigen::MatrixXd &measurementCovariance)
+                                 const std::string &topicName,
+                                 const std::string &targetFrame,
+                                 const bool differential,
+                                 const bool relative,
+                                 const bool imuData,
+                                 std::vector<int> &updateVector,
+                                 Eigen::VectorXd &measurement,
+                                 Eigen::MatrixXd &measurementCovariance)
   {
     bool retVal = false;
 
@@ -2089,7 +2039,11 @@ namespace RobotLocalization
 
     // 3. Get the target frame transformation
     tf2::Transform targetFrameTrans;
-    bool canTransform = lookupTransformSafe(finalTargetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
+    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                                finalTargetFrame,
+                                                                poseTmp.frame_id_,
+                                                                poseTmp.stamp_,
+                                                                targetFrameTrans);
 
     // 4. robot_localization lets users configure which variables from the sensor should be
     //    fused with the filter. This is specified at the sensor level. However, the data
@@ -2151,8 +2105,7 @@ namespace RobotLocalization
 
     RF_DEBUG("After rotating into the " << finalTargetFrame << " frame, covariance is \n" << covarianceRotated << "\n");
 
-    // Regardless of whether or not we are using differential mode, we'll need
-    // to transform the data into a target frame.
+    // Make sure we can work with this data before carrying on
     if(canTransform)
     {
       // Two cases: if we're in differential mode, we need to generate a twist
@@ -2269,8 +2222,8 @@ namespace RobotLocalization
 
           // 6b. Apply the offset (making sure to bound them), and throw them in a vector
           tf2::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
-                                FilterUtilities::clampRotation(pitch - pitchOffset),
-                                FilterUtilities::clampRotation(yaw - yawOffset));
+                                 FilterUtilities::clampRotation(pitch - pitchOffset),
+                                 FilterUtilities::clampRotation(yaw - yawOffset));
 
           // 6c. Now we need to rotate the roll and pitch by the yaw offset value.
           // Imagine a case where an IMU is mounted facing sideways. In that case
@@ -2382,7 +2335,11 @@ namespace RobotLocalization
 
     // 4. We need to transform this into the target frame (probably base_link)
     tf2::Transform targetFrameTrans;
-    bool canTransform = lookupTransformSafe(targetFrame, msgFrame, msg->header.stamp, targetFrameTrans);
+    bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                                targetFrame,
+                                                                msgFrame,
+                                                                msg->header.stamp,
+                                                                targetFrameTrans);
 
     if(canTransform)
     {

@@ -32,7 +32,9 @@
 
 #include "robot_localization/navsat_transform.h"
 #include "robot_localization/filter_common.h"
+#include "robot_localization/filter_utilities.h"
 #include "robot_localization/navsat_conversions.h"
+#include "robot_localization/ros_filter_utilities.h"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -56,7 +58,9 @@ namespace RobotLocalization
     useManualDatum_(false),
     zeroAltitude_(false),
     worldFrameId_("odom"),
-    utmZone_("")
+    baseLinkFrameId_("base_link"),
+    utmZone_(""),
+    tfListener_(tfBuffer_)
  {
     latestUtmCovariance_.resize(POSE_SIZE, POSE_SIZE);
   }
@@ -171,6 +175,7 @@ namespace RobotLocalization
   {
     tf2::fromMsg(msg->pose.pose, transformWorldPose_);
     worldFrameId_ = msg->header.frame_id;
+    baseLinkFrameId_ = msg->child_frame_id;
     hasTransformOdom_ = true;
 
     ROS_INFO_STREAM("Initial odometry position is (" << std::fixed << 
@@ -199,14 +204,44 @@ namespace RobotLocalization
      * the transform), so we can assumed that every IMU message
      * that comes here is meant to be used for that purpose. */
     tf2::fromMsg(msg->orientation, transformOrientation_);
-    hasTransformImu_ = true;
 
-    double roll, pitch, yaw;
-    tf2::Matrix3x3 mat;
-    mat.setRotation(transformOrientation_);
-    mat.getRPY(roll, pitch, yaw);
-    ROS_INFO_STREAM("Initial orientation roll, pitch, yaw is (" << 
+    // Correct for the IMU's orientation w.r.t. base_link
+    tf2::Transform targetFrameTrans;
+    RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                            baseLinkFrameId_,
+                                            msg->header.frame_id,
+                                            msg->header.stamp,
+                                            targetFrameTrans);
+
+    double rollOffset = 0;
+    double pitchOffset = 0;
+    double yawOffset = 0;
+    double roll = 0;
+    double pitch = 0;
+    double yaw = 0;
+    RosFilterUtilities::quatToRPY(targetFrameTrans.getRotation(), rollOffset, pitchOffset, yawOffset);
+    RosFilterUtilities::quatToRPY(transformOrientation_, roll, pitch, yaw);
+
+    ROS_INFO_STREAM("Initial orientation roll, pitch, yaw is (" <<
                     roll << ", " << pitch << ", " << yaw << ")");
+
+    // Apply the offset (making sure to bound them), and throw them in a vector
+    tf2::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
+                           FilterUtilities::clampRotation(pitch - pitchOffset),
+                           FilterUtilities::clampRotation(yaw - yawOffset));
+
+    // Now we need to rotate the roll and pitch by the yaw offset value.
+    // Imagine a case where an IMU is mounted facing sideways. In that case
+    // pitch for the IMU's world frame is roll for the robot.
+    tf2::Matrix3x3 mat;
+    mat.setRPY(0.0, 0.0, yawOffset);
+    rpyAngles = mat * rpyAngles;
+    transformOrientation_.setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
+
+    ROS_INFO_STREAM("Initial corrected orientation roll, pitch, yaw is (" <<
+                    rpyAngles.getX() << ", " << rpyAngles.getY() << ", " << rpyAngles.getZ() << ")");
+
+    hasTransformImu_ = true;
   }
 
   void NavSatTransform::computeTransform()
