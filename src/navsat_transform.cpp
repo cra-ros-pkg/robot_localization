@@ -189,10 +189,10 @@ namespace RobotLocalization
     // UTM->world_frame transform.
     if(!transformGood_ && useOdometryYaw_ && !useManualDatum_)
     {
-      sensor_msgs::Imu imu;
-      imu.orientation = msg->pose.pose.orientation;
-      imu.header.frame_id = msg->child_frame_id;
-      sensor_msgs::ImuConstPtr imuPtr(&imu);
+      sensor_msgs::Imu *imu = new sensor_msgs::Imu();
+      imu->orientation = msg->pose.pose.orientation;
+      imu->header.frame_id = msg->child_frame_id;
+      sensor_msgs::ImuConstPtr imuPtr(imu);
       imuCallback(imuPtr);
     }
   }
