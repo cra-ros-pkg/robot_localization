@@ -514,10 +514,6 @@ namespace RobotLocalization
       //!
       tf2_ros::TransformListener tfListener_;
 
-      //! @brief tf prefix
-      //!
-      std::string tfPrefix_;
-
       //! @brief For future (or past) dating the world_frame->base_link_frame transform
       //!
       ros::Duration tfTimeOffset_;
