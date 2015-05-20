@@ -439,14 +439,6 @@ namespace RobotLocalization
       }
     }
 
-    // Try to resolve the tf_prefix
-    nh_.param("/tf_prefix", tfPrefix_, std::string(""));
-
-    if (tfPrefix_.empty())
-    {
-      nh_.param("tf_prefix", tfPrefix_, std::string(""));
-    }
-
     // These params specify the name of the robot's body frame (typically
     // base_link) and odometry frame (typically odom)
     nhLocal_.param("map_frame", mapFrameId_, std::string("map"));
@@ -485,26 +477,21 @@ namespace RobotLocalization
                    mapFrameId_ == baseLinkFrameId_,
                    "Invalid frame configuration! The values for map_frame, odom_frame, and base_link_frame must be unique");
 
-    // Append tf_prefix if it's specified (@todo: tf2 migration)
-    if (!tfPrefix_.empty() && baseLinkFrameId_.at(0) != '/')
+    // Try to resolve tf_prefix
+    std::string tfPrefix = "";
+    std::string tfPrefixPath = "";
+    if (nhLocal_.searchParam("tf_prefix", tfPrefixPath))
     {
-      if(mapFrameId_.at(0) != '/')
-      {
-        mapFrameId_ = "/" + tfPrefix_ + "/" + mapFrameId_;
-      }
-
-      if(odomFrameId_.at(0) != '/')
-      {
-        odomFrameId_ = "/" + tfPrefix_ + "/" + odomFrameId_;
-      }
-
-      if(baseLinkFrameId_.at(0) != '/')
-      {
-        baseLinkFrameId_ = "/" + tfPrefix_ + "/" + baseLinkFrameId_;
-      }
+      nhLocal_.getParam(tfPrefixPath, tfPrefix);
     }
 
-    // Transform future (or past) dating
+    // Append the tf prefix in a tf2-friendly manner
+    FilterUtilities::appendPrefix(tfPrefix, mapFrameId_);
+    FilterUtilities::appendPrefix(tfPrefix, odomFrameId_);
+    FilterUtilities::appendPrefix(tfPrefix, baseLinkFrameId_);
+    FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
+
+    // Transform future dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
     tfTimeOffset_.fromSec(offsetTmp);
@@ -519,7 +506,7 @@ namespace RobotLocalization
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
     // Debugging writes to file
-    RF_DEBUG("tf_prefix is " << tfPrefix_ <<
+    RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
              "\nodom_frame is " << odomFrameId_ <<
              "\nbase_link_frame is " << baseLinkFrameId_ <<
