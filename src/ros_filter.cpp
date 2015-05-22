@@ -2063,21 +2063,23 @@ namespace RobotLocalization
     // We'll need this later for storing this measurement for differential integration
     tf2::Transform curMeasurement;
 
-    // 2. If this sensor is relative, remove the initial measurement for it
+    // 2. Get the target frame transformation
+    tf2::Transform targetFrameTrans;
+    bool canTransform = lookupTransformSafe(finalTargetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
+
+    // 3. If this sensor is relative, remove the initial measurement for it
+    //    *after* transforming to the target frame! This way, the relative pose always
+    //    starts as identity w.r.t the final target frame.
     if(relative)
     {
       if(initialMeasurements_.count(topicName) == 0)
       {
-        initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(topicName, poseTmp));
+        initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(topicName, poseTmp * targetFrameTrans));
       }
 
       tf2::Transform initialMeasurement = initialMeasurements_[topicName];
       poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
     }
-
-    // 3. Get the target frame transformation
-    tf2::Transform targetFrameTrans;
-    bool canTransform = lookupTransformSafe(finalTargetFrame, poseTmp.frame_id_, poseTmp.stamp_, targetFrameTrans);
 
     // 4. robot_localization lets users configure which variables from the sensor should be
     //    fused with the filter. This is specified at the sensor level. However, the data
