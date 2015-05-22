@@ -56,6 +56,12 @@ namespace RobotLocalization
     //! @return the bounded value
     //!
     double clampRotation(double rotation);
+
+    //! @brief Utility method for appending tf2 prefixes cleanly
+    //! @param[in] tfPrefix - the tf2 prefix to append
+    //! @paramp[in, out] frameId - the resulting frame_id value
+    //!
+    void appendPrefix(std::string tfPrefix, std::string &frameId);
   }
 }
 

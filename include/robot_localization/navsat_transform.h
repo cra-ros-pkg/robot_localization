@@ -40,6 +40,8 @@
 
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <Eigen/Dense>
 
@@ -148,6 +150,13 @@ namespace RobotLocalization
       //!
       bool useManualDatum_;
 
+      //! @brief Frame ID of the robot's body frame
+      //!
+      //! This is needed for obtaining transforms from the robot's body
+      //! frame to the frames of sensors (IMU and GPS)
+      //!
+      std::string baseLinkFrameId_;
+
       //! @brief Frame ID of the GPS odometry output
       //!
       //! This will just match whatever your odometry message has
@@ -185,6 +194,14 @@ namespace RobotLocalization
       //! @brief Covariance for most recent odometry data
       //!
       Eigen::MatrixXd latestOdomCovariance_;
+
+      //! @brief Transform buffer for managing coordinate transforms
+      //!
+      tf2_ros::Buffer tfBuffer_;
+
+      //! @brief Transform listener for receiving transforms
+      //!
+      tf2_ros::TransformListener tfListener_;
 
       //! @brief Used for publishing the static world_frame->utm transform
       //!

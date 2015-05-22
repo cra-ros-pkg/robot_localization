@@ -303,24 +303,6 @@ namespace RobotLocalization
       //!
       std::vector<int> loadUpdateConfig(const std::string &topicName);
 
-      //! @brief Method for safely obtaining transforms.
-      //! @param[in] targetFrame - The target frame of the desired transform
-      //! @param[in] sourceFrame - The source frame of the desired transform
-      //! @param[in] time - The time at which we want the transform
-      //! @param[out] targetFrameTrans - The resulting transform object
-      //! @return Sets the value of @p targetFrameTrans and returns true if successful,
-      //! false otherwise.
-      //!
-      //! This method attempts to obtain a transform from the @p sourceFrame to the @p
-      //! targetFrame at the specific @p time. If no transform is available at that time,
-      //! it attempts to simply obtain the latest transform. If that still fails, then the
-      //! method checks to see if the transform is going from a given frame_id to itself.
-      //! If any of these checks succeed, the method sets the value of @p targetFrameTrans
-      //! and returns true, otherwise it returns false.
-      //!
-      bool lookupTransformSafe(const std::string &targetFrame, const std::string &sourceFrame,
-                               const ros::Time &time, tf2::Transform &targetFrameTrans);
-
       //! @brief Prepares an IMU message's linear acceleration for integration into the filter
       //! @param[in] msg - The IMU message to prepare
       //! @param[in] topicName - The name of the topic over which this message was received
@@ -531,10 +513,6 @@ namespace RobotLocalization
       //! @brief Transform listener for receiving transforms
       //!
       tf2_ros::TransformListener tfListener_;
-
-      //! @brief tf prefix
-      //!
-      std::string tfPrefix_;
 
       //! @brief For future (or past) dating the world_frame->base_link_frame transform
       //!
