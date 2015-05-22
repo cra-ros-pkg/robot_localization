@@ -2183,6 +2183,13 @@ namespace RobotLocalization
 
         retVal = success;
       }
+      else if(relative)
+      {
+        if(!imuData)
+        {
+          poseTmp.mult(targetFrameTrans, poseTmp);
+        }
+      }
       else
       {
         // 6. If we're not handling this differentially, then transform it to the
