@@ -2,7 +2,7 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.1.9 (2015-05-22)
+1.2.0 (2015-05-22)
 ------------------
 * Fixed issue with out-of-order measurements and pose resets
 * Nodes now assume ENU standard for yaw data
