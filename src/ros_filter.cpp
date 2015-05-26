@@ -561,6 +561,14 @@ namespace RobotLocalization
         bool relative;
         nhLocal_.param(odomTopicName + std::string("_relative"), relative, false);
 
+        if(relative && differential)
+        {
+          ROS_WARN_STREAM("Both " << odomTopicName << "_differential" << " and " << odomTopicName <<
+                          "_relative were set to true. Using differential mode.");
+
+          relative = false;
+        }
+
         std::string odomTopic;
         nhLocal_.getParam(odomTopicName, odomTopic);
 
@@ -683,6 +691,14 @@ namespace RobotLocalization
         // Determine if we want to integrate this sensor relatively
         bool relative;
         nhLocal_.param(poseTopicName + std::string("_relative"), relative, false);
+
+        if(relative && differential)
+        {
+          ROS_WARN_STREAM("Both " << poseTopicName << "_differential" << " and " << poseTopicName <<
+                          "_relative were set to true. Using differential mode.");
+
+          relative = false;
+        }
 
         std::string poseTopic;
         nhLocal_.getParam(poseTopicName, poseTopic);
@@ -820,6 +836,14 @@ namespace RobotLocalization
         // Determine if we want to integrate this sensor relatively
         bool relative;
         nhLocal_.param(imuTopicName + std::string("_relative"), relative, false);
+
+        if(relative && differential)
+        {
+          ROS_WARN_STREAM("Both " << imuTopicName << "_differential" << " and " << imuTopicName <<
+                          "_relative were set to true. Using differential mode.");
+
+          relative = false;
+        }
 
         std::string imuTopic;
         nhLocal_.getParam(imuTopicName, imuTopic);
@@ -1984,14 +2008,14 @@ namespace RobotLocalization
 
   template<typename T>
   bool RosFilter<T>::preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                              const std::string &topicName,
-                              const std::string &targetFrame,
-                              const bool differential,
-                              const bool relative,
-                              const bool imuData,
-                              std::vector<int> &updateVector,
-                              Eigen::VectorXd &measurement,
-                              Eigen::MatrixXd &measurementCovariance)
+                                 const std::string &topicName,
+                                 const std::string &targetFrame,
+                                 const bool differential,
+                                 const bool relative,
+                                 const bool imuData,
+                                 std::vector<int> &updateVector,
+                                 Eigen::VectorXd &measurement,
+                                 Eigen::MatrixXd &measurementCovariance)
   {
     bool retVal = false;
 
@@ -2073,7 +2097,7 @@ namespace RobotLocalization
         initialMeasurements_.insert(std::pair<std::string, tf::Transform>(topicName, poseTmp));
       }
 
-      tf::Pose initialMeasurement = initialMeasurements_[topicName];
+      tf::Transform initialMeasurement = initialMeasurements_[topicName];
       poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
     }
 
@@ -2141,8 +2165,7 @@ namespace RobotLocalization
 
     RF_DEBUG("After rotating into the " << finalTargetFrame << " frame, covariance is \n" << covarianceRotated << "\n");
 
-    // Regardless of whether or not we are using differential mode, we'll need
-    // to transform the data into a target frame.
+    // Make sure we can work with this data before carrying on
     if(canTransform)
     {
       // Two cases: if we're in differential mode, we need to generate a twist
@@ -2166,7 +2189,7 @@ namespace RobotLocalization
           // Even if we're not using all of the variables from this sensor,
           // we need to use the whole measurement to determine the delta
           // to the new measurement
-          tf::Pose prevMeasurement = previousMeasurements_[topicName];
+          tf::Transform prevMeasurement = previousMeasurements_[topicName];
           poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
 
           RF_DEBUG("Previous measurement:\n" << previousMeasurements_[topicName] <<
