@@ -264,10 +264,13 @@ namespace RobotLocalization
   void RosFilter<T>::imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
                               const std::string &topicName)
   {
+    std::cerr << "TAM: imu callback!\n";
+
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
     if(msg->header.stamp <= lastSetPoseTime_)
     {
+      std::cerr << "TAM: return!\n";
       return;
     }
 
@@ -296,6 +299,8 @@ namespace RobotLocalization
 
       geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
       poseMessageFilters_[imuPoseTopicName]->add(pptr);
+
+      std::cerr << "  TAM: just added message with stamp " << std::setprecision(20) << (*posPtr).header.stamp.toSec() << "\n";
     }
 
     std::string imuTwistTopicName = topicName + "_twist";
@@ -1197,6 +1202,8 @@ namespace RobotLocalization
                                const bool imuData,
                                const double mahalanobisThresh)
   {
+    std::cerr << "  TAM: pose callback time stamp is " << msg->header.stamp << "\n";
+
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
     if(msg->header.stamp <= lastSetPoseTime_)
@@ -1383,7 +1390,9 @@ namespace RobotLocalization
 
       // The spin will call all the available callbacks and enqueue
       // their received measurements
+      std::cerr << "TAM: before spin!\n";
       ros::spinOnce();
+      std::cerr << "TAM: after spin!\n";
 
       // Now we'll integrate any measurements we've received
       ros::Time curTime = ros::Time::now();
@@ -2021,6 +2030,8 @@ namespace RobotLocalization
         initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(topicName, poseTmp));
       }
 
+      std::cerr << "TAM: WTF!\n";
+
       tf2::Transform initialMeasurement = initialMeasurements_[topicName];
       poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
     }
@@ -2096,6 +2107,11 @@ namespace RobotLocalization
     // Make sure we can work with this data before carrying on
     if(canTransform)
     {
+      // IF IMU DATA
+      //   DO OFFSET REMOVAL AND R/P SWAP HERE, THEN PUT BACK IN POSETMP
+      //   AS IF MEASUREMENT IS THE ORIGINAL MEASUREMENT
+
+
       // Two cases: if we're in differential mode, we need to generate a twist
       // message. Otherwise, we just transform it to the target frame.
       if(differential)
@@ -2123,11 +2139,30 @@ namespace RobotLocalization
           RF_DEBUG("Previous measurement:\n" << previousMeasurements_[topicName] <<
                    "\nAfter removing previous measurement, measurement delta is:\n" << poseTmp << "\n");
 
-          // 6b. Now we we have a measurement delta in the frame_id of the
-          // message, but we want that delta to be in the target frame, so
-          // we need to apply the rotation of the target frame transform.
-          targetFrameTrans.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
-          poseTmp.mult(targetFrameTrans, poseTmp);
+          if(imuData)
+          {
+            double dummy, yaw;
+            targetFrameTrans.getBasis().getRPY(dummy, dummy, yaw);
+            tf2::Matrix3x3 yawTrans;
+            yawTrans.setRPY(0, 0, yaw);
+            double rVel, pVel, yVel;
+            poseTmp.getBasis().getRPY(rVel, pVel, yVel);
+
+
+            // TAM: investigate why yVEl doesn't match poseTmp.yaw above!
+
+            tf2::Vector3 rotVels(rVel, pVel, 0);
+            rotVels = yawTrans * rotVels;
+            poseTmp.getBasis().setRPY(rotVels.getX(), rotVels.getY(), yVel);
+          }
+          else
+          {
+            // 6b. Now we we have a measurement delta in the frame_id of the
+            // message, but we want that delta to be in the target frame, so
+            // we need to apply the rotation of the target frame transform.
+            targetFrameTrans.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
+            poseTmp.mult(targetFrameTrans, poseTmp);
+          }
 
           RF_DEBUG("After rotating to the target frame, measurement delta is:\n" << poseTmp << "\n");
 
@@ -2146,6 +2181,12 @@ namespace RobotLocalization
           rollVel /= dt;
           pitchVel /= dt;
           yawVel /= dt;
+
+          RF_DEBUG("Previous message time was " << lastMessageTimes_[topicName].toSec() <<
+                   ", current message time is " << msg->header.stamp.toSec() << ", delta is " <<
+                   dt << ", velocity is (vX, vY, vZ): (" << xVel << ", " << yVel << ", " << zVel <<
+                   ")\n" << "(vRoll, vPitch, vYaw): (" << rollVel << ", " << pitchVel << ", " <<
+                   yawVel << ")\n");
 
           // 6d. Fill out the velocity data in the message
           geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
