@@ -2,6 +2,10 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.2.1 (2015-05-27)
+------------------
+* Fixed handling of IMU data w.r.t. differential mode and relative mode
+
 2.2.0 (2015-05-22)
 ------------------
 * Added tf2-friendly tf_prefix appending
