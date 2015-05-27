@@ -2,7 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.2.0 (2015-05-22)
+1.2.2 (2015-05-27)
+------------------
+* Fixed handling of IMU data w.r.t. differential mode and relative mode
+
+1.2.1 (2015-05-22)
 ------------------
 * Fixed issue with out-of-order measurements and pose resets
 * Nodes now assume ENU standard for yaw data
