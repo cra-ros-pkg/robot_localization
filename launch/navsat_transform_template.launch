@@ -95,7 +95,7 @@
       The fields in the parameter represent latitude and longitude in decimal degrees,
       and heading in radians. As navsat_transform_node assumes an ENU standard, a 0
       heading corresponds to east. -->
-      <rosparam param="datum">[42.376115, -71.147233, 0.0, map]</rosparam>
+      <rosparam param="datum">[55.944904, -3.186693, 0.0, map, base_link]</rosparam>
 
       <!-- Placeholders for input remapping. Set your topic names as the "to" values.
       <remap from="/imu/data" to=""/>
