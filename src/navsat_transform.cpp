@@ -87,11 +87,6 @@ namespace RobotLocalization
     sensor_msgs::NavSatFixConstPtr fixPtr(fix);
     setTransformGps(fixPtr);
 
-    sensor_msgs::Imu *imu = new sensor_msgs::Imu();
-    imu->orientation = request.geo_pose.orientation;
-    sensor_msgs::ImuConstPtr imuPtr(imu);
-    imuCallback(imuPtr);
-
     nav_msgs::Odometry *odom = new nav_msgs::Odometry();
     odom->pose.pose.orientation.x = 0;
     odom->pose.pose.orientation.y = 0;
@@ -101,8 +96,15 @@ namespace RobotLocalization
     odom->pose.pose.position.y = 0;
     odom->pose.pose.position.z = 0;
     odom->header.frame_id = worldFrameId_;
+    odom->child_frame_id = baseLinkFrameId_;
     nav_msgs::OdometryConstPtr odomPtr(odom);
     setTransformOdometry(odomPtr);
+
+    sensor_msgs::Imu *imu = new sensor_msgs::Imu();
+    imu->orientation = request.geo_pose.orientation;
+    imu->header.frame_id = baseLinkFrameId_;
+    sensor_msgs::ImuConstPtr imuPtr(imu);
+    imuCallback(imuPtr);
 
     return true;
   }
@@ -121,6 +123,7 @@ namespace RobotLocalization
 
   void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
   {
+
     // Make sure the GPS data is usable
     bool goodGps = (msg->status.status != sensor_msgs::NavSatStatus::STATUS_NO_FIX &&
                     !std::isnan(msg->altitude) &&
@@ -211,41 +214,44 @@ namespace RobotLocalization
 
       // Correct for the IMU's orientation w.r.t. base_link
       tf2::Transform targetFrameTrans;
-      RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                              baseLinkFrameId_,
-                                              msg->header.frame_id,
-                                              msg->header.stamp,
-                                              targetFrameTrans);
+      bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                                  baseLinkFrameId_,
+                                                                  msg->header.frame_id,
+                                                                  msg->header.stamp,
+                                                                  targetFrameTrans);
 
-      double rollOffset = 0;
-      double pitchOffset = 0;
-      double yawOffset = 0;
-      double roll = 0;
-      double pitch = 0;
-      double yaw = 0;
-      RosFilterUtilities::quatToRPY(targetFrameTrans.getRotation(), rollOffset, pitchOffset, yawOffset);
-      RosFilterUtilities::quatToRPY(transformOrientation_, roll, pitch, yaw);
+      if(canTransform)
+      {
+        double rollOffset = 0;
+        double pitchOffset = 0;
+        double yawOffset = 0;
+        double roll = 0;
+        double pitch = 0;
+        double yaw = 0;
+        RosFilterUtilities::quatToRPY(targetFrameTrans.getRotation(), rollOffset, pitchOffset, yawOffset);
+        RosFilterUtilities::quatToRPY(transformOrientation_, roll, pitch, yaw);
 
-      ROS_DEBUG_STREAM("Initial orientation roll, pitch, yaw is (" <<
-                       roll << ", " << pitch << ", " << yaw << ")");
+        ROS_DEBUG_STREAM("Initial orientation roll, pitch, yaw is (" <<
+                         roll << ", " << pitch << ", " << yaw << ")");
 
-      // Apply the offset (making sure to bound them), and throw them in a vector
-      tf2::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
-                             FilterUtilities::clampRotation(pitch - pitchOffset),
-                             FilterUtilities::clampRotation(yaw - yawOffset));
+        // Apply the offset (making sure to bound them), and throw them in a vector
+        tf2::Vector3 rpyAngles(FilterUtilities::clampRotation(roll - rollOffset),
+                               FilterUtilities::clampRotation(pitch - pitchOffset),
+                               FilterUtilities::clampRotation(yaw - yawOffset));
 
-      // Now we need to rotate the roll and pitch by the yaw offset value.
-      // Imagine a case where an IMU is mounted facing sideways. In that case
-      // pitch for the IMU's world frame is roll for the robot.
-      tf2::Matrix3x3 mat;
-      mat.setRPY(0.0, 0.0, yawOffset);
-      rpyAngles = mat * rpyAngles;
-      transformOrientation_.setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
+        // Now we need to rotate the roll and pitch by the yaw offset value.
+        // Imagine a case where an IMU is mounted facing sideways. In that case
+        // pitch for the IMU's world frame is roll for the robot.
+        tf2::Matrix3x3 mat;
+        mat.setRPY(0.0, 0.0, yawOffset);
+        rpyAngles = mat * rpyAngles;
+        transformOrientation_.setRPY(rpyAngles.getX(), rpyAngles.getY(), rpyAngles.getZ());
 
-      ROS_DEBUG_STREAM("Initial corrected orientation roll, pitch, yaw is (" <<
-                       rpyAngles.getX() << ", " << rpyAngles.getY() << ", " << rpyAngles.getZ() << ")");
+        ROS_DEBUG_STREAM("Initial corrected orientation roll, pitch, yaw is (" <<
+                         rpyAngles.getX() << ", " << rpyAngles.getY() << ", " << rpyAngles.getZ() << ")");
 
-      hasTransformImu_ = true;
+        hasTransformImu_ = true;
+      }
     }
   }
 
@@ -488,15 +494,39 @@ namespace RobotLocalization
 
         nhPriv.getParam("datum", datumConfig);
 
+        // Handle datum specification. Users should always specify a baseLinkFrameId_ in the
+        // datum config, but we had a release where it wasn't used, so we'll maintain compatibility.
         ROS_ASSERT(datumConfig.getType() == XmlRpc::XmlRpcValue::TypeArray);
-        ROS_ASSERT(datumConfig.size() == 4);
+        ROS_ASSERT(datumConfig.size() == 4 || datumConfig.size() == 5);
 
         useManualDatum_ = true;
 
         std::ostringstream ostr;
-        ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] << " " << datumConfig[3];
-        std::istringstream istr(ostr.str());
-        istr >> datumLat >> datumLon >> datumYaw >> worldFrameId_;
+        if(datumConfig.size() == 4)
+        {
+          ROS_WARN_STREAM("No base_link_frame specified for the datum (parameter 5).");
+          ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] << " " << datumConfig[3];
+          std::istringstream istr(ostr.str());
+          istr >> datumLat >> datumLon >> datumYaw >> worldFrameId_;
+        }
+        else if(datumConfig.size() == 5)
+        {
+          ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] << " " << datumConfig[3] << " " << datumConfig[4];
+          std::istringstream istr(ostr.str());
+          istr >> datumLat >> datumLon >> datumYaw >> worldFrameId_ >> baseLinkFrameId_;
+        }
+
+        // Try to resolve tf_prefix
+        std::string tfPrefix = "";
+        std::string tfPrefixPath = "";
+        if (nhPriv.searchParam("tf_prefix", tfPrefixPath))
+        {
+          nhPriv.getParam(tfPrefixPath, tfPrefix);
+        }
+
+        // Append the tf prefix in a tf2-friendly manner
+        FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
+        FilterUtilities::appendPrefix(tfPrefix, baseLinkFrameId_);
 
         robot_localization::SetDatum::Request request;
         request.geo_pose.position.latitude = datumLat;
