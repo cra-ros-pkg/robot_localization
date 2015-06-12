@@ -56,6 +56,7 @@ namespace RobotLocalization
     publishGps_(false),
     useOdometryYaw_(false),
     useManualDatum_(false),
+    pinDatum_(false),
     zeroAltitude_(false),
     worldFrameId_("odom"),
     baseLinkFrameId_("base_link"),
@@ -109,9 +110,18 @@ namespace RobotLocalization
     return true;
   }
 
+  bool NavSatTransform::pinDatumCallback(std_srvs::Empty::Request& request,
+                                      std_srvs::Empty::Response&)
+  {
+    transformGood_ = false;
+    pinDatum_ = true;
+    ROS_INFO("Pin datum requested");
+    return true;
+  }
+
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
-    if(!transformGood_ && !useManualDatum_)
+    if ((!transformGood_ && !useManualDatum_) || pinDatum_)
     {
       setTransformOdometry(msg);
     }
@@ -134,7 +144,7 @@ namespace RobotLocalization
     {
       // If we haven't computed the transform yet, then
       // store this message as the initial GPS data to use
-      if(!transformGood_ && !useManualDatum_)
+      if ((!transformGood_ && !useManualDatum_) || pinDatum_)
       {
         setTransformGps(msg);
       }
@@ -190,7 +200,7 @@ namespace RobotLocalization
     // the odometry source, which may have multiple fused sources of
     // heading data, and so would act as a better heading for the
     // UTM->world_frame transform.
-    if(!transformGood_ && useOdometryYaw_ && !useManualDatum_)
+    if (useOdometryYaw_ && ((!transformGood_ && !useManualDatum_) || pinDatum_))
     {
       sensor_msgs::Imu *imu = new sensor_msgs::Imu();
       imu->orientation = msg->pose.pose.orientation;
@@ -336,6 +346,7 @@ namespace RobotLocalization
                                              yaw << ")");
 
       transformGood_ = true;
+      pinDatum_ = false;
 
       // Send out the (static) UTM transform in case anyone else would like to use it.
       if(broadcastUtmTransform_)
@@ -481,6 +492,7 @@ namespace RobotLocalization
 
     // Subscribe to the messages and services we need
     ros::ServiceServer datumServ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
+    ros::ServiceServer pinDatumServ = nh.advertiseService("pinDatum", &NavSatTransform::pinDatumCallback, this);
 
     if(useManualDatum_ && nhPriv.hasParam("datum"))
     {

@@ -34,6 +34,7 @@
 
 #include <ros/ros.h>
 
+#include <std_srvs/Empty.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
@@ -69,7 +70,7 @@ namespace RobotLocalization
       //!
       bool broadcastUtmTransform_;
 
-      //! @brief Parameter that specifies the magnetic decliation for the robot's
+      //! @brief Parameter that specifies the magnetic declination for the robot's
       //! environment.
       //!
       double magneticDeclination_;
@@ -150,6 +151,10 @@ namespace RobotLocalization
       //!
       bool useManualDatum_;
 
+      //! @brief Flag set to pin the datum at the current location
+      //!
+      bool pinDatum_;
+
       //! @brief Frame ID of the robot's body frame
       //!
       //! This is needed for obtaining transforms from the robot's body
@@ -219,6 +224,11 @@ namespace RobotLocalization
       //!
       bool datumCallback(robot_localization::SetDatum::Request& request,
                          robot_localization::SetDatum::Response&);
+
+      //! @brief Callback for the pin datum service
+      //!
+      bool pinDatumCallback(std_srvs::Empty::Request& request,
+                            std_srvs::Empty::Response&);
 
       //! @brief Callback for the odom data
       //!
