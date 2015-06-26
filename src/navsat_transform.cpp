@@ -320,6 +320,14 @@ namespace RobotLocalization
 
       utmWorldTransInverse_ = utmWorldTransform_.inverse();
 
+      // publish the origin of the world frame in NavSatFix format
+      sensor_msgs::NavSatFix nsf;
+      NavsatConversions::UTMtoLL(utmWorldTransInverse_.getOrigin().getY(), 
+                                 utmWorldTransInverse_.getOrigin().getX(),
+                                 utmZone_, nsf.latitude, nsf.longitude);
+      nsf.altitude = utmWorldTransInverse_.getOrigin().getZ();
+      worldOriginPub_.publish(nsf);
+
       double roll = 0;
       double pitch = 0;
       double yaw = 0;
@@ -567,6 +575,7 @@ namespace RobotLocalization
     }
 
     ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
+    worldOriginPub_ = nh.advertise<sensor_msgs::NavSatFix>("gps/world_origin", 1, true);
     ros::Publisher filteredGpsPub;
 
     if(publishGps_)

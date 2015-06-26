@@ -220,6 +220,10 @@ namespace RobotLocalization
       //!
       tf2::Transform utmWorldTransInverse_;
 
+      //! @brief publisher for the origin of the world frame in NavSatFix
+      //!
+      ros::Publisher worldOriginPub_;
+
       //! @brief Callback for the datum service
       //!
       bool datumCallback(robot_localization::SetDatum::Request& request,
