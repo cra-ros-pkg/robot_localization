@@ -561,7 +561,7 @@ namespace RobotLocalization
     ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
     ros::Subscriber imuSub;
 
-    if(!useOdometryYaw_ && !useManualDatum_)
+    if (!useOdometryYaw_)
     {
       imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
     }
@@ -588,7 +588,7 @@ namespace RobotLocalization
       {
         computeTransform();
 
-        if(transformGood_ && !useOdometryYaw_ && !useManualDatum_)
+        if(transformGood_ && !useOdometryYaw_)
         {
           // Once we have the transform, we don't need the IMU
           imuSub.shutdown();
