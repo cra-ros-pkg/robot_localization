@@ -35,14 +35,15 @@
 
 #include <XmlRpcException.h>
 
-#include <sstream>
 #include <iomanip>
 #include <limits>
+#include <sstream>
+#include <vector>
 
 namespace RobotLocalization
 {
   Ekf::Ekf(std::vector<double>) :
-    FilterBase() // Must initialize filter base!
+    FilterBase()  // Must initialize filter base!
   {
   }
 
@@ -90,12 +91,12 @@ namespace RobotLocalization
     size_t updateSize = updateIndices.size();
 
     // Now set up the relevant matrices
-    Eigen::VectorXd stateSubset(updateSize);                             // x (in most literature)
-    Eigen::VectorXd measurementSubset(updateSize);                       // z
-    Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize); // R
-    Eigen::MatrixXd stateToMeasurementSubset(updateSize, state_.rows()); // H
-    Eigen::MatrixXd kalmanGainSubset(state_.rows(), updateSize);         // K
-    Eigen::VectorXd innovationSubset(updateSize);                        // z - Hx
+    Eigen::VectorXd stateSubset(updateSize);                              // x (in most literature)
+    Eigen::VectorXd measurementSubset(updateSize);                        // z
+    Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize);  // R
+    Eigen::MatrixXd stateToMeasurementSubset(updateSize, state_.rows());  // H
+    Eigen::MatrixXd kalmanGainSubset(state_.rows(), updateSize);          // K
+    Eigen::VectorXd innovationSubset(updateSize);                         // z - Hx
 
     stateSubset.setZero();
     measurementSubset.setZero();
@@ -160,7 +161,7 @@ namespace RobotLocalization
     kalmanGainSubset.noalias() = pht * hphrInv;
 
     innovationSubset = (measurementSubset - stateSubset);
-    
+
     // (2) Check Mahalanobis distance between mapped measurement and state.
     if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisThresh_))
     {
@@ -168,31 +169,35 @@ namespace RobotLocalization
       // Wrap angles in the innovation
       for (size_t i = 0; i < updateSize; ++i)
       {
-        if (updateIndices[i] == StateMemberRoll || updateIndices[i] == StateMemberPitch || updateIndices[i] == StateMemberYaw)
+        if (updateIndices[i] == StateMemberRoll ||
+            updateIndices[i] == StateMemberPitch ||
+            updateIndices[i] == StateMemberYaw)
         {
-          while(innovationSubset(i) < -PI)
+          while (innovationSubset(i) < -PI)
           {
             innovationSubset(i) += TAU;
           }
 
-          while(innovationSubset(i) > PI)
+          while (innovationSubset(i) > PI)
           {
             innovationSubset(i) -= TAU;
           }
         }
       }
-        
+
       state_.noalias() += kalmanGainSubset * innovationSubset;
-        
+
       // (4) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
       Eigen::MatrixXd gainResidual = identity_;
       gainResidual.noalias() -= kalmanGainSubset * stateToMeasurementSubset;
       estimateErrorCovariance_ = gainResidual * estimateErrorCovariance_ * gainResidual.transpose();
-      estimateErrorCovariance_.noalias() += kalmanGainSubset * measurementCovarianceSubset * kalmanGainSubset.transpose();
-      
+      estimateErrorCovariance_.noalias() += kalmanGainSubset *
+                                            measurementCovarianceSubset *
+                                            kalmanGainSubset.transpose();
+
       // Handle wrapping of angles
       wrapStateAngles();
-      
+
       FB_DEBUG("Kalman gain subset is:\n" << kalmanGainSubset <<
                "\nInnovation is:\n" << innovationSubset <<
                "\nCorrected full state is:\n" << state_ <<
@@ -317,7 +322,7 @@ namespace RobotLocalization
     yCoeff = -sp * sr;
     zCoeff = -sp * cr;
     double dF2dp = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared; 
+                   (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
     double dF8dp = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     // Much of the transfer function Jacobian is identical to the transfer function
@@ -354,11 +359,13 @@ namespace RobotLocalization
              "\nCurrent estimate error covariance is:\n" <<  estimateErrorCovariance_ << "\n");
 
     // (2) Project the error forward: P = J * P * J' + Q
-    estimateErrorCovariance_ = (transferFunctionJacobian_ * estimateErrorCovariance_ * transferFunctionJacobian_.transpose());
+    estimateErrorCovariance_ = (transferFunctionJacobian_ *
+                                estimateErrorCovariance_ *
+                                transferFunctionJacobian_.transpose());
     estimateErrorCovariance_.noalias() += (processNoiseCovariance_ * delta);
 
     FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
              "\n\n--------------------- /Ekf::predict ----------------------\n");
   }
 
-}
+}  // namespace RobotLocalization

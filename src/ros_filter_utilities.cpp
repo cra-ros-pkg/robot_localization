@@ -36,6 +36,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <ros/console.h>
 
+#include <string>
+
 std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec)
 {
   os << "(" << std::setprecision(20) << vec.getX() << " " << vec.getY() << " " << vec.getZ() << ")\n";
@@ -105,9 +107,9 @@ namespace RobotLocalization
       // Transforming from a frame id to itself can fail when the tf tree isn't
       // being broadcast (e.g., for some bag files). This is the only failure that
       // would throw an exception, so check for this situation before giving up.
-      if(!retVal)
+      if (!retVal)
       {
-        if(targetFrame == sourceFrame)
+        if (targetFrame == sourceFrame)
         {
           targetFrameTrans.setIdentity();
           retVal = true;
@@ -143,5 +145,6 @@ namespace RobotLocalization
       state(StateMemberZ) = stateTF.getOrigin().getZ();
       quatToRPY(stateTF.getRotation(), state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
     }
-  }
-}
+
+  }  // namespace RosFilterUtilities
+}  // namespace RobotLocalization
