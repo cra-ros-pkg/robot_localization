@@ -2,23 +2,34 @@ cmake_minimum_required(VERSION 2.8.3)
 project(robot_localization)
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  message_filters
-  std_msgs
-  geographic_msgs
-  geometry_msgs
-  nav_msgs
-  sensor_msgs
   diagnostic_msgs
   diagnostic_updater
-  cmake_modules
-  message_generation)
-find_package(Eigen REQUIRED)
+  geographic_msgs
+  geometry_msgs
+  message_filters
+  message_generation
+  nav_msgs
+  roscpp
+  roslint
+  sensor_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros)
+
+# Attempt to find Eigen using its own CMake module.
+# If that fails, fall back to cmake_modules pacakge.
+find_package(Eigen3)
+if(NOT EIGEN3_FOUND)
+  find_package(cmake_modules REQUIRED)
+  find_package(Eigen REQUIRED)
+  set(EIGEN3_INCLUDE_DIRS ${EIGEN_INCLUDE_DIRS})
+  set(EIGEN3_LIBRARIES ${EIGEN_LIBRARIES})
+endif()
 
 add_definitions(-DEIGEN_NO_DEBUG)
+
+roslint_cpp()
 
 ###################################
 ## catkin specific configuration ##
@@ -37,21 +48,31 @@ generate_messages(
 )
 
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES filter_base ekf
+  INCLUDE_DIRS
+    include
+  LIBRARIES 
+    ekf
+    filter_base
+    filter_utilities
+    navsat_transform
+    ros_filter
+    ros_filter_utilities
+    ukf
   CATKIN_DEPENDS
-    roscpp
-    tf2
-    tf2_ros
-    message_filters
-    std_msgs
-    geometry_msgs
-    nav_msgs
-    sensor_msgs
+    cmake_modules
     diagnostic_msgs
     diagnostic_updater
-    cmake_modules
+    geographic_msgs
+    geometry_msgs
+    message_filters
     message_runtime
+    nav_msgs
+    roscpp
+    sensor_msgs
+    std_msgs
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
   DEPENDS Eigen
 )
 
@@ -59,9 +80,9 @@ catkin_package(
 ## Build ##
 ###########
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 
-# Library definition
+# Library definitions
 add_library(filter_utilities src/filter_utilities.cpp)
 add_library(filter_base src/filter_base.cpp)
 add_library(ekf src/ekf.cpp)
@@ -80,15 +101,15 @@ add_executable(ukf_localization_node src/ukf_localization_node.cpp)
 add_executable(navsat_transform_node src/navsat_transform_node.cpp)
 
 # Linking
-target_link_libraries(ros_filter_utilities ${catkin_LIBRARIES})
-target_link_libraries(filter_utilities ${catkin_LIBRARIES})
-target_link_libraries(filter_base filter_utilities ${catkin_LIBRARIES})
-target_link_libraries(ekf filter_base ${catkin_LIBRARIES})
-target_link_libraries(ukf filter_base ${catkin_LIBRARIES})
-target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES})
+target_link_libraries(ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(filter_base filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(ekf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(ukf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
-target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES})
+target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
 
 #############
@@ -97,16 +118,16 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 
 ## Mark executables and/or libraries for installation
 install(TARGETS
-  filter_utilities
-  filter_base
   ekf
-  ukf
-  ros_filter_utilities
-  ros_filter
-  ekf_localization_node
-  ukf_localization_node
+  filter_base
+  filter_utilities
   navsat_transform
+  ros_filter
+  ros_filter_utilities
+  ukf
+  ekf_localization_node
   navsat_transform_node
+  ukf_localization_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
