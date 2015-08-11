@@ -193,15 +193,15 @@ namespace RobotLocalization
 
       // Initialize the filter, but only with the values we're using
       size_t measurementLength = measurement.updateVector_.size();
-      for(size_t i = 0; i < measurementLength; ++i)
+      for (size_t i = 0; i < measurementLength; ++i)
       {
         state_[i] = (measurement.updateVector_[i] ? measurement.measurement_[i] : state_[i]);
       }
 
       // Same for covariance
-      for(size_t i = 0; i < measurementLength; ++i)
+      for (size_t i = 0; i < measurementLength; ++i)
       {
-        for(size_t j = 0; j < measurementLength; ++j)
+        for (size_t j = 0; j < measurementLength; ++j)
         {
           estimateErrorCovariance_(i, j) = (measurement.updateVector_[i] && measurement.updateVector_[j] ?
                                             measurement.covariance_(i, j) :
@@ -212,7 +212,7 @@ namespace RobotLocalization
       initialized_ = true;
     }
 
-    if(delta >= 0.0)
+    if (delta >= 0.0)
     {
       // Update the last measurement and update time.
       // The measurement time is based on the time stamp of the
@@ -314,4 +314,4 @@ namespace RobotLocalization
 
     return true;
   }
-}
+}  // namespace RobotLocalization

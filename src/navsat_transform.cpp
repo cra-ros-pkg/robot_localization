@@ -40,6 +40,8 @@
 
 #include <XmlRpcException.h>
 
+#include <string>
+
 namespace RobotLocalization
 {
   NavSatTransform::NavSatTransform() :
@@ -61,13 +63,12 @@ namespace RobotLocalization
     baseLinkFrameId_("base_link"),
     utmZone_(""),
     tfListener_(tfBuffer_)
- {
+  {
     latestUtmCovariance_.resize(POSE_SIZE, POSE_SIZE);
   }
 
   NavSatTransform::~NavSatTransform()
   {
-
   }
 
   bool NavSatTransform::datumCallback(robot_localization::SetDatum::Request& request,
@@ -111,7 +112,7 @@ namespace RobotLocalization
 
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
-    if(!transformGood_ && !useManualDatum_)
+    if (!transformGood_ && !useManualDatum_)
     {
       setTransformOdometry(msg);
     }
@@ -123,18 +124,17 @@ namespace RobotLocalization
 
   void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
   {
-
     // Make sure the GPS data is usable
     bool goodGps = (msg->status.status != sensor_msgs::NavSatStatus::STATUS_NO_FIX &&
                     !std::isnan(msg->altitude) &&
                     !std::isnan(msg->latitude) &&
                     !std::isnan(msg->longitude));
 
-    if(goodGps)
+    if (goodGps)
     {
       // If we haven't computed the transform yet, then
       // store this message as the initial GPS data to use
-      if(!transformGood_ && !useManualDatum_)
+      if (!transformGood_ && !useManualDatum_)
       {
         setTransformGps(msg);
       }
@@ -166,7 +166,8 @@ namespace RobotLocalization
     double utmY = 0;
     NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utmZone_);
 
-    ROS_INFO_STREAM("Datum (latitude, longitude, altitude) is (" << std::fixed << msg->latitude << ", " << msg->longitude << ", " << msg->altitude << ")");
+    ROS_INFO_STREAM("Datum (latitude, longitude, altitude) is (" << std::fixed << msg->latitude << ", " <<
+                    msg->longitude << ", " << msg->altitude << ")");
     ROS_INFO_STREAM("Datum UTM coordinate is (" << std::fixed << utmX << ", " << utmY << ")");
 
     transformUtmPose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
@@ -181,16 +182,16 @@ namespace RobotLocalization
     baseLinkFrameId_ = msg->child_frame_id;
     hasTransformOdom_ = true;
 
-    ROS_INFO_STREAM("Initial odometry position is (" << std::fixed << 
-                    transformWorldPose_.getOrigin().getX() << ", " << 
-                    transformWorldPose_.getOrigin().getY() << ", " << 
+    ROS_INFO_STREAM("Initial odometry position is (" << std::fixed <<
+                    transformWorldPose_.getOrigin().getX() << ", " <<
+                    transformWorldPose_.getOrigin().getY() << ", " <<
                     transformWorldPose_.getOrigin().getZ() << ")");
 
     // Users can optionally use the (potentially fused) heading from
     // the odometry source, which may have multiple fused sources of
     // heading data, and so would act as a better heading for the
     // UTM->world_frame transform.
-    if(!transformGood_ && useOdometryYaw_ && !useManualDatum_)
+    if (!transformGood_ && useOdometryYaw_ && !useManualDatum_)
     {
       sensor_msgs::Imu *imu = new sensor_msgs::Imu();
       imu->orientation = msg->pose.pose.orientation;
@@ -204,7 +205,7 @@ namespace RobotLocalization
   {
     // We need the baseLinkFrameId_ from the odometry message, so
     // we need to wait until we receive it.
-    if(hasTransformOdom_)
+    if (hasTransformOdom_)
     {
       /* This method only gets called if we don't yet have the
        * IMU data (the subscriber gets shut down once we compute
@@ -220,7 +221,7 @@ namespace RobotLocalization
                                                                   msg->header.stamp,
                                                                   targetFrameTrans);
 
-      if(canTransform)
+      if (canTransform)
       {
         double rollOffset = 0;
         double pitchOffset = 0;
@@ -260,7 +261,7 @@ namespace RobotLocalization
     // Only do this if:
     // 1. We haven't computed the odom_frame->utm_frame transform before
     // 2. We've received the data we need
-    if(!transformGood_ &&
+    if (!transformGood_ &&
        hasTransformOdom_ &&
        hasTransformGps_ &&
        hasTransformImu_)
@@ -338,7 +339,7 @@ namespace RobotLocalization
       transformGood_ = true;
 
       // Send out the (static) UTM transform in case anyone else would like to use it.
-      if(broadcastUtmTransform_)
+      if (broadcastUtmTransform_)
       {
         geometry_msgs::TransformStamped utmTransformStamped;
         utmTransformStamped.header.stamp = ros::Time::now();
@@ -354,7 +355,7 @@ namespace RobotLocalization
   {
     bool newData = false;
 
-    if(transformGood_ && gpsUpdated_)
+    if (transformGood_ && gpsUpdated_)
     {
       tf2::Transform transformedUtm;
 
@@ -366,7 +367,7 @@ namespace RobotLocalization
       Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
       rot6d.setIdentity();
 
-      for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+      for (size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
       {
         rot6d(rInd, 0) = rot.getRow(rInd).getX();
         rot6d(rInd, 1) = rot.getRow(rInd).getY();
@@ -407,7 +408,7 @@ namespace RobotLocalization
   {
     bool newData = false;
 
-    if(transformGood_ && odomUpdated_)
+    if (transformGood_ && odomUpdated_)
     {
       tf2::Transform odomAsUtm;
 
@@ -419,7 +420,7 @@ namespace RobotLocalization
       Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
       rot6d.setIdentity();
 
-      for(size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
+      for (size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
       {
         rot6d(rInd, 0) = rot.getRow(rInd).getX();
         rot6d(rInd, 1) = rot.getRow(rInd).getY();
@@ -433,7 +434,11 @@ namespace RobotLocalization
       latestOdomCovariance_ = rot6d * latestOdomCovariance_.eval() * rot6d.transpose();
 
       // Now convert the data back to lat/long and place into the message
-      NavsatConversions::UTMtoLL(odomAsUtm.getOrigin().getY(), odomAsUtm.getOrigin().getX(), utmZone_, filteredGps.latitude, filteredGps.longitude);
+      NavsatConversions::UTMtoLL(odomAsUtm.getOrigin().getY(),
+                                 odomAsUtm.getOrigin().getX(),
+                                 utmZone_,
+                                 filteredGps.latitude,
+                                 filteredGps.longitude);
       filteredGps.altitude = odomAsUtm.getOrigin().getZ();
 
       // Copy the measurement's covariance matrix back
@@ -482,7 +487,7 @@ namespace RobotLocalization
     // Subscribe to the messages and services we need
     ros::ServiceServer datumServ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
-    if(useManualDatum_ && nhPriv.hasParam("datum"))
+    if (useManualDatum_ && nhPriv.hasParam("datum"))
     {
       XmlRpc::XmlRpcValue datumConfig;
 
@@ -502,16 +507,17 @@ namespace RobotLocalization
         useManualDatum_ = true;
 
         std::ostringstream ostr;
-        if(datumConfig.size() == 4)
+        if (datumConfig.size() == 4)
         {
           ROS_WARN_STREAM("No base_link_frame specified for the datum (parameter 5).");
           ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] << " " << datumConfig[3];
           std::istringstream istr(ostr.str());
           istr >> datumLat >> datumLon >> datumYaw >> worldFrameId_;
         }
-        else if(datumConfig.size() == 5)
+        else if (datumConfig.size() == 5)
         {
-          ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] << " " << datumConfig[3] << " " << datumConfig[4];
+          ostr << datumConfig[0] << " " << datumConfig[1] << " " << datumConfig[2] <<
+                  " " << datumConfig[3] << " " << datumConfig[4];
           std::istringstream istr(ostr.str());
           istr >> datumLat >> datumLon >> datumYaw >> worldFrameId_ >> baseLinkFrameId_;
         }
@@ -549,7 +555,7 @@ namespace RobotLocalization
     ros::Subscriber gpsSub = nh.subscribe("gps/fix", 1, &NavSatTransform::gpsFixCallback, this);
     ros::Subscriber imuSub;
 
-    if(!useOdometryYaw_ && !useManualDatum_)
+    if (!useOdometryYaw_ && !useManualDatum_)
     {
       imuSub = nh.subscribe("imu/data", 1, &NavSatTransform::imuCallback, this);
     }
@@ -557,7 +563,7 @@ namespace RobotLocalization
     ros::Publisher gpsOdomPub = nh.advertise<nav_msgs::Odometry>("odometry/gps", 10);
     ros::Publisher filteredGpsPub;
 
-    if(publishGps_)
+    if (publishGps_)
     {
       filteredGpsPub = nh.advertise<sensor_msgs::NavSatFix>("gps/filtered", 10);
     }
@@ -568,15 +574,15 @@ namespace RobotLocalization
     startDelay.sleep();
 
     ros::Rate rate(frequency);
-    while(ros::ok())
+    while (ros::ok())
     {
       ros::spinOnce();
 
-      if(!transformGood_)
+      if (!transformGood_)
       {
         computeTransform();
 
-        if(transformGood_ && !useOdometryYaw_ && !useManualDatum_)
+        if (transformGood_ && !useOdometryYaw_ && !useManualDatum_)
         {
           // Once we have the transform, we don't need the IMU
           imuSub.shutdown();
@@ -585,15 +591,15 @@ namespace RobotLocalization
       else
       {
         nav_msgs::Odometry gpsOdom;
-        if(prepareGpsOdometry(gpsOdom))
+        if (prepareGpsOdometry(gpsOdom))
         {
           gpsOdomPub.publish(gpsOdom);
         }
 
-        if(publishGps_)
+        if (publishGps_)
         {
           sensor_msgs::NavSatFix odomGps;
-          if(prepareFilteredGps(odomGps))
+          if (prepareFilteredGps(odomGps))
           {
             filteredGpsPub.publish(odomGps);
           }
@@ -603,4 +609,4 @@ namespace RobotLocalization
       rate.sleep();
     }
   }
-}
+}  // namespace RobotLocalization

@@ -1,13 +1,50 @@
+/*
+ * Copyright (c) 2015, Charles River Analytics, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "robot_localization/ros_filter_types.h"
-#include <limits>
+
 #include <gtest/gtest.h>
 
-using namespace RobotLocalization;
+#include <limits>
+#include <vector>
+
+using RobotLocalization::Ukf;
+using RobotLocalization::RosUkf;
+using RobotLocalization::STATE_SIZE;
 
 class RosUkfPassThrough : public RosUkf
 {
   public:
-    RosUkfPassThrough(std::vector<double> args) : RosUkf(args)
+    explicit RosUkfPassThrough(std::vector<double> &args) : RosUkf(args)
     {
     }
 
@@ -17,7 +54,7 @@ class RosUkfPassThrough : public RosUkf
     }
 };
 
-TEST (UkfTest, Measurements)
+TEST(UkfTest, Measurements)
 {
   std::vector<double> args;
   args.push_back(0.001);
@@ -32,13 +69,13 @@ TEST (UkfTest, Measurements)
   ukf.getFilter().setEstimateErrorCovariance(initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurement[i] = i * 0.01 * STATE_SIZE;
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurementCovariance(i, i) = 1e-9;
   }
@@ -70,7 +107,7 @@ TEST (UkfTest, Measurements)
 
   measurement2 *= 2.0;
 
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurementCovariance(i, i) = 1e-9;
   }
@@ -86,7 +123,7 @@ TEST (UkfTest, Measurements)
   ukf.integrateMeasurements(1003);
 
   measurement = measurement2.eval() - ukf.getFilter().getState();
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
   }
