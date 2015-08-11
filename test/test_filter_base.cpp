@@ -46,49 +46,51 @@ using RobotLocalization::Measurement;
 
 namespace RobotLocalization
 {
-  class FilterDerived : public FilterBase
-  {
-    public:
-      double val;
 
-      FilterDerived() : val(0) { }
+class FilterDerived : public FilterBase
+{
+  public:
+    double val;
 
-      void correct(const Measurement &measurement)
+    FilterDerived() : val(0) { }
+
+    void correct(const Measurement &measurement)
+    {
+      EXPECT_EQ(val, measurement.time_);
+      EXPECT_EQ(measurement.topicName_, "topic");
+
+      EXPECT_EQ(measurement.updateVector_.size(), 10);
+      for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
       {
-        EXPECT_EQ(val, measurement.time_);
-        EXPECT_EQ(measurement.topicName_, "topic");
-
-        EXPECT_EQ(measurement.updateVector_.size(), 10);
-        for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
-        {
-          EXPECT_EQ(measurement.updateVector_[i], true);
-        }
+        EXPECT_EQ(measurement.updateVector_[i], true);
       }
+    }
 
-      void predict(const double delta)
-      {
-        val = delta;
-      }
-  };
+    void predict(const double delta)
+    {
+      val = delta;
+    }
+};
 
-  class FilterDerived2 : public FilterBase
-  {
-    public:
-      FilterDerived2() { }
+class FilterDerived2 : public FilterBase
+{
+  public:
+    FilterDerived2() { }
 
-      void correct(const Measurement &measurement)
-      {
-      }
+    void correct(const Measurement &measurement)
+    {
+    }
 
-      void predict(const double delta)
-      {
-      }
+    void predict(const double delta)
+    {
+    }
 
-      void processMeasurement(const Measurement &measurement)
-      {
-        FilterBase::processMeasurement(measurement);
-      }
-  };
+    void processMeasurement(const Measurement &measurement)
+    {
+      FilterBase::processMeasurement(measurement);
+    }
+};
+
 }  // namespace RobotLocalization
 
 TEST(FilterBaseTest, MeasurementStruct)

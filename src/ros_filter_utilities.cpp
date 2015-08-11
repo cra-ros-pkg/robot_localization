@@ -66,85 +66,87 @@ std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans)
 
 namespace RobotLocalization
 {
-  namespace RosFilterUtilities
-  {
-    bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
-                             const std::string &targetFrame,
-                             const std::string &sourceFrame,
-                             const ros::Time &time,
-                             tf2::Transform &targetFrameTrans)
-    {
-      bool retVal = true;
 
-      // First try to transform the data at the requested time
+namespace RosFilterUtilities
+{
+  bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
+                           const std::string &targetFrame,
+                           const std::string &sourceFrame,
+                           const ros::Time &time,
+                           tf2::Transform &targetFrameTrans)
+  {
+    bool retVal = true;
+
+    // First try to transform the data at the requested time
+    try
+    {
+      tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time).transform,
+                   targetFrameTrans);
+    }
+    catch (tf2::TransformException &ex)
+    {
+      // The issue might be that the transforms that are available are not close
+      // enough temporally to be used. In that case, just use the latest available
+      // transform and warn the user.
       try
       {
-        tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time).transform,
+        tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
                      targetFrameTrans);
+
+        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
+                                      " was unavailable for the time requested. Using latest instead.\n");
       }
-      catch (tf2::TransformException &ex)
+      catch(tf2::TransformException &ex)
       {
-        // The issue might be that the transforms that are available are not close
-        // enough temporally to be used. In that case, just use the latest available
-        // transform and warn the user.
-        try
-        {
-          tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
-                       targetFrameTrans);
+        ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
+                                      " to " << targetFrame << ". Error was " << ex.what() << "\n");
 
-          ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
-                                        " was unavailable for the time requested. Using latest instead.\n");
-        }
-        catch(tf2::TransformException &ex)
-        {
-          ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
-                                        " to " << targetFrame << ". Error was " << ex.what() << "\n");
-
-          retVal = false;
-        }
+        retVal = false;
       }
+    }
 
-      // Transforming from a frame id to itself can fail when the tf tree isn't
-      // being broadcast (e.g., for some bag files). This is the only failure that
-      // would throw an exception, so check for this situation before giving up.
-      if (!retVal)
+    // Transforming from a frame id to itself can fail when the tf tree isn't
+    // being broadcast (e.g., for some bag files). This is the only failure that
+    // would throw an exception, so check for this situation before giving up.
+    if (!retVal)
+    {
+      if (targetFrame == sourceFrame)
       {
-        if (targetFrame == sourceFrame)
-        {
-          targetFrameTrans.setIdentity();
-          retVal = true;
-        }
+        targetFrameTrans.setIdentity();
+        retVal = true;
       }
-
-      return retVal;
     }
 
-    void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
-    {
-      tf2::Matrix3x3 orTmp(quat);
-      orTmp.getRPY(roll, pitch, yaw);
-    }
+    return retVal;
+  }
 
-    void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF)
-    {
-      stateTF.setOrigin(tf2::Vector3(state(StateMemberX),
-                                     state(StateMemberY),
-                                     state(StateMemberZ)));
-      tf2::Quaternion quat;
-      quat.setRPY(state(StateMemberRoll),
-                  state(StateMemberPitch),
-                  state(StateMemberYaw));
+  void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
+  {
+    tf2::Matrix3x3 orTmp(quat);
+    orTmp.getRPY(roll, pitch, yaw);
+  }
 
-      stateTF.setRotation(quat);
-    }
+  void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF)
+  {
+    stateTF.setOrigin(tf2::Vector3(state(StateMemberX),
+                                   state(StateMemberY),
+                                   state(StateMemberZ)));
+    tf2::Quaternion quat;
+    quat.setRPY(state(StateMemberRoll),
+                state(StateMemberPitch),
+                state(StateMemberYaw));
 
-    void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state)
-    {
-      state(StateMemberX) = stateTF.getOrigin().getX();
-      state(StateMemberY) = stateTF.getOrigin().getY();
-      state(StateMemberZ) = stateTF.getOrigin().getZ();
-      quatToRPY(stateTF.getRotation(), state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
-    }
+    stateTF.setRotation(quat);
+  }
 
-  }  // namespace RosFilterUtilities
+  void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state)
+  {
+    state(StateMemberX) = stateTF.getOrigin().getX();
+    state(StateMemberY) = stateTF.getOrigin().getY();
+    state(StateMemberZ) = stateTF.getOrigin().getZ();
+    quatToRPY(stateTF.getRotation(), state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
+  }
+
+}  // namespace RosFilterUtilities
+
 }  // namespace RobotLocalization
