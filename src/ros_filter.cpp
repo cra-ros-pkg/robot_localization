@@ -274,18 +274,19 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                              const std::string &topicName)
+  void RosFilter<T>::imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const std::string &topicName)
   {
+    RF_DEBUG("------ RosFilter::imuCallback (" << topicName << ") ------\n" <<
+             "IMU message:\n" << *msg);
+
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
     if (msg->header.stamp <= lastSetPoseTime_)
     {
+      RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
+
       return;
     }
-
-    RF_DEBUG("------ RosFilter::imuCallback (" << topicName << ") ------\n" <<
-             "IMU message:\n" << *msg);
 
     // As with the odometry message, we can separate out the pose- and twist-related variables
     // in the IMU message and pass them to the pose and twist callbacks (filters)
@@ -293,54 +294,85 @@ namespace RobotLocalization
     std::string imuPoseTopicName = topicName + "_pose";
     if (poseMessageFilters_.count(imuPoseTopicName) > 0)
     {
-      // Extract the pose (orientation) data, pass it to its filter
-      geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
-      posPtr->header = msg->header;
-      posPtr->pose.pose.orientation = msg->orientation;
-
-      // Copy the covariance for roll, pitch, and yaw
-      for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+      // Per the IMU message specification, if the IMU does not provide orientation,
+      // then its first covariance value should be set to -1, and we should ignore
+      // that portion of the message. robot_localization allows users to explicitly
+      // ignore data using its parameters, but we should also be compliant with
+      // message specs.
+      if(::fabs(msg->orientation_covariance[0] + 1) < 1e-9)
       {
-        for (size_t j = 0; j < ORIENTATION_SIZE; j++)
-        {
-          posPtr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] =
-              msg->orientation_covariance[ORIENTATION_SIZE * i + j];
-        }
+        RF_DEBUG("Received IMU message with -1 as its first covariance value for orientation. "
+                 "Ignoring orientation...");
       }
+      else
+      {
+        // Extract the pose (orientation) data, pass it to its filter
+        geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
+        posPtr->header = msg->header;
+        posPtr->pose.pose.orientation = msg->orientation;
 
-      geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-      poseMessageFilters_[imuPoseTopicName]->add(pptr);
+        // Copy the covariance for roll, pitch, and yaw
+        for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+        {
+          for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+          {
+            posPtr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] =
+                msg->orientation_covariance[ORIENTATION_SIZE * i + j];
+          }
+        }
+
+        geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
+        poseMessageFilters_[imuPoseTopicName]->add(pptr);
+      }
     }
 
     std::string imuTwistTopicName = topicName + "_twist";
     if (twistMessageFilters_.count(imuTwistTopicName) > 0)
     {
-      // Repeat for velocity
-      geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
-      twistPtr->header = msg->header;
-      twistPtr->twist.twist.angular = msg->angular_velocity;
-
-      // Copy the covariance
-      for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+      // Ignore rotational velocity if the first covariance value is -1
+      if(::fabs(msg->angular_velocity_covariance[0] + 1) < 1e-9)
       {
-        for (size_t j = 0; j < ORIENTATION_SIZE; j++)
-        {
-          twistPtr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] =
-              msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
-        }
+        RF_DEBUG("Received IMU message with -1 as its first covariance value for angular "
+                 "velocity. Ignoring angular velocity...");
       }
+      else
+      {
+        // Repeat for velocity
+        geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
+        twistPtr->header = msg->header;
+        twistPtr->twist.twist.angular = msg->angular_velocity;
 
-      geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-      twistMessageFilters_[imuTwistTopicName]->add(tptr);
+        // Copy the covariance
+        for (size_t i = 0; i < ORIENTATION_SIZE; i++)
+        {
+          for (size_t j = 0; j < ORIENTATION_SIZE; j++)
+          {
+            twistPtr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) + (j + ORIENTATION_SIZE)] =
+              msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
+          }
+        }
+
+        geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
+        twistMessageFilters_[imuTwistTopicName]->add(tptr);
+      }
     }
 
     std::string imuAccelTopicName = topicName + "_acceleration";
     if (accelerationMessageFilters_.count(imuAccelTopicName) > 0)
     {
-      // We still need to handle the acceleration data, but we don't
-      // actually have a good container message for it, so just pass
-      // the IMU message on through a message filter.
-      accelerationMessageFilters_[imuAccelTopicName]->add(msg);
+      // Ignore linear acceleration if the first covariance value is -1
+      if(::fabs(msg->linear_acceleration_covariance[0] + 1) < 1e-9)
+      {
+        RF_DEBUG("Received IMU message with -1 as its first covariance value for linear "
+                 "acceleration. Ignoring linear acceleration...");
+      }
+      else
+      {
+        // We still need to handle the acceleration data, but we don't
+        // actually have a good container message for it, so just pass
+        // the IMU message on through a message filter.
+        accelerationMessageFilters_[imuAccelTopicName]->add(msg);
+      }
     }
 
     RF_DEBUG("\n----- /RosFilter::imuCallback (" << topicName << ") ------\n");

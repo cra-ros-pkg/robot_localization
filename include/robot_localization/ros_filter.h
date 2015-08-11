@@ -426,7 +426,7 @@ template<class T> class RosFilter
     //!
     std::map<std::string, ros::Time> lastMessageTimes_;
 
-    //! @brief Store the last time a message from each topic was received
+    //! @brief Store the last time set pose message was received
     //!
     //! If we receive a setPose message to reset the filter, we can get in
     //! strange situations wherein we process the pose reset, but then even
