@@ -1185,8 +1185,7 @@ namespace RobotLocalization
 
     /* Warn users about:
     *    1. Multiple non-differential input sources
-    *    2. No absolute measurements of orientations variables
-    *    3. No absolute *or* relative measurements of position variables
+    *    2. No absolute *or* velocity measurements for pose variables
     */
     if (printDiagnostics_)
     {
@@ -1207,41 +1206,21 @@ namespace RobotLocalization
         }
         else if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] == 0)
         {
-          if (twoDMode_ == false)
-          {
-            if (static_cast<StateMembers>(stateVar) == StateMemberRoll ||
-               static_cast<StateMembers>(stateVar) == StateMemberPitch)
-            {
-              std::stringstream stream;
-              stream << "two_d_mode is false, and " << stateVariableNames_[stateVar] << " is not being measured. "
-                        "This will result in unbounded error growth and erratic filter behavior.";
-
-              addDiagnostic(diagnostic_msgs::DiagnosticStatus::ERROR,
-                            stateVariableNames_[stateVar] + "_configuration",
-                            stream.str(),
-                            true);
-            }
-          }
-
-          if (static_cast<StateMembers>(stateVar) == StateMemberYaw)
-          {
-            std::stringstream stream;
-            stream << stateVariableNames_[stateVar] << " is not being measured. This will result "
-                      "in unbounded error growth and erratic filter behavior.";
-
-            addDiagnostic(diagnostic_msgs::DiagnosticStatus::ERROR,
-                          stateVariableNames_[stateVar] + "_configuration",
-                          stream.str(),
-                          true);
-          }
-
           if ((static_cast<StateMembers>(stateVar) == StateMemberX &&
-              twistVarCounts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
-             (static_cast<StateMembers>(stateVar) == StateMemberY &&
-              twistVarCounts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
-             (static_cast<StateMembers>(stateVar) == StateMemberZ &&
-              twistVarCounts[static_cast<StateMembers>(StateMemberVz)] == 0 &&
-              twoDMode_ == false))
+               twistVarCounts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
+              (static_cast<StateMembers>(stateVar) == StateMemberY &&
+               twistVarCounts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
+              (static_cast<StateMembers>(stateVar) == StateMemberZ &&
+               twistVarCounts[static_cast<StateMembers>(StateMemberVz)] == 0 &&
+               twoDMode_ == false) ||
+              (static_cast<StateMembers>(stateVar) == StateMemberRoll &&
+               twistVarCounts[static_cast<StateMembers>(StateMemberVroll)] == 0 &&
+               twoDMode_ == false) ||
+              (static_cast<StateMembers>(stateVar) == StateMemberPitch &&
+               twistVarCounts[static_cast<StateMembers>(StateMemberVpitch)] == 0 &&
+               twoDMode_ == false) ||
+              (static_cast<StateMembers>(stateVar) == StateMemberYaw &&
+               twistVarCounts[static_cast<StateMembers>(StateMemberVyaw)] == 0))
           {
             std::stringstream stream;
             stream << "Neither " << stateVariableNames_[stateVar] << " nor its "
@@ -2144,7 +2123,7 @@ namespace RobotLocalization
       accTmp = targetFrameTrans.getBasis() * accTmp;
       maskAcc = targetFrameTrans.getBasis() * maskAcc;
 
-      // Now use the mask values to determinme which update vector values should true
+      // Now use the mask values to determine which update vector values should be true
       updateVector[StateMemberAx] = static_cast<int>(
         maskAcc.getRow(StateMemberAx - POSITION_A_OFFSET).length() >= 1e-6);
       updateVector[StateMemberAy] = static_cast<int>(
