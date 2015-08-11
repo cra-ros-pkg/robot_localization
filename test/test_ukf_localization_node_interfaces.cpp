@@ -557,6 +557,35 @@ TEST(InterfacesTest, ImuPoseBasicIO)
   EXPECT_LT(filtered_.pose.covariance[35], 0.5);
 
   resetFilter();
+
+  // Test to see if the orientation data is ignored when we set the
+  // first covariance value to -1
+  sensor_msgs::Imu imuIgnore;
+  imuIgnore.orientation.x = 0.1;
+  imuIgnore.orientation.y = 0.2;
+  imuIgnore.orientation.z = 0.3;
+  imuIgnore.orientation.w = 0.4;
+  imuIgnore.orientation_covariance[0] = -1;
+
+  loopRate = ros::Rate(50);
+  for (size_t i = 0; i < 50; ++i)
+  {
+    imuIgnore.header.stamp = ros::Time::now();
+    imuPub.publish(imuIgnore);
+    loopRate.sleep();
+    ros::spinOnce();
+
+    imuIgnore.header.seq++;
+  }
+
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
+  mat.setRotation(quat);
+  mat.getRPY(r, p, y);
+  EXPECT_LT(::fabs(r), 1e-3);
+  EXPECT_LT(::fabs(p), 1e-3);
+  EXPECT_LT(::fabs(y), 1e-3);
+
+  resetFilter();
 }
 
 TEST(InterfacesTest, ImuTwistBasicIO)
@@ -661,6 +690,34 @@ TEST(InterfacesTest, ImuTwistBasicIO)
   EXPECT_LT(filtered_.pose.covariance[35], 0.1);
 
   resetFilter();
+
+  // Test to see if the angular velocity data is ignored when we set the
+  // first covariance value to -1
+  sensor_msgs::Imu imuIgnore;
+  imuIgnore.angular_velocity.x = 100;
+  imuIgnore.angular_velocity.y = 100;
+  imuIgnore.angular_velocity.z = 100;
+  imuIgnore.angular_velocity_covariance[0] = -1;
+
+  loopRate = ros::Rate(50);
+  for (size_t i = 0; i < 50; ++i)
+  {
+    imuIgnore.header.stamp = ros::Time::now();
+    imuPub.publish(imuIgnore);
+    loopRate.sleep();
+    ros::spinOnce();
+
+    imuIgnore.header.seq++;
+  }
+
+  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
+  mat.setRotation(quat);
+  mat.getRPY(r, p, y);
+  EXPECT_LT(::fabs(r), 1e-3);
+  EXPECT_LT(::fabs(p), 1e-3);
+  EXPECT_LT(::fabs(y), 1e-3);
+
+  resetFilter();
 }
 
 TEST(InterfacesTest, ImuAccBasicIO)
@@ -716,6 +773,31 @@ TEST(InterfacesTest, ImuAccBasicIO)
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);
+
+  resetFilter();
+
+  // Test to see if the linear acceleration data is ignored when we set the
+  // first covariance value to -1
+  sensor_msgs::Imu imuIgnore;
+  imuIgnore.linear_acceleration.x = 1000;
+  imuIgnore.linear_acceleration.y = 1000;
+  imuIgnore.linear_acceleration.z = 1000;
+  imuIgnore.linear_acceleration_covariance[0] = -1;
+
+  loopRate = ros::Rate(50);
+  for (size_t i = 0; i < 50; ++i)
+  {
+    imuIgnore.header.stamp = ros::Time::now();
+    imuPub.publish(imuIgnore);
+    loopRate.sleep();
+    ros::spinOnce();
+
+    imuIgnore.header.seq++;
+  }
+
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x), 1e-3);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 1e-3);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z), 1e-3);
 
   resetFilter();
 }
