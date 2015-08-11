@@ -152,16 +152,16 @@ install(FILES
 ## Testing ##
 #############
 
-# Filter base unit tests
-catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
-target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
-
 if (CATKIN_ENABLE_TESTING)
 
   # Not really necessary, but it will cause the build to fail if it's
   # missing, rather than failing once the tests are being executed
   find_package(rosbag REQUIRED)
   find_package(rostest REQUIRED)
+
+  #### FILTER BASE TESTS #### 
+  catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
+  target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
 
   #### EKF TESTS #####
   add_rostest_gtest(test_ekf

@@ -34,7 +34,8 @@
   
   <exec_depend>message_runtime</exec_depend>
 
-  <test_depend>rostest</test_depend>
   <test_depend>rosbag</test_depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
 
 </package>
