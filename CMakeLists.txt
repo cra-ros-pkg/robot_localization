@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros)
 
 # Attempt to find Eigen using its own CMake module.
-# If that fails, fall back to cmake_modules pacakge.
+# If that fails, fall back to cmake_modules package.
 find_package(Eigen3)
 if(NOT EIGEN3_FOUND)
   find_package(cmake_modules REQUIRED)
@@ -159,7 +159,7 @@ if (CATKIN_ENABLE_TESTING)
   find_package(rosbag REQUIRED)
   find_package(rostest REQUIRED)
 
-  #### FILTER BASE TESTS #### 
+  #### FILTER BASE TESTS ####
   catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
   target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
 
