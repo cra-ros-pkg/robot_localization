@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RobotLocalization_RosFilterUtilities_h
-#define RobotLocalization_RosFilterUtilities_h
+#ifndef ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H
+#define ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
@@ -39,10 +39,11 @@
 
 #include <Eigen/Dense>
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <string>
 
-#define RF_DEBUG(msg) if(filter_.getDebug()) { debugStream_ << msg; }
+#define RF_DEBUG(msg) if (filter_.getDebug()) { debugStream_ << msg; }
 
 // Handy methods for debug output
 std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec);
@@ -51,50 +52,52 @@ std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans);
 
 namespace RobotLocalization
 {
-  namespace RosFilterUtilities
-  {
-    //! @brief Method for safely obtaining transforms.
-    //! @param[in] buffer - tf buffer object to use for looking up the transform
-    //! @param[in] targetFrame - The target frame of the desired transform
-    //! @param[in] sourceFrame - The source frame of the desired transform
-    //! @param[in] time - The time at which we want the transform
-    //! @param[out] targetFrameTrans - The resulting transform object
-    //! @return Sets the value of @p targetFrameTrans and returns true if successful,
-    //! false otherwise.
-    //!
-    //! This method attempts to obtain a transform from the @p sourceFrame to the @p
-    //! targetFrame at the specific @p time. If no transform is available at that time,
-    //! it attempts to simply obtain the latest transform. If that still fails, then the
-    //! method checks to see if the transform is going from a given frame_id to itself.
-    //! If any of these checks succeed, the method sets the value of @p targetFrameTrans
-    //! and returns true, otherwise it returns false.
-    //!
-    bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
-                             const std::string &targetFrame,
-                             const std::string &sourceFrame,
-                             const ros::Time &time,
-                             tf2::Transform &targetFrameTrans);
+namespace RosFilterUtilities
+{
 
-    //! @brief Utility method for converting quaternion to RPY
-    //! @param[in] quat - The quaternion to convert
-    //! @param[out] roll - The converted roll
-    //! @param[out] pitch - The converted pitch
-    //! @param[out] yaw - The converted yaw
-    //!
-    void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw);
+//! @brief Method for safely obtaining transforms.
+//! @param[in] buffer - tf buffer object to use for looking up the transform
+//! @param[in] targetFrame - The target frame of the desired transform
+//! @param[in] sourceFrame - The source frame of the desired transform
+//! @param[in] time - The time at which we want the transform
+//! @param[out] targetFrameTrans - The resulting transform object
+//! @return Sets the value of @p targetFrameTrans and returns true if successful,
+//! false otherwise.
+//!
+//! This method attempts to obtain a transform from the @p sourceFrame to the @p
+//! targetFrame at the specific @p time. If no transform is available at that time,
+//! it attempts to simply obtain the latest transform. If that still fails, then the
+//! method checks to see if the transform is going from a given frame_id to itself.
+//! If any of these checks succeed, the method sets the value of @p targetFrameTrans
+//! and returns true, otherwise it returns false.
+//!
+bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
+                         const std::string &targetFrame,
+                         const std::string &sourceFrame,
+                         const ros::Time &time,
+                         tf2::Transform &targetFrameTrans);
 
-    //! @brief Converts our Eigen state vector into a TF transform/pose
-    //! @param[in] state - The state to convert
-    //! @param[out] stateTF - The converted state
-    //!
-    void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF);
+//! @brief Utility method for converting quaternion to RPY
+//! @param[in] quat - The quaternion to convert
+//! @param[out] roll - The converted roll
+//! @param[out] pitch - The converted pitch
+//! @param[out] yaw - The converted yaw
+//!
+void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw);
 
-    //! @brief Converts a TF transform/pose into our Eigen state vector
-    //! @param[in] stateTF - The state to convert
-    //! @param[out] state - The converted state
-    //!
-    void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state);
-  }
-}
+//! @brief Converts our Eigen state vector into a TF transform/pose
+//! @param[in] state - The state to convert
+//! @param[out] stateTF - The converted state
+//!
+void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF);
 
-#endif
+//! @brief Converts a TF transform/pose into our Eigen state vector
+//! @param[in] stateTF - The state to convert
+//! @param[out] state - The converted state
+//!
+void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state);
+
+}  // namespace RosFilterUtilities
+}  // namespace RobotLocalization
+
+#endif  // ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H

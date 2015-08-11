@@ -1,90 +1,125 @@
+/*
+ * Copyright (c) 2015, Charles River Analytics, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
 
 #include <Eigen/Dense>
 
 #include <gtest/gtest.h>
-#include <queue>
+
 #include <iostream>
+#include <queue>
+#include <string>
+
+using RobotLocalization::STATE_SIZE;
+using RobotLocalization::Measurement;
 
 namespace RobotLocalization
 {
-  class FilterDerived : public FilterBase
-  {
-    public:
 
-      double val;
+class FilterDerived : public FilterBase
+{
+  public:
+    double val;
 
-      FilterDerived() : val(0) { }
+    FilterDerived() : val(0) { }
 
-      void correct(const Measurement &measurement)
+    void correct(const Measurement &measurement)
+    {
+      EXPECT_EQ(val, measurement.time_);
+      EXPECT_EQ(measurement.topicName_, "topic");
+
+      EXPECT_EQ(measurement.updateVector_.size(), 10);
+      for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
       {
-        EXPECT_EQ (val, measurement.time_);
-        EXPECT_EQ (measurement.topicName_, "topic");
-
-        EXPECT_EQ (measurement.updateVector_.size(), 10);
-        for(size_t i = 0; i < measurement.updateVector_.size(); ++i)
-        {
-          EXPECT_EQ (measurement.updateVector_[i], true);
-        }
+        EXPECT_EQ(measurement.updateVector_[i], true);
       }
+    }
 
-      void predict(const double delta)
-      {
-        val = delta;
-      }
-  };
+    void predict(const double delta)
+    {
+      val = delta;
+    }
+};
 
-  class FilterDerived2 : public FilterBase
-  {
-    public:
+class FilterDerived2 : public FilterBase
+{
+  public:
+    FilterDerived2() { }
 
-      FilterDerived2() { }
+    void correct(const Measurement &measurement)
+    {
+    }
 
-      void correct(const Measurement &measurement)
-      {
+    void predict(const double delta)
+    {
+    }
 
-      }
+    void processMeasurement(const Measurement &measurement)
+    {
+      FilterBase::processMeasurement(measurement);
+    }
+};
 
-      void predict(const double delta)
-      {
+}  // namespace RobotLocalization
 
-      }
-
-      void processMeasurement(const Measurement &measurement)
-      {
-        FilterBase::processMeasurement(measurement);
-      }
-  };
-}
-
-TEST (FilterBaseTest, MeasurementStruct)
+TEST(FilterBaseTest, MeasurementStruct)
 {
     RobotLocalization::Measurement meas1;
     RobotLocalization::Measurement meas2;
 
-    EXPECT_EQ (meas1.topicName_, std::string(""));
-    EXPECT_EQ (meas1.time_, 0);
-    EXPECT_EQ (meas2.time_, 0);
+    EXPECT_EQ(meas1.topicName_, std::string(""));
+    EXPECT_EQ(meas1.time_, 0);
+    EXPECT_EQ(meas2.time_, 0);
 
     // Comparison test is true if the first
     // argument is > the second, so should
     // be false if they're equal.
-    EXPECT_EQ (meas1(meas1, meas2), false);
-    EXPECT_EQ (meas2(meas2, meas1), false);
+    EXPECT_EQ(meas1(meas1, meas2), false);
+    EXPECT_EQ(meas2(meas2, meas1), false);
 
     meas1.time_ = 100;
     meas2.time_ = 200;
 
-    EXPECT_EQ (meas1(meas1, meas2), false);
-    EXPECT_EQ (meas1(meas2, meas1), true);
-    EXPECT_EQ (meas2(meas1, meas2), false);
-    EXPECT_EQ (meas2(meas2, meas1), true);
+    EXPECT_EQ(meas1(meas1, meas2), false);
+    EXPECT_EQ(meas1(meas2, meas1), true);
+    EXPECT_EQ(meas2(meas1, meas2), false);
+    EXPECT_EQ(meas2(meas2, meas1), true);
 }
 
-TEST (FilterBaseTest, DerivedFilterGetSet)
+TEST(FilterBaseTest, DerivedFilterGetSet)
 {
-    using namespace RobotLocalization;
+    using RobotLocalization::FilterDerived;
 
     FilterDerived derived;
 
@@ -114,9 +149,9 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
     EXPECT_EQ(derived.getLastMeasurementTime(), lastMeasTime);
 
     Eigen::MatrixXd pnCovar(STATE_SIZE, STATE_SIZE);
-    for(size_t i = 0; i < STATE_SIZE; ++i)
+    for (size_t i = 0; i < STATE_SIZE; ++i)
     {
-      for(size_t j = 0; j < STATE_SIZE; ++j)
+      for (size_t j = 0; j < STATE_SIZE; ++j)
       {
         pnCovar(i, j) = static_cast<double>(i * j);
       }
@@ -131,24 +166,24 @@ TEST (FilterBaseTest, DerivedFilterGetSet)
     EXPECT_EQ(derived.getInitializedStatus(), false);
 }
 
-TEST (FilterBaseTest, MeasurementProcessing)
+TEST(FilterBaseTest, MeasurementProcessing)
 {
-  using namespace RobotLocalization;
+  using RobotLocalization::FilterDerived2;
 
   FilterDerived2 derived;
 
   Measurement meas;
 
   Eigen::VectorXd measurement(STATE_SIZE);
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurement[i] = 0.1 * static_cast<double>(i);
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
-  for(size_t i = 0; i < STATE_SIZE; ++i)
+  for (size_t i = 0; i < STATE_SIZE; ++i)
   {
-    for(size_t j = 0; j < STATE_SIZE; ++j)
+    for (size_t j = 0; j < STATE_SIZE; ++j)
     {
       measurementCovariance(i, j) = 0.1 * static_cast<double>(i * j);
     }
