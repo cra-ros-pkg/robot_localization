@@ -66,9 +66,9 @@ std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans)
 
 namespace RobotLocalization
 {
-
 namespace RosFilterUtilities
 {
+
   bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                            const std::string &targetFrame,
                            const std::string &sourceFrame,
@@ -148,5 +148,4 @@ namespace RosFilterUtilities
   }
 
 }  // namespace RosFilterUtilities
-
 }  // namespace RobotLocalization
