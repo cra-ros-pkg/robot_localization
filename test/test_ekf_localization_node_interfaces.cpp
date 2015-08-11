@@ -1,3 +1,35 @@
+/*
+ * Copyright (c) 2015, Charles River Analytics, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "robot_localization/SetPose.h"
 
 #include <ros/ros.h>
@@ -24,7 +56,7 @@ void resetFilter()
   robot_localization::SetPose setPose;
   setPose.request.pose.pose.pose.orientation.w = 1;
   setPose.request.pose.header.frame_id = "odom";
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     setPose.request.pose.pose.covariance[ind] = 1e-6;
   }
@@ -40,7 +72,7 @@ void resetFilter()
   double deltaY = 0.0;
   double deltaZ = 0.0;
 
-  while(!stateUpdated_ || ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
+  while (!stateUpdated_ || ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
   {
     ros::spinOnce();
     ros::Duration(0.01).sleep();
@@ -59,7 +91,7 @@ void filterCallback(const nav_msgs::OdometryConstPtr &msg)
   stateUpdated_ = true;
 }
 
-TEST (InterfacesTest, OdomPoseBasicIO)
+TEST(InterfacesTest, OdomPoseBasicIO)
 {
   stateUpdated_ = false;
 
@@ -71,7 +103,7 @@ TEST (InterfacesTest, OdomPoseBasicIO)
   odom.pose.pose.position.x = 20.0;
   odom.pose.pose.position.y = 10.0;
   odom.pose.pose.position.z = -40.0;
-  
+
   odom.pose.covariance[0] = 2.0;
   odom.pose.covariance[7] = 2.0;
   odom.pose.covariance[14] = 2.0;
@@ -80,7 +112,7 @@ TEST (InterfacesTest, OdomPoseBasicIO)
   odom.child_frame_id = "base_link";
 
   ros::Rate loopRate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -93,17 +125,17 @@ TEST (InterfacesTest, OdomPoseBasicIO)
 
   // Now check the values from the callback
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x), 0.01);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.01); // Configuration for this variable for this sensor is false
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.01);  // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z), 0.01);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
-  EXPECT_LT(filtered_.pose.covariance[7], 0.25); // Configuration for this variable for this sensor is false
+  EXPECT_LT(filtered_.pose.covariance[7], 0.25);  // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter();
 }
 
-TEST (InterfacesTest, OdomTwistBasicIO)
+TEST(InterfacesTest, OdomTwistBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher odomPub = nh.advertise<nav_msgs::Odometry>("/odom_input2", 5);
@@ -117,7 +149,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   odom.twist.twist.angular.y = 0.0;
   odom.twist.twist.angular.z = 0.0;
 
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     odom.twist.covariance[ind] = 1e-6;
   }
@@ -126,7 +158,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   odom.child_frame_id = "base_link";
 
   ros::Rate loopRate(20);
-  for(size_t i = 0; i < 400; ++i)
+  for (size_t i = 0; i < 400; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -147,7 +179,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   odom.twist.twist.linear.y = 5.0;
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 200; ++i)
+  for (size_t i = 0; i < 200; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -168,7 +200,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   odom.twist.twist.linear.z = 5.0;
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -190,7 +222,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   odom.twist.twist.angular.z = (M_PI/2) / (100.0 * 0.05);
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -214,7 +246,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
 
   // First, roll the vehicle on its side
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -231,7 +263,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
 
   // Now, pitch it down (positive pitch velocity in vehicle frame)
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -250,7 +282,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   // the vehicle frame X direction, and make sure Y decreases in
   // the world frame.
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -268,7 +300,7 @@ TEST (InterfacesTest, OdomTwistBasicIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, PoseBasicIO)
+TEST(InterfacesTest, PoseBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher posePub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/pose_input0", 5);
@@ -283,7 +315,7 @@ TEST (InterfacesTest, PoseBasicIO)
   pose.pose.pose.orientation.z = 0;
   pose.pose.pose.orientation.w = 1;
 
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     pose.pose.covariance[ind] = 1e-6;
   }
@@ -291,7 +323,7 @@ TEST (InterfacesTest, PoseBasicIO)
   pose.header.frame_id = "odom";
 
   ros::Rate loopRate = ros::Rate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     pose.header.stamp = ros::Time::now();
     posePub.publish(pose);
@@ -304,17 +336,17 @@ TEST (InterfacesTest, PoseBasicIO)
 
   // Now check the values from the callback
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x), 0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.1); // Configuration for this variable for this sensor is false
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y), 0.1);  // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z), 0.1);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
-  EXPECT_LT(filtered_.pose.covariance[7], 0.25); // Configuration for this variable for this sensor is false
+  EXPECT_LT(filtered_.pose.covariance[7], 0.25);  // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter();
 }
 
-TEST (InterfacesTest, TwistBasicIO)
+TEST(InterfacesTest, TwistBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher twistPub = nh.advertise<geometry_msgs::TwistWithCovarianceStamped>("/twist_input0", 5);
@@ -328,7 +360,7 @@ TEST (InterfacesTest, TwistBasicIO)
   twist.twist.twist.angular.y = 0;
   twist.twist.twist.angular.z = 0;
 
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     twist.twist.covariance[ind] = 1e-6;
   }
@@ -336,7 +368,7 @@ TEST (InterfacesTest, TwistBasicIO)
   twist.header.frame_id = "base_link";
 
   ros::Rate loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 400; ++i)
+  for (size_t i = 0; i < 400; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -357,7 +389,7 @@ TEST (InterfacesTest, TwistBasicIO)
   twist.twist.twist.linear.y = 5.0;
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 200; ++i)
+  for (size_t i = 0; i < 200; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -378,7 +410,7 @@ TEST (InterfacesTest, TwistBasicIO)
   twist.twist.twist.linear.z = 5.0;
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -400,7 +432,7 @@ TEST (InterfacesTest, TwistBasicIO)
   twist.twist.twist.angular.z = (M_PI/2) / (100.0 * 0.05);
 
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -424,7 +456,7 @@ TEST (InterfacesTest, TwistBasicIO)
 
   // First, roll the vehicle on its side
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -441,7 +473,7 @@ TEST (InterfacesTest, TwistBasicIO)
 
   // Now, pitch it down (positive pitch velocity in vehicle frame)
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -460,7 +492,7 @@ TEST (InterfacesTest, TwistBasicIO)
   // the vehicle frame X direction, and make sure Y decreases in
   // the world frame.
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     twist.header.stamp = ros::Time::now();
     twistPub.publish(twist);
@@ -478,7 +510,7 @@ TEST (InterfacesTest, TwistBasicIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, ImuPoseBasicIO)
+TEST(InterfacesTest, ImuPoseBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher imuPub = nh.advertise<sensor_msgs::Imu>("/imu_input0", 5);
@@ -489,7 +521,7 @@ TEST (InterfacesTest, ImuPoseBasicIO)
   quat.setRPY(M_PI/4, -M_PI/4, M_PI/2);
   imu.orientation = tf2::toMsg(quat);
 
-  for(size_t ind = 0; ind < 9; ind+=4)
+  for (size_t ind = 0; ind < 9; ind+=4)
   {
     imu.orientation_covariance[ind] = 1e-6;
   }
@@ -499,7 +531,7 @@ TEST (InterfacesTest, ImuPoseBasicIO)
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
   ros::Rate loopRate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -526,7 +558,7 @@ TEST (InterfacesTest, ImuPoseBasicIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, ImuTwistBasicIO)
+TEST(InterfacesTest, ImuTwistBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher imuPub = nh.advertise<sensor_msgs::Imu>("/imu_input1", 5);
@@ -536,7 +568,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   tf2::Quaternion quat;
   imu.angular_velocity.x = (M_PI / 2.0);
 
-  for(size_t ind = 0; ind < 9; ind+=4)
+  for (size_t ind = 0; ind < 9; ind+=4)
   {
     imu.angular_velocity_covariance[ind] = 1e-6;
   }
@@ -544,7 +576,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   imu.header.frame_id = "base_link";
 
   ros::Rate loopRate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -577,7 +609,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
   loopRate = ros::Rate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -606,7 +638,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
   loopRate = ros::Rate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -630,7 +662,7 @@ TEST (InterfacesTest, ImuTwistBasicIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, ImuAccBasicIO)
+TEST(InterfacesTest, ImuAccBasicIO)
 {
   ros::NodeHandle nh;
   ros::Publisher imuPub = nh.advertise<sensor_msgs::Imu>("/imu_input2", 5);
@@ -649,7 +681,7 @@ TEST (InterfacesTest, ImuAccBasicIO)
   // Move with constant acceleration for 1 second,
   // then check our velocity.
   ros::Rate loopRate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -670,7 +702,7 @@ TEST (InterfacesTest, ImuAccBasicIO)
   // Now move for another second, and see where we
   // end up
   loopRate = ros::Rate(50);
-  for(size_t i = 0; i < 50; ++i)
+  for (size_t i = 0; i < 50; ++i)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -687,7 +719,7 @@ TEST (InterfacesTest, ImuAccBasicIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, OdomDifferentialIO)
+TEST(InterfacesTest, OdomDifferentialIO)
 {
   ros::NodeHandle nh;
   ros::Publisher odomPub = nh.advertise<nav_msgs::Odometry>("/odom_input1", 5);
@@ -715,7 +747,7 @@ TEST (InterfacesTest, OdomDifferentialIO)
   // a result of zeroing it out previously,
   // so check 10 times in succession.
   size_t zeroCount = 0;
-  while(zeroCount++ < 10)
+  while (zeroCount++ < 10)
   {
     odom.header.stamp = ros::Time::now();
     odomPub.publish(odom);
@@ -734,7 +766,7 @@ TEST (InterfacesTest, OdomDifferentialIO)
     odom.header.seq++;
   }
 
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     odom.pose.covariance[ind] = 1e-6;
   }
@@ -742,7 +774,7 @@ TEST (InterfacesTest, OdomDifferentialIO)
   // Slowly move the position, and hope that the
   // differential position keeps up
   ros::Rate loopRate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     odom.pose.pose.position.x += 0.01;
     odom.pose.pose.position.y += 0.02;
@@ -765,7 +797,7 @@ TEST (InterfacesTest, OdomDifferentialIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, PoseDifferentialIO)
+TEST(InterfacesTest, PoseDifferentialIO)
 {
   ros::NodeHandle nh;
   ros::Publisher posePub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/pose_input1", 5);
@@ -792,7 +824,7 @@ TEST (InterfacesTest, PoseDifferentialIO)
   // a result of zeroing it out previously,
   // so check 10 times in succession.
   size_t zeroCount = 0;
-  while(zeroCount++ < 10)
+  while (zeroCount++ < 10)
   {
     pose.header.stamp = ros::Time::now();
     posePub.publish(pose);
@@ -812,7 +844,7 @@ TEST (InterfacesTest, PoseDifferentialIO)
   }
 
   // ...but only if we give the measurement a tiny covariance
-  for(size_t ind = 0; ind < 36; ind+=7)
+  for (size_t ind = 0; ind < 36; ind+=7)
   {
     pose.pose.covariance[ind] = 1e-6;
   }
@@ -820,7 +852,7 @@ TEST (InterfacesTest, PoseDifferentialIO)
   // Issue this location repeatedly, and see if we get
   // a final reported position of (1, 2, -3)
   ros::Rate loopRate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     pose.pose.pose.position.x += 0.01;
     pose.pose.pose.position.y += 0.02;
@@ -843,7 +875,7 @@ TEST (InterfacesTest, PoseDifferentialIO)
   resetFilter();
 }
 
-TEST (InterfacesTest, ImuDifferentialIO)
+TEST(InterfacesTest, ImuDifferentialIO)
 {
   ros::NodeHandle nh;
   ros::Publisher imu0Pub = nh.advertise<sensor_msgs::Imu>("/imu_input0", 5);
@@ -869,11 +901,11 @@ TEST (InterfacesTest, ImuDifferentialIO)
   imu.angular_velocity_covariance[8] = 0.02;
 
   size_t setCount = 0;
-  while(setCount++ < 10)
+  while (setCount++ < 10)
   {
     imu.header.stamp = ros::Time::now();
-    imu0Pub.publish(imu); // Use this to move the absolute orientation
-    imu1Pub.publish(imu); // Use this to keep velocities at 0
+    imu0Pub.publish(imu);  // Use this to move the absolute orientation
+    imu1Pub.publish(imu);  // Use this to keep velocities at 0
     ros::spinOnce();
 
     ros::Duration(0.1).sleep();
@@ -882,7 +914,7 @@ TEST (InterfacesTest, ImuDifferentialIO)
   }
 
   size_t zeroCount = 0;
-  while(zeroCount++ < 10)
+  while (zeroCount++ < 10)
   {
     imu.header.stamp = ros::Time::now();
     imuPub.publish(imu);
@@ -900,7 +932,7 @@ TEST (InterfacesTest, ImuDifferentialIO)
   // Move the orientation slowly, and see if we
   // can push it to 0
   ros::Rate loopRate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     yawFinal -= 0.01 * (3.0 * M_PI/4.0);
 
@@ -920,7 +952,7 @@ TEST (InterfacesTest, ImuDifferentialIO)
   // Move the orientation slowly, and see if we
   // can push it to 0
   loopRate = ros::Rate(20);
-  for(size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 100; ++i)
   {
     rollFinal += 0.01 * (M_PI/2.0);
 
