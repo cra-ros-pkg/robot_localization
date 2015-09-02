@@ -276,7 +276,7 @@ namespace RobotLocalization
     zCoeff = -cy * sp * sr + sy * cr;
     double dF0dr = (yCoeff * yVel + zCoeff * zVel) * delta +
                    (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dF6dr = 1 + (yCoeff * rollVel + zCoeff * yawVel) * delta;
+    double dF6dr = 1 + (yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = -cy * sp;
     yCoeff = cy * cp * sr;
