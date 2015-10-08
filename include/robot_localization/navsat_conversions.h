@@ -195,7 +195,7 @@ static inline void LLtoUTM(const double Lat, const double Long,
   double N, T, C, A, M;
 
   // Make sure the longitude is between -180.00 .. 179.9
-  double LongTemp = (Long+180)-static_cast<int>(((Long+180)/360)*360-180);
+  double LongTemp = (Long+180)-static_cast<int>((Long+180)/360)*360-180;
 
   double LatRad = Lat*RADIANS_PER_DEGREE;
   double LongRad = LongTemp*RADIANS_PER_DEGREE;
