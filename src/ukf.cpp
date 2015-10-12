@@ -239,27 +239,28 @@ namespace RobotLocalization
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
     innovationSubset = (measurementSubset - predictedMeasurement);
 
+    // Wrap angles in the innovation
+    for (size_t i = 0; i < updateSize; ++i)
+    {
+      if (updateIndices[i] == StateMemberRoll  ||
+          updateIndices[i] == StateMemberPitch ||
+          updateIndices[i] == StateMemberYaw)
+      {
+        while (innovationSubset(i) < -PI)
+        {
+          innovationSubset(i) += TAU;
+        }
+
+        while (innovationSubset(i) > PI)
+        {
+          innovationSubset(i) -= TAU;
+        }
+      }
+    }
+
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
-      // Wrap angles in the innovation
-      for (size_t i = 0; i < updateSize; ++i)
-      {
-        if (updateIndices[i] == StateMemberRoll ||
-            updateIndices[i] == StateMemberPitch ||
-            updateIndices[i] == StateMemberYaw)
-        {
-          while (innovationSubset(i) < -PI)
-          {
-            innovationSubset(i) += TAU;
-          }
-
-          while (innovationSubset(i) > PI)
-          {
-            innovationSubset(i) -= TAU;
-          }
-        }
-      }
 
       state_.noalias() += kalmanGainSubset * innovationSubset;
 

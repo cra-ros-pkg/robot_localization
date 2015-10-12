@@ -162,29 +162,29 @@ namespace RobotLocalization
 
     innovationSubset = (measurementSubset - stateSubset);
 
+    // Wrap angles in the innovation
+    for (size_t i = 0; i < updateSize; ++i)
+    {
+      if (updateIndices[i] == StateMemberRoll  ||
+          updateIndices[i] == StateMemberPitch ||
+          updateIndices[i] == StateMemberYaw)
+      {
+        while (innovationSubset(i) < -PI)
+        {
+          innovationSubset(i) += TAU;
+        }
+
+        while (innovationSubset(i) > PI)
+        {
+          innovationSubset(i) -= TAU;
+        }
+      }
+    }
+    
     // (2) Check Mahalanobis distance between mapped measurement and state.
     if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisThresh_))
     {
       // (3) Apply the gain to the difference between the state and measurement: x = x + K(z - Hx)
-      // Wrap angles in the innovation
-      for (size_t i = 0; i < updateSize; ++i)
-      {
-        if (updateIndices[i] == StateMemberRoll ||
-            updateIndices[i] == StateMemberPitch ||
-            updateIndices[i] == StateMemberYaw)
-        {
-          while (innovationSubset(i) < -PI)
-          {
-            innovationSubset(i) += TAU;
-          }
-
-          while (innovationSubset(i) > PI)
-          {
-            innovationSubset(i) -= TAU;
-          }
-        }
-      }
-
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
       // (4) Update the estimate error covariance using the Joseph form: (I - KH)P(I - KH)' + KRK'
