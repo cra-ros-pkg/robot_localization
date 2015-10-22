@@ -346,6 +346,7 @@ namespace RobotLocalization
         utmTransformStamped.header.frame_id = worldFrameId_;
         utmTransformStamped.child_frame_id = "utm";
         utmTransformStamped.transform = tf2::toMsg(utmWorldTransform_);
+        utmTransformStamped.transform.translation.z = (zeroAltitude_ ? 0.0 : utmTransformStamped.transform.translation.z);
         utmBroadcaster_.sendTransform(utmTransformStamped);
       }
     }
