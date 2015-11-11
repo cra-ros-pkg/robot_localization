@@ -1535,6 +1535,14 @@ namespace RobotLocalization
 
     while (ros::ok())
     {
+      // The spin will call all the available callbacks and enqueue
+      // their received measurements
+      ros::spinOnce();
+
+      // Now we'll integrate any measurements we've received
+      ros::Time curTime = ros::Time::now();
+      integrateMeasurements(ros::Time::now().toSec());
+
       // Get latest state and publish it
       nav_msgs::Odometry filteredPosition;
 
@@ -1611,14 +1619,6 @@ namespace RobotLocalization
           freqDiag.tick();
         }
       }
-
-      // The spin will call all the available callbacks and enqueue
-      // their received measurements
-      ros::spinOnce();
-
-      // Now we'll integrate any measurements we've received
-      ros::Time curTime = ros::Time::now();
-      integrateMeasurements(ros::Time::now().toSec());
 
       /* Diagnostics can behave strangely when playing back from bag
        * files and using simulated time, so we have to check for
