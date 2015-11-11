@@ -1540,8 +1540,8 @@ namespace RobotLocalization
       ros::spinOnce();
 
       // Now we'll integrate any measurements we've received
-      ros::Time curTime = ros::Time::now();
-      integrateMeasurements(ros::Time::now().toSec());
+      curTime = ros::Time::now();
+      integrateMeasurements(curTime.toSec());
 
       // Get latest state and publish it
       nav_msgs::Odometry filteredPosition;
