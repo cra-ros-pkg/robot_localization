@@ -54,6 +54,7 @@ namespace RobotLocalization
       filter_(args),
       frequency_(30.0),
       lastSetPoseTime_(0),
+      messageFiltersEmpty_(true),
       nhLocal_("~"),
       printDiagnostics_(true),
       twoDMode_(false)
@@ -323,6 +324,7 @@ namespace RobotLocalization
 
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
         poseMessageFilters_[imuPoseTopicName]->add(pptr);
+        messageFiltersEmpty_ = false;
       }
     }
 
@@ -354,6 +356,7 @@ namespace RobotLocalization
 
         geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
         twistMessageFilters_[imuTwistTopicName]->add(tptr);
+        messageFiltersEmpty_ = false;
       }
     }
 
@@ -372,6 +375,7 @@ namespace RobotLocalization
         // actually have a good container message for it, so just pass
         // the IMU message on through a message filter.
         accelerationMessageFilters_[imuAccelTopicName]->add(msg);
+        messageFiltersEmpty_ = false;
       }
     }
 
@@ -1365,7 +1369,7 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::odometryCallback(const nav_msgs::Odometry::ConstPtr &msg,
-                                   const std::string &topicName)
+                                      const std::string &topicName)
   {
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
@@ -1387,6 +1391,7 @@ namespace RobotLocalization
 
       geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
       poseMessageFilters_[odomPoseTopicName]->add(pptr);
+      messageFiltersEmpty_ = false;
     }
 
     std::string odomTwistTopicName = topicName + "_twist";
@@ -1400,6 +1405,7 @@ namespace RobotLocalization
 
       geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
       twistMessageFilters_[odomTwistTopicName]->add(tptr);
+      messageFiltersEmpty_ = false;
     }
 
     RF_DEBUG("\n----- /RosFilter::odometryCallback (" << topicName << ") ------\n");
@@ -1538,6 +1544,12 @@ namespace RobotLocalization
       // The spin will call all the available callbacks and enqueue
       // their received measurements
       ros::spinOnce();
+
+      if(!messageFiltersEmpty_)
+      {
+        ros::spinOnce();
+        messageFiltersEmpty_ = true;
+      }
 
       // Now we'll integrate any measurements we've received
       curTime = ros::Time::now();

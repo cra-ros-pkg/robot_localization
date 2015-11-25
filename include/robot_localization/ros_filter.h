@@ -445,6 +445,12 @@ template<class T> class RosFilter
     //!
     MeasurementQueue measurementQueue_;
 
+    //! @brief If we receive an odometry or IMU message, we put it into a message
+    //! filter queue. Those won't get processed until the next spin cycle, but we
+    //! can detect that event and manually do a second spin.
+    //!
+    bool messageFiltersEmpty_;
+
     //! @brief Node handle
     //!
     ros::NodeHandle nh_;
