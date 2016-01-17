@@ -2100,7 +2100,29 @@ namespace RobotLocalization
         tf2::Vector3 normAcc(0, 0, 9.80665);
         tf2::Quaternion curAttitude;
         tf2::Transform trans;
-        tf2::fromMsg(msg->orientation, curAttitude);
+
+        if(::fabs(msg->orientation_covariance[0] + 1) < 1e-9)
+        {
+          // Imu message contains no orientation, so we should use orientation
+          // from filter state to transform and remove acceleration
+          const Eigen::VectorXd &state = filter_.getState();
+          tf2::Vector3 stateTmp(state(StateMemberRoll),
+                                state(StateMemberPitch),
+                                state(StateMemberYaw));
+          // transform state orientation to IMU frame
+          tf2::Transform imuFrameTrans;
+          RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                  msgFrame,
+                                                  targetFrame,
+                                                  msg->header.stamp,
+                                                  imuFrameTrans);
+          stateTmp = imuFrameTrans.getBasis() * stateTmp;
+          curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
+        }
+        else
+        {
+          tf2::fromMsg(msg->orientation, curAttitude);
+        }
         trans.setRotation(curAttitude);
         tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
         accTmp.setX(accTmp.getX() - rotNorm.getX());
@@ -2719,4 +2741,3 @@ namespace RobotLocalization
 // is placed in a .cpp file.
 template class RobotLocalization::RosFilter<RobotLocalization::Ekf>;
 template class RobotLocalization::RosFilter<RobotLocalization::Ukf>;
-
