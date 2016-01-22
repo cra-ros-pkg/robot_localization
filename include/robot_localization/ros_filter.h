@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -444,6 +444,12 @@ template<class T> class RosFilter
     //! iteration
     //!
     MeasurementQueue measurementQueue_;
+
+    //! @brief If we receive an odometry or IMU message, we put it into a message
+    //! filter queue. Those won't get processed until the next spin cycle, but we
+    //! can detect that event and manually do a second spin.
+    //!
+    bool messageFiltersEmpty_;
 
     //! @brief Node handle
     //!

@@ -27,7 +27,7 @@ if(NOT EIGEN3_FOUND)
   set(EIGEN3_LIBRARIES ${EIGEN_LIBRARIES})
 endif()
 
-add_definitions(-DEIGEN_NO_DEBUG)
+add_definitions(-DEIGEN_NO_DEBUG -DEIGEN_MPL2_ONLY)
 
 roslint_cpp()
 
