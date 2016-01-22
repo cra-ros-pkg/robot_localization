@@ -293,12 +293,18 @@ namespace RobotLocalization
     double yaw = state_(StateMemberYaw);
 
     // We'll need these trig calculations a lot.
-    double cr = cos(roll);
-    double cp = cos(pitch);
-    double cy = cos(yaw);
-    double sr = sin(roll);
-    double sp = sin(pitch);
-    double sy = sin(yaw);
+    double sp = 0.0;
+    double cp = 0.0;
+    ::sincos(pitch, &sp, &cp);
+
+    double sr = 0.0;
+    double cr = 0.0;
+    ::sincos(roll, &sr, &cr);
+
+    double sy = 0.0;
+    double cy = 0.0;
+    ::sincos(yaw, &sy, &cy);
+
 
     // Prepare the transfer function
     transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
