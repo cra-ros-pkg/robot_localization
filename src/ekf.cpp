@@ -226,7 +226,6 @@ namespace RobotLocalization
     double zAcc = state_(StateMemberAz);
 
     // We'll need these trig calculations a lot.
-
     double sp = 0.0;
     double cp = 0.0;
     ::sincos(pitch, &sp, &cp);
