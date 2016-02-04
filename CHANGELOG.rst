@@ -2,6 +2,24 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.2.2 (2016-02-04)
+------------------
+* Updating trig functions to use sincos for efficiency
+* Updating licensing information and adding Eigen MPL-only flag
+* Added state to imu frame transformation
+* Using state orientation if imu orientation is missing
+* Manually adding second spin for odometry and IMU data that is passed to message filters
+* Reducing delay between measurement reception and filter output
+* Zero altitute in intital transform too, when zero altitude param is set
+* Fixing regression with conversion back to GPS coordinates
+* Switched cropping of orientation data in inovationSubset with mahalanobis check to prevent excluding measurements with orientations bigger/smaller than ± PI
+* Fix Jacobian for EKF.
+* Removing warning about orientation variables when only their velocities are measured
+* Checking for -1 in IMU covariances and ignoring relevant message data
+* roslint and catkin_lint applied
+* Adding base_link to datum specification, and fixing bug with order of measurement handling when a datum is specified. Also added check to make sure IMU data is transformable before using it.
+* Contributors: Adnan Ademovic, Jit Ray Chowdhury, Philipp Tscholl, Tom Moore, ayrton04, kphil
+
 2.2.1 (2015-05-27)
 ------------------
 * Fixed handling of IMU data w.r.t. differential mode and relative mode
