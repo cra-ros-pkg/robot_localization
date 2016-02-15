@@ -33,7 +33,7 @@
 #ifndef ROBOT_LOCALIZATION_NAVSAT_TRANSFORM_H
 #define ROBOT_LOCALIZATION_NAVSAT_TRANSFORM_H
 
-#include "robot_localization/SetDatum.h"
+#include <robot_localization/SetDatum.h>
 
 #include <ros/ros.h>
 
@@ -69,6 +69,63 @@ class NavSatTransform
     void run();
 
   private:
+    //! @brief Computes the transform from the UTM frame to the odom frame
+    //!
+    void computeTransform();
+
+    //! @brief Callback for the datum service
+    //!
+    bool datumCallback(robot_localization::SetDatum::Request& request, robot_localization::SetDatum::Response&);
+
+    //! @brief Given the pose of the navsat sensor in the UTM frame, removes the offset from the vehicle's centroid
+    //! and returns the UTM-frame pose of said centroid.
+    //!
+    void getRobotOriginUtmPose(const tf2::Transform &gps_utm_pose,
+                               tf2::Transform &robot_utm_pose,
+                               const ros::Time &transform_time);
+
+    //! @brief Given the pose of the navsat sensor in the world frame, removes the offset from the vehicle's centroid
+    //! and returns the world-frame pose of said centroid.
+    //!
+    void getRobotOriginWorldPose(const tf2::Transform &gps_odom_pose,
+                                 tf2::Transform &robot_odom_pose,
+                                 const ros::Time &transform_time);
+
+    //! @brief Callback for the GPS fix data
+    //! @param[in] msg The NavSatFix message to process
+    //!
+    void gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg);
+
+    //! @brief Callback for the IMU data
+    //! @param[in] msg The IMU message to process
+    //!
+    void imuCallback(const sensor_msgs::ImuConstPtr& msg);
+
+    //! @brief Callback for the odom data
+    //! @param[in] msg The odometry message to process
+    //!
+    void odomCallback(const nav_msgs::OdometryConstPtr& msg);
+
+    //! @brief Converts the odometry data back to GPS and broadcasts it
+    //! @param[out] filtered_gps The NavSatFix message to prepare
+    //!
+    bool prepareFilteredGps(sensor_msgs::NavSatFix &filtered_gps);
+
+    //! @brief Prepares the GPS odometry message before sending
+    //! @param[out] gps_odom The odometry message to prepare
+    //!
+    bool prepareGpsOdometry(nav_msgs::Odometry &gps_odom);
+
+    //! @brief Used for setting the GPS data that will be used to compute the transform
+    //! @param[in] msg The NavSatFix message to use in the transform
+    //!
+    void setTransformGps(const sensor_msgs::NavSatFixConstPtr& msg);
+
+    //! @brief Used for setting the odometry data that will be used to compute the transform
+    //! @param[in] msg The odometry message to use in the transform
+    //!
+    void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
+
     //! @brief Frame ID of the robot's body frame
     //!
     //! This is needed for obtaining transforms from the robot's body frame to the frames of sensors (IMU and GPS)
@@ -78,6 +135,10 @@ class NavSatTransform
     //! @brief Whether or not we broadcast the UTM transform
     //!
     bool broadcast_utm_transform_;
+
+    //! @brief The frame_id of the GPS message (specifies mounting location)
+    //!
+    std::string gps_frame_id_;
 
     //! @brief Timestamp of the latest good GPS message
     //!
@@ -210,50 +271,6 @@ class NavSatTransform
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
     //!
     bool zero_altitude_;
-
-    //! @brief Computes the transform from the UTM frame to the odom frame
-    //!
-    void computeTransform();
-
-    //! @brief Callback for the datum service
-    //!
-    bool datumCallback(robot_localization::SetDatum::Request& request,
-                       robot_localization::SetDatum::Response&);
-
-    //! @brief Callback for the GPS fix data
-    //! @param[in] msg The NavSatFix message to process
-    //!
-    void gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg);
-
-    //! @brief Callback for the IMU data
-    //! @param[in] msg The IMU message to process
-    //!
-    void imuCallback(const sensor_msgs::ImuConstPtr& msg);
-
-    //! @brief Callback for the odom data
-    //! @param[in] msg The odometry message to process
-    //!
-    void odomCallback(const nav_msgs::OdometryConstPtr& msg);
-
-    //! @brief Converts the odometry data back to GPS and broadcasts it
-    //! @param[out] filtered_gps The NavSatFix message to prepare
-    //!
-    bool prepareFilteredGps(sensor_msgs::NavSatFix &filtered_gps);
-
-    //! @brief Prepares the GPS odometry message before sending
-    //! @param[out] gps_odom The odometry message to prepare
-    //!
-    bool prepareGpsOdometry(nav_msgs::Odometry &gps_odom);
-
-    //! @brief Used for setting the GPS data that will be used to compute the transform
-    //! @param[in] msg The NavSatFix message to use in the transform
-    //!
-    void setTransformGps(const sensor_msgs::NavSatFixConstPtr& msg);
-
-    //! @brief Used for setting the odometry data that will be used to compute the transform
-    //! @param[in] msg The odometry message to use in the transform
-    //!
-    void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
 };
 
 }  // namespace RobotLocalization
