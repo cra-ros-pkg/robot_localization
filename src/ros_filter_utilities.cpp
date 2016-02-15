@@ -69,6 +69,17 @@ namespace RobotLocalization
 namespace RosFilterUtilities
 {
 
+  double getYaw(const tf2::Quaternion quat)
+  {
+    tf2::Matrix3x3 mat(quat);
+
+    double dummy;
+    double yaw;
+    mat.getRPY(dummy, dummy, yaw);
+
+    return yaw;
+  }
+
   bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                            const std::string &targetFrame,
                            const std::string &sourceFrame,

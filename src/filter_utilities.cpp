@@ -106,21 +106,6 @@ namespace RobotLocalization
 
 namespace FilterUtilities
 {
-  double clampRotation(double rotation)
-  {
-    while (rotation > PI)
-    {
-      rotation -= TAU;
-    }
-
-    while (rotation < -PI)
-    {
-      rotation += TAU;
-    }
-
-    return rotation;
-  }
-
   void appendPrefix(std::string tfPrefix, std::string &frameId)
   {
     // Strip all leading slashes for tf2 compliance
@@ -139,6 +124,21 @@ namespace FilterUtilities
     {
       frameId = tfPrefix + "/" + frameId;
     }
+  }
+
+  double clampRotation(double rotation)
+  {
+    while (rotation > PI)
+    {
+      rotation -= TAU;
+    }
+
+    while (rotation < -PI)
+    {
+      rotation += TAU;
+    }
+
+    return rotation;
   }
 
 }  // namespace FilterUtilities
