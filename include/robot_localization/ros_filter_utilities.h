@@ -55,6 +55,8 @@ namespace RobotLocalization
 namespace RosFilterUtilities
 {
 
+double getYaw(const tf2::Quaternion quat);
+
 //! @brief Method for safely obtaining transforms.
 //! @param[in] buffer - tf buffer object to use for looking up the transform
 //! @param[in] targetFrame - The target frame of the desired transform
