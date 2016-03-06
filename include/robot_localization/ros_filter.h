@@ -63,6 +63,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include <deque>
 
 // Some typedefs for message filter shared pointers
 typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> > poseMFSubPtr;
@@ -75,6 +76,8 @@ namespace RobotLocalization
 {
 
 typedef std::priority_queue<Measurement, std::vector<Measurement>, Measurement> MeasurementQueue;
+typedef std::deque<Measurement> MeasurementHistoryDeque;
+typedef std::deque<FilterState> FilterStateHistoryDeque;
 
 template<class T> class RosFilter
 {
@@ -255,6 +258,19 @@ template<class T> class RosFilter
                        const double mahalanobisThresh);
 
   protected:
+    //! Finds the latest filter state before the given timestamp and makes it
+    //! the current state again. It also inserts all measurements between the 
+    //! older filter timestamp and now into the measurements queue.
+    //! @return True if restoring the filter succeeded. False if not.
+    bool restoreFilterAndMeasurementsBefore(const double t);
+
+    //! Saves the current filter state on in the queue of previous filter states
+    //! to be used in backwards smoothing in case older measurements come in.
+    void saveFilterState(FilterBase &filter);
+
+    //! Removes measurements and filter states older than the given timestamp.
+    void removeHistoryStatesAndMeasurementsOlderThan(const double t);
+
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
     //! @param[in] errLevel - The error level of the diagnostic
     //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
@@ -544,6 +560,12 @@ template<class T> class RosFilter
     //!
     bool twoDMode_;
 
+    //! @brief: The smoothing window time in milliseconds.
+    //!
+    //! This is the guaranteed minimum buffer size for which previous
+    //! states and measurements are kept. 
+    int filterHistoryInterval_;
+ 
     //! @brief Message that contains our latest transform (i.e., state)
     //!
     //! We use the vehicle's latest state in a number of places, and often
@@ -555,6 +577,19 @@ template<class T> class RosFilter
     //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
     //!
     std::string worldFrameId_;
+
+
+    //! @brief An implicitly time ordered queue of past filter states used for smoothing.
+    //
+    // front() refers to the filter state with the earliest timestamp.
+    // back() referst to the filter state with the latest timestamp.
+    FilterStateHistoryDeque filterStateHistory_;
+
+    //! @brief A deque of previous measurements which is implicitly ordered from earliest to latest measurement.
+    // when popped from the measurement priority queue.
+    // front() refers to the measurement with the earliest timestamp.
+    // back() referst to the measurement with the latest timestamp.
+    MeasurementHistoryDeque measurementHistory_;
 };
 
 }  // namespace RobotLocalization

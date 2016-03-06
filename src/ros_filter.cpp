@@ -57,7 +57,8 @@ namespace RobotLocalization
       messageFiltersEmpty_(true),
       nhLocal_("~"),
       printDiagnostics_(true),
-      twoDMode_(false)
+      twoDMode_(false),
+      filterHistoryInterval_(0)
   {
     stateVariableNames_.push_back("X");
     stateVariableNames_.push_back("Y");
@@ -392,13 +393,45 @@ namespace RobotLocalization
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
     {
+      // If smoothing is enabled and the earliest measurement is older than
+      // the current filter state try to reset filter and measurement queue
+      // to a time earlier than the earliest measurement.
+      const Measurement& oldest_measurement = measurementQueue_.top();
+      if (filterHistoryInterval_ > 0 &&
+          oldest_measurement.time_ < filter_.getLastMeasurementTime())
+      {
+        const double time_difference = (oldest_measurement.time_ - filter_.getLastMeasurementTime());
+        RF_DEBUG("Smoothing: Measurement" << oldest_measurement.topicName_ << " is " << -time_difference << " seconds behind filter state. Begin smoothing update.\n");
+        const bool success = restoreFilterAndMeasurementsBefore(oldest_measurement.time_);
+        if (!success)
+        {
+          RF_DEBUG("FATAL ERROR: Time difference too big to reset filter! Diff is : " << time_difference << "\n");
+        }
+      }
+
+
       while (!measurementQueue_.empty())
       {
         Measurement measurement = measurementQueue_.top();
         measurementQueue_.pop();
 
+        if (filterHistoryInterval_ > 0)
+        {
+          // Invariant still holds: measurementHistoryDeque_.back().time_ < measurementQueue_.top().time_
+          measurementHistory_.push_back(measurement);
+        }
+
         // This will call predict and, if necessary, correct
         filter_.processMeasurement(measurement);
+
+        // Only save one filter state for exactly one timestamp each.
+        // So wait with saving the state until all measurements with the same
+        // timestamp have been processed.
+        if (filterHistoryInterval_ > 0 &&
+            (measurementQueue_.empty() || measurementQueue_.top().time_ > filter_.getLastMeasurementTime()))
+        {
+          saveFilterState(filter_);
+        }
       }
 
       filter_.setLastUpdateTime(currentTime);
@@ -557,6 +590,9 @@ namespace RobotLocalization
     // Determine if we're in 2D mode
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
+    // Smoothing window size.
+    nhLocal_.param("filter_history_interval", filterHistoryInterval_, 0);
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -567,6 +603,7 @@ namespace RobotLocalization
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
+             "\nfilter_history_interval is " << filterHistoryInterval_ <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
     // Create a subscriber for manually setting/resetting pose
@@ -1541,6 +1578,14 @@ namespace RobotLocalization
 
     while (ros::ok())
     {
+      // Each second we remove old states and measurements from the queue.
+      static int flush_counter = 0;
+      flush_counter++;
+      if (flush_counter > frequency_)
+      {
+        removeHistoryStatesAndMeasurementsOlderThan(filter_.getLastMeasurementTime()-double(double(filterHistoryInterval_)/1000.0));
+      }
+
       // The spin will call all the available callbacks and enqueue
       // their received measurements
       ros::spinOnce();
@@ -2746,6 +2791,87 @@ namespace RobotLocalization
     RF_DEBUG("\n----- /RosFilter::prepareTwist (" << topicName << ") ------\n");
 
     return canTransform;
+  }
+
+  template<typename T>
+  void RosFilter<T>::saveFilterState(FilterBase& filter)
+  {
+    FilterState state;
+    state.state_ = filter.getState();
+    state.estimate_error_covariance_ = filter.getEstimateErrorCovariance();
+    state.time_ = filter.getLastMeasurementTime();
+    filterStateHistory_.push_back(state);
+    ros::Time ts;
+    ts.fromSec(state.time_);
+    RF_DEBUG("\n---- RosFilter::saveFilterState for timestamp " << ts << " size = " << filterStateHistory_.size() << "----\n");
+  }
+
+  template<typename T>
+  bool RosFilter<T>::restoreFilterAndMeasurementsBefore(const double t)
+  {
+    RF_DEBUG("\n----- RosFilter::restoreFilterAndMeasurementsBefore (" << t << ") -----\n");
+    // Remove all filter states older than t. This yields either the latest
+    // filter state before t or an empty queue. In that case the smoothing
+    // window is too small and we cannot reset the filter.
+    //
+
+    int num_popped_filter_updates = 0;
+    while (!filterStateHistory_.empty()
+        && filterStateHistory_.back().time_ > t)
+    {
+      filterStateHistory_.pop_back();
+      num_popped_filter_updates++;
+    }
+    RF_DEBUG("\n---- Popped " << num_popped_filter_updates << " filter updates. Queue is empty/size? " << filterStateHistory_.empty() << "/" << filterStateHistory_.size() << "\n");
+
+    if (filterStateHistory_.empty()) return false;
+
+    // Reset filter to the latest state from the queue.
+    const FilterState &old = filterStateHistory_.back();
+    filter_.setState(old.state_);
+    filter_.setEstimateErrorCovariance(old.estimate_error_covariance_);
+    filter_.setLastMeasurementTime(old.time_);
+
+    // Find all measurements from the history whose timestamp is > t
+    // and push them to the measurements queue for integration.
+    // This re-establishes our invariant: measurementHistory_.back().time_ < measurementQueue_.top()
+    while (!measurementHistory_.empty()
+           && measurementHistory_.back().time_ > t)
+    {
+      measurementQueue_.push(measurementHistory_.back());
+      measurementHistory_.pop_back();
+    }
+
+    RF_DEBUG("\n----- Restored measurement queue has " << measurementQueue_.size() << " entries now.\n");
+
+    RF_DEBUG("\n----- /RosFilter::restoreFilterAndMeasurementsBefore\n");
+
+    return true;
+  }
+
+  template<typename T>
+  void RosFilter<T>::removeHistoryStatesAndMeasurementsOlderThan(const double t)
+  {
+    int debug_popped_measurements = 0;
+    int debug_popped_states = 0;
+
+    while (!measurementHistory_.empty()
+        && measurementHistory_.front().time_ < t)
+    {
+      debug_popped_measurements++;
+      measurementHistory_.pop_front();
+    }
+
+    while (!filterStateHistory_.empty()
+           && filterStateHistory_.front().time_ < t)
+    {
+      debug_popped_states++;
+      filterStateHistory_.pop_front();
+    }
+    ros::Time ts; ts.fromSec(t);
+    RF_DEBUG("\n---- /RosFilter::removeHistoryStatesAndMeasurementsOlderThan "
+       << debug_popped_states << "/" << debug_popped_measurements
+      << " older than " << ts << "----\n" );
   }
 }  // namespace RobotLocalization
 

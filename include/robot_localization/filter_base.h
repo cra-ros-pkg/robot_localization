@@ -91,6 +91,31 @@ struct Measurement
   }
 };
 
+struct FilterState
+{
+
+  Eigen::VectorXd state_;
+
+  Eigen::MatrixXd estimate_error_covariance_;
+
+  double last_update_time_;
+
+  double time_;
+
+  // We want the queue to be sorted from latest to earliest timestamps. 
+  bool operator()(const FilterState &a, const FilterState &b)
+  {
+    return a.time_ < b.time_;
+  }
+
+  FilterState() :
+    state_(),
+    estimate_error_covariance_(),
+    last_update_time_(0),
+    time_(0)
+  {}
+};
+
 class FilterBase
 {
   public:
@@ -242,6 +267,8 @@ class FilterBase
     void validateDelta(double &delta);
 
   protected:
+
+
     //! @brief Keeps the state Euler angles in the range [-pi, pi]
     //!
     virtual void wrapStateAngles();
