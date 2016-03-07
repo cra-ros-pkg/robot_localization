@@ -591,7 +591,13 @@ namespace RobotLocalization
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
     // Smoothing window size.
-    nhLocal_.param("filter_history_interval", filterHistoryInterval_, 0);
+    //
+    // Internally stored in ms because checking double values to be exactly zero is unreliable.
+    {
+      double filter_history_interval_seconds = 0.;
+      nhLocal_.param("filter_history_interval", filter_history_interval_seconds, 0.);
+      filterHistoryInterval_ = int(filter_history_interval_seconds*1000);
+    }
 
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
