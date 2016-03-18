@@ -988,28 +988,11 @@ namespace RobotLocalization
                        poseMahalanobisThresh,
                        std::numeric_limits<double>::max());
 
-        // Check for angular velocity rejection threshold. Handle deprecated name.
+        // Check for angular velocity rejection threshold
         double twistMahalanobisThresh;
-        std::string correctImuTwistRejectionName =
+        std::string imuTwistRejectionName =
           imuTopicName + std::string("_twist_rejection_threshold");
-        std::string deprecatedImuTwistRejectionName =
-          imuTopicName + std::string("_angular_velocity_rejection_threshold");
-
-        if (nhLocal_.hasParam(correctImuTwistRejectionName))
-        {
-          nhLocal_.param(correctImuTwistRejectionName, twistMahalanobisThresh, std::numeric_limits<double>::max());
-        }
-        else if (nhLocal_.hasParam(deprecatedImuTwistRejectionName))
-        {
-          nhLocal_.param(deprecatedImuTwistRejectionName, twistMahalanobisThresh, std::numeric_limits<double>::max());
-
-          ROS_WARN_STREAM("Detected deprecated parameter " << deprecatedImuTwistRejectionName << ". Please use " <<
-                          correctImuTwistRejectionName << " intstead.");
-        }
-        else
-        {
-          twistMahalanobisThresh = std::numeric_limits<double>::max();
-        }
+        nhLocal_.param(imuTwistRejectionName, twistMahalanobisThresh, std::numeric_limits<double>::max());
 
         // Check for acceleration rejection threshold
         double accelMahalanobisThresh;
@@ -1018,14 +1001,7 @@ namespace RobotLocalization
                        std::numeric_limits<double>::max());
 
         bool removeGravAcc = false;
-        if (!nhLocal_.getParam(imuTopicName + "_remove_gravitational_acceleration", removeGravAcc))
-        {
-          // Handle deprecated method
-          nhLocal_.param("remove_gravitational_acceleration", removeGravAcc, false);
-
-          ROS_WARN_STREAM("Detected deprecated parameter remove_gravitational_acceleration. Please specify this " <<
-                          "parameter for each IMU, e.g., " << imuTopicName + "_remove_gravitational_acceleration");
-        }
+        nhLocal_.param(imuTopicName + "_remove_gravitational_acceleration", removeGravAcc, false);
         removeGravitationalAcc_[imuTopicName + "_acceleration"] = removeGravAcc;
 
         // Now pull in its boolean update vector configuration and differential
@@ -1254,21 +1230,6 @@ namespace RobotLocalization
         ROS_ASSERT(processNoiseCovarConfig.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
         int matSize = processNoiseCovariance.rows();
-
-        ///////////////////////// HANDLE DEPRECATED PROCESS NOISE COVARIANCE DIMENSIONS /////////////////////////
-        if (processNoiseCovarConfig.size() != matSize * matSize)
-        {
-          if (::fabs(::sqrt(processNoiseCovarConfig.size()) - 12) < 0.1)
-          {
-            ROS_WARN_STREAM("Process_noise_covariance matrix should have " << matSize * matSize << " values.");
-            matSize = 12;
-          }
-          else
-          {
-            ROS_FATAL_STREAM("Process_noise_covariance matrix must have " << matSize * matSize << " values.");
-          }
-        }
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         for (int i = 0; i < matSize; i++)
         {
