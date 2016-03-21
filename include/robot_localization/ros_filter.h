@@ -33,10 +33,11 @@
 #ifndef ROBOT_LOCALIZATION_ROS_FILTER_H
 #define ROBOT_LOCALIZATION_ROS_FILTER_H
 
-#include "robot_localization/ros_filter_utilities.h"
-#include "robot_localization/filter_common.h"
-#include "robot_localization/filter_base.h"
-#include "robot_localization/SetPose.h"
+#include "ros_filter_utilities.h"
+#include "filter_common.h"
+#include "filter_base.h"
+
+#include <robot_localization/SetPose.h>
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -64,15 +65,57 @@
 #include <string>
 #include <vector>
 
-// Some typedefs for message filter shared pointers
-typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> > poseMFSubPtr;
-typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped> > twistMFSubPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped> > poseMFPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped> > twistMFPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<sensor_msgs::Imu> > imuMFPtr;
-
 namespace RobotLocalization
 {
+
+struct CallbackData
+{
+  CallbackData(const std::string &poseTopicName,
+               const std::string &twistTopicName,
+               const std::string &accelTopicName,
+               const std::vector<int> &poseUpdateVector,
+               const std::vector<int> &twistUpdateVector,
+               const std::vector<int> &accelUpdateVector,
+               const int poseUpdateSum,
+               const int twistUpdateSum,
+               const int accelUpdateSum,
+               const bool differential,
+               const bool relative,
+               const double poseMahalanobisThresh,
+               const double twistMahalanobisThresh,
+               const double accelMahalanobisThresh) :
+    poseTopicName_(poseTopicName),
+    twistTopicName_(twistTopicName),
+    accelTopicName_(accelTopicName),
+    poseUpdateVector_(poseUpdateVector),
+    twistUpdateVector_(twistUpdateVector),
+    accelUpdateVector_(accelUpdateVector),
+    poseUpdateSum_(poseUpdateSum),
+    twistUpdateSum_(twistUpdateSum),
+    accelUpdateSum_(accelUpdateSum),
+    differential_(differential),
+    relative_(relative),
+    poseMahalanobisThresh_(poseMahalanobisThresh),
+    twistMahalanobisThresh_(twistMahalanobisThresh),
+    accelMahalanobisThresh_(accelMahalanobisThresh)
+  {
+  }
+
+  std::string poseTopicName_;
+  std::string twistTopicName_;
+  std::string accelTopicName_;
+  std::vector<int> poseUpdateVector_;
+  std::vector<int> twistUpdateVector_;
+  std::vector<int> accelUpdateVector_;
+  int poseUpdateSum_;
+  int twistUpdateSum_;
+  int accelUpdateSum_;
+  bool differential_;
+  bool relative_;
+  double poseMahalanobisThresh_;
+  double twistMahalanobisThresh_;
+  double accelMahalanobisThresh_;
+};
 
 typedef std::priority_queue<Measurement, std::vector<Measurement>, Measurement> MeasurementQueue;
 
@@ -94,16 +137,12 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] topicName - The name of the IMU topic
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
     //!
     void accelerationCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                              const std::string &topicName,
-                              const std::string &targetFrame,
-                              const std::vector<int> &updateVector,
-                              const double mahalanobisThresh);
+                              const CallbackData &callbackData,
+                              const std::string &targetFrame);
 
     //! @brief Adds a measurement to the queue of measurements to be processed
     //!
@@ -142,13 +181,12 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] topicName - The name of the IMU data topic (we support many)
+    //! @param[in] callbackData - Relevant static callback data
     //!
     //! This method really just separates out the absolute orientation and velocity data into two new
     //! messages and adds them to their respective pose and twist callback message filters.
     //!
-    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                     const std::string &topicName);
+    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const CallbackData &callbackData);
 
     //! @brief Processes all measurements in the measurement queue, in temporal order
     //!
@@ -162,30 +200,23 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all odometry messages
     //! @param[in] msg - The ROS odometry message to take in.
-    //! @param[in] topicName - The name of the odometry topic (we support many)
+    //! @param[in] callbackData - Relevant static callback data
     //!
-    //! This method really just separates out the pose and twist data into two new messages, and passes
-    //! them to their respective callbacks
+    //! This method simply separates out the pose and twist data into two new messages, and passes them into their
+    //! respective callbacks
     //!
-    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg,
-                          const std::string &topicName);
+    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const CallbackData &callbackData);
 
     //! @brief Callback method for receiving all pose messages
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
-    //! @param[in] topicName - The name of the pose topic (we support many)
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] differential - Whether we integrate the pose portions of this message differentially
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] imuData - Whether this data comes from an IMU
     //!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                      const std::string &topicName,
+                      const CallbackData &callbackData,
                       const std::string &targetFrame,
-                      const std::vector<int> &updateVector,
-                      const bool differential,
-                      const bool relative,
-                      const bool imuData,
-                      const double mahalanobisThresh);
+                      const bool imuData);
 
     //! @brief Main run method
     //!
@@ -208,51 +239,14 @@ template<class T> class RosFilter
     //! @return a string explanation of the failure
     std::string tfFailureReasonString(const tf2_ros::FilterFailureReason reason);
 
-    //! @brief Callback method for reporting failed IMU message transforms
-    //! @param[in] msg - The ROS IMU message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the IMU topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformImuFailureCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                                     const tf2_ros::FilterFailureReason reason,
-                                     const std::string &topicName,
-                                     const std::string &targetFrame);
-
-    //! @brief Callback method for reporting failed Pose message transforms
-    //! @param[in] msg - The ROS stamped pose with covariance message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the pose topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformPoseFailureCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                      const tf2_ros::FilterFailureReason reason,
-                                      const std::string &topicName,
-                                      const std::string &targetFrame);
-
-    //! @brief Callback method for reporting failed Twist message transforms
-    //! @param[in] msg - The ROS stamped twist with covariance message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the twist topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformTwistFailureCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                                       const tf2_ros::FilterFailureReason reason,
-                                       const std::string &topicName,
-                                       const std::string &targetFrame);
-
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
-    //! @param[in] topicName - The name of the twist topic (we support many)
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
     //!
     void twistCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                       const std::string &topicName,
-                       const std::string &targetFrame,
-                       const std::vector<int> &updateVector,
-                       const double mahalanobisThresh);
+                       const CallbackData &callbackData,
+                       const std::string &targetFrame);
 
   protected:
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
@@ -357,10 +351,6 @@ template<class T> class RosFilter
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
 
-    //! @brief Vector to hold our acceleration (represented as IMU) message filters so they don't go out of scope.
-    //!
-    std::map<std::string, imuMFPtr> accelerationMessageFilters_;
-
     //! @brief tf frame name for the robot's body frame
     //!
     std::string baseLinkFrameId_;
@@ -399,10 +389,9 @@ template<class T> class RosFilter
     //!
     double frequency_;
 
-    //! @brief Vector to hold our IMU message filter subscriber objects so they
-    //! don't go out of scope.
+    //! @brief Vector to hold our subscribers until they go out of scope
     //!
-    std::vector<ros::Subscriber> imuTopicSubs_;
+    std::vector<ros::Subscriber> topicSubs_;
 
     //! @brief Stores the first measurement from each topic for relative measurements
     //!
@@ -445,12 +434,6 @@ template<class T> class RosFilter
     //!
     MeasurementQueue measurementQueue_;
 
-    //! @brief If we receive an odometry or IMU message, we put it into a message
-    //! filter queue. Those won't get processed until the next spin cycle, but we
-    //! can detect that event and manually do a second spin.
-    //!
-    bool messageFiltersEmpty_;
-
     //! @brief Node handle
     //!
     ros::NodeHandle nh_;
@@ -462,18 +445,6 @@ template<class T> class RosFilter
     //! @brief tf frame name for the robot's odometry (world-fixed) frame
     //!
     std::string odomFrameId_;
-
-    //! @brief Vector to hold our odometry message filter subscriber objects so they don't go out of scope.
-    //!
-    std::vector<ros::Subscriber> odomTopicSubs_;
-
-    //! @brief Vector to hold our pose message filters so they don't go out of scope.
-    //!
-    std::map<std::string, poseMFPtr> poseMessageFilters_;
-
-    //! @brief Vector to hold our pose message filter subscriber objects so they don't go out of scope.
-    //!
-    std::vector<poseMFSubPtr> poseTopicSubs_;
 
     //! @brief Stores the last measurement from a given topic for differential integration
     //!
@@ -526,15 +497,6 @@ template<class T> class RosFilter
     //! @brief For future (or past) dating the world_frame->base_link_frame transform
     //!
     ros::Duration tfTimeOffset_;
-
-    //! @brief Vector to hold our twist message filters so they don't go out of scope.
-    //!
-    std::map<std::string, twistMFPtr> twistMessageFilters_;
-
-    //! @brief Vector to hold our twist message filter subscriber objects so they
-    //! don't go out of scope.
-    //!
-    std::vector<twistMFSubPtr>  twistTopicSubs_;
 
     //! @brief Whether or not we're in 2D mode
     //!
