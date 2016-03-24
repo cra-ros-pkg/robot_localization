@@ -33,9 +33,9 @@
 #ifndef ROBOT_LOCALIZATION_ROS_FILTER_H
 #define ROBOT_LOCALIZATION_ROS_FILTER_H
 
-#include "ros_filter_utilities.h"
-#include "filter_common.h"
-#include "filter_base.h"
+#include "robot_localization/ros_filter_utilities.h"
+#include "robot_localization/filter_common.h"
+#include "robot_localization/filter_base.h"
 
 #include <robot_localization/SetPose.h>
 
