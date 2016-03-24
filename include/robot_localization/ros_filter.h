@@ -70,51 +70,27 @@ namespace RobotLocalization
 
 struct CallbackData
 {
-  CallbackData(const std::string &poseTopicName,
-               const std::string &twistTopicName,
-               const std::string &accelTopicName,
-               const std::vector<int> &poseUpdateVector,
-               const std::vector<int> &twistUpdateVector,
-               const std::vector<int> &accelUpdateVector,
-               const int poseUpdateSum,
-               const int twistUpdateSum,
-               const int accelUpdateSum,
+  CallbackData(const std::string &topicName,
+               const std::vector<int> &updateVector,
+               const int updateSum,
                const bool differential,
                const bool relative,
-               const double poseMahalanobisThresh,
-               const double twistMahalanobisThresh,
-               const double accelMahalanobisThresh) :
-    poseTopicName_(poseTopicName),
-    twistTopicName_(twistTopicName),
-    accelTopicName_(accelTopicName),
-    poseUpdateVector_(poseUpdateVector),
-    twistUpdateVector_(twistUpdateVector),
-    accelUpdateVector_(accelUpdateVector),
-    poseUpdateSum_(poseUpdateSum),
-    twistUpdateSum_(twistUpdateSum),
-    accelUpdateSum_(accelUpdateSum),
+               const double rejectionThreshold) :
+    topicName_(topicName),
+    updateVector_(updateVector),
+    updateSum_(updateSum_),
     differential_(differential),
     relative_(relative),
-    poseMahalanobisThresh_(poseMahalanobisThresh),
-    twistMahalanobisThresh_(twistMahalanobisThresh),
-    accelMahalanobisThresh_(accelMahalanobisThresh)
+    rejectionThreshold_(rejectionThreshold)
   {
   }
 
-  std::string poseTopicName_;
-  std::string twistTopicName_;
-  std::string accelTopicName_;
-  std::vector<int> poseUpdateVector_;
-  std::vector<int> twistUpdateVector_;
-  std::vector<int> accelUpdateVector_;
-  int poseUpdateSum_;
-  int twistUpdateSum_;
-  int accelUpdateSum_;
+  std::string topicName_;
+  std::vector<int> updateVector_;
+  int updateSum_;
   bool differential_;
   bool relative_;
-  double poseMahalanobisThresh_;
-  double twistMahalanobisThresh_;
-  double accelMahalanobisThresh_;
+  double rejectionThreshold_;
 };
 
 typedef std::priority_queue<Measurement, std::vector<Measurement>, Measurement> MeasurementQueue;
@@ -181,12 +157,17 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] topicName - The topic name for the IMU message (only used for debug output)
+    //! @param[in] poseCallbackData - Relevant static callback data for orientation variables
+    //! @param[in] twistCallbackData - Relevant static callback data for angular velocity variables
+    //! @param[in] accelCallbackData - Relevant static callback data for linear acceleration variables
     //!
-    //! This method really just separates out the absolute orientation and velocity data into two new
-    //! messages and adds them to their respective pose and twist callback message filters.
+    //! This method separates out the orientation, angular velocity, and linear acceleration data and
+    //! passed each on to its respective callback.
     //!
-    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const CallbackData &callbackData);
+    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const std::string &topicName,
+      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData,
+      const CallbackData &accelCallbackData);
 
     //! @brief Processes all measurements in the measurement queue, in temporal order
     //!
@@ -200,12 +181,15 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all odometry messages
     //! @param[in] msg - The ROS odometry message to take in.
-    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] topicName - The topic name for the odometry message (only used for debug output)
+    //! @param[in] poseCallbackData - Relevant static callback data for pose variables
+    //! @param[in] twistCallbackData - Relevant static callback data for twist variables
     //!
     //! This method simply separates out the pose and twist data into two new messages, and passes them into their
     //! respective callbacks
     //!
-    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const CallbackData &callbackData);
+    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const std::string &topicName,
+      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData);
 
     //! @brief Callback method for receiving all pose messages
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -320,6 +304,8 @@ template<class T> class RosFilter
     //! @param[in] topicName - The name of the topic over which this message was received
     //! @param[in] targetFrame - The target tf frame
     //! @param[in] differential - Whether we're carrying out differential integration
+    //! @param[in] relative - Whether this measurement is processed relative to the first
+    //! @param[in] imuData - Whether this measurement is from an IMU
     //! @param[in,out] updateVector - The update vector for the data source
     //! @param[out] measurement - The pose data converted to a measurement
     //! @param[out] measurementCovariance - The covariance of the converted measurement

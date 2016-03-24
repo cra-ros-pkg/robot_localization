@@ -30,10 +30,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../include/robot_localization/ros_filter.h"
-#include "../include/robot_localization/filter_utilities.h"
-#include "../include/robot_localization/ekf.h"
-#include "../include/robot_localization/ukf.h"
+#include "robot_localization/ros_filter.h"
+#include "robot_localization/filter_utilities.h"
+#include "robot_localization/ekf.h"
+#include "robot_localization/ukf.h"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -95,7 +95,7 @@ namespace RobotLocalization
       return;
     }
 
-    const std::string &topicName = callbackData.accelTopicName_;
+    const std::string &topicName = callbackData.topicName_;
 
     RF_DEBUG("------ RosFilter::accelerationCallback (" << topicName << ") ------\n"
              "Twist message:\n" << *msg);
@@ -117,7 +117,7 @@ namespace RobotLocalization
       measurementCovariance.setZero();
 
       // Make sure we're actually updating at least one of these variables
-      std::vector<int> updateVectorCorrected = callbackData.accelUpdateVector_;
+      std::vector<int> updateVectorCorrected = callbackData.updateVector_;
 
       // Prepare the twist data for inclusion in the filter
       if (prepareAcceleration(msg, topicName, targetFrame, updateVectorCorrected, measurement,
@@ -129,7 +129,7 @@ namespace RobotLocalization
                            measurement,
                            measurementCovariance,
                            updateVectorCorrected,
-                           callbackData.accelMahalanobisThresh_,
+                           callbackData.rejectionThreshold_,
                            msg->header.stamp);
 
         RF_DEBUG("Enqueued new measurement for " << topicName << "_acceleration\n");
@@ -264,10 +264,11 @@ namespace RobotLocalization
 
   template<typename T>
   void RosFilter<T>::imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                                 const CallbackData &callbackData)
+                                 const std::string &topicName,
+                                 const CallbackData &poseCallbackData,
+                                 const CallbackData &twistCallbackData,
+                                 const CallbackData &accelCallbackData)
   {
-    const std::string topicName = callbackData.poseTopicName_.substr(callbackData.poseTopicName_.size() - 5);
-
     RF_DEBUG("------ RosFilter::imuCallback (" << topicName << ") ------\n" << "IMU message:\n" << *msg);
 
     // If we've just reset the filter, then we want to ignore any messages
@@ -281,7 +282,7 @@ namespace RobotLocalization
 
     // As with the odometry message, we can separate out the pose- and twist-related variables
     // in the IMU message and pass them to the pose and twist callbacks (filters)
-    if (callbackData.poseUpdateSum_ > 0)
+    if (poseCallbackData.updateSum_ > 0)
     {
       // Per the IMU message specification, if the IMU does not provide orientation,
       // then its first covariance value should be set to -1, and we should ignore
@@ -315,11 +316,11 @@ namespace RobotLocalization
         // to imu transform, we make the target frame baseLinkFrameId_ and tell the poseCallback that it is working
         // with IMU data. This will cause it to apply different logic to the data.
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, callbackData, baseLinkFrameId_, true);
+        poseCallback(pptr, poseCallbackData, baseLinkFrameId_, true);
       }
     }
 
-    if (callbackData.twistUpdateSum_ > 0)
+    if (twistCallbackData.updateSum_ > 0)
     {
       // Ignore rotational velocity if the first covariance value is -1
       if(::fabs(msg->angular_velocity_covariance[0] + 1) < 1e-9)
@@ -345,11 +346,11 @@ namespace RobotLocalization
         }
 
         geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-        twistCallback(tptr, callbackData, baseLinkFrameId_);
+        twistCallback(tptr, twistCallbackData, baseLinkFrameId_);
       }
     }
 
-    if (callbackData.accelUpdateSum_ > 0)
+    if (accelCallbackData.updateSum_ > 0)
     {
       // Ignore linear acceleration if the first covariance value is -1
       if(::fabs(msg->linear_acceleration_covariance[0] + 1) < 1e-9)
@@ -360,7 +361,7 @@ namespace RobotLocalization
       else
       {
         // Pass the message on
-        accelerationCallback(msg, callbackData, baseLinkFrameId_);
+        accelerationCallback(msg, accelCallbackData, baseLinkFrameId_);
       }
     }
 
@@ -628,16 +629,17 @@ namespace RobotLocalization
         int odomQueueSize = 1;
         nhLocal_.param(odomTopicName + "_queue_size", odomQueueSize, 1);
 
-        const CallbackData callbackData(odomTopicName + "_pose", odomTopicName + "_twist", "", poseUpdateVec,
-          twistUpdateVec, std::vector<int>(STATE_SIZE), poseUpdateSum, twistUpdateSum, 0, differential, relative,
-          poseMahalanobisThresh, twistMahalanobisThresh, 0.0);
+        const CallbackData poseCallbackData(odomTopicName + "_pose",poseUpdateVec, poseUpdateSum, differential,
+          relative, poseMahalanobisThresh);
+        const CallbackData twistCallbackData(odomTopicName + "_twist", twistUpdateVec, twistUpdateSum, false, false,
+          twistMahalanobisThresh);
 
         // Store the odometry topic subscribers so they don't go out of scope.
         if (poseUpdateSum + twistUpdateSum > 0)
         {
           topicSubs_.push_back(
             nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
-              boost::bind(&RosFilter<T>::odometryCallback, this, _1, callbackData)));
+              boost::bind(&RosFilter<T>::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData)));
         }
         else
         {
@@ -745,9 +747,8 @@ namespace RobotLocalization
 
         if (poseUpdateSum > 0)
         {
-          const CallbackData callbackData(poseTopicName, "", "", poseUpdateVec, std::vector<int>(STATE_SIZE),
-            std::vector<int>(STATE_SIZE), poseUpdateSum, 0, 0, differential, relative, poseMahalanobisThresh,
-            0.0, 0.0);
+          const CallbackData callbackData(poseTopicName, poseUpdateVec, poseUpdateSum, differential, relative,
+            poseMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
@@ -819,9 +820,8 @@ namespace RobotLocalization
 
         if (twistUpdateSum > 0)
         {
-          const CallbackData callbackData("", twistTopicName, "", std::vector<int>(STATE_SIZE), twistUpdateVec,
-            std::vector<int>(STATE_SIZE), 0, twistUpdateSum, 0, false, false, 0.0, twistMahalanobisThresh,
-            0.0);
+          const CallbackData callbackData(twistTopicName, twistUpdateVec, twistUpdateSum,false, false,
+            twistMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
@@ -937,13 +937,17 @@ namespace RobotLocalization
 
         if (poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
         {
-          const CallbackData callbackData(imuTopicName + "_pose", imuTopicName + "_twist", imuTopicName + "_accel",
-            poseUpdateVec, twistUpdateVec, accelUpdateVec, poseUpdateSum, twistUpdateSum, accelUpdateSum, differential,
-            relative, poseMahalanobisThresh, twistMahalanobisThresh, accelMahalanobisThresh);
+          const CallbackData poseCallbackData(imuTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
+            relative, poseMahalanobisThresh);
+          const CallbackData twistCallbackData(imuTopicName + "_twist", twistUpdateVec, twistUpdateSum, differential,
+            relative, poseMahalanobisThresh);
+          const CallbackData accelCallbackData(imuTopicName + "_acceleration", accelUpdateVec, accelUpdateSum,
+            differential, relative, accelMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
-              boost::bind(&RosFilter<T>::imuCallback, this, _1, callbackData)));
+              boost::bind(&RosFilter<T>::imuCallback, this, _1, imuTopicName, poseCallbackData, twistCallbackData,
+                accelCallbackData)));
         }
         else
         {
@@ -1155,7 +1159,8 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const CallbackData &callbackData)
+  void RosFilter<T>::odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const std::string &topicName,
+    const CallbackData &poseCallbackData, const CallbackData &twistCallbackData)
   {
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
@@ -1164,11 +1169,9 @@ namespace RobotLocalization
       return;
     }
 
-    const std::string topicName = callbackData.poseTopicName_.substr(callbackData.poseTopicName_.size() - 5);
-
     RF_DEBUG("------ RosFilter::odometryCallback (" << topicName << ") ------\n" << "Odometry message:\n" << *msg);
 
-    if (callbackData.poseUpdateSum_ > 0)
+    if (poseCallbackData.updateSum_ > 0)
     {
       // Grab the pose portion of the message and pass it to the poseCallback
       geometry_msgs::PoseWithCovarianceStamped *posPtr = new geometry_msgs::PoseWithCovarianceStamped();
@@ -1176,10 +1179,10 @@ namespace RobotLocalization
       posPtr->pose = msg->pose;  // Entire pose object, also copies covariance
 
       geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-      poseCallback(pptr, callbackData, worldFrameId_, false);
+      poseCallback(pptr, poseCallbackData, worldFrameId_, false);
     }
 
-    if (callbackData.twistUpdateSum_ > 0)
+    if (twistCallbackData.updateSum_ > 0)
     {
       // Grab the twist portion of the message and pass it to the twistCallback
       geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
@@ -1188,7 +1191,7 @@ namespace RobotLocalization
       twistPtr->twist = msg->twist;  // Entire twist object, also copies covariance
 
       geometry_msgs::TwistWithCovarianceStampedConstPtr tptr(twistPtr);
-      twistCallback(tptr, callbackData, baseLinkFrameId_);
+      twistCallback(tptr, twistCallbackData, baseLinkFrameId_);
     }
 
     RF_DEBUG("\n----- /RosFilter::odometryCallback (" << topicName << ") ------\n");
@@ -1207,7 +1210,7 @@ namespace RobotLocalization
       return;
     }
 
-    const std::string &topicName = callbackData.poseTopicName_;
+    const std::string &topicName = callbackData.topicName_;
 
     RF_DEBUG("------ RosFilter::poseCallback (" << topicName << ") ------\n" <<
              "Pose message:\n" << *msg);
@@ -1221,7 +1224,7 @@ namespace RobotLocalization
     // Make sure this message is newer than the last one
     if (msg->header.stamp >= lastMessageTimes_[topicName])
     {
-      RF_DEBUG("Update vector for " << topicName << " is:\n" << callbackData.poseUpdateVector_);
+      RF_DEBUG("Update vector for " << topicName << " is:\n" << callbackData.updateVector_);
 
       Eigen::VectorXd measurement(STATE_SIZE);
       Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
@@ -1230,7 +1233,7 @@ namespace RobotLocalization
       measurementCovariance.setZero();
 
       // Make sure we're actually updating at least one of these variables
-      std::vector<int> updateVectorCorrected = callbackData.poseUpdateVector_;
+      std::vector<int> updateVectorCorrected = callbackData.updateVector_;
 
       // Prepare the pose data for inclusion in the filter
       if (preparePose(msg,
@@ -1249,7 +1252,7 @@ namespace RobotLocalization
                            measurement,
                            measurementCovariance,
                            updateVectorCorrected,
-                           callbackData.poseMahalanobisThresh_,
+                           callbackData.rejectionThreshold_,
                            msg->header.stamp);
 
         RF_DEBUG("Enqueued new measurement for " << topicName << "\n");
@@ -1491,7 +1494,7 @@ namespace RobotLocalization
       return;
     }
 
-    const std::string &topicName = callbackData.twistTopicName_;
+    const std::string &topicName = callbackData.topicName_;
 
     RF_DEBUG("------ RosFilter::twistCallback (" << topicName << ") ------\n"
              "Twist message:\n" << *msg);
@@ -1504,7 +1507,7 @@ namespace RobotLocalization
     // Make sure this message is newer than the last one
     if (msg->header.stamp >= lastMessageTimes_[topicName])
     {
-      RF_DEBUG("Update vector for " << topicName << " is:\n" << callbackData.twistUpdateVector_);
+      RF_DEBUG("Update vector for " << topicName << " is:\n" << callbackData.updateVector_);
 
       Eigen::VectorXd measurement(STATE_SIZE);
       Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
@@ -1513,7 +1516,7 @@ namespace RobotLocalization
       measurementCovariance.setZero();
 
       // Make sure we're actually updating at least one of these variables
-      std::vector<int> updateVectorCorrected = callbackData.twistUpdateVector_;
+      std::vector<int> updateVectorCorrected = callbackData.updateVector_;
 
       // Prepare the twist data for inclusion in the filter
       if (prepareTwist(msg, topicName, targetFrame, updateVectorCorrected, measurement, measurementCovariance))
@@ -1524,7 +1527,7 @@ namespace RobotLocalization
                            measurement,
                            measurementCovariance,
                            updateVectorCorrected,
-                           callbackData.twistMahalanobisThresh_,
+                           callbackData.rejectionThreshold_,
                            msg->header.stamp);
 
         RF_DEBUG("Enqueued new measurement for " << topicName << "_twist\n");
