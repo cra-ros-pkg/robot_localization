@@ -78,7 +78,7 @@ struct CallbackData
                const double rejectionThreshold) :
     topicName_(topicName),
     updateVector_(updateVector),
-    updateSum_(updateSum_),
+    updateSum_(updateSum),
     differential_(differential),
     relative_(relative),
     rejectionThreshold_(rejectionThreshold)
