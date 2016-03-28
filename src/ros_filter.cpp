@@ -202,7 +202,6 @@ namespace RobotLocalization
     meas.updateVector_ = updateVector;
     meas.time_ = time.toSec();
     meas.mahalanobisThresh_ = mahalanobisThresh;
-
     measurementQueue_.push(meas);
   }
 
@@ -598,6 +597,7 @@ namespace RobotLocalization
         {
           ROS_ERROR_STREAM("Control configuration must be of size " << TWIST_SIZE << ". Provided config was of "
             "size " << controlUpdateVector.size() << ". No control term will be used.");
+          useControl = false;
         }
       }
       else
