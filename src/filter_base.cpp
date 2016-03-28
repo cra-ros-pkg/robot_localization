@@ -328,41 +328,14 @@ namespace RobotLocalization
 
       double frequency = ::fabs(1.0 / predictionDelta);
 
-      if(controlUpdateVector_[ControlMemberVx])
+      for(size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
       {
-        controlAcceleration_(ControlMemberVx) = computeControlAcceleration(state_(StateMemberVx),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVx)), frequency, accelerationLimits_[ControlMemberVx],
-          decelerationLimits_[ControlMemberVx]);
-      }
-      if(controlUpdateVector_[ControlMemberVy])
-      {
-        controlAcceleration_(ControlMemberVy) = computeControlAcceleration(state_(StateMemberVy),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVy)), frequency, accelerationLimits_[ControlMemberVy],
-          decelerationLimits_[ControlMemberVy]);
-      }
-      if(controlUpdateVector_[ControlMemberVz])
-      {
-        controlAcceleration_(ControlMemberVz) = computeControlAcceleration(state_(StateMemberVz),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVz)), frequency, accelerationLimits_[ControlMemberVz],
-          decelerationLimits_[ControlMemberVz]);
-      }
-      if(controlUpdateVector_[ControlMemberVroll])
-      {
-        controlAcceleration_(ControlMemberVroll) = computeControlAcceleration(state_(StateMemberVroll),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVroll)), frequency, accelerationLimits_[ControlMemberVroll],
-          decelerationLimits_[ControlMemberVroll]);
-      }
-      if(controlUpdateVector_[ControlMemberVpitch])
-      {
-        controlAcceleration_(ControlMemberVpitch) = computeControlAcceleration(state_(StateMemberVpitch),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVpitch)), frequency, accelerationLimits_[ControlMemberVpitch],
-          decelerationLimits_[ControlMemberVpitch]);
-      }
-      if(controlUpdateVector_[ControlMemberVyaw])
-      {
-        controlAcceleration_(ControlMemberVyaw) = computeControlAcceleration(state_(StateMemberVyaw),
-          (timedOut ? 0.0 : latestControl_(ControlMemberVyaw)), frequency, accelerationLimits_[ControlMemberVyaw],
-          decelerationLimits_[ControlMemberVyaw]);
+        if(controlUpdateVector_[controlInd])
+        {
+          controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
+            (timedOut ? 0.0 : latestControl_(controlInd)), frequency, accelerationLimits_[controlInd],
+            decelerationLimits_[controlInd]);
+        }
       }
     }
   }
