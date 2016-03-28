@@ -42,6 +42,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define RF_DEBUG(msg) if (filter_.getDebug()) { debugStream_ << msg; }
 
@@ -49,6 +50,7 @@
 std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec);
 std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat);
 std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans);
+std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec);
 
 namespace RobotLocalization
 {

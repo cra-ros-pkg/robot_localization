@@ -155,6 +155,38 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  void RosFilter<T>::controlCallback(const geometry_msgs::Twist::ConstPtr &msg)
+  {
+    geometry_msgs::TwistStampedPtr twistStampedPtr = geometry_msgs::TwistStampedPtr(new geometry_msgs::TwistStamped());
+    twistStampedPtr->twist = *msg;
+    twistStampedPtr->header.frame_id = baseLinkFrameId_;
+    twistStampedPtr->header.stamp = ros::Time::now();
+    controlCallback(twistStampedPtr);
+  }
+
+  template<typename T>
+  void RosFilter<T>::controlCallback(const geometry_msgs::TwistStamped::ConstPtr &msg)
+  {
+    if(msg->header.frame_id == baseLinkFrameId_ || msg->header.frame_id == "")
+    {
+      latestControl_(ControlMemberVx) = msg->twist.linear.x;
+      latestControl_(ControlMemberVy) = msg->twist.linear.y;
+      latestControl_(ControlMemberVz) = msg->twist.linear.z;
+      latestControl_(ControlMemberVroll) = msg->twist.angular.x;
+      latestControl_(ControlMemberVpitch) = msg->twist.angular.y;
+      latestControl_(ControlMemberVyaw) = msg->twist.angular.z;
+
+      // Update the filter with this control term
+      filter_.setControl(latestControl_, msg->header.stamp.toSec());
+    }
+    else
+    {
+      ROS_WARN_STREAM_THROTTLE(5.0, "Commanded velocities must be given in the robot's body frame (" <<
+        baseLinkFrameId_ << "). Message frame was " << msg->header.frame_id);
+    }
+  }
+
+  template<typename T>
   void RosFilter<T>::enqueueMeasurement(const std::string &topicName,
                                         const Eigen::VectorXd &measurement,
                                         const Eigen::MatrixXd &measurementCovariance,
@@ -369,16 +401,18 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::integrateMeasurements(const double currentTime)
+  void RosFilter<T>::integrateMeasurements(const ros::Time &currentTime)
   {
+    const double currentTimeSec = currentTime.toSec();
+
     RF_DEBUG("------ RosFilter::integrateMeasurements ------\n\n"
-             "Integration time is " << std::setprecision(20) << currentTime << "\n"
+             "Integration time is " << std::setprecision(20) << currentTimeSec << "\n"
              << measurementQueue_.size() << " measurements in queue.\n");
 
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
     {
-      while (!measurementQueue_.empty())
+      while (!measurementQueue_.empty() && ros::ok())
       {
         Measurement measurement = measurementQueue_.top();
         measurementQueue_.pop();
@@ -387,24 +421,24 @@ namespace RobotLocalization
         filter_.processMeasurement(measurement);
       }
 
-      filter_.setLastUpdateTime(currentTime);
+      filter_.setLastUpdateTime(currentTimeSec);
     }
     else if (filter_.getInitializedStatus())
     {
       // In the event that we don't get any measurements for a long time,
       // we still need to continue to estimate our state. Therefore, we
       // should project the state forward here.
-      double lastUpdateDelta = currentTime - filter_.getLastUpdateTime();
+      double lastUpdateDelta = currentTimeSec - filter_.getLastUpdateTime();
 
       // If we get a large delta, then continuously predict until
       if (lastUpdateDelta >= filter_.getSensorTimeout())
       {
         RF_DEBUG("Sensor timeout! Last update time was " << filter_.getLastUpdateTime() <<
-                 ", current time is " << currentTime <<
+                 ", current time is " << currentTimeSec <<
                  ", delta is " << lastUpdateDelta << "\n");
 
         filter_.validateDelta(lastUpdateDelta);
-        filter_.predict(lastUpdateDelta);
+        filter_.predict(currentTimeSec, lastUpdateDelta);
 
         // Update the last measurement time and last update time
         filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
@@ -543,6 +577,66 @@ namespace RobotLocalization
     // Determine if we're in 2D mode
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
+    // Determine if we're using a control term
+    bool useControl = false;
+    bool stampedControl = false;
+    double controlTimeout = sensorTimeout;
+    std::vector<int> controlUpdateVector(TWIST_SIZE, 0);
+    std::vector<double> accelerationLimits(TWIST_SIZE, 0.0);
+    std::vector<double> decelerationLimits(TWIST_SIZE, 0.0);
+
+    nhLocal_.param("use_control", useControl, false);
+    nhLocal_.param("stamped_control", stampedControl, false);
+    nhLocal_.param("control_timeout", controlTimeout, sensorTimeout);
+
+    if(useControl)
+    {
+      if(nhLocal_.getParam("control_config", controlUpdateVector))
+      {
+        if(controlUpdateVector.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Control configuration must be of size " << TWIST_SIZE << ". Provided config was of "
+            "size " << controlUpdateVector.size() << ". No control term will be used.");
+          useControl = false;
+        }
+      }
+      else
+      {
+        ROS_ERROR_STREAM("use_control is set to true, but control_config is missing. No control term will be used.");
+        useControl = false;
+      }
+
+      if(nhLocal_.getParam("acceleration_limits", accelerationLimits))
+      {
+        if(accelerationLimits.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration configuration must be of size " << TWIST_SIZE << ". Provided config was of "
+            "size " << accelerationLimits.size() << ". No control term will be used.");
+          useControl = false;
+        }
+      }
+      else
+      {
+        ROS_WARN_STREAM("use_control is set to true, but acceleration_limits is missing. Will use default values.");
+        accelerationLimits.resize(TWIST_SIZE, 1.0);
+      }
+
+      if(nhLocal_.getParam("deceleration_limits", decelerationLimits))
+      {
+        if(decelerationLimits.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Deceleration configuration must be of size " << TWIST_SIZE << ". Provided config was of size " <<
+            decelerationLimits.size() << ". No control term will be used.");
+          useControl = false;
+        }
+      }
+      else
+      {
+        ROS_WARN_STREAM("use_control is set to true, but deceleration_limits is missing. Will use acceleration limits.");
+        decelerationLimits = accelerationLimits;
+      }
+    }
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -553,6 +647,12 @@ namespace RobotLocalization
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
+             "\nuse_control is " << (useControl ? "true" : "false") <<
+             "\nstamped_control is " << (stampedControl ? "true" : "false") <<
+             "\ncontrol_config is " << controlUpdateVector <<
+             "\ncontrol_timeout is " << controlTimeout <<
+             "\nacceleration_limits are " << accelerationLimits <<
+             "\ndeceleration_limits are " << decelerationLimits <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
     // Create a subscriber for manually setting/resetting pose
@@ -932,6 +1032,23 @@ namespace RobotLocalization
         int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
         int accelUpdateSum = std::accumulate(accelUpdateVec.begin(), accelUpdateVec.end(), 0);
 
+        // Check if we're using control input for any of the acceleration variables; turn the off if so
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVx]) && static_cast<bool>(accelUpdateVec[StateMemberAx]))
+        {
+          ROS_WARN_STREAM("X acceleration is being measured from IMU; X velocity control input is disabled");
+          controlUpdateVector[ControlMemberVx] = 0;
+        }
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVy]) && static_cast<bool>(accelUpdateVec[StateMemberAy]))
+        {
+          ROS_WARN_STREAM("Y acceleration is being measured from IMU; Y velocity control input is disabled");
+          controlUpdateVector[ControlMemberVy] = 0;
+        }
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVz]) && static_cast<bool>(accelUpdateVec[StateMemberAz]))
+        {
+          ROS_WARN_STREAM("Z acceleration is being measured from IMU; Z velocity control input is disabled");
+          controlUpdateVector[ControlMemberVz] = 0;
+        }
+
         int imuQueueSize = 1;
         nhLocal_.param(imuTopicName + "_queue_size", imuQueueSize, 1);
 
@@ -992,6 +1109,32 @@ namespace RobotLocalization
       }
     }
     while (moreParams);
+
+    // Now that we've checked if IMU linear acceleration is being used, we can determine our final control parameters
+    if(useControl && std::accumulate(controlUpdateVector.begin(), controlUpdateVector.end(), 0) == 0)
+    {
+      ROS_ERROR_STREAM("use_control is set to true, but control_config has only false values. No control term "
+        "will be used.");
+      useControl = false;
+    }
+
+    // If we're using control, set the parameters and create the necessary subscribers
+    if(useControl)
+    {
+      latestControl_.resize(TWIST_SIZE);
+      latestControl_.setZero();
+
+      filter_.setControlParams(controlUpdateVector, controlTimeout, accelerationLimits, decelerationLimits);
+
+      if(stampedControl)
+      {
+        controlSub_ = nh_.subscribe<geometry_msgs::TwistStamped>("cmd_vel", 1, &RosFilter<T>::controlCallback, this);
+      }
+      else
+      {
+        controlSub_ = nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &RosFilter<T>::controlCallback, this);
+      }
+    }
 
     /* Warn users about:
     *    1. Multiple non-differential input sources
@@ -1321,10 +1464,10 @@ namespace RobotLocalization
       // The spin will call all the available callbacks and enqueue
       // their received measurements
       ros::spinOnce();
+      curTime = ros::Time::now();
 
       // Now we'll integrate any measurements we've received
-      curTime = ros::Time::now();
-      integrateMeasurements(curTime.toSec());
+      integrateMeasurements(curTime);
 
       // Get latest state and publish it
       nav_msgs::Odometry filteredPosition;
@@ -1436,7 +1579,7 @@ namespace RobotLocalization
 
     // Clear out the measurement queue so that we don't immediately undo our
     // reset.
-    while (!measurementQueue_.empty())
+    while (!measurementQueue_.empty() && ros::ok())
     {
       measurementQueue_.pop();
     }
