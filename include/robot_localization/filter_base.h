@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION_FILTER_BASE_H
 
 #include "robot_localization/filter_utilities.h"
+#include "robot_localization/filter_common.h"
 
 #include <Eigen/Dense>
 
@@ -169,15 +170,33 @@ class FilterBase
     //! Projects the state and error matrices forward using a model of
     //! the vehicle's motion. This method must be implemented by subclasses.
     //!
+    //! @param[in] referenceTime - The time at which the prediction is being made
     //! @param[in] delta - The time step over which to predict.
     //!
-    virtual void predict(const double delta) = 0;
+    virtual void predict(const double referenceTime, const double delta) = 0;
 
     //! @brief Does some final preprocessing, carries out the predict/update cycle
     //!
     //! @param[in] measurement - The measurement object to fuse into the filter
     //!
     virtual void processMeasurement(const Measurement &measurement);
+
+    //! @brief Sets the most recent control term
+    //!
+    //! @param[in] control - The control term to be applied
+    //! @param[in] controlTime - The time at which the control in question was received
+    //!
+    void setControl(const Eigen::VectorXd &control, const double controlTime);
+
+    //! @brief Sets the control update vector and acceleration limits
+    //!
+    //! @param[in] updateVector - The values the control term affects
+    //! @param[in] controlTimeout - Timeout value, in seconds, after which a control is considered stale
+    //! @param[in] accelerationLimits - The acceleration limits for the control variables
+    //! @param[in] decelerationLimits - The deceleration limits for the control variables
+    //!
+    void setControlParams(const std::vector<int> &updateVector, const double controlTimeout,
+      const std::vector<double> &accelerationLimits, const std::vector<double> &decelerationLimits);
 
     //! @brief Sets the filter into debug mode
     //!
@@ -242,15 +261,82 @@ class FilterBase
     void validateDelta(double &delta);
 
   protected:
+    //! @brief Method for settings bounds on acceleration values derived from controls
+    //! @param[in] state - The current state variable (e.g., linear X velocity)
+    //! @param[in] control - The current control commanded velocity corresponding to the state variable
+    //! @param[in] frequency - Inverse of the time delta from the last filter update time
+    //! @param[in] accelerationLimit - Limit for acceleration (regardless of driving direction)
+    //! @param[in] decelerationLimit - Limit for deceleration (moving towards zero, regardless of driving direction)
+    //! @return a usable acceleration estimate for the control vector
+    //!
+    inline double computeControlAcceleration(const double state, const double control, const double frequency,
+      const double accelerationLimit, const double decelerationLimit)
+    {
+      FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
+
+      const double error = control - state;
+      const bool sameSign = (::fabs(error) <= ::fabs(control) + 0.01);
+      const double setPoint = (sameSign ? control : 0.0);
+      const bool decelerating = ::fabs(setPoint) < ::fabs(state);
+      const double accelLimit = (decelerating ? decelerationLimit : accelerationLimit);
+
+      const double finalAccel = std::min(std::max(frequency * error, -accelLimit), accelLimit);
+
+      FB_DEBUG("Control value: " << control << "\n" <<
+               "State value: " << state << "\n" <<
+               "Error: " << error << "\n" <<
+               "Same sign: " << (sameSign ? "true" : "false") << "\n" <<
+               "Set point: " << setPoint << "\n" <<
+               "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
+               "Limit: " << accelLimit << "\n" <<
+               "Frequecy: " << frequency << "\n" <<
+               "Final is " << finalAccel << "\n");
+
+      return finalAccel;
+    }
+
     //! @brief Keeps the state Euler angles in the range [-pi, pi]
     //!
     virtual void wrapStateAngles();
 
     //! @brief Tests if innovation is within N-sigmas of covariance. Returns true if passed the test.
+    //! @param[in] innovation - The difference between the measurement and the state
+    //! @param[in] invCovariance - The innovation error
+    //! @param[in] nsigmas - Number of standard deviations that are considered acceptable
     //!
     virtual bool checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
                                            const Eigen::MatrixXd &invCovariance,
                                            const double nsigmas);
+
+    //! @brief Converts the control term to an acceleration to be applied in the prediction step
+    //! @param[in] referenceTime - The time of the update (measurement used in the prediction step)
+    //! @param[in] predictionDelta - The amount of time over which we are carrying out our prediction
+    //!
+    void prepareControl(const double referenceTime, const double predictionDelta);
+
+    //! @brief Caps the acceleration we apply from control input
+    //!
+    std::vector<double> accelerationLimits_;
+
+    //! @brief Variable that gets updated every time we process a measurement and we have a valid control
+    //!
+    Eigen::VectorXd controlAcceleration_;
+
+    //! @brief Caps the deceleration we apply from control input
+    //!
+    std::vector<double> decelerationLimits_;
+
+    //! @brief Latest control term
+    //!
+    Eigen::VectorXd latestControl_;
+
+    //! @brief Which control variables are being used (e.g., not every vehicle is controllable in Y or Z)
+    //!
+    std::vector<int> controlUpdateVector_;
+
+    //! @brief Timeout value, in seconds, after which a control is considered stale
+    //!
+    double controlTimeout_;
 
     //! @brief Covariance matrices can be incredibly unstable. We can
     //! add a small value to it at each iteration to help maintain its
@@ -292,6 +378,10 @@ class FilterBase
     //! a sensor timeout, i.e., if we haven't received any sensor data in a long time.
     //!
     double lastUpdateTime_;
+
+    //! @brief The time of reception of the most recent control term
+    //!
+    double latestControlTime_;
 
     //! @brief Holds the last predicted state of the filter
     //!
@@ -345,6 +435,10 @@ class FilterBase
     //! matrix with respect to each state variable.
     //!
     Eigen::MatrixXd transferFunctionJacobian_;
+
+    //! @brief Whether or not we apply the control term
+    //!
+    bool useControl_;
 
   private:
     //! @brief Whether or not the filter is in debug mode

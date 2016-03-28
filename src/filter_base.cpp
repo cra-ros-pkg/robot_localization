@@ -41,6 +41,12 @@
 namespace RobotLocalization
 {
   FilterBase::FilterBase() :
+    accelerationLimits_(TWIST_SIZE, 0.0),
+    decelerationLimits_(TWIST_SIZE, 0.0),
+    controlAcceleration_(TWIST_SIZE),
+    controlTimeout_(0.0),
+    controlUpdateVector_(TWIST_SIZE, 0),
+    latestControlTime_(0.0),
     state_(STATE_SIZE),
     predictedState_(STATE_SIZE),
     transferFunction_(STATE_SIZE, STATE_SIZE),
@@ -50,13 +56,15 @@ namespace RobotLocalization
     processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
     identity_(STATE_SIZE, STATE_SIZE),
     debug_(false),
-    debugStream_(NULL)
+    debugStream_(NULL),
+    useControl_(false)
   {
     initialized_ = false;
 
     // Clear the state and predicted state
     state_.setZero();
     predictedState_.setZero();
+    controlAcceleration_.setZero();
 
     // Prepare the invariant parts of the transfer
     // function
@@ -178,8 +186,7 @@ namespace RobotLocalization
       if (delta > 0)
       {
         validateDelta(delta);
-
-        predict(delta);
+        predict(measurement.time_, delta);
 
         // Return this to the user
         predictedState_ = state_;
@@ -225,6 +232,22 @@ namespace RobotLocalization
     }
 
     FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
+  }
+
+  void FilterBase::setControl(const Eigen::VectorXd &control, const double controlTime)
+  {
+    latestControl_ = control;
+    latestControlTime_ = controlTime;
+  }
+
+  void FilterBase::setControlParams(const std::vector<int> &updateVector, const double controlTimeout,
+    const std::vector<double> &accelerationLimits, const std::vector<double> &decelerationLimits)
+  {
+    useControl_ = true;
+    controlUpdateVector_ = updateVector;
+    controlTimeout_ = controlTimeout;
+    accelerationLimits_ = accelerationLimits;
+    decelerationLimits_ = decelerationLimits;
   }
 
   void FilterBase::setDebug(const bool debug, std::ostream *outStream)
@@ -285,6 +308,62 @@ namespace RobotLocalization
       FB_DEBUG("Delta was very large. Suspect playing from bag file. Setting to 0.01\n");
 
       delta = 0.01;
+    }
+  }
+
+
+  void FilterBase::prepareControl(const double referenceTime, const double predictionDelta)
+  {
+    controlAcceleration_.setZero();
+
+    if (useControl_)
+    {
+      bool timedOut = ::fabs(referenceTime - latestControlTime_) >= controlTimeout_;
+
+      if(timedOut)
+      {
+        FB_DEBUG("Control timed out. Reference time was " << referenceTime << ", latest control time was " <<
+          latestControlTime_ << ", control timeout was " << controlTimeout_ << "\n");
+      }
+
+      double frequency = ::fabs(1.0 / predictionDelta);
+
+      if(controlUpdateVector_[ControlMemberVx])
+      {
+        controlAcceleration_(ControlMemberVx) = computeControlAcceleration(state_(StateMemberVx),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVx)), frequency, accelerationLimits_[ControlMemberVx],
+          decelerationLimits_[ControlMemberVx]);
+      }
+      if(controlUpdateVector_[ControlMemberVy])
+      {
+        controlAcceleration_(ControlMemberVy) = computeControlAcceleration(state_(StateMemberVy),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVy)), frequency, accelerationLimits_[ControlMemberVy],
+          decelerationLimits_[ControlMemberVy]);
+      }
+      if(controlUpdateVector_[ControlMemberVz])
+      {
+        controlAcceleration_(ControlMemberVz) = computeControlAcceleration(state_(StateMemberVz),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVz)), frequency, accelerationLimits_[ControlMemberVz],
+          decelerationLimits_[ControlMemberVz]);
+      }
+      if(controlUpdateVector_[ControlMemberVroll])
+      {
+        controlAcceleration_(ControlMemberVroll) = computeControlAcceleration(state_(StateMemberVroll),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVroll)), frequency, accelerationLimits_[ControlMemberVroll],
+          decelerationLimits_[ControlMemberVroll]);
+      }
+      if(controlUpdateVector_[ControlMemberVpitch])
+      {
+        controlAcceleration_(ControlMemberVpitch) = computeControlAcceleration(state_(StateMemberVpitch),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVpitch)), frequency, accelerationLimits_[ControlMemberVpitch],
+          decelerationLimits_[ControlMemberVpitch]);
+      }
+      if(controlUpdateVector_[ControlMemberVyaw])
+      {
+        controlAcceleration_(ControlMemberVyaw) = computeControlAcceleration(state_(StateMemberVyaw),
+          (timedOut ? 0.0 : latestControl_(ControlMemberVyaw)), frequency, accelerationLimits_[ControlMemberVyaw],
+          decelerationLimits_[ControlMemberVyaw]);
+      }
     }
   }
 
