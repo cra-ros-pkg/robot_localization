@@ -2074,22 +2074,24 @@ namespace RobotLocalization
       // Blank target and message frames mean we can just
       // use our world_frame
       finalTargetFrame = worldFrameId_;
+      poseTmp.frame_id_ = finalTargetFrame;
     }
     else if (targetFrame == "")
     {
       // A blank target frame means we shouldn't bother
       // transforming the data
       finalTargetFrame = msg->header.frame_id;
+      poseTmp.frame_id_ = finalTargetFrame;
     }
     else
     {
       // Otherwise, we should use our target frame
       finalTargetFrame = targetFrame;
+      poseTmp.frame_id_ = (differential ? finalTargetFrame  : msg->header.frame_id);
     }
 
     RF_DEBUG("Final target frame for " << topicName << " is " << finalTargetFrame << "\n");
 
-    poseTmp.frame_id_ = msg->header.frame_id;
     poseTmp.stamp_ = msg->header.stamp;
 
     // Fill out the position data
