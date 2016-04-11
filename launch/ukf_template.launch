@@ -1,6 +1,6 @@
 <launch>
   <node pkg="robot_localization" type="ukf_localization_node" name="ukf_se" clear_params="true">
-    <rosparam command="load" file="$(find robot_localization)/params/ekf_template.yaml" />
+    <rosparam command="load" file="$(find robot_localization)/params/ukf_template.yaml" />
 
     <!--  Placeholder for output topic remapping
     <remap from="odometry/filtered" to=""/>
