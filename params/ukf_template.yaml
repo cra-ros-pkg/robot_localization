@@ -21,6 +21,10 @@ deceleration_limits: [1.3, 0.0, 0.0, 0.0, 0.0, 4.5]
 acceleration_gains: [0.8, 0.0, 0.0, 0.0, 0.0, 0.9]
 deceleration_gains: [1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
 
+alpha: 0.001
+kappa: 0
+beta: 2
+
 odom0: example/odom
 odom0_config: [true,true,false,
                false, false, false,
