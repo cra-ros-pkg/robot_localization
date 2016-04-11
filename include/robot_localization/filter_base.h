@@ -193,10 +193,13 @@ class FilterBase
     //! @param[in] updateVector - The values the control term affects
     //! @param[in] controlTimeout - Timeout value, in seconds, after which a control is considered stale
     //! @param[in] accelerationLimits - The acceleration limits for the control variables
+    //! @param[in] accelerationGains - Gains applied to the control term-derived acceleration
     //! @param[in] decelerationLimits - The deceleration limits for the control variables
+    //! @param[in] decelerationGains - Gains applied to the control term-derived deceleration
     //!
     void setControlParams(const std::vector<int> &updateVector, const double controlTimeout,
-      const std::vector<double> &accelerationLimits, const std::vector<double> &decelerationLimits);
+      const std::vector<double> &accelerationLimits, const std::vector<double> &accelerationGains,
+      const std::vector<double> &decelerationLimits, const std::vector<double> &decelerationGains);
 
     //! @brief Sets the filter into debug mode
     //!
@@ -266,11 +269,14 @@ class FilterBase
     //! @param[in] control - The current control commanded velocity corresponding to the state variable
     //! @param[in] frequency - Inverse of the time delta from the last filter update time
     //! @param[in] accelerationLimit - Limit for acceleration (regardless of driving direction)
+    //! @param[in] accelerationGain - Gain applied to acceleration control error
     //! @param[in] decelerationLimit - Limit for deceleration (moving towards zero, regardless of driving direction)
+    //! @param[in] decelerationGain - Gain applied to deceleration control error
     //! @return a usable acceleration estimate for the control vector
     //!
     inline double computeControlAcceleration(const double state, const double control, const double frequency,
-      const double accelerationLimit, const double decelerationLimit)
+      const double accelerationLimit, const double accelerationGain, const double decelerationLimit,
+      const double decelerationGain)
     {
       FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
 
@@ -278,9 +284,16 @@ class FilterBase
       const bool sameSign = (::fabs(error) <= ::fabs(control) + 0.01);
       const double setPoint = (sameSign ? control : 0.0);
       const bool decelerating = ::fabs(setPoint) < ::fabs(state);
-      const double accelLimit = (decelerating ? decelerationLimit : accelerationLimit);
+      double limit = accelerationLimit;
+      double gain = accelerationGain;
 
-      const double finalAccel = std::min(std::max(frequency * error, -accelLimit), accelLimit);
+      if(decelerating)
+      {
+        limit = decelerationLimit;
+        gain = decelerationGain;
+      }
+
+      const double finalAccel = gain * std::min(std::max(frequency * error, -limit), limit);
 
       FB_DEBUG("Control value: " << control << "\n" <<
                "State value: " << state << "\n" <<
@@ -288,7 +301,8 @@ class FilterBase
                "Same sign: " << (sameSign ? "true" : "false") << "\n" <<
                "Set point: " << setPoint << "\n" <<
                "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
-               "Limit: " << accelLimit << "\n" <<
+               "Limit: " << limit << "\n" <<
+               "Gain: " << gain << "\n" <<
                "Frequecy: " << frequency << "\n" <<
                "Final is " << finalAccel << "\n");
 
@@ -314,6 +328,10 @@ class FilterBase
     //!
     void prepareControl(const double referenceTime, const double predictionDelta);
 
+    //! @brief Gains applied to acceleration derived from control term
+    //!
+    std::vector<double> accelerationGains_;
+
     //! @brief Caps the acceleration we apply from control input
     //!
     std::vector<double> accelerationLimits_;
@@ -321,6 +339,10 @@ class FilterBase
     //! @brief Variable that gets updated every time we process a measurement and we have a valid control
     //!
     Eigen::VectorXd controlAcceleration_;
+
+    //! @brief Gains applied to deceleration derived from control term
+    //!
+    std::vector<double> decelerationGains_;
 
     //! @brief Caps the deceleration we apply from control input
     //!
