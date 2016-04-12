@@ -583,7 +583,9 @@ namespace RobotLocalization
     double controlTimeout = sensorTimeout;
     std::vector<int> controlUpdateVector(TWIST_SIZE, 0);
     std::vector<double> accelerationLimits(TWIST_SIZE, 0.0);
+    std::vector<double> accelerationGains(TWIST_SIZE, 0.0);
     std::vector<double> decelerationLimits(TWIST_SIZE, 0.0);
+    std::vector<double> decelerationGains(TWIST_SIZE, 0.0);
 
     nhLocal_.param("use_control", useControl, false);
     nhLocal_.param("stamped_control", stampedControl, false);
@@ -621,19 +623,48 @@ namespace RobotLocalization
         accelerationLimits.resize(TWIST_SIZE, 1.0);
       }
 
+      accelerationGains.resize(TWIST_SIZE, 1.0);
+      if(nhLocal_.getParam("acceleration_gains", accelerationGains))
+      {
+        if(accelerationGains.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << accelerationGains.size() << ". All gains will be assumed to be 1.");
+          accelerationGains.resize(TWIST_SIZE, 1.0);
+        }
+      }
+
+      bool useAccelLimits = false;
       if(nhLocal_.getParam("deceleration_limits", decelerationLimits))
       {
         if(decelerationLimits.size() != TWIST_SIZE)
         {
-          ROS_ERROR_STREAM("Deceleration configuration must be of size " << TWIST_SIZE << ". Provided config was of size " <<
-            decelerationLimits.size() << ". No control term will be used.");
+          ROS_ERROR_STREAM("Deceleration configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << decelerationLimits.size() << ". No control term will be used.");
           useControl = false;
         }
       }
       else
       {
-        ROS_WARN_STREAM("use_control is set to true, but deceleration_limits is missing. Will use acceleration limits.");
+        ROS_INFO_STREAM("use_control is set to true, but no deceleration_limits specified. Will use acceleration "
+          "limits.");
         decelerationLimits = accelerationLimits;
+        useAccelLimits = true;
+      }
+
+      decelerationGains.resize(TWIST_SIZE, 1.0);
+      if(nhLocal_.getParam("deceleration_gains", decelerationGains))
+      {
+        if(decelerationGains.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << decelerationLimits.size() << ". All gains will be assumed to be 1.");
+        }
+      }
+      else if(useAccelLimits)
+      {
+        ROS_INFO_STREAM("Using acceleration gains for deceleration");
+        decelerationGains = accelerationGains;
       }
     }
 
@@ -652,7 +683,9 @@ namespace RobotLocalization
              "\ncontrol_config is " << controlUpdateVector <<
              "\ncontrol_timeout is " << controlTimeout <<
              "\nacceleration_limits are " << accelerationLimits <<
+             "\nacceleration_gains are " << accelerationLimits <<
              "\ndeceleration_limits are " << decelerationLimits <<
+             "\ndeceleration_gains are " << decelerationLimits <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
     // Create a subscriber for manually setting/resetting pose
@@ -1124,7 +1157,8 @@ namespace RobotLocalization
       latestControl_.resize(TWIST_SIZE);
       latestControl_.setZero();
 
-      filter_.setControlParams(controlUpdateVector, controlTimeout, accelerationLimits, decelerationLimits);
+      filter_.setControlParams(controlUpdateVector, controlTimeout, accelerationLimits, accelerationGains,
+        decelerationLimits, decelerationGains);
 
       if(stampedControl)
       {

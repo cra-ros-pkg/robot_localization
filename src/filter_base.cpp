@@ -41,7 +41,9 @@
 namespace RobotLocalization
 {
   FilterBase::FilterBase() :
+    accelerationGains_(TWIST_SIZE, 0.0),
     accelerationLimits_(TWIST_SIZE, 0.0),
+    decelerationGains_(TWIST_SIZE, 0.0),
     decelerationLimits_(TWIST_SIZE, 0.0),
     controlAcceleration_(TWIST_SIZE),
     controlTimeout_(0.0),
@@ -241,13 +243,16 @@ namespace RobotLocalization
   }
 
   void FilterBase::setControlParams(const std::vector<int> &updateVector, const double controlTimeout,
-    const std::vector<double> &accelerationLimits, const std::vector<double> &decelerationLimits)
+    const std::vector<double> &accelerationLimits, const std::vector<double> &accelerationGains,
+    const std::vector<double> &decelerationLimits, const std::vector<double> &decelerationGains)
   {
     useControl_ = true;
     controlUpdateVector_ = updateVector;
     controlTimeout_ = controlTimeout;
     accelerationLimits_ = accelerationLimits;
+    accelerationGains_ = accelerationGains;
     decelerationLimits_ = decelerationLimits;
+    decelerationGains_ = decelerationGains;
   }
 
   void FilterBase::setDebug(const bool debug, std::ostream *outStream)
@@ -334,7 +339,7 @@ namespace RobotLocalization
         {
           controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
             (timedOut ? 0.0 : latestControl_(controlInd)), frequency, accelerationLimits_[controlInd],
-            decelerationLimits_[controlInd]);
+            accelerationGains_[controlInd], decelerationLimits_[controlInd], decelerationGains_[controlInd]);
         }
       }
     }
