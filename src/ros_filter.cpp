@@ -62,6 +62,8 @@ RosFilter::RosFilter(
   smooth_lagged_data_(false),
   two_d_mode_(false),
   use_control_(false),
+  disabled_at_startup_(false),
+  enabled_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0),
@@ -886,6 +888,12 @@ void RosFilter::loadParams()
     }
   }
 
+  // Check if the filter should start or not
+  disabled_at_startup_ = node_->declare_parameter<bool>("disabled_at_startup", false);
+  if (!disabled_at_startup_) {
+    enabled_ = true;
+  }
+
   // Debugging writes to file
   RF_DEBUG("tf_prefix is " <<
     tf_prefix << "\nmap_frame is " << map_frame_id_ <<
@@ -939,6 +947,11 @@ void RosFilter::loadParams()
 
   set_pose_service_ = node_->create_service<robot_localization::srv::SetPose>(
     "set_pose", setPoseSrvCallback);
+
+  // Create a service for manually enabling the filter
+  enable_filter_srv_ = node_->create_service<std_srvs::srv::Empty>("enable",
+    std::bind(&RosFilter::enableFilterSrvCallback, this, std::placeholders::_1,
+    std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
   filter_->setLastMeasurementTime(node_->now());
@@ -1776,6 +1789,16 @@ void RosFilter::run()
   rclcpp::Rate loop_rate(frequency_);
 
   while (rclcpp::ok()) {
+
+    // Wait for the filter to be enabled
+    if (!enabled_)
+    {
+      RCLCPP_INFO_ONCE(node_->get_logger(),
+        "Filter is disabled. To enable it call the %s service",
+        enable_filter_srv_->get_service_name());
+      return;
+    }
+
     // The spin will call all the available callbacks and enqueue
     // their received measurements
     rclcpp::spin_some(node_);
@@ -1981,6 +2004,22 @@ void RosFilter::setPoseCallback(
 
     return true;
   }*/
+
+bool RosFilter::enableFilterSrvCallback(
+  const std::shared_ptr<rmw_request_id_t>,
+  const std::shared_ptr<std_srvs::srv::Empty::Request>,
+  const std::shared_ptr<std_srvs::srv::Empty::Response>)
+{
+  RF_DEBUG("\n[" << node_->get_name() << ":]" << " ------ /RosFilter::enableFilterSrvCallback ------\n");
+  if (enabled_) {
+    RCLCPP_WARN(node_->get_logger(), "[%s:] Asking for enabling filter service, but the filter was already enabled! Use param disabled_at_startup.", node_->get_name());
+  } else {
+    RCLCPP_INFO(node_->get_logger(), "[%s:] Enabling filter...",
+      node_->get_name());
+    enabled_ = true;
+  }
+  return true;
+}
 
 void RosFilter::twistCallback(
   const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,
