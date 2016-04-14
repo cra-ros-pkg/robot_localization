@@ -41,6 +41,7 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_srvs/Empty.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/Twist.h>
@@ -243,6 +244,13 @@ template<class T> class RosFilter
     //! @return true if successful, false if not
     bool setPoseSrvCallback(robot_localization::SetPose::Request& request,
                             robot_localization::SetPose::Response&);
+
+    //! @brief Service callback for manually enable the filter
+    //! @param[in] request - N/A
+    //! @param[out] response - N/A
+    //! @return boolean true if successful, false if not
+    bool enableFilterSrvCallback(std_srvs::Empty::Request& request,
+                                 std_srvs::Empty::Response&);
 
     //! @brief Converts tf message filter failures to strings
     //! @param[in] reason - The failure reason object
@@ -550,6 +558,10 @@ template<class T> class RosFilter
     //!
     bool smoothLaggedData_;
 
+    //! @brief Service that allows another node to enable the filter. Uses a standard Empty service.
+    //!
+    ros::ServiceServer enableFilterSrv_;
+
     //! @brief Contains the state vector variable names in string format
     //!
     std::vector<std::string> stateVariableNames_;
@@ -581,6 +593,16 @@ template<class T> class RosFilter
     //! @brief Whether or not we use a control term
     //!
     bool useControl_;
+
+    //! @brief Start the Filter disabled at startup
+    //!
+    //! If this is true, the filter reads parameters and prepares publishers and subscribes
+    //! but does not integrate new messages into the state vector.
+    //! The filter can be enabled later using a service.
+    bool disabledAtStartup_;
+
+    //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
+    bool enabled_;
 
     //! @brief Message that contains our latest transform (i.e., state)
     //!
