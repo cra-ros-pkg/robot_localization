@@ -559,7 +559,7 @@ namespace RobotLocalization
     setPoseSub_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("set_pose",
                                                                           1,
                                                                           &RosFilter<T>::setPoseCallback,
-                                                                          this);
+                                                                          this,ros::TransportHints().tcpNoDelay());
 
     // Create a service for manually setting/resetting pose
     setPoseSrv_ = nh_.advertiseService("set_pose", &RosFilter<T>::setPoseSrvCallback, this);
@@ -639,7 +639,7 @@ namespace RobotLocalization
         {
           topicSubs_.push_back(
             nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
-              boost::bind(&RosFilter<T>::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData)));
+              boost::bind(&RosFilter<T>::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
         }
         else
         {
@@ -752,7 +752,7 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
-              boost::bind(&RosFilter<T>::poseCallback, this, _1, callbackData, worldFrameId_, false)));
+              boost::bind(&RosFilter<T>::poseCallback, this, _1, callbackData, worldFrameId_, false),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
 
           if (differential)
           {
@@ -825,7 +825,7 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
-              boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_)));
+              boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
 
           twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
           twistVarCounts[StateMemberVy] += twistUpdateVec[StateMemberVy];
@@ -947,7 +947,7 @@ namespace RobotLocalization
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
               boost::bind(&RosFilter<T>::imuCallback, this, _1, imuTopicName, poseCallbackData, twistCallbackData,
-                accelCallbackData)));
+                accelCallbackData),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
         }
         else
         {
