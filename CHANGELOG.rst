@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.3
------------
+2.2.2 (2016-05-02)
+------------------
 * Fixing differential handling for pose data so that it doesn't care about the message's frame_id
 * Fixing UKF yaml file
 * Updating UKF config and launch
