@@ -146,6 +146,15 @@ namespace RobotLocalization
     }
     else
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp before that of the previous message received," <<
+                " this message will be ignored. This may indicate a bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
+
       RF_DEBUG("Message is too old. Last message time for " << topicName <<
                " is " << lastMessageTimes_[topicName] << ", current message time is " <<
                msg->header.stamp << ".\n");
@@ -275,6 +284,14 @@ namespace RobotLocalization
     // that arrive with an older timestamp
     if (msg->header.stamp <= lastSetPoseTime_)
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp equal to or before the last filter reset, " <<
+                "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
       RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
 
       return;
@@ -1166,6 +1183,16 @@ namespace RobotLocalization
     // that arrive with an older timestamp
     if (msg->header.stamp <= lastSetPoseTime_)
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp equal to or before the last filter reset, " <<
+                "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
+      RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
+
       return;
     }
 
@@ -1203,14 +1230,22 @@ namespace RobotLocalization
                                   const std::string &targetFrame,
                                   const bool imuData)
   {
+    const std::string &topicName = callbackData.topicName_;
+
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
     if (msg->header.stamp <= lastSetPoseTime_)
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp equal to or before the last filter reset, " <<
+                "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
       return;
     }
-
-    const std::string &topicName = callbackData.topicName_;
 
     RF_DEBUG("------ RosFilter::poseCallback (" << topicName << ") ------\n" <<
              "Pose message:\n" << *msg);
@@ -1269,6 +1304,15 @@ namespace RobotLocalization
     }
     else
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp before that of the previous message received," <<
+                " this message will be ignored. This may indicate a bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
+
       RF_DEBUG("Message is too old. Last message time for " << topicName << " is "
                << lastMessageTimes_[topicName] << ", current message time is "
                << msg->header.stamp << ".\n");
@@ -1487,14 +1531,22 @@ namespace RobotLocalization
                                    const CallbackData &callbackData,
                                    const std::string &targetFrame)
   {
+    const std::string &topicName = callbackData.topicName_;
+
     // If we've just reset the filter, then we want to ignore any messages
     // that arrive with an older timestamp
     if (msg->header.stamp <= lastSetPoseTime_)
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp equal to or before the last filter reset, " <<
+                "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
       return;
     }
-
-    const std::string &topicName = callbackData.topicName_;
 
     RF_DEBUG("------ RosFilter::twistCallback (" << topicName << ") ------\n"
              "Twist message:\n" << *msg);
@@ -1544,6 +1596,15 @@ namespace RobotLocalization
     }
     else
     {
+      std::stringstream stream;
+      stream << "The " << topicName << " message has a timestamp before that of the previous message received," <<
+                " this message will be ignored. This may indicate a bad timestamp. (message time: " <<
+                msg->header.stamp.toSec() << ")";
+      addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                    topicName + "_timestamp",
+                    stream.str(),
+                    false);
+
       RF_DEBUG("Message is too old. Last message time for " << topicName << " is " << lastMessageTimes_[topicName] <<
         ", current message time is " << msg->header.stamp << ".\n");
     }
