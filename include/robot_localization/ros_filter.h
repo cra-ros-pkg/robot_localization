@@ -43,6 +43,8 @@
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf2_ros/transform_listener.h>
@@ -123,13 +125,23 @@ template<class T> class RosFilter
                               const CallbackData &callbackData,
                               const std::string &targetFrame);
 
+    //! @brief Callback method for receiving non-stamped control input
+    //! @param[in] msg - The ROS twist message to take in
+    //!
+    void controlCallback(const geometry_msgs::Twist::ConstPtr &msg);
+
+    //! @brief Callback method for receiving stamped control input
+    //! @param[in] msg - The ROS stamped twist message to take in
+    //!
+    void controlCallback(const geometry_msgs::TwistStamped::ConstPtr &msg);
+
     //! @brief Adds a measurement to the queue of measurements to be processed
     //!
     //! @param[in] topicName - The name of the measurement source (only used for debugging)
     //! @param[in] measurement - The measurement to enqueue
     //! @param[in] measurementCovariance - The covariance of the measurement
     //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outlier rejection
     //! @param[in] time - The time of arrival (in seconds)
     //!
     void enqueueMeasurement(const std::string &topicName,
@@ -176,7 +188,7 @@ template<class T> class RosFilter
     //!
     //! @param[in] currentTime - The time at which to carry out integration (the current time)
     //!
-    void integrateMeasurements(const double currentTime);
+    void integrateMeasurements(const ros::Time &currentTime);
 
     //! @brief Loads all parameters from file
     //!
@@ -364,6 +376,10 @@ template<class T> class RosFilter
     //!
     std::string baseLinkFrameId_;
 
+    //! @brief Subscribes to the control input topic
+    //!
+    ros::Subscriber controlSub_;
+
     //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
     //! to the configuration parameters.
     //!
@@ -403,6 +419,14 @@ template<class T> class RosFilter
     //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
     //!
     double historyLength_;
+
+    //! @brief The most recent control input
+    //!
+    Eigen::VectorXd latestControl_;
+
+    //! @brief The time of the most recent control input
+    //!
+    ros::Time latestControlTime_;
 
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
@@ -493,6 +517,10 @@ template<class T> class RosFilter
     //!
     ros::ServiceServer setPoseSrv_;
 
+    //! @brief Whether or not we use smoothing
+    //!
+    bool smoothLaggedData_;
+
     //! @brief Contains the state vector variable names in string format
     //!
     std::vector<std::string> stateVariableNames_;
@@ -521,9 +549,9 @@ template<class T> class RosFilter
     //!
     bool twoDMode_;
 
-    //! @brief Whether or not we use smoothing
+    //! @brief Whether or not we use a control term
     //!
-    bool smoothLaggedData_;
+    bool useControl_;
 
     //! @brief Message that contains our latest transform (i.e., state)
     //!

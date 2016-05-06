@@ -83,9 +83,10 @@ class Ukf: public FilterBase
     //! Projects the state and error matrices forward using a model of
     //! the vehicle's motion.
     //!
+    //! @param[in] referenceTime - The time at which the prediction is being made
     //! @param[in] delta - The time step over which to predict.
     //!
-    void predict(const double delta);
+    void predict(const double referenceTime, const double delta);
 
   protected:
     //! @brief The UKF sigma points

@@ -282,7 +282,7 @@ namespace RobotLocalization
     }
   }
 
-  void Ukf::predict(const double delta)
+  void Ukf::predict(const double referenceTime, const double delta)
   {
     FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
              "delta is " << delta <<
@@ -305,6 +305,7 @@ namespace RobotLocalization
     double cy = 0.0;
     ::sincos(yaw, &sy, &cy);
 
+    prepareControl(referenceTime, delta);
 
     // Prepare the transfer function
     transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;

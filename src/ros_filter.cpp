@@ -55,10 +55,13 @@ namespace RobotLocalization
       frequency_(30.0),
       historyLength_(0),
       lastSetPoseTime_(0),
+      latestControl_(),
+      latestControlTime_(0),
       nhLocal_("~"),
       printDiagnostics_(true),
       publishTransform_(true),
       twoDMode_(false),
+      useControl_(false),
       smoothLaggedData_(false)
   {
     stateVariableNames_.push_back("X");
@@ -167,6 +170,39 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  void RosFilter<T>::controlCallback(const geometry_msgs::Twist::ConstPtr &msg)
+  {
+    geometry_msgs::TwistStampedPtr twistStampedPtr = geometry_msgs::TwistStampedPtr(new geometry_msgs::TwistStamped());
+    twistStampedPtr->twist = *msg;
+    twistStampedPtr->header.frame_id = baseLinkFrameId_;
+    twistStampedPtr->header.stamp = ros::Time::now();
+    controlCallback(twistStampedPtr);
+  }
+
+  template<typename T>
+  void RosFilter<T>::controlCallback(const geometry_msgs::TwistStamped::ConstPtr &msg)
+  {
+    if(msg->header.frame_id == baseLinkFrameId_ || msg->header.frame_id == "")
+    {
+      latestControl_(ControlMemberVx) = msg->twist.linear.x;
+      latestControl_(ControlMemberVy) = msg->twist.linear.y;
+      latestControl_(ControlMemberVz) = msg->twist.linear.z;
+      latestControl_(ControlMemberVroll) = msg->twist.angular.x;
+      latestControl_(ControlMemberVpitch) = msg->twist.angular.y;
+      latestControl_(ControlMemberVyaw) = msg->twist.angular.z;
+      latestControlTime_ = msg->header.stamp;
+
+      // Update the filter with this control term
+      filter_.setControl(latestControl_, msg->header.stamp.toSec());
+    }
+    else
+    {
+      ROS_WARN_STREAM_THROTTLE(5.0, "Commanded velocities must be given in the robot's body frame (" <<
+        baseLinkFrameId_ << "). Message frame was " << msg->header.frame_id);
+    }
+  }
+
+  template<typename T>
   void RosFilter<T>::enqueueMeasurement(const std::string &topicName,
                                         const Eigen::VectorXd &measurement,
                                         const Eigen::MatrixXd &measurementCovariance,
@@ -182,6 +218,8 @@ namespace RobotLocalization
     meas->updateVector_ = updateVector;
     meas->time_ = time.toSec();
     meas->mahalanobisThresh_ = mahalanobisThresh;
+    meas->latestControl_ = latestControl_;
+    meas->latestControlTime_ = latestControlTime_.toSec();
     measurementQueue_.push(meas);
   }
 
@@ -389,10 +427,12 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::integrateMeasurements(const double currentTime)
+  void RosFilter<T>::integrateMeasurements(const ros::Time &currentTime)
   {
+    const double currentTimeSec = currentTime.toSec();
+
     RF_DEBUG("------ RosFilter::integrateMeasurements ------\n\n"
-             "Integration time is " << std::setprecision(20) << currentTime << "\n"
+             "Integration time is " << std::setprecision(20) << currentTimeSec << "\n"
              << measurementQueue_.size() << " measurements in queue.\n");
 
     // If we have any measurements in the queue, process them
@@ -403,31 +443,48 @@ namespace RobotLocalization
       // revert both the filter state and measurement queue to the first state that preceded the time stamp
       // of our first measurement.
       const MeasurementPtr& firstMeasurement = measurementQueue_.top();
+      int restoredMeasurementCount = 0;
       if (smoothLaggedData_ && firstMeasurement->time_ < filter_.getLastMeasurementTime())
       {
         RF_DEBUG("Received a measurement that was " << filter_.getLastMeasurementTime() - firstMeasurement->time_ <<
                  " seconds in the past. Reverting filter state and measurement queue...");
 
+        int originalCount = static_cast<int>(measurementQueue_.size());
         if (!revertTo(firstMeasurement->time_ - 1e-9))
         {
           RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurement->time_ << "\n");
           ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic " << firstMeasurement->topicName_ <<
                                    ", but history interval is insufficiently sized to revert state and measurement queue.");
+          restoredMeasurementCount = 0;
         }
+
+        restoredMeasurementCount = static_cast<int>(measurementQueue_.size()) - originalCount;
       }
 
-      while (!measurementQueue_.empty())
+      while (!measurementQueue_.empty() && ros::ok())
       {
         MeasurementPtr measurement = measurementQueue_.top();
 
         // If we've reached a measurement that has a time later than now, it should wait until a future iteration.
         // Since measurements are stored in a priority queue, all remaining measurements will be in the future.
-        if (measurement->time_ > currentTime)
+        if (measurement->time_ > currentTime.toSec())
         {
           break;
         }
 
         measurementQueue_.pop();
+
+        // When we receive control messages, we call this directly in the control callback. However, we also associate
+        // a control with each sensor message so that we can support lagged smoothing. As we cannot guarantee that the
+        // new control callback will fire before a new measurement, we should only perform this operation if we are
+        // processing messages from the history. Otherwise, we may get a new measurement, store the "old" latest control,
+        // then received a control, call setControl, and then overwrite that value with this one (i.e., with the "old"
+        // control we associated with the measurement).
+        if (useControl_ && restoredMeasurementCount > 0)
+        {
+          filter_.setControl(measurement->latestControl_, measurement->latestControlTime_);
+          restoredMeasurementCount--;
+        }
 
         // This will call predict and, if necessary, correct
         filter_.processMeasurement(*(measurement.get()));
@@ -447,24 +504,24 @@ namespace RobotLocalization
         }
       }
 
-      filter_.setLastUpdateTime(currentTime);
+      filter_.setLastUpdateTime(currentTimeSec);
     }
     else if (filter_.getInitializedStatus())
     {
       // In the event that we don't get any measurements for a long time,
       // we still need to continue to estimate our state. Therefore, we
       // should project the state forward here.
-      double lastUpdateDelta = currentTime - filter_.getLastUpdateTime();
+      double lastUpdateDelta = currentTimeSec - filter_.getLastUpdateTime();
 
       // If we get a large delta, then continuously predict until
       if (lastUpdateDelta >= filter_.getSensorTimeout())
       {
         RF_DEBUG("Sensor timeout! Last update time was " << filter_.getLastUpdateTime() <<
-                 ", current time is " << currentTime <<
+                 ", current time is " << currentTimeSec <<
                  ", delta is " << lastUpdateDelta << "\n");
 
         filter_.validateDelta(lastUpdateDelta);
-        filter_.predict(lastUpdateDelta);
+        filter_.predict(currentTimeSec, lastUpdateDelta);
 
         // Update the last measurement time and last update time
         filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
@@ -623,6 +680,96 @@ namespace RobotLocalization
 
     historyLength_ = ::fabs(historyLength_);
 
+    // Determine if we're using a control term
+    bool stampedControl = false;
+    double controlTimeout = sensorTimeout;
+    std::vector<int> controlUpdateVector(TWIST_SIZE, 0);
+    std::vector<double> accelerationLimits(TWIST_SIZE, 0.0);
+    std::vector<double> accelerationGains(TWIST_SIZE, 0.0);
+    std::vector<double> decelerationLimits(TWIST_SIZE, 0.0);
+    std::vector<double> decelerationGains(TWIST_SIZE, 0.0);
+
+    nhLocal_.param("use_control", useControl_, false);
+    nhLocal_.param("stamped_control", stampedControl, false);
+    nhLocal_.param("control_timeout", controlTimeout, sensorTimeout);
+
+    if(useControl_)
+    {
+      if(nhLocal_.getParam("control_config", controlUpdateVector))
+      {
+        if(controlUpdateVector.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Control configuration must be of size " << TWIST_SIZE << ". Provided config was of "
+            "size " << controlUpdateVector.size() << ". No control term will be used.");
+          useControl_ = false;
+        }
+      }
+      else
+      {
+        ROS_ERROR_STREAM("use_control is set to true, but control_config is missing. No control term will be used.");
+        useControl_ = false;
+      }
+
+      if(nhLocal_.getParam("acceleration_limits", accelerationLimits))
+      {
+        if(accelerationLimits.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration configuration must be of size " << TWIST_SIZE << ". Provided config was of "
+            "size " << accelerationLimits.size() << ". No control term will be used.");
+          useControl_ = false;
+        }
+      }
+      else
+      {
+        ROS_WARN_STREAM("use_control is set to true, but acceleration_limits is missing. Will use default values.");
+        accelerationLimits.resize(TWIST_SIZE, 1.0);
+      }
+
+      accelerationGains.resize(TWIST_SIZE, 1.0);
+      if(nhLocal_.getParam("acceleration_gains", accelerationGains))
+      {
+        if(accelerationGains.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << accelerationGains.size() << ". All gains will be assumed to be 1.");
+          accelerationGains.resize(TWIST_SIZE, 1.0);
+        }
+      }
+
+      bool useAccelLimits = false;
+      if(nhLocal_.getParam("deceleration_limits", decelerationLimits))
+      {
+        if(decelerationLimits.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Deceleration configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << decelerationLimits.size() << ". No control term will be used.");
+          useControl_ = false;
+        }
+      }
+      else
+      {
+        ROS_INFO_STREAM("use_control is set to true, but no deceleration_limits specified. Will use acceleration "
+          "limits.");
+        decelerationLimits = accelerationLimits;
+        useAccelLimits = true;
+      }
+
+      decelerationGains.resize(TWIST_SIZE, 1.0);
+      if(nhLocal_.getParam("deceleration_gains", decelerationGains))
+      {
+        if(decelerationGains.size() != TWIST_SIZE)
+        {
+          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << decelerationLimits.size() << ". All gains will be assumed to be 1.");
+        }
+      }
+      else if(useAccelLimits)
+      {
+        ROS_INFO_STREAM("Using acceleration gains for deceleration");
+        decelerationGains = accelerationGains;
+      }
+    }
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -635,6 +782,14 @@ namespace RobotLocalization
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
              "\nsmooth_lagged_data is " << (smoothLaggedData_ ? "true" : "false") <<
              "\nhistory_length is " << historyLength_ <<
+             "\nuse_control is " << (useControl_ ? "true" : "false") <<
+             "\nstamped_control is " << (stampedControl ? "true" : "false") <<
+             "\ncontrol_config is " << controlUpdateVector <<
+             "\ncontrol_timeout is " << controlTimeout <<
+             "\nacceleration_limits are " << accelerationLimits <<
+             "\nacceleration_gains are " << accelerationLimits <<
+             "\ndeceleration_limits are " << decelerationLimits <<
+             "\ndeceleration_gains are " << decelerationLimits <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
     // Create a subscriber for manually setting/resetting pose
@@ -1014,6 +1169,23 @@ namespace RobotLocalization
         int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
         int accelUpdateSum = std::accumulate(accelUpdateVec.begin(), accelUpdateVec.end(), 0);
 
+        // Check if we're using control input for any of the acceleration variables; turn the off if so
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVx]) && static_cast<bool>(accelUpdateVec[StateMemberAx]))
+        {
+          ROS_WARN_STREAM("X acceleration is being measured from IMU; X velocity control input is disabled");
+          controlUpdateVector[ControlMemberVx] = 0;
+        }
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVy]) && static_cast<bool>(accelUpdateVec[StateMemberAy]))
+        {
+          ROS_WARN_STREAM("Y acceleration is being measured from IMU; Y velocity control input is disabled");
+          controlUpdateVector[ControlMemberVy] = 0;
+        }
+        if(static_cast<bool>(controlUpdateVector[ControlMemberVz]) && static_cast<bool>(accelUpdateVec[StateMemberAz]))
+        {
+          ROS_WARN_STREAM("Z acceleration is being measured from IMU; Z velocity control input is disabled");
+          controlUpdateVector[ControlMemberVz] = 0;
+        }
+
         int imuQueueSize = 1;
         nhLocal_.param(imuTopicName + "_queue_size", imuQueueSize, 1);
 
@@ -1074,6 +1246,33 @@ namespace RobotLocalization
       }
     }
     while (moreParams);
+
+    // Now that we've checked if IMU linear acceleration is being used, we can determine our final control parameters
+    if(useControl_ && std::accumulate(controlUpdateVector.begin(), controlUpdateVector.end(), 0) == 0)
+    {
+      ROS_ERROR_STREAM("use_control is set to true, but control_config has only false values. No control term "
+        "will be used.");
+      useControl_ = false;
+    }
+
+    // If we're using control, set the parameters and create the necessary subscribers
+    if(useControl_)
+    {
+      latestControl_.resize(TWIST_SIZE);
+      latestControl_.setZero();
+
+      filter_.setControlParams(controlUpdateVector, controlTimeout, accelerationLimits, accelerationGains,
+        decelerationLimits, decelerationGains);
+
+      if(stampedControl)
+      {
+        controlSub_ = nh_.subscribe<geometry_msgs::TwistStamped>("cmd_vel", 1, &RosFilter<T>::controlCallback, this);
+      }
+      else
+      {
+        controlSub_ = nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &RosFilter<T>::controlCallback, this);
+      }
+    }
 
     /* Warn users about:
     *    1. Multiple non-differential input sources
@@ -1430,10 +1629,10 @@ namespace RobotLocalization
       // The spin will call all the available callbacks and enqueue
       // their received measurements
       ros::spinOnce();
+      curTime = ros::Time::now();
 
       // Now we'll integrate any measurements we've received
-      curTime = ros::Time::now();
-      integrateMeasurements(curTime.toSec());
+      integrateMeasurements(curTime);
 
       // Get latest state and publish it
       nav_msgs::Odometry filteredPosition;
@@ -1554,7 +1753,7 @@ namespace RobotLocalization
 
     // Clear out the measurement queue so that we don't immediately undo our
     // reset.
-    while (!measurementQueue_.empty())
+    while (!measurementQueue_.empty() && ros::ok())
     {
       measurementQueue_.pop();
     }
@@ -2579,6 +2778,8 @@ namespace RobotLocalization
     state->state_ = Eigen::VectorXd(filter.getState());
     state->estimateErrorCovariance_ = Eigen::MatrixXd(filter.getEstimateErrorCovariance());
     state->lastMeasurementTime_ = filter.getLastMeasurementTime();
+    state->latestControl_ = Eigen::VectorXd(filter.getControl());
+    state->latestControlTime_ = filter.getControlTime();
     filterStateHistory_.push_back(state);
     RF_DEBUG("Saved state with timestamp " << state->lastMeasurementTime_ << " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
   }

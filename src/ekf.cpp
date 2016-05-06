@@ -206,7 +206,7 @@ namespace RobotLocalization
     }
   }
 
-  void Ekf::predict(const double delta)
+  void Ekf::predict(const double referenceTime, const double delta)
   {
     FB_DEBUG("---------------------- Ekf::predict ----------------------\n" <<
              "delta is " << delta << "\n" <<
@@ -237,6 +237,8 @@ namespace RobotLocalization
     double sy = 0.0;
     double cy = 0.0;
     ::sincos(yaw, &sy, &cy);
+
+    prepareControl(referenceTime, delta);
 
     // Prepare the transfer function
     transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -354,7 +356,19 @@ namespace RobotLocalization
              "\nProcess noise covariance is:\n" << processNoiseCovariance_ <<
              "\nCurrent state is:\n" << state_ << "\n");
 
-    // (1) Project the state forward: x = Ax (really, x = f(x))
+    // (1) Apply control terms, which are actually accelerations
+    state_(StateMemberVroll) += controlAcceleration_(ControlMemberVroll) * delta;
+    state_(StateMemberVpitch) += controlAcceleration_(ControlMemberVpitch) * delta;
+    state_(StateMemberVyaw) += controlAcceleration_(ControlMemberVyaw) * delta;
+
+    state_(StateMemberAx) = (controlUpdateVector_[ControlMemberVx] ?
+      controlAcceleration_(ControlMemberVx) : state_(StateMemberAx));
+    state_(StateMemberAy) = (controlUpdateVector_[ControlMemberVy] ?
+      controlAcceleration_(ControlMemberVy) : state_(StateMemberAy));
+    state_(StateMemberAz) = (controlUpdateVector_[ControlMemberVz] ?
+      controlAcceleration_(ControlMemberVz) : state_(StateMemberAz));
+
+    // (2) Project the state forward: x = Ax + Bu (really, x = f(x, u))
     state_ = transferFunction_ * state_;
 
     // Handle wrapping
@@ -363,7 +377,7 @@ namespace RobotLocalization
     FB_DEBUG("Predicted state is:\n" << state_ <<
              "\nCurrent estimate error covariance is:\n" <<  estimateErrorCovariance_ << "\n");
 
-    // (2) Project the error forward: P = J * P * J' + Q
+    // (3) Project the error forward: P = J * P * J' + Q
     estimateErrorCovariance_ = (transferFunctionJacobian_ *
                                 estimateErrorCovariance_ *
                                 transferFunctionJacobian_.transpose());
