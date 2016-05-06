@@ -438,7 +438,7 @@ namespace RobotLocalization
           // Invariant still holds: measurementHistoryDeque_.back().time_ < measurementQueue_.top().time_
           measurementHistory_.push_back(measurement);
 
-          // We should only save the filter state one per unique timstamp
+          // We should only save the filter state once per unique timstamp
           if (measurementQueue_.empty() ||
               ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9)
           {
@@ -2580,7 +2580,8 @@ namespace RobotLocalization
     state->estimateErrorCovariance_ = Eigen::MatrixXd(filter.getEstimateErrorCovariance());
     state->lastMeasurementTime_ = filter.getLastMeasurementTime();
     filterStateHistory_.push_back(state);
-    RF_DEBUG("Saved state with timestamp " << state->lastMeasurementTime_ << " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
+    RF_DEBUG("Saved state with timestamp " << std::setprecision(20) << state->lastMeasurementTime_ <<
+             " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
   }
 
   template<typename T>
@@ -2589,18 +2590,16 @@ namespace RobotLocalization
     RF_DEBUG("\n----- RosFilter::revertTo -----\n");
     RF_DEBUG("\nRequested time was " << std::setprecision(20) << time << "\n")
 
-    // Walk back through the queue until we reach a filter state whose time stamp
-    // is less than or equal to the requested time
-    FilterStateHistoryDeque::reverse_iterator state_it = filterStateHistory_.rbegin();
-
-    while(state_it != filterStateHistory_.rend() && (*state_it)->lastMeasurementTime_ > time)
+    // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the requested time.
+    // Since every saved state after that time will be overwritten/corrected, we can pop from the queue.
+    while (!filterStateHistory_.empty() && filterStateHistory_.back()->lastMeasurementTime_ > time)
     {
-      state_it++;
+      filterStateHistory_.pop_back();
     }
 
     // The state and measurement histories are stored at the same time, so if we have insufficient state history, we
     // will also have insufficient measurement history.
-    if (state_it == filterStateHistory_.rend())
+    if (filterStateHistory_.empty())
     {
       RF_DEBUG("Insufficient history to revert to time " << time << "\n");
 
@@ -2608,20 +2607,19 @@ namespace RobotLocalization
     }
 
     // Reset filter to the latest state from the queue.
-    filter_.setState((*state_it)->state_);
-    filter_.setEstimateErrorCovariance((*state_it)->estimateErrorCovariance_);
-    filter_.setLastMeasurementTime((*state_it)->lastMeasurementTime_);
+    const FilterStatePtr &state = filterStateHistory_.back();
+    filter_.setState(state->state_);
+    filter_.setEstimateErrorCovariance(state->estimateErrorCovariance_);
+    filter_.setLastMeasurementTime(state->lastMeasurementTime_);
 
-    RF_DEBUG("Reverted to state with time " << (*state_it)->lastMeasurementTime_ << "\n");
+    RF_DEBUG("Reverted to state with time " << state->lastMeasurementTime_ << "\n");
 
     // Repeat for measurements, but push every measurement onto the measurement queue as we go
-    MeasurementHistoryDeque::reverse_iterator meas_it = measurementHistory_.rbegin();
     int restored_measurements = 0;
-
-    while (meas_it != measurementHistory_.rend() && (*meas_it)->time_ > time)
+    while (!measurementHistory_.empty() && measurementHistory_.back()->time_ > time)
     {
-      measurementQueue_.push(*meas_it);
-      meas_it++;
+      measurementQueue_.push(measurementHistory_.back());
+      measurementHistory_.pop_back();
       restored_measurements++;
     }
 
