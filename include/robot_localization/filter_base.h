@@ -45,6 +45,8 @@
 #include <limits>
 #include <string>
 
+#include <boost/shared_ptr.hpp>
+
 namespace RobotLocalization
 {
 
@@ -78,6 +80,11 @@ struct Measurement
   double mahalanobisThresh_;
 
   // We want earlier times to have greater priority
+  bool operator()(const boost::shared_ptr<Measurement> &a, const boost::shared_ptr<Measurement> &b)
+  {
+    return (*this)(*(a.get()), *(b.get()));
+  }
+
   bool operator()(const Measurement &a, const Measurement &b)
   {
     return a.time_ > b.time_;
@@ -90,6 +97,38 @@ struct Measurement
   {
   }
 };
+typedef boost::shared_ptr<Measurement> MeasurementPtr;
+
+//! @brief Structure used for storing and comparing filter states
+//!
+//! This structure is useful when higher-level classes need to remember filter history.
+//! Measurement units are assumed to be in meters and radians.
+//! Times are real-valued and measured in seconds.
+//!
+struct FilterState
+{
+  // The filter state vector
+  Eigen::VectorXd state_;
+
+  // The filter error covariance matrix
+  Eigen::MatrixXd estimateErrorCovariance_;
+
+  // The time stamp of the most recent measurement for the filter
+  double lastMeasurementTime_;
+
+  // We want the queue to be sorted from latest to earliest timestamps.
+  bool operator()(const FilterState &a, const FilterState &b)
+  {
+    return a.lastMeasurementTime_ < b.lastMeasurementTime_;
+  }
+
+  FilterState() :
+    state_(),
+    estimateErrorCovariance_(),
+    lastMeasurementTime_(0)
+  {}
+};
+typedef boost::shared_ptr<FilterState> FilterStatePtr;
 
 class FilterBase
 {
