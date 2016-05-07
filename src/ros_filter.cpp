@@ -478,7 +478,7 @@ namespace RobotLocalization
         // a control with each sensor message so that we can support lagged smoothing. As we cannot guarantee that the
         // new control callback will fire before a new measurement, we should only perform this operation if we are
         // processing messages from the history. Otherwise, we may get a new measurement, store the "old" latest control,
-        // then received a control, call setControl, and then overwrite that value with this one (i.e., with the "old"
+        // then receive a control, call setControl, and then overwrite that value with this one (i.e., with the "old"
         // control we associated with the measurement).
         if (useControl_ && restoredMeasurementCount > 0)
         {
@@ -1169,7 +1169,7 @@ namespace RobotLocalization
         int twistUpdateSum = std::accumulate(twistUpdateVec.begin(), twistUpdateVec.end(), 0);
         int accelUpdateSum = std::accumulate(accelUpdateVec.begin(), accelUpdateVec.end(), 0);
 
-        // Check if we're using control input for any of the acceleration variables; turn the off if so
+        // Check if we're using control input for any of the acceleration variables; turn off if so
         if(static_cast<bool>(controlUpdateVector[ControlMemberVx]) && static_cast<bool>(accelUpdateVec[StateMemberAx]))
         {
           ROS_WARN_STREAM("X acceleration is being measured from IMU; X velocity control input is disabled");
