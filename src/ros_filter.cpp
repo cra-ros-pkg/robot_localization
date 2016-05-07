@@ -304,7 +304,7 @@ namespace RobotLocalization
         }
       }
 
-      message.header.stamp = ros::Time::now();
+      message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
       message.header.frame_id = worldFrameId_;
       message.child_frame_id = baseLinkFrameId_;
     }
