@@ -559,7 +559,7 @@ namespace RobotLocalization
     setPoseSub_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("set_pose",
                                                                           1,
                                                                           &RosFilter<T>::setPoseCallback,
-                                                                          this,ros::TransportHints().tcpNoDelay());
+                                                                          this, ros::TransportHints().tcpNoDelay(false));
 
     // Create a service for manually setting/resetting pose
     setPoseSrv_ = nh_.advertiseService("set_pose", &RosFilter<T>::setPoseSrvCallback, this);
@@ -634,12 +634,15 @@ namespace RobotLocalization
         const CallbackData twistCallbackData(odomTopicName + "_twist", twistUpdateVec, twistUpdateSum, false, false,
           twistMahalanobisThresh);
 
+        bool nodelayOdom = false;
+        nhLocal_.param(odomTopicName + "_nodelay", nodelayOdom, false);
+
         // Store the odometry topic subscribers so they don't go out of scope.
         if (poseUpdateSum + twistUpdateSum > 0)
         {
           topicSubs_.push_back(
             nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
-              boost::bind(&RosFilter<T>::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
+              boost::bind(&RosFilter<T>::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayOdom)));
         }
         else
         {
@@ -734,6 +737,9 @@ namespace RobotLocalization
         int poseQueueSize = 1;
         nhLocal_.param(poseTopicName + "_queue_size", poseQueueSize, 1);
 
+        bool nodelayPose = false;
+        nhLocal_.param(poseTopicName + "_nodelay", nodelayPose, false);
+
         // Pull in the sensor's config, zero out values that are invalid for the pose type
         std::vector<int> poseUpdateVec = loadUpdateConfig(poseTopicName);
         std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET,
@@ -752,7 +758,7 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
-              boost::bind(&RosFilter<T>::poseCallback, this, _1, callbackData, worldFrameId_, false),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
+              boost::bind(&RosFilter<T>::poseCallback, this, _1, callbackData, worldFrameId_, false), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayPose)));
 
           if (differential)
           {
@@ -812,6 +818,9 @@ namespace RobotLocalization
         int twistQueueSize = 1;
         nhLocal_.param(twistTopicName + "_queue_size", twistQueueSize, 1);
 
+        bool nodelayTwist = false;
+        nhLocal_.param(twistTopicName + "_nodelay", nodelayTwist, false);
+
         // Pull in the sensor's config, zero out values that are invalid for the twist type
         std::vector<int> twistUpdateVec = loadUpdateConfig(twistTopicName);
         std::fill(twistUpdateVec.begin() + POSITION_OFFSET, twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
@@ -825,7 +834,7 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
-              boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
+              boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayTwist)));
 
           twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
           twistVarCounts[StateMemberVy] += twistUpdateVec[StateMemberVy];
@@ -935,6 +944,9 @@ namespace RobotLocalization
         int imuQueueSize = 1;
         nhLocal_.param(imuTopicName + "_queue_size", imuQueueSize, 1);
 
+        bool nodelayImu = false;
+        nhLocal_.param(imuTopicName + "_nodelay", nodelayImu, false);
+
         if (poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
         {
           const CallbackData poseCallbackData(imuTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
@@ -947,7 +959,7 @@ namespace RobotLocalization
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
               boost::bind(&RosFilter<T>::imuCallback, this, _1, imuTopicName, poseCallbackData, twistCallbackData,
-                accelCallbackData),ros::VoidPtr(),ros::TransportHints().tcpNoDelay()));
+                accelCallbackData), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayImu)));
         }
         else
         {

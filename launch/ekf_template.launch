@@ -151,6 +151,12 @@
            that users do not set values for these parameters without having a thorough understanding of
            the parameters do. -->
 
+      <!-- TCP_NODELAY can provide a potentially lower-latency connection if a TCP transport is used. By default, the option is set false. -->
+      <param name="odom0_nodelay" value="false"/>
+      <param name="pose0_nodelay" value="false"/>
+      <param name="twist0_nodelay" value="false"/>		
+      <param name="imu0_nodelay" value="false"/>				
+
       <!-- By default, the subscription queue size for each message type is 1. If you wish to increase that so as not
            miss any messages (even if your frequency is set to a relatively small value), increase these. -->
       <param name="odom0_queue_size" value="2"/>
