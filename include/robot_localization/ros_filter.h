@@ -66,6 +66,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace RobotLocalization
 {
@@ -95,7 +96,9 @@ struct CallbackData
   double rejectionThreshold_;
 };
 
-typedef std::priority_queue<Measurement, std::vector<Measurement>, Measurement> MeasurementQueue;
+typedef std::priority_queue<MeasurementPtr, std::vector<MeasurementPtr>, Measurement> MeasurementQueue;
+typedef std::deque<MeasurementPtr> MeasurementHistoryDeque;
+typedef std::deque<FilterStatePtr> FilterStateHistoryDeque;
 
 template<class T> class RosFilter
 {
@@ -245,6 +248,25 @@ template<class T> class RosFilter
                        const std::string &targetFrame);
 
   protected:
+    //! @brief Finds the latest filter state before the given timestamp and makes it the current state again.
+    //!
+    //! This method also inserts all measurements between the older filter timestamp and now into the measurements
+    //! queue.
+    //! @return True if restoring the filter succeeded. False if not.
+    //!
+    bool revertTo(const double time);
+
+    //! @brief Saves the current filter state in the queue of previous filter states
+    //!
+    //! These measurements will be used in backwards smoothing in the event that older measurements come in.
+    //! @param[in] The filter base object whose state we want to save
+    //!
+    void saveFilterState(FilterBase &filter);
+
+    //! @brief Removes measurements and filter states older than the given cutoff time.
+    //! @param[in] cutoffTime - Measurements and states older than this time will be dropped.
+    //!
+    void clearExpiredHistory(const double cutoffTime);
 
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
     //! @param[in] errLevel - The error level of the diagnostic
@@ -392,9 +414,19 @@ template<class T> class RosFilter
     //!
     double frequency_;
 
+    //! @brief The depth of the history we track for smoothing/delayed measurement processing
+    //!
+    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
+    //!
+    double historyLength_;
+
     //! @brief The most recent control input
     //!
     Eigen::VectorXd latestControl_;
+
+    //! @brief The time of the most recent control input
+    //!
+    ros::Time latestControlTime_;
 
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
@@ -485,6 +517,10 @@ template<class T> class RosFilter
     //!
     ros::ServiceServer setPoseSrv_;
 
+    //! @brief Whether or not we use smoothing
+    //!
+    bool smoothLaggedData_;
+
     //! @brief Contains the state vector variable names in string format
     //!
     std::vector<std::string> stateVariableNames_;
@@ -513,6 +549,10 @@ template<class T> class RosFilter
     //!
     bool twoDMode_;
 
+    //! @brief Whether or not we use a control term
+    //!
+    bool useControl_;
+
     //! @brief Message that contains our latest transform (i.e., state)
     //!
     //! We use the vehicle's latest state in a number of places, and often
@@ -524,6 +564,22 @@ template<class T> class RosFilter
     //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
     //!
     std::string worldFrameId_;
+
+    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
+    //!
+    bool publishTransform_;
+
+    //! @brief An implicitly time ordered queue of past filter states used for smoothing.
+    //
+    // front() refers to the filter state with the earliest timestamp.
+    // back() refers to the filter state with the latest timestamp.
+    FilterStateHistoryDeque filterStateHistory_;
+
+    //! @brief A deque of previous measurements which is implicitly ordered from earliest to latest measurement.
+    // when popped from the measurement priority queue.
+    // front() refers to the measurement with the earliest timestamp.
+    // back() refers to the measurement with the latest timestamp.
+    MeasurementHistoryDeque measurementHistory_;
 };
 
 }  // namespace RobotLocalization

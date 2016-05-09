@@ -46,6 +46,8 @@
 #include <limits>
 #include <string>
 
+#include <boost/shared_ptr.hpp>
+
 namespace RobotLocalization
 {
 
@@ -78,7 +80,18 @@ struct Measurement
   // The Mahalanobis distance threshold in number of sigmas
   double mahalanobisThresh_;
 
+  // The most recent control vector (needed for lagged data)
+  Eigen::VectorXd latestControl_;
+
+  // The time stamp of the most recent control term (needed for lagged data)
+  double latestControlTime_;
+
   // We want earlier times to have greater priority
+  bool operator()(const boost::shared_ptr<Measurement> &a, const boost::shared_ptr<Measurement> &b)
+  {
+    return (*this)(*(a.get()), *(b.get()));
+  }
+
   bool operator()(const Measurement &a, const Measurement &b)
   {
     return a.time_ > b.time_;
@@ -86,11 +99,53 @@ struct Measurement
 
   Measurement() :
     topicName_(""),
-    time_(0),
+    latestControl_(),
+    latestControlTime_(0.0),
+    time_(0.0),
     mahalanobisThresh_(std::numeric_limits<double>::max())
   {
   }
 };
+typedef boost::shared_ptr<Measurement> MeasurementPtr;
+
+//! @brief Structure used for storing and comparing filter states
+//!
+//! This structure is useful when higher-level classes need to remember filter history.
+//! Measurement units are assumed to be in meters and radians.
+//! Times are real-valued and measured in seconds.
+//!
+struct FilterState
+{
+  // The filter state vector
+  Eigen::VectorXd state_;
+
+  // The filter error covariance matrix
+  Eigen::MatrixXd estimateErrorCovariance_;
+
+  // The most recent control vector
+  Eigen::VectorXd latestControl_;
+
+  // The time stamp of the most recent measurement for the filter
+  double lastMeasurementTime_;
+
+  // The time stamp of the most recent control term
+  double latestControlTime_;
+
+  // We want the queue to be sorted from latest to earliest timestamps.
+  bool operator()(const FilterState &a, const FilterState &b)
+  {
+    return a.lastMeasurementTime_ < b.lastMeasurementTime_;
+  }
+
+  FilterState() :
+    state_(),
+    estimateErrorCovariance_(),
+    latestControl_(),
+    lastMeasurementTime_(0.0),
+    latestControlTime_(0.0)
+  {}
+};
+typedef boost::shared_ptr<FilterState> FilterStatePtr;
 
 class FilterBase
 {
@@ -109,6 +164,18 @@ class FilterBase
     //! @param[in] measurement - The measurement to fuse with the state estimate
     //!
     virtual void correct(const Measurement &measurement) = 0;
+
+    //! @brief Returns the control vector currently being used
+    //!
+    //! @return The control vector
+    //!
+    const Eigen::VectorXd& getControl();
+
+    //! @brief Returns the time at which the control term was issued
+    //!
+    //! @return The time the control vector was issued
+    //!
+    double getControlTime();
 
     //! @brief Gets the value of the debug_ variable.
     //!
@@ -267,16 +334,14 @@ class FilterBase
     //! @brief Method for settings bounds on acceleration values derived from controls
     //! @param[in] state - The current state variable (e.g., linear X velocity)
     //! @param[in] control - The current control commanded velocity corresponding to the state variable
-    //! @param[in] frequency - Inverse of the time delta from the last filter update time
     //! @param[in] accelerationLimit - Limit for acceleration (regardless of driving direction)
     //! @param[in] accelerationGain - Gain applied to acceleration control error
     //! @param[in] decelerationLimit - Limit for deceleration (moving towards zero, regardless of driving direction)
     //! @param[in] decelerationGain - Gain applied to deceleration control error
     //! @return a usable acceleration estimate for the control vector
     //!
-    inline double computeControlAcceleration(const double state, const double control, const double frequency,
-      const double accelerationLimit, const double accelerationGain, const double decelerationLimit,
-      const double decelerationGain)
+    inline double computeControlAcceleration(const double state, const double control, const double accelerationLimit,
+      const double accelerationGain, const double decelerationLimit, const double decelerationGain)
     {
       FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
 
@@ -293,7 +358,7 @@ class FilterBase
         gain = decelerationGain;
       }
 
-      const double finalAccel = gain * std::min(std::max(frequency * error, -limit), limit);
+      const double finalAccel = std::min(std::max(gain * error, -limit), limit);
 
       FB_DEBUG("Control value: " << control << "\n" <<
                "State value: " << state << "\n" <<
@@ -303,7 +368,6 @@ class FilterBase
                "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
                "Limit: " << limit << "\n" <<
                "Gain: " << gain << "\n" <<
-               "Frequecy: " << frequency << "\n" <<
                "Final is " << finalAccel << "\n");
 
       return finalAccel;

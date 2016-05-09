@@ -120,6 +120,16 @@ namespace RobotLocalization
   {
   }
 
+  const Eigen::VectorXd& FilterBase::getControl()
+  {
+    return latestControl_;
+  }
+
+  double FilterBase::getControlTime()
+  {
+    return latestControlTime_;
+  }
+
   bool FilterBase::getDebug()
   {
     return debug_;
@@ -331,14 +341,12 @@ namespace RobotLocalization
           latestControlTime_ << ", control timeout was " << controlTimeout_ << "\n");
       }
 
-      double frequency = ::fabs(1.0 / predictionDelta);
-
       for(size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
       {
         if(controlUpdateVector_[controlInd])
         {
           controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
-            (timedOut ? 0.0 : latestControl_(controlInd)), frequency, accelerationLimits_[controlInd],
+            (timedOut ? 0.0 : latestControl_(controlInd)), accelerationLimits_[controlInd],
             accelerationGains_[controlInd], decelerationLimits_[controlInd], decelerationGains_[controlInd]);
         }
       }

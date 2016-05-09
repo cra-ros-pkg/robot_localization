@@ -2,27 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.3 (2016-05-02)
+2.2.3 (2016-04-24)
 ------------------
-* Fixing differential handling for pose data so that it doesn't care about the message's frame_id
-* Fixing UKF yaml file
-* Updating UKF config and launch
-* Adding acceleration and deceleration gains, and adding .yaml file for EKF config
-* Fixing target frame handling for differential mode
-* Fixing control configuration check
-* Cleaning up prepareControl
-* Updating tests to match new method signatures
-* Adding acceleration prep to UKF
-* Adding control term
-* Fixing typo
-* Restoring includes in ros_filter.h
 * Cleaning up callback data structure and callbacks and updating doxygen comments in headers
 * Removing MessageFilters
 * Removing deprecated parameters
-* Adding the ability to handle GPS offsets from the vehicle's origin, and code cleanup
+* Adding the ability to handle GPS offsets from the vehicle's origin
 * Cleaning up navsat_transform.h
 * Making variables in navsat_transform conform to ROS coding standards
-* Contributors: Tom Moore
 
 2.2.2 (2016-02-04)
 ------------------
