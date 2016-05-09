@@ -2,6 +2,15 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.2.3 (2016-04-24)
+------------------
+* Cleaning up callback data structure and callbacks and updating doxygen comments in headers
+* Removing MessageFilters
+* Removing deprecated parameters
+* Adding the ability to handle GPS offsets from the vehicle's origin
+* Cleaning up navsat_transform.h
+* Making variables in navsat_transform conform to ROS coding standards
+
 2.2.2 (2016-02-04)
 ------------------
 * Updating trig functions to use sincos for efficiency

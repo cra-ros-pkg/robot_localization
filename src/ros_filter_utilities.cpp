@@ -64,6 +64,20 @@ std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans)
   return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec)
+{
+  os << "(" << std::setprecision(20);
+
+  for(size_t i = 0; i < vec.size(); ++i)
+  {
+    os << vec[i] << " ";
+  }
+
+  os << ")\n";
+
+  return os;
+}
+
 namespace RobotLocalization
 {
 namespace RosFilterUtilities

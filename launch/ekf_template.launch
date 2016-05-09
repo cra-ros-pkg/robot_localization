@@ -1,7 +1,8 @@
-<!-- Launch file for ekf_localization_node -->
-
 <launch>
+  <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+    <rosparam command="load" file="$(find robot_localization)/params/ekf_template.yaml" />
 
+<<<<<<< HEAD
     <!-- This node will take in measurements from odometry, IMU, stamped pose, and stamped twist messages. It tracks
          the state of the robot, with the state vector being defined as X position, Y position, Z position,
          roll, pitch, yaw, their respective velocites, and linear acceleration. Units for all measurements are assumed
@@ -149,13 +150,7 @@
 
       <!-- Most users will be able to remove these parameters from the launch file without any consequences. We recommend
            that users do not set values for these parameters without having a thorough understanding of
-           the parameters do. -->
-
-      <!-- TCP_NODELAY can provide a potentially lower-latency connection if a TCP transport is used. By default, the option is set false. -->
-      <param name="odom0_nodelay" value="false"/>
-      <param name="pose0_nodelay" value="false"/>
-      <param name="twist0_nodelay" value="false"/>		
-      <param name="imu0_nodelay" value="false"/>				
+           the parameters do. -->			
 
       <!-- By default, the subscription queue size for each message type is 1. If you wish to increase that so as not
            miss any messages (even if your frequency is set to a relatively small value), increase these. -->
@@ -227,5 +222,11 @@
       -->
 
     </node>
+=======
+    <!--  Placeholder for output topic remapping
+    <remap from="odometry/filtered" to=""/>
+    -->
+>>>>>>> upstream/indigo-devel
 
+  </node>
 </launch>
