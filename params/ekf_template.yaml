@@ -32,6 +32,7 @@ odom0_relative: false
 odom0_queue_size: 2
 odom0_pose_rejection_threshold: 5
 odom0_twist_rejection_threshold: 1
+odom0_nodelay: false
 
 odom1: example/another_odom
 odom1_config: [false, false, true,
@@ -44,6 +45,7 @@ odom1_relative: true
 odom1_queue_size: 2
 odom1_pose_rejection_threshold: 2
 odom1_twist_rejection_threshold: 0.2
+odom1_nodelay: false
 
 pose0: example/pose
 pose0_config: [true,  true,  false,
@@ -55,6 +57,7 @@ pose0_differential: true
 pose0_relative: false
 pose0_queue_size: 5
 pose0_rejection_threshold: 2
+pose0_nodelay: false
 
 twist0: example/twist
 twist0_config: [false, false, false,
@@ -64,6 +67,7 @@ twist0_config: [false, false, false,
                 false, false, false]
 twist0_queue_size: 3
 twist0_rejection_threshold: 2
+twist0_nodelay: false
 
 imu0: example/imu
 imu0_config: [false, false, false,
@@ -71,6 +75,8 @@ imu0_config: [false, false, false,
               false, false, false,
               true,  true,  true,
               true,  true,  true]
+imu0_nodelay: false
+
 odom1_differential: false
 odom1_relative: true
 imu0_queue_size: 5
