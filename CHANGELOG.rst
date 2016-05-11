@@ -2,7 +2,7 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.3 (2016-05-11)
+2.3.0 (2016-05-11)
 ------------------
 * Added TcpNoDelay option for subscribers
 * Fixed some comments
