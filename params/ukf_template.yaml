@@ -1,0 +1,122 @@
+frequency: 30
+sensor_timeout: 0.1
+transform_time_offset: 0.0
+two_d_mode: false
+print_diagnostics: true
+
+debug: false
+debug_out_file: /path/to/debug/file.txt
+
+map_frame: map
+odom_frame: odom
+base_link_frame: base_link
+world_frame: odom
+
+use_control: true
+stamped_control: false
+control_timeout: 0.2
+control_config: [true, false, false, false, false, true]
+acceleration_limits: [1.3, 0.0, 0.0, 0.0, 0.0, 3.4]
+deceleration_limits: [1.3, 0.0, 0.0, 0.0, 0.0, 4.5]
+acceleration_gains: [0.8, 0.0, 0.0, 0.0, 0.0, 0.9]
+deceleration_gains: [1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+alpha: 0.001
+kappa: 0
+beta: 2
+
+odom0: example/odom
+odom0_config: [true,true,false,
+               false, false, false,
+               false, false, false,
+               false, false, true,
+               false, false, false]
+odom0_differential: false
+odom0_relative: false
+odom0_queue_size: 2
+odom0_pose_rejection_threshold: 5
+odom0_twist_rejection_threshold: 1
+odom0_nodelay: false
+
+odom1: example/another_odom
+odom1_config: [false, false, true,
+               false, false, false,
+               false, false, false,
+               false, false, true,
+               false, false, false]
+odom1_differential: false
+odom1_relative: true
+odom1_queue_size: 2
+odom1_pose_rejection_threshold: 2
+odom1_twist_rejection_threshold: 0.2
+odom1_nodelay: false
+
+pose0: example/pose
+pose0_config: [true,  true,  false,
+               false, false, false,
+               false, false, false,
+               false, false, false,
+               false, false, false]
+pose0_differential: true
+pose0_relative: false
+pose0_queue_size: 5
+pose0_rejection_threshold: 2
+pose0_nodelay: false
+
+twist0: example/twist
+twist0_config: [false, false, false,
+                false, false, false,
+                true,  true,  true,
+                false, false, false,
+                false, false, false]
+twist0_queue_size: 3
+twist0_rejection_threshold: 2
+twist0_nodelay: false
+
+imu0: example/imu
+imu0_config: [false, false, false,
+              true,  true,  true,
+              false, false, false,
+              true,  true,  true,
+              true,  true,  true]
+imu0_nodelay: false
+
+odom1_differential: false
+odom1_relative: true
+imu0_queue_size: 5
+imu0_pose_rejection_threshold: 0.8
+imu0_twist_rejection_threshold: 0.8
+imu0_linear_acceleration_rejection_threshold: 0.8
+
+process_noise_covariance: [0.05, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0.05, 0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0.06, 0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0.03, 0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0.03, 0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0.06, 0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0.025, 0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0.025, 0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0.04, 0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0.01, 0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0.01, 0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0.02, 0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0.01, 0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0.01, 0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0.015]
+
+initial_estimate_covariance: [1e-9, 0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    1e-9, 0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    1e-9, 0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    1e-9, 0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    1e-9, 0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    1e-9, 0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    1e-9, 0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    1e-9, 0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    1e-9, 0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-9,  0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     1e-9,  0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     1e-9,  0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     1e-9, 0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    1e-9, 0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1e-9]
+

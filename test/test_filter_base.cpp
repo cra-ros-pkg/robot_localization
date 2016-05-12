@@ -66,7 +66,7 @@ class FilterDerived : public FilterBase
       }
     }
 
-    void predict(const double delta)
+    void predict(const double refTime, const double delta)
     {
       val = delta;
     }
@@ -81,7 +81,7 @@ class FilterDerived2 : public FilterBase
     {
     }
 
-    void predict(const double delta)
+    void predict(const double refTime, const double delta)
     {
     }
 
