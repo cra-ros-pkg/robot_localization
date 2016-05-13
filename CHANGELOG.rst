@@ -6,7 +6,7 @@ Changelog for package robot_localization
 ------------------
 * Added TcpNoDelay option for subscribers
 * Fixed some comments
-* Adding lagged measurement support
+* Adding lagged measurement support 
 * Changing output timestamp to more accurately use the time stamp of the most recently-processed measurement
 * Add parameter to make transform publishing optional
 * Fixing differential handling for pose data so that it doesn't care about the message's frame_id
