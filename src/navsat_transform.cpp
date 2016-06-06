@@ -66,6 +66,7 @@ namespace RobotLocalization
     tf_listener_(tf_buffer_)
   {
     latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
+    latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
   }
 
   NavSatTransform::~NavSatTransform()
@@ -522,6 +523,15 @@ namespace RobotLocalization
     }
 
     tf2::fromMsg(msg->pose.pose, latest_world_pose_);
+    latest_odom_covariance_.setZero();
+    for(size_t row = 0; row < POSE_SIZE; ++row)
+    {
+      for(size_t col = 0; col < POSE_SIZE; ++col)
+      {
+        latest_odom_covariance_(row, col) = msg->pose.covariance[row * POSE_SIZE + col];
+      }
+    }
+
     odom_update_time_ = msg->header.stamp;
     odom_updated_ = true;
   }
@@ -569,7 +579,7 @@ namespace RobotLocalization
       {
         for (size_t j = 0; j < POSITION_SIZE; j++)
         {
-          filtered_gps.position_covariance[POSITION_SIZE * i + j] = latest_utm_covariance_(i, j);
+          filtered_gps.position_covariance[POSITION_SIZE * i + j] = latest_odom_covariance_(i, j);
         }
       }
 

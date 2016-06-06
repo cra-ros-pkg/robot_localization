@@ -92,7 +92,7 @@ TEST(UkfTest, Measurements)
                          std::numeric_limits<double>::max(),
                          time);
 
-  ukf.integrateMeasurements(1001);
+  ukf.integrateMeasurements(ros::Time(1001));
 
   EXPECT_EQ(ukf.getFilter().getState(), measurement);
   EXPECT_EQ(ukf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
@@ -120,7 +120,7 @@ TEST(UkfTest, Measurements)
                          std::numeric_limits<double>::max(),
                          time);
 
-  ukf.integrateMeasurements(1003);
+  ukf.integrateMeasurements(ros::Time(1003));
 
   measurement = measurement2.eval() - ukf.getFilter().getState();
   for (size_t i = 0; i < STATE_SIZE; ++i)

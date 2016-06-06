@@ -163,11 +163,19 @@ if (CATKIN_ENABLE_TESTING)
   catkin_add_gtest(filter_base-test test/test_filter_base.cpp)
   target_link_libraries(filter_base-test filter_base ${catkin_LIBRARIES})
 
+  # This test uses ekf_localization node for convenience.
+  add_rostest_gtest(test_filter_base_diagnostics_timestamps
+                    test/test_filter_base_diagnostics_timestamps.test
+                    test/test_filter_base_diagnostics_timestamps.cpp)
+  target_link_libraries(test_filter_base_diagnostics_timestamps ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_filter_base_diagnostics_timestamps ekf_localization_node)
+
   #### EKF TESTS #####
   add_rostest_gtest(test_ekf
                     test/test_ekf.test
                     test/test_ekf.cpp)
   target_link_libraries(test_ekf ros_filter ekf ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+
 
   add_rostest_gtest(test_ekf_localization_node_interfaces
                     test/test_ekf_localization_node_interfaces.test

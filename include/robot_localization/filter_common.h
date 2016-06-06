@@ -57,6 +57,18 @@ enum StateMembers
   StateMemberAz
 };
 
+//! @brief Enumeration that defines the control vector
+//!
+enum ControlMembers
+{
+  ControlMemberVx,
+  ControlMemberVy,
+  ControlMemberVz,
+  ControlMemberVroll,
+  ControlMemberVpitch,
+  ControlMemberVyaw
+};
+
 //! @brief Global constants that define our state
 //! vector size and offsets to groups of values
 //! within that state.
