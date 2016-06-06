@@ -523,6 +523,7 @@ namespace RobotLocalization
     }
 
     tf2::fromMsg(msg->pose.pose, latest_world_pose_);
+    latest_odom_covariance_.setZero();
     for(size_t row = 0; row < POSE_SIZE; ++row)
     {
       for(size_t col = 0; col < POSE_SIZE; ++col)
@@ -578,7 +579,7 @@ namespace RobotLocalization
       {
         for (size_t j = 0; j < POSITION_SIZE; j++)
         {
-          filtered_gps.position_covariance[POSITION_SIZE * i + j] = latest_utm_covariance_(i, j);
+          filtered_gps.position_covariance[POSITION_SIZE * i + j] = latest_odom_covariance_(i, j);
         }
       }
 
