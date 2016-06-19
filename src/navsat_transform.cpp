@@ -368,7 +368,10 @@ namespace RobotLocalization
       utm_orientation.setRPY(roll, pitch, yaw);
 
       // Rotate the GPS linear offset by the orientation
+      // Zero out the orientation, because the GPS orientation is meaningless, and if it's non-zero, it will make the
+      // the computation of robot_utm_pose erroneous.
       offset.setOrigin(tf2::quatRotate(utm_orientation, offset.getOrigin()));
+      offset.setRotation(tf2::Quaternion::getIdentity());
 
       // Update the initial pose
       robot_utm_pose = offset.inverse() * gps_utm_pose;
