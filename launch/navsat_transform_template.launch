@@ -81,13 +81,9 @@
            to false. -->
       <param name="use_odometry_yaw" value="false"/>
 
-      <!-- If this is true, the node ignores the IMU data and gets its heading from the
-           odometry source (typically the /odometry/filtered topic coming from one of
-           robot_localization's state estimation nodes). BE CAREFUL when using this!
-           The yaw value in your odometry source *must* be world-referenced, e.g., you
-           cannot use your odometry source for yaw if you have only one source for yaw
-           data and it has its differential or relative parameter set to true. Defaults
-           to false. -->
+      <!-- If true, will retrieve the datum from the 'datum' parameter below, if available.
+           If no 'datum' parameter exists, navsat_transform_node will wait until the user
+           calls the 'datum' service with the SetDatum service message. -->
       <param name="wait_for_datum" value="false"/>
 
       <!-- Instead of using the first GPS location and IMU-based heading for the
