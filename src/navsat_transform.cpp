@@ -103,7 +103,7 @@ namespace RobotLocalization
 
       try
       {
-        double dataum_law;
+        double datum_lat;
         double datum_lon;
         double datum_yaw;
 
@@ -112,25 +112,18 @@ namespace RobotLocalization
         // Handle datum specification. Users should always specify a baseLinkFrameId_ in the
         // datum config, but we had a release where it wasn't used, so we'll maintain compatibility.
         ROS_ASSERT(datum_config.getType() == XmlRpc::XmlRpcValue::TypeArray);
-        ROS_ASSERT(datum_config.size() == 4 || datum_config.size() == 5);
+        ROS_ASSERT(datum_config.size() >= 3);
 
-        use_manual_datum_ = true;
+        if (datum_config.size() > 3)
+        {
+          ROS_WARN_STREAM("Deprecated datum parameter configuration detected. Only the first three parameters "
+              "(latitude, longitude, yaw) will be used. frame_ids will be derived from odometry and navsat inputs.");
+        }
 
         std::ostringstream ostr;
-        if (datum_config.size() == 4)
-        {
-          ROS_WARN_STREAM("No base_link_frame specified for the datum (parameter 5).");
-          ostr << datum_config[0] << " " << datum_config[1] << " " << datum_config[2] << " " << datum_config[3];
-          std::istringstream istr(ostr.str());
-          istr >> dataum_law >> datum_lon >> datum_yaw >> world_frame_id_;
-        }
-        else if (datum_config.size() == 5)
-        {
-          ostr << datum_config[0] << " " << datum_config[1] << " " << datum_config[2] <<
-                  " " << datum_config[3] << " " << datum_config[4];
-          std::istringstream istr(ostr.str());
-          istr >> dataum_law >> datum_lon >> datum_yaw >> world_frame_id_ >> base_link_frame_id_;
-        }
+        ostr << datum_config[0] << " " << datum_config[1] << " " << datum_config[2];
+        std::istringstream istr(ostr.str());
+        istr >> datum_lat >> datum_lon >> datum_yaw;
 
         // Try to resolve tf_prefix
         std::string tf_prefix = "";
@@ -145,7 +138,7 @@ namespace RobotLocalization
         FilterUtilities::appendPrefix(tf_prefix, base_link_frame_id_);
 
         robot_localization::SetDatum::Request request;
-        request.geo_pose.position.latitude = dataum_law;
+        request.geo_pose.position.latitude = datum_lat;
         request.geo_pose.position.longitude = datum_lon;
         request.geo_pose.position.altitude = 0.0;
         tf2::Quaternion quat;
@@ -233,7 +226,14 @@ namespace RobotLocalization
       // The UTM pose we have is given at the location of the GPS sensor on the robot. We need to get the UTM pose of
       // the robot's origin.
       tf2::Transform transform_utm_pose_corrected;
-      getRobotOriginUtmPose(transform_utm_pose_, transform_utm_pose_corrected, ros::Time(0));
+      if (!use_manual_datum_)
+      {
+        getRobotOriginUtmPose(transform_utm_pose_, transform_utm_pose_corrected, ros::Time(0));
+      }
+      else
+      {
+        transform_utm_pose_corrected = transform_utm_pose_;
+      }
 
       // Get the IMU's current RPY values. Need the raw values (for yaw, anyway).
       tf2::Matrix3x3 mat(transform_orientation_);
@@ -303,6 +303,11 @@ namespace RobotLocalization
   bool NavSatTransform::datumCallback(robot_localization::SetDatum::Request& request,
                                       robot_localization::SetDatum::Response&)
   {
+    // If we get a service call with a manual datum, even if we already computed the transform using the robot's
+    // initial pose, then we want to assume that we are using a datum from now on, and we want other methods to
+    // not attempt to transform the values we are specifying here.
+    use_manual_datum_ = true;
+
     transform_good_ = false;
 
     sensor_msgs::NavSatFix *fix = new sensor_msgs::NavSatFix();
@@ -378,8 +383,11 @@ namespace RobotLocalization
     }
     else
     {
-      ROS_WARN_STREAM("Unable to obtain " << base_link_frame_id_ << "->" << gps_frame_id_ <<
-        " transform. Will assume navsat device is mounted at vehicle's origin");
+      if (gps_frame_id_ != "")
+      {
+        ROS_WARN_STREAM_ONCE("Unable to obtain " << base_link_frame_id_ << "->" << gps_frame_id_ <<
+          " transform. Will assume navsat device is mounted at robot's origin");
+      }
 
       robot_utm_pose = gps_utm_pose;
     }
@@ -428,6 +436,14 @@ namespace RobotLocalization
 
   void NavSatTransform::gpsFixCallback(const sensor_msgs::NavSatFixConstPtr& msg)
   {
+    gps_frame_id_ = msg->header.frame_id;
+
+    if (gps_frame_id_.empty())
+    {
+      ROS_WARN_STREAM_ONCE("NavSatFix message has empty frame_id. Will assume navsat device is mounted at robot's "
+        "origin.");
+    }
+
     // Make sure the GPS data is usable
     bool good_gps = (msg->status.status != sensor_msgs::NavSatStatus::STATUS_NO_FIX &&
                      !std::isnan(msg->altitude) &&
@@ -520,6 +536,9 @@ namespace RobotLocalization
 
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
+    world_frame_id_ = msg->header.frame_id;
+    base_link_frame_id_ = msg->child_frame_id;
+
     if (!transform_good_ && !use_manual_datum_)
     {
       setTransformOdometry(msg);
@@ -603,7 +622,7 @@ namespace RobotLocalization
   {
     bool new_data = false;
 
-    if (transform_good_ && gps_updated_)
+    if (transform_good_ && gps_updated_ && odom_updated_)
     {
       tf2::Transform transformed_utm_gps;
 
@@ -668,15 +687,12 @@ namespace RobotLocalization
 
     transform_utm_pose_.setOrigin(tf2::Vector3(utm_x, utm_y, msg->altitude));
     transform_utm_pose_.setRotation(tf2::Quaternion::getIdentity());
-    gps_frame_id_ = msg->header.frame_id;
     has_transform_gps_ = true;
   }
 
   void NavSatTransform::setTransformOdometry(const nav_msgs::OdometryConstPtr& msg)
   {
     tf2::fromMsg(msg->pose.pose, transform_world_pose_);
-    world_frame_id_ = msg->header.frame_id;
-    base_link_frame_id_ = msg->child_frame_id;
     has_transform_odom_ = true;
 
     ROS_INFO_STREAM("Initial odometry pose is " << transform_world_pose_);
@@ -689,7 +705,6 @@ namespace RobotLocalization
     {
       sensor_msgs::Imu *imu = new sensor_msgs::Imu();
       imu->orientation = msg->pose.pose.orientation;
-      imu->header.frame_id = msg->child_frame_id;
       sensor_msgs::ImuConstPtr imuPtr(imu);
       imuCallback(imuPtr);
     }
