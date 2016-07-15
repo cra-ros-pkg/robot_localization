@@ -2,23 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.3.0 (2016-05-11)
+2.2.3 (2016-04-24)
 ------------------
-* Added TcpNoDelay option for subscribers
-* Fixed some comments
-* Adding lagged measurement support 
-* Changing output timestamp to more accurately use the time stamp of the most recently-processed measurement
-* Add parameter to make transform publishing optional
-* Fixing differential handling for pose data so that it doesn't care about the message's frame_id
-* Updated config and launch files
-* Added reporting of bad timestamps via diagnostics
-* Added control term
 * Cleaning up callback data structure and callbacks and updating doxygen comments in headers
-* Removed MessageFilters
-* Removed deprecated parameters
-* Added the ability to handle GPS offsets from the vehicle's origin
+* Removing MessageFilters
+* Removing deprecated parameters
+* Adding the ability to handle GPS offsets from the vehicle's origin
+* Cleaning up navsat_transform.h
 * Making variables in navsat_transform conform to ROS coding standards
-* Contributors: Adel Fakih, Ivor Wanders, Marc Essinger, Tobias Tueylue, Tom Moore
 
 2.2.2 (2016-02-04)
 ------------------
