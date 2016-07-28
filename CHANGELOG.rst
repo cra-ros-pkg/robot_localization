@@ -2,6 +2,28 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.3.0 (2016-07-28)
+------------------
+* Fixed issues with datum usage and frame_ids
+* Fixed comment for wait_for_datum
+* Fixing issue with non-zero navsat sensor orientation offsets
+* Fixing issue with base_link->gps transform wrecking the 'true' UTM position computation
+* Using correct covariance for filtered GPS
+* Fixed unitialized odometry covariance bug
+* Added filter history and measurement queue behavior
+* Changing output timestamp to more accurately use the time stamp of the most recently-processed measurement
+* Added TcpNoDelay()
+* Added parameter to make transform publishing optional
+* Fixed differential handling for pose data so that it doesn't care about the message's frame_id
+* Updated UKF config and launch
+* Added a test case for the timestamp diagnostics
+* Added reporting of bad timestamps via diagnostics
+* Updated tests to match new method signatures
+* Added control term
+* Added smoothing capability for delayed measurements
+* Making variables in navsat_transform conform to ROS coding standards
+* Contributors: Adel Fakih, Ivor Wanders, Marc Essinger, Tobias Tueylue, Tom Moore
+
 2.2.3 (2016-04-24)
 ------------------
 * Cleaning up callback data structure and callbacks and updating doxygen comments in headers
