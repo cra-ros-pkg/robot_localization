@@ -1,13 +1,15 @@
-.. robot_localization documentation master file, created by
-   sphinx-quickstart on Sat Sep  3 14:09:43 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 ***********************
 robot_localization wiki
 ***********************
 
 ``robot_localization`` is a collection of state estimation nodes, each of which is an implementation of a nonlinear state estimator for robots moving in 3D space. It contains two state estimation nodes, ``ekf_localization_node`` and ``ukf_localization_node``. In addition, ``robot_localization`` provides ``navsat_transform_node``, which aids in the integration of GPS data.
+
+.. toctree::
+   :hidden:
+
+   state_estimation_nodes
+   navsat_transform_node
+   CHANGELOGs
 
 Features
 ========
@@ -39,16 +41,9 @@ Further details can be found in :download:`this paper <robot_localization_ias13_
     publisher = {Springer}
   }
 
-.. toctree::
-    :hidden:
-
-   state_estimation_nodes
-   CHANGELOG
-
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

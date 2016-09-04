@@ -29,7 +29,7 @@ exclude_patterns = ['.build']
 pygments_style = 'sphinx'
 todo_include_todos = True
 
-html_theme = 'bizstyle'
+html_theme = 'nature'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -59,7 +59,7 @@ html_static_path = ['.static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = { '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'], }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
