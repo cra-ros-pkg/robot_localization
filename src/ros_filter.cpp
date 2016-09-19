@@ -1770,6 +1770,10 @@ namespace RobotLocalization
       measurementQueue_.pop();
     }
 
+    ros::getGlobalCallbackQueue()->clear();
+    filterStateHistory_.clear();
+    measurementHistory_.clear();
+
     // Also set the last set pose time, so we ignore all messages
     // that occur before it
     lastSetPoseTime_ = msg->header.stamp;
