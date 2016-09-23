@@ -36,12 +36,15 @@
 #include "robot_localization/ros_filter_utilities.h"
 #include "robot_localization/filter_common.h"
 #include "robot_localization/filter_base.h"
-#include "robot_localization/SetPose.h"
+
+#include <robot_localization/SetPose.h>
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf2_ros/transform_listener.h>
@@ -63,18 +66,39 @@
 #include <queue>
 #include <string>
 #include <vector>
-
-// Some typedefs for message filter shared pointers
-typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> > poseMFSubPtr;
-typedef boost::shared_ptr< message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped> > twistMFSubPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::PoseWithCovarianceStamped> > poseMFPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<geometry_msgs::TwistWithCovarianceStamped> > twistMFPtr;
-typedef boost::shared_ptr< tf2_ros::MessageFilter<sensor_msgs::Imu> > imuMFPtr;
+#include <deque>
 
 namespace RobotLocalization
 {
 
-typedef std::priority_queue<Measurement, std::vector<Measurement>, Measurement> MeasurementQueue;
+struct CallbackData
+{
+  CallbackData(const std::string &topicName,
+               const std::vector<int> &updateVector,
+               const int updateSum,
+               const bool differential,
+               const bool relative,
+               const double rejectionThreshold) :
+    topicName_(topicName),
+    updateVector_(updateVector),
+    updateSum_(updateSum),
+    differential_(differential),
+    relative_(relative),
+    rejectionThreshold_(rejectionThreshold)
+  {
+  }
+
+  std::string topicName_;
+  std::vector<int> updateVector_;
+  int updateSum_;
+  bool differential_;
+  bool relative_;
+  double rejectionThreshold_;
+};
+
+typedef std::priority_queue<MeasurementPtr, std::vector<MeasurementPtr>, Measurement> MeasurementQueue;
+typedef std::deque<MeasurementPtr> MeasurementHistoryDeque;
+typedef std::deque<FilterStatePtr> FilterStateHistoryDeque;
 
 template<class T> class RosFilter
 {
@@ -94,16 +118,22 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] topicName - The name of the IMU topic
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
     //!
     void accelerationCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                              const std::string &topicName,
-                              const std::string &targetFrame,
-                              const std::vector<int> &updateVector,
-                              const double mahalanobisThresh);
+                              const CallbackData &callbackData,
+                              const std::string &targetFrame);
+
+    //! @brief Callback method for receiving non-stamped control input
+    //! @param[in] msg - The ROS twist message to take in
+    //!
+    void controlCallback(const geometry_msgs::Twist::ConstPtr &msg);
+
+    //! @brief Callback method for receiving stamped control input
+    //! @param[in] msg - The ROS stamped twist message to take in
+    //!
+    void controlCallback(const geometry_msgs::TwistStamped::ConstPtr &msg);
 
     //! @brief Adds a measurement to the queue of measurements to be processed
     //!
@@ -111,7 +141,7 @@ template<class T> class RosFilter
     //! @param[in] measurement - The measurement to enqueue
     //! @param[in] measurementCovariance - The covariance of the measurement
     //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outlier rejection
     //! @param[in] time - The time of arrival (in seconds)
     //!
     void enqueueMeasurement(const std::string &topicName,
@@ -142,19 +172,23 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] topicName - The name of the IMU data topic (we support many)
+    //! @param[in] topicName - The topic name for the IMU message (only used for debug output)
+    //! @param[in] poseCallbackData - Relevant static callback data for orientation variables
+    //! @param[in] twistCallbackData - Relevant static callback data for angular velocity variables
+    //! @param[in] accelCallbackData - Relevant static callback data for linear acceleration variables
     //!
-    //! This method really just separates out the absolute orientation and velocity data into two new
-    //! messages and adds them to their respective pose and twist callback message filters.
+    //! This method separates out the orientation, angular velocity, and linear acceleration data and
+    //! passed each on to its respective callback.
     //!
-    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                     const std::string &topicName);
+    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const std::string &topicName,
+      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData,
+      const CallbackData &accelCallbackData);
 
     //! @brief Processes all measurements in the measurement queue, in temporal order
     //!
     //! @param[in] currentTime - The time at which to carry out integration (the current time)
     //!
-    void integrateMeasurements(const double currentTime);
+    void integrateMeasurements(const ros::Time &currentTime);
 
     //! @brief Loads all parameters from file
     //!
@@ -162,30 +196,26 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all odometry messages
     //! @param[in] msg - The ROS odometry message to take in.
-    //! @param[in] topicName - The name of the odometry topic (we support many)
+    //! @param[in] topicName - The topic name for the odometry message (only used for debug output)
+    //! @param[in] poseCallbackData - Relevant static callback data for pose variables
+    //! @param[in] twistCallbackData - Relevant static callback data for twist variables
     //!
-    //! This method really just separates out the pose and twist data into two new messages, and passes
-    //! them to their respective callbacks
+    //! This method simply separates out the pose and twist data into two new messages, and passes them into their
+    //! respective callbacks
     //!
-    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg,
-                          const std::string &topicName);
+    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const std::string &topicName,
+      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData);
 
     //! @brief Callback method for receiving all pose messages
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
-    //! @param[in] topicName - The name of the pose topic (we support many)
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] differential - Whether we integrate the pose portions of this message differentially
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] imuData - Whether this data comes from an IMU
     //!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                      const std::string &topicName,
+                      const CallbackData &callbackData,
                       const std::string &targetFrame,
-                      const std::vector<int> &updateVector,
-                      const bool differential,
-                      const bool relative,
-                      const bool imuData,
-                      const double mahalanobisThresh);
+                      const bool imuData);
 
     //! @brief Main run method
     //!
@@ -208,53 +238,36 @@ template<class T> class RosFilter
     //! @return a string explanation of the failure
     std::string tfFailureReasonString(const tf2_ros::FilterFailureReason reason);
 
-    //! @brief Callback method for reporting failed IMU message transforms
-    //! @param[in] msg - The ROS IMU message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the IMU topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformImuFailureCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                                     const tf2_ros::FilterFailureReason reason,
-                                     const std::string &topicName,
-                                     const std::string &targetFrame);
-
-    //! @brief Callback method for reporting failed Pose message transforms
-    //! @param[in] msg - The ROS stamped pose with covariance message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the pose topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformPoseFailureCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                      const tf2_ros::FilterFailureReason reason,
-                                      const std::string &topicName,
-                                      const std::string &targetFrame);
-
-    //! @brief Callback method for reporting failed Twist message transforms
-    //! @param[in] msg - The ROS stamped twist with covariance message that failed
-    //! @param[in] reason - The reason for failure
-    //! @param[in] topicName - The name of the twist topic
-    //! @param[in] targetFrame - The tf target frame into which we attempted to transform the message
-    //!
-    void transformTwistFailureCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                                       const tf2_ros::FilterFailureReason reason,
-                                       const std::string &topicName,
-                                       const std::string &targetFrame);
-
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
-    //! @param[in] topicName - The name of the twist topic (we support many)
-    //! @param[in] targetFrame - The tf frame name into which we will transform this measurement
-    //! @param[in] updateVector - Specifies which variables we want to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outliter rejection
+    //! @param[in] callbackData - Relevant static callback data
+    //! @param[in] targetFrame - The target frame_id into which to transform the data
     //!
     void twistCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                       const std::string &topicName,
-                       const std::string &targetFrame,
-                       const std::vector<int> &updateVector,
-                       const double mahalanobisThresh);
+                       const CallbackData &callbackData,
+                       const std::string &targetFrame);
 
   protected:
+    //! @brief Finds the latest filter state before the given timestamp and makes it the current state again.
+    //!
+    //! This method also inserts all measurements between the older filter timestamp and now into the measurements
+    //! queue.
+    //! @return True if restoring the filter succeeded. False if not.
+    //!
+    bool revertTo(const double time);
+
+    //! @brief Saves the current filter state in the queue of previous filter states
+    //!
+    //! These measurements will be used in backwards smoothing in the event that older measurements come in.
+    //! @param[in] The filter base object whose state we want to save
+    //!
+    void saveFilterState(FilterBase &filter);
+
+    //! @brief Removes measurements and filter states older than the given cutoff time.
+    //! @param[in] cutoffTime - Measurements and states older than this time will be dropped.
+    //!
+    void clearExpiredHistory(const double cutoffTime);
+
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
     //! @param[in] errLevel - The error level of the diagnostic
     //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
@@ -326,6 +339,8 @@ template<class T> class RosFilter
     //! @param[in] topicName - The name of the topic over which this message was received
     //! @param[in] targetFrame - The target tf frame
     //! @param[in] differential - Whether we're carrying out differential integration
+    //! @param[in] relative - Whether this measurement is processed relative to the first
+    //! @param[in] imuData - Whether this measurement is from an IMU
     //! @param[in,out] updateVector - The update vector for the data source
     //! @param[out] measurement - The pose data converted to a measurement
     //! @param[out] measurementCovariance - The covariance of the converted measurement
@@ -357,13 +372,13 @@ template<class T> class RosFilter
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
 
-    //! @brief Vector to hold our acceleration (represented as IMU) message filters so they don't go out of scope.
-    //!
-    std::map<std::string, imuMFPtr> accelerationMessageFilters_;
-
     //! @brief tf frame name for the robot's body frame
     //!
     std::string baseLinkFrameId_;
+
+    //! @brief Subscribes to the control input topic
+    //!
+    ros::Subscriber controlSub_;
 
     //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
     //! to the configuration parameters.
@@ -399,10 +414,23 @@ template<class T> class RosFilter
     //!
     double frequency_;
 
-    //! @brief Vector to hold our IMU message filter subscriber objects so they
-    //! don't go out of scope.
+    //! @brief The depth of the history we track for smoothing/delayed measurement processing
     //!
-    std::vector<ros::Subscriber> imuTopicSubs_;
+    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
+    //!
+    double historyLength_;
+
+    //! @brief The most recent control input
+    //!
+    Eigen::VectorXd latestControl_;
+
+    //! @brief The time of the most recent control input
+    //!
+    ros::Time latestControlTime_;
+
+    //! @brief Vector to hold our subscribers until they go out of scope
+    //!
+    std::vector<ros::Subscriber> topicSubs_;
 
     //! @brief Stores the first measurement from each topic for relative measurements
     //!
@@ -445,12 +473,6 @@ template<class T> class RosFilter
     //!
     MeasurementQueue measurementQueue_;
 
-    //! @brief If we receive an odometry or IMU message, we put it into a message
-    //! filter queue. Those won't get processed until the next spin cycle, but we
-    //! can detect that event and manually do a second spin.
-    //!
-    bool messageFiltersEmpty_;
-
     //! @brief Node handle
     //!
     ros::NodeHandle nh_;
@@ -462,18 +484,6 @@ template<class T> class RosFilter
     //! @brief tf frame name for the robot's odometry (world-fixed) frame
     //!
     std::string odomFrameId_;
-
-    //! @brief Vector to hold our odometry message filter subscriber objects so they don't go out of scope.
-    //!
-    std::vector<ros::Subscriber> odomTopicSubs_;
-
-    //! @brief Vector to hold our pose message filters so they don't go out of scope.
-    //!
-    std::map<std::string, poseMFPtr> poseMessageFilters_;
-
-    //! @brief Vector to hold our pose message filter subscriber objects so they don't go out of scope.
-    //!
-    std::vector<poseMFSubPtr> poseTopicSubs_;
 
     //! @brief Stores the last measurement from a given topic for differential integration
     //!
@@ -507,6 +517,10 @@ template<class T> class RosFilter
     //!
     ros::ServiceServer setPoseSrv_;
 
+    //! @brief Whether or not we use smoothing
+    //!
+    bool smoothLaggedData_;
+
     //! @brief Contains the state vector variable names in string format
     //!
     std::vector<std::string> stateVariableNames_;
@@ -527,15 +541,6 @@ template<class T> class RosFilter
     //!
     ros::Duration tfTimeOffset_;
 
-    //! @brief Vector to hold our twist message filters so they don't go out of scope.
-    //!
-    std::map<std::string, twistMFPtr> twistMessageFilters_;
-
-    //! @brief Vector to hold our twist message filter subscriber objects so they
-    //! don't go out of scope.
-    //!
-    std::vector<twistMFSubPtr>  twistTopicSubs_;
-
     //! @brief Whether or not we're in 2D mode
     //!
     //! If this is true, the filter binds all 3D variables (Z,
@@ -543,6 +548,10 @@ template<class T> class RosFilter
     //! every measurement.
     //!
     bool twoDMode_;
+
+    //! @brief Whether or not we use a control term
+    //!
+    bool useControl_;
 
     //! @brief Message that contains our latest transform (i.e., state)
     //!
@@ -555,6 +564,22 @@ template<class T> class RosFilter
     //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
     //!
     std::string worldFrameId_;
+
+    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
+    //!
+    bool publishTransform_;
+
+    //! @brief An implicitly time ordered queue of past filter states used for smoothing.
+    //
+    // front() refers to the filter state with the earliest timestamp.
+    // back() refers to the filter state with the latest timestamp.
+    FilterStateHistoryDeque filterStateHistory_;
+
+    //! @brief A deque of previous measurements which is implicitly ordered from earliest to latest measurement.
+    // when popped from the measurement priority queue.
+    // front() refers to the measurement with the earliest timestamp.
+    // back() refers to the measurement with the latest timestamp.
+    MeasurementHistoryDeque measurementHistory_;
 };
 
 }  // namespace RobotLocalization

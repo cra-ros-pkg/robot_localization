@@ -87,7 +87,7 @@ TEST(EkfTest, Measurements)
                          std::numeric_limits<double>::max(),
                          time);
 
-  ekf.integrateMeasurements(1001);
+  ekf.integrateMeasurements(ros::Time(1001));
 
   EXPECT_EQ(ekf.getFilter().getState(), measurement);
   EXPECT_EQ(ekf.getFilter().getEstimateErrorCovariance(), measurementCovariance);
@@ -115,7 +115,7 @@ TEST(EkfTest, Measurements)
                          std::numeric_limits<double>::max(),
                          time);
 
-  ekf.integrateMeasurements(1003);
+  ekf.integrateMeasurements(ros::Time(1003));
 
   measurement = measurement2.eval() - ekf.getFilter().getState();
   for (size_t i = 0; i < STATE_SIZE; ++i)
