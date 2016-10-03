@@ -31,6 +31,10 @@ todo_include_todos = True
 
 html_theme = 'nature'
 
+html_theme_options = {
+  "sidebarwidth": "300"
+}
+
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 html_logo = 'rl_small.png'
@@ -59,7 +63,7 @@ html_static_path = ['.static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = { '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'], }
+html_sidebars = { '**': ['full_globaltoc.html', 'sourcelink.html', 'searchbox.html'], }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

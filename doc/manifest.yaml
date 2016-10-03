@@ -33,6 +33,6 @@ msgs: []
 package_type: package
 repo_url: ''
 srvs:
-- SetPose
 - SetDatum
+- SetPose
 url: http://ros.org/wiki/robot_localization
