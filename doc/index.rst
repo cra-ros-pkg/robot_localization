@@ -1,4 +1,3 @@
-***********************
 robot_localization wiki
 ***********************
 
@@ -9,6 +8,8 @@ robot_localization wiki
 
    state_estimation_nodes
    navsat_transform_node
+   preparing_sensor_data
+   configuring_robot_localization
    CHANGELOGs
 
 Features

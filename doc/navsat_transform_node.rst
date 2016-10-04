@@ -1,6 +1,5 @@
-**********************
 navsat_transform_node
-**********************
+*********************
 
 ``navsat_transform_node`` takes as input a `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message (usually the output of ``ekf_localization_node`` or ``ukf_localization_node``), a `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ containing an accurate estimate of your robot's heading, and a `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing GPS data. It produces an odometry message in coordinates that are consistent with your robot's world frame. This value can be directly fused into your state estimate.
 
@@ -19,7 +18,7 @@ The time, in seconds, to wait before calculating the transform from GPS coordina
 
 ~magnetic_declination_radians
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Enter the magnetic declination for your location. If you don't know it, see http://www.ngdc.noaa.gov/geomag-web/ (make sure to convert the value to radians). This parameter is needed if your IMU prodives its orientation with respect to the magnetic north.
+Enter the magnetic declination for your location. If you don't know it, see `http://www.ngdc.noaa.gov/geomag-web <http://www.ngdc.noaa.gov/geomag-web>`_ (make sure to convert the value to radians). This parameter is needed if your IMU prodives its orientation with respect to the magnetic north.
 
 ~yaw_offset
 ^^^^^^^^^^^

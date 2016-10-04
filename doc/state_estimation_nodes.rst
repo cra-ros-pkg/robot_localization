@@ -1,18 +1,14 @@
-######################
 State Estimation Nodes
 ######################
 
-*********************
 ekf_localization_node
 *********************
 ``ekf_localization_node`` is an implementation of an `extended Kalman filter <http://en.wikipedia.org/wiki/Extended_Kalman_filter>`_. It uses an omnidirectional motion model to project the state forward in time, and corrects that projected estimate using perceived sensor data.
 
-*********************
 ukf_localization_node
 *********************
 ``ukf_localization_node`` is an implementation of an `unscented Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter#Unscented_Kalman_filter>`_. It uses a set of carefully selected sigma points to project the state through the same motion model that is used in the EKF, and then uses those projected sigma points to recover the state estimate and covariance. This eliminates the use of Jacobian matrices and makes the filter more stable. However, it is also more computationally taxing than ``ekf_localization_node``.
 
-**********
 Parameters
 **********
 
