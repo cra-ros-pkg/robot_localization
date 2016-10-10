@@ -9,6 +9,7 @@ Adherence to ROS Standards
 **************************
 
 The two most important ROS REPs to consider are:
+
 * `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ (Standard Units of Measure and Coordinate Conventions) 
 * `REP-105 <http://www.ros.org/reps/rep-0105.html>`_ (Coordinate Frame Conventions). 
 
@@ -41,8 +42,7 @@ The IMU may also be oriented on the robot in a position other than its "neutral"
 Handling tf_prefix
 ******************
 
-With the migration to `tf2 <http://wiki.ros.org/tf2>`_ as of ROS Indigo, ``robot_localization`` still allows for the use of the ``tf_prefix`` parameter, but, in accordance with `tf2 <http://wiki.ros.org/tf2>`_, all ``frame_id``s will have any leading '/' stripped.  
-`}
+With the migration to `tf2 <http://wiki.ros.org/tf2>`_ as of ROS Indigo, ``robot_localization`` still allows for the use of the ``tf_prefix`` parameter, but, in accordance with `tf2 <http://wiki.ros.org/tf2>`_, all ``frame_id`` values will have any leading '/' stripped.
 
 Considerations for Each Sensor Message Type
 *******************************************
@@ -60,9 +60,9 @@ Many robot platforms come equipped with wheel encoders that provide instantaneou
 
 2. **frame_id:** See the section on coordinate frames and transforms above.
 
-3. ***Covariance:** Covariance values **matter** to ``robot_localization``. `robot_pose_ekf <http://wiki.ros.org/robot_pose_ekf>`_ attempts to fuse all pose variables in an odometry message. Some robots' drivers have been written to accommodate its requirements. This means that if a given sensor does not produce a certain variable (e.g., a robot that doesn't report :math:`Z` position), then the only way to get ``robot_pose_ekf`` to ignore it is to inflate its variance to a very large value (on the order of :math:`1e3`) so that the variable in question is effectively ignored. This practice is both unnecessary and even detrimental to the performance of ``robot_localization``. The exception is the case where you have a second input source measuring the variable in question, in which case inflated covariances will work.
+3. **Covariance:** Covariance values **matter** to ``robot_localization``. `robot_pose_ekf <http://wiki.ros.org/robot_pose_ekf>`_ attempts to fuse all pose variables in an odometry message. Some robots' drivers have been written to accommodate its requirements. This means that if a given sensor does not produce a certain variable (e.g., a robot that doesn't report :math:`Z` position), then the only way to get ``robot_pose_ekf`` to ignore it is to inflate its variance to a very large value (on the order of :math:`1e3`) so that the variable in question is effectively ignored. This practice is both unnecessary and even detrimental to the performance of ``robot_localization``. The exception is the case where you have a second input source measuring the variable in question, in which case inflated covariances will work.
 
- .. note:: See :ref:`sensor_configuration` and :ref:`migration_from_robot_pose_ekf` for more information.
+ .. note:: See :ref:`configuring_robot_localization` and :ref:`migrating_from_robot_pose_ekf` for more information.
  
 4. **Signs:** Adherence to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ means that you need to ensure that the **signs** of your data are correct. For example, if you have a ground robot and turn it counter-clockwise, then its yaw angle should *increase*, and its yaw velocity should be *positive*. If you drive it *forward*, its X-position should *increase* and its X-velocity should be *positive*. 
 
@@ -73,7 +73,7 @@ IMU
 
 In addition to the following, be sure to read the above section regarding coordinate frames and transforms for IMU data.
 
-1. **Adherence to specifications:** As with odometry, be sure your data adheres to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ and the `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ specification. Double-check the signs of your data, and make sure the ``frame_id``s are correct.
+1. **Adherence to specifications:** As with odometry, be sure your data adheres to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ and the `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ specification. Double-check the signs of your data, and make sure the ``frame_id`` values are correct.
 
 2. **Covariance:** Echoing the advice for odometry, make sure your covariances make sense. Do not use large values to get the filter to ignore a given variable. Set the configuration for the variable you'd like to ignore to *false*. 
 
@@ -96,7 +96,7 @@ Common errors
 *************
 
 * Input data doesn't adhere to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_. Make sure that all values (especially orientation angles) increase and decrease in the correct directions.
-* Incorrect ``frame_id``s. Velocity data should be reported in the frame given by the ``base_link_frame`` parameter, or a transform should exist between the ``frame_id`` of the velocity data and the ``base_link_frame``.
+* Incorrect ``frame_id`` values. Velocity data should be reported in the frame given by the ``base_link_frame`` parameter, or a transform should exist between the ``frame_id`` of the velocity data and the ``base_link_frame``.
 * Inflated covariances. The preferred method for ignoring variables in measurements is through the ``odomN_config`` parameter. 
-* Missing covariances. If you have configured a given sensor to fuse a given variable into the state estimation node, then the variance for that value (i.e., the covariance matrix value at position :math:`(i, i)`, where :math:`i` is the index of that variable) should **not** be :math:`0`. If a :math:`0` variance value is encountered for a variable that is being fused, the state estimation nodes will add a small epsilon value (:math:`1e-6:math:`) to that value. A better solution is for users to set covariances appropriately.
+* Missing covariances. If you have configured a given sensor to fuse a given variable into the state estimation node, then the variance for that value (i.e., the covariance matrix value at position :math:`(i, i)`, where :math:`i` is the index of that variable) should **not** be :math:`0`. If a :math:`0` variance value is encountered for a variable that is being fused, the state estimation nodes will add a small epsilon value (:math:`1e^{-6}`) to that value. A better solution is for users to set covariances appropriately.
 

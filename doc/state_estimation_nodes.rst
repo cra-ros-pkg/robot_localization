@@ -220,7 +220,7 @@ Specific parameters:
 
 If *true*, sets the `tcpNoDelay` `transport hint <http://docs.ros.org/api/roscpp/html/classros_1_1TransportHints.html#a03191a9987162fca0ae2c81fa79fcde9>`_. There is some evidence that Nagle's algorithm intereferes with the timely reception of large message types, such as the `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message. Setting this to *true* for an input disables Nagle's algorithm for that subscriber. Defaults to *false*.
 
-~[sensor]_rejection_threshold
+~[sensor]_threshold
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Specific parameters:
 
@@ -276,4 +276,4 @@ Published Transforms
 Services
 ========
 
-* ``set_pose`` - By issuing a `geometry_msgs/PoseWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html>`_ message to the ``set_pose`` topic, users can manually set the state of the filter. This is useful for resetting the filter during testing, and allows for interaction with ``rviz``. Alternatively, the state estimation nodes advertise a ``SetPose`` service, whose type is `robot_localization/SetPose <http://docs.ros.org/api/robot_localization/html/srv/SetPose.html>`_.
+* ``set_pose`` - By issuing a `geometry_msgs/PoseWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html>`_ message to the ``set_pose`` topic, users can manually set the state of the filter. This is useful for resetting the filter during testing, and allows for interaction with ``rviz``. Alternatively, the state estimation nodes advertise a ``SetPose`` service, whose type is `robot_localization/SetPose <http://docs.ros.org/api/robot_localization/html/srv/SetPose.html>`_.rejection

@@ -1,3 +1,5 @@
+.. _configuring_robot_localization:
+
 Configuring robot_localization
 ##############################
 

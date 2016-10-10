@@ -1,3 +1,5 @@
+.. _index:
+
 robot_localization wiki
 ***********************
 
@@ -10,6 +12,8 @@ robot_localization wiki
    navsat_transform_node
    preparing_sensor_data
    configuring_robot_localization
+   migrating_from_robot_pose_ekf
+   integrating_gps
    CHANGELOGs
 
 Features
