@@ -3,3 +3,4 @@
  - builder: doxygen
    output_dir: api
    file_patterns: '*.cpp *.h *.dox *.md'
+   exclude_patterns: '*/test/*'

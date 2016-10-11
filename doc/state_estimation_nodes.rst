@@ -98,7 +98,7 @@ For each of the sensor messages defined above, users must specify what variables
 
 The order of the boolean values are :math:`X, Y, Z, roll, pitch, yaw, \dot{X}, \dot{Y}, \dot{Z}, \dot{roll}, \dot{pitch}, \dot{yaw}, \ddot{X}, \ddot{Y}, \ddot{Z}`. In this example, we are fusing :math:`X` and :math:`Y` position, :math:`yaw`, :math:`\dot{X}`, and :math:`\dot{yaw}`.
 
-.. note:: The specification is done in the ``frame_id`` of the **sensor**, *not* in the ``world_frame`` or ``base_link_frame``. Please see the :doc:`sensor integration tutorial <sensor_integration_tutorial>` for more information.
+.. note:: The specification is done in the ``frame_id`` of the **sensor**, *not* in the ``world_frame`` or ``base_link_frame``. Please see the :doc:`coniguration tutorial <configuring_robot_localization>` for more information.
 
 ~[sensor]_queue_size
 ^^^^^^^^^^^^^^^^^^^^

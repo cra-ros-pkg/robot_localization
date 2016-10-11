@@ -227,9 +227,9 @@ template<class T> class RosFilter
     void setPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
 
     //! @brief Service callback for manually setting/resetting the internal pose estimate
+    //!
     //! @param[in] request - Custom service request with pose information
-    //! @param[out] response - N/A
-    //! @return boolean true if successful, false if not
+    //! @return true if successful, false if not
     bool setPoseSrvCallback(robot_localization::SetPose::Request& request,
                             robot_localization::SetPose::Response&);
 
@@ -252,6 +252,8 @@ template<class T> class RosFilter
     //!
     //! This method also inserts all measurements between the older filter timestamp and now into the measurements
     //! queue.
+    //!
+    //! @param[in] time - The time to which the filter state should revert
     //! @return True if restoring the filter succeeded. False if not.
     //!
     bool revertTo(const double time);
@@ -259,7 +261,7 @@ template<class T> class RosFilter
     //! @brief Saves the current filter state in the queue of previous filter states
     //!
     //! These measurements will be used in backwards smoothing in the event that older measurements come in.
-    //! @param[in] The filter base object whose state we want to save
+    //! @param[in] filter - The filter base object whose state we want to save
     //!
     void saveFilterState(FilterBase &filter);
 
@@ -272,6 +274,7 @@ template<class T> class RosFilter
     //! @param[in] errLevel - The error level of the diagnostic
     //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
     //! @param[in] message - Details of the diagnostic
+    //! @param[in] staticDiag - Whether or not this diagnostic information is static
     //!
     void addDiagnostic(const int errLevel,
                        const std::string &topicAndClass,
