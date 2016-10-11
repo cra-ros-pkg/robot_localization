@@ -26,6 +26,7 @@ Required Inputs
 These data can be obtained in three different ways:
 
 1. (Default behavior) The data can come entirely from the robot's sensors and pose estimation software. To enable this mode, make sure the ``wait_for_datum`` parameter is set to *false* (its default value). The required messages are:
+
  * A `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message with raw GPS coordinates in it.
  * A `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ message with an absolute (earth-referenced) heading.
  * A `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message that contains the robot's current position estimate in the frame specified by its start location (typically the output of a ``robot_localization`` state estimation node).

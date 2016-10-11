@@ -48,11 +48,15 @@ Specific parameters:
 These parameters define the operating "mode" for ``robot_localization``. `REP-105 <http://www.ros.org/reps/rep-0105.html>`_ specifies three principal coordinate frames: *map*, *odom*, and *base_link*. *base_link* is the coordinate frame that is affixed to the robot. The robot's position in the *odom* frame will drift over time, but is accurate in the short term and should be continuous. The *map* frame, like the *odom* frame, is a world-fixed coordinate frame, and while it contains the most globally accurate position estimate for your robot, it is subject to discrete jumps, e.g., due to the fusion of GPS data. Here is how to use these parameters:
 
 1. Set the ``map_frame``, ``odom_frame``, and ``base_link_frame`` parameters to the appropriate frame names for your system.
+
  .. note:: If your system does not have a ``map_frame``, just remove it, and make sure ``world_frame`` is set to the value of ``odom_frame``.
+
 2. If you are only fusing continuous position data such as wheel encoder odometry, visual odometry, or IMU data, set ``world_frame`` to your ``odom_frame`` value. This is the default behavior for the state estimation nodes in ``robot_localization``, and the most common use for it.
 3. If you are fusing global absolute position data that is subject to discrete jumps (e.g., GPS or position updates from landmark observations) then:
+
  i. Set your ``world_frame`` to your ``map_frame`` value
  ii. **Make sure** something else is generating the *odom->base_link* transform. This can even be another instance of a ``robot_localization`` state estimation node. However, that instance should *not* fuse the global data.
+
 The default values for ``map_frame``, ``odom_frame``, and ``base_link_frame`` are *map*, *odom,* and *base_link,* respectively. The ``world_frame`` parameter defaults to the value of ``odom_frame``.
 
 ~transform_time_offset

@@ -14,7 +14,7 @@ robot_localization wiki
    configuring_robot_localization
    migrating_from_robot_pose_ekf
    integrating_gps
-   CHANGELOGs
+   CHANGELOG
 
 Features
 ========
@@ -35,7 +35,7 @@ If you're new to ``robot_localization``, check out the `2015 ROSCon talk <https:
 
 Further details can be found in :download:`this paper <robot_localization_ias13_revised.pdf>`:
 
-.. code-block:: bibtex
+.. code-block:: none
 
   @inproceedings{MooreStouchKeneralizedEkf2014,
     author    = {T. Moore and D. Stouch},

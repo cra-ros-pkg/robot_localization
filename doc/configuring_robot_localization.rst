@@ -54,6 +54,7 @@ As a first pass, this makes sense, as a planar robot only needs to concern itsel
 1. For ``odom0``, we are including :math:`X` and :math:`Y` (reported in a world coordinate frame), :math:`yaw`, :math:`\dot{X}` (reported in the body frame), and :math:`\dot{yaw}`. However, unless your robot is internally using an IMU, it is most likely simply using wheel encoder data to generate the values in its measurements. Therefore, its velocity, heading, and position data are all generated from the same source. In that instance, we don't want to use all the values, as you're feeding duplicate information into the filter. Instead, it's best to just use the velocities:
 
 .. code-block:: xml
+
  <rosparam param="odom0_config">[false, false, false, 
                                  false, false, false, 
                                  true, false, false, 
@@ -87,13 +88,14 @@ You may wonder why did we not fuse :math:`\dot{Z}` velocity for the same reason.
 3. Last, we come to the IMU. You may notice that we have set the :math:`\ddot{Y}` to *false*. This is due to the fact that many systems, including the hypothetical one we are discussing here, will not undergo instantaneous :math:`Y` acceleration. However, the IMU will likely report non-zero, noisy values for Y acceleration, which can cause your estimate to drift rapidly.
 
 The *differential* and *relative* Parameters
-****************************************
+********************************************
 
 The state estimation nodes in ''robot_localization'' allow users to fuse as many sensors as they like. This allows users to measure certain state vector variables - in particular, pose variables - using more than one source. For example, your robot may obtain absolute orientation information from multiple IMUs, or it may have multiple data sources providing an estimate its absolute position. In this case, users have two options:
 
 1. Fuse all the absolute position/orientation data as-is, e.g.,
 
 .. code-block:: xml
+
  <rosparam param="imu0_config">[false, false, false, 
                                 true,  true,  true, 
                                 false, false, false, 

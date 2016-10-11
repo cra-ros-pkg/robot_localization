@@ -53,6 +53,7 @@ Odometry
 Many robot platforms come equipped with wheel encoders that provide instantaneous translational and rotational velocity. Many also internally integrate these velocities to generate a position estimate. If you are responsible for this data, or can edit it, keep the following in mind:
 
 1. **Velocities/Poses:** `robot_localization` can integrate velocities or absolute pose information. In general, the best practice is:
+
  * If the odometry provides both position and linear velocity, fuse the linear velocity. 
  * If the odometry provides both orientation and angular velocity, fuse the orientation.
 
@@ -78,6 +79,7 @@ In addition to the following, be sure to read the above section regarding coordi
 2. **Covariance:** Echoing the advice for odometry, make sure your covariances make sense. Do not use large values to get the filter to ignore a given variable. Set the configuration for the variable you'd like to ignore to *false*. 
 
 3. **Acceleration:** Be careful with acceleration data. The state estimation nodes in ``robot_localization`` assume that an IMU that is placed in its neutral *right-side-up* position on a flat surface will:
+
  * Measure **+**:math:`9.81` meters per second squared for the :math:`Z` axis. 
  * If the sensor is rolled **+**:math:`90` degrees (left side up), the acceleration should be **+**:math:`9.81` meters per second squared for the :math:`Y` axis. 
  * If the sensor is pitched **+**:math:`90` degrees (front side down), it should read **-**:math:`9.81` meters per second squared for the :math:`X` axis.
