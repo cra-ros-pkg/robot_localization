@@ -1,0 +1,38 @@
+actions: []
+authors: Tom Moore <ayrton04@gmail.com>
+brief: ''
+bugtracker: ''
+depends:
+- catkin
+- eigen
+- diagnostic_updater
+- cmake_modules
+- tf2
+- nav_msgs
+- roscpp
+- rostest
+- tf2_ros
+- message_generation
+- message_filters
+- tf2_geometry_msgs
+- sensor_msgs
+- message_runtime
+- std_msgs
+- roslint
+- rosunit
+- diagnostic_msgs
+- geographic_msgs
+- python-catkin-pkg
+- geometry_msgs
+- rosbag
+description: The robot_localization package provides nonlinear state estimation through
+  sensor fusion of an abritrary number of sensors.
+license: BSD
+maintainers: Tom Moore <ayrton04@gmail.com>
+msgs: []
+package_type: package
+repo_url: ''
+srvs:
+- SetPose
+- SetDatum
+url: http://ros.org/wiki/robot_localization

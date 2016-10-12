@@ -1,0 +1,4 @@
+doc/html
+*.cproject
+*.project
+*.settings
