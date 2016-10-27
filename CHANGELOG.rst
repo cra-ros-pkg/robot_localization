@@ -2,6 +2,22 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.3.1 (2016-10-27)
+------------------
+* Adding gitignore
+* Adding remaining wiki pages
+* Adding config and prep pages
+* Adding navsat_transform_node documentation
+* use_odometry_yaw fix for n_t_n
+* Fixing issue with manual pose reset when history is not empty
+* Getting inverse transform when looking up robot's pose.
+* Sphinx documentation
+* Removing forward slashes from navsat_transform input topics for template launch file
+* Adding example launch and parameter files for a two-level EKF setup with navsat_transform_node
+* Adding yaml file for navsat_transform_node, and moving parameter documentation to it.
+* Updating EKF and UKF parameter templates with usage comments
+* Contributors: Tom Moore, asimay
+
 2.3.0 (2016-07-28)
 ------------------
 * Fixed issues with datum usage and frame_ids
