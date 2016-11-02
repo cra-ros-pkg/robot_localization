@@ -8,7 +8,7 @@ For additional information, users are encouraged to watch this `presentation <ht
 Notes on Fusing GPS Data
 ************************
 
-Before beginning this tutorial, users should be sure to familiarize themselves with `REP-105 <[http://www.ros.org/reps/rep-0105.html>`_. It is important for users to realize that using a position estimate that includes GPS data will likely be unfit for use by navigation modules, owing to the fact that GPS data is subject to discrete discontinuities ("jumps"). If you want to fuse data from a GPS into your position estimate, one potential solution is to do the following:
+Before beginning this tutorial, users should be sure to familiarize themselves with `REP-105 <http://www.ros.org/reps/rep-0105.html>`_. It is important for users to realize that using a position estimate that includes GPS data will likely be unfit for use by navigation modules, owing to the fact that GPS data is subject to discrete discontinuities ("jumps"). If you want to fuse data from a GPS into your position estimate, one potential solution is to do the following:
 
 1. Run one instance of a ``robot_localization`` state estimation node that fuses only continuous data, such as odometry and IMU data. Set the ``world_frame`` parameter for this instance to the same value as the ``odom_frame`` parameter. Execute local path plans and motions in this frame.
 2. Run another instance of a ``robot_localization`` state estimation node that fuses all sources of data, including the GPS. Set the ``world_frame`` parameter for this instance to the same value as the ``map_frame`` parameter. 
