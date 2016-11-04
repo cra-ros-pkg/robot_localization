@@ -31,6 +31,12 @@ debug: false
 # Defaults to "robot_localization_debug.txt" if unspecified. Please specify the full path.
 debug_out_file: /path/to/debug/file.txt
 
+# Whether to broadcast the transformation over the /tf topic. Defaults to true if unspecified.
+publish_tf: true
+
+# Whether to publish the acceleration state. Defaults to false if unspecified.
+publish_acceleration: false
+
 # REP-105 (http://www.ros.org/reps/rep-0105.html) specifies four principal coordinate frames: base_link, odom, map, and
 # earth. base_link is the coordinate frame that is affixed to the robot. Both odom and map are world-fixed frames.
 # The robot's position in the odom frame will drift over time, but is accurate in the short term and should be

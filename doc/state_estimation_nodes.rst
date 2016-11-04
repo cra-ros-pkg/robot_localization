@@ -148,6 +148,10 @@ If fusing accelerometer data from IMUs, this parameter determines whether or not
 ^^^^^^^^^^^
 If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to the frame specified by the ``base_link_frame`` parameter. Defaults to true.
 
+~publish_acceleration
+^^^^^^^^^^^
+If *true*, the state estimation node will publish the linear acceleration state. Defaults to false.
+
 ~print_diagnostics
 ^^^^^^^^^^^^^^^^^^
 If true, the state estimation node will publish diagnostic messages to the ``/diagnostics`` topic. This is useful for debugging your configuration and sensor data.
