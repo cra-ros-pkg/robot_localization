@@ -255,7 +255,7 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  bool RosFilter<T>::getFilteredOdometryAndAccelMessage(nav_msgs::Odometry &odom_msg, geometry_msgs::AccelWithCovarianceStamped &accel_msg)
+  bool RosFilter<T>::getFilteredOdometryAndAccelMessage(nav_msgs::Odometry &odomMsg, geometry_msgs::AccelWithCovarianceStamped &accelMsg)
   {
     // If the filter has received a measurement at some point...
     if (filter_.getInitializedStatus())
@@ -270,26 +270,26 @@ namespace RobotLocalization
       quat.setRPY(state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
 
       //! Fill out the odometry message
-      odom_msg.pose.pose.position.x = state(StateMemberX);
-      odom_msg.pose.pose.position.y = state(StateMemberY);
-      odom_msg.pose.pose.position.z = state(StateMemberZ);
-      odom_msg.pose.pose.orientation.x = quat.x();
-      odom_msg.pose.pose.orientation.y = quat.y();
-      odom_msg.pose.pose.orientation.z = quat.z();
-      odom_msg.pose.pose.orientation.w = quat.w();
-      odom_msg.twist.twist.linear.x = state(StateMemberVx);
-      odom_msg.twist.twist.linear.y = state(StateMemberVy);
-      odom_msg.twist.twist.linear.z = state(StateMemberVz);
-      odom_msg.twist.twist.angular.x = state(StateMemberVroll);
-      odom_msg.twist.twist.angular.y = state(StateMemberVpitch);
-      odom_msg.twist.twist.angular.z = state(StateMemberVyaw);
+      odomMsg.pose.pose.position.x = state(StateMemberX);
+      odomMsg.pose.pose.position.y = state(StateMemberY);
+      odomMsg.pose.pose.position.z = state(StateMemberZ);
+      odomMsg.pose.pose.orientation.x = quat.x();
+      odomMsg.pose.pose.orientation.y = quat.y();
+      odomMsg.pose.pose.orientation.z = quat.z();
+      odomMsg.pose.pose.orientation.w = quat.w();
+      odomMsg.twist.twist.linear.x = state(StateMemberVx);
+      odomMsg.twist.twist.linear.y = state(StateMemberVy);
+      odomMsg.twist.twist.linear.z = state(StateMemberVz);
+      odomMsg.twist.twist.angular.x = state(StateMemberVroll);
+      odomMsg.twist.twist.angular.y = state(StateMemberVpitch);
+      odomMsg.twist.twist.angular.z = state(StateMemberVyaw);
 
       // Our covariance matrix layout doesn't quite match
       for (size_t i = 0; i < POSE_SIZE; i++)
       {
         for (size_t j = 0; j < POSE_SIZE; j++)
         {
-          odom_msg.pose.covariance[POSE_SIZE * i + j] = estimateErrorCovariance(i, j);
+          odomMsg.pose.covariance[POSE_SIZE * i + j] = estimateErrorCovariance(i, j);
         }
       }
 
@@ -300,19 +300,19 @@ namespace RobotLocalization
       {
         for (size_t j = 0; j < TWIST_SIZE; j++)
         {
-          odom_msg.twist.covariance[TWIST_SIZE * i + j] =
+          odomMsg.twist.covariance[TWIST_SIZE * i + j] =
               estimateErrorCovariance(i + POSITION_V_OFFSET, j + POSITION_V_OFFSET);
         }
       }
 
-      odom_msg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
-      odom_msg.header.frame_id = worldFrameId_;
-      odom_msg.child_frame_id = baseLinkFrameId_;
+      odomMsg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
+      odomMsg.header.frame_id = worldFrameId_;
+      odomMsg.child_frame_id = baseLinkFrameId_;
 
       //! Fill out the accel_msg
-      accel_msg.accel.accel.linear.x = state(StateMemberAx);
-      accel_msg.accel.accel.linear.y = state(StateMemberAy);
-      accel_msg.accel.accel.linear.z = state(StateMemberAz);
+      accelMsg.accel.accel.linear.x = state(StateMemberAx);
+      accelMsg.accel.accel.linear.y = state(StateMemberAy);
+      accelMsg.accel.accel.linear.z = state(StateMemberAz);
 
       // Fill the covariance (only the left-upper matrix since we are not estimating
       // the rotational accelerations arround the axes
@@ -321,14 +321,14 @@ namespace RobotLocalization
         for (size_t j = 0; j < ACCELERATION_SIZE; j++)
         {
           // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
-          accel_msg.accel.covariance[POSE_SIZE * i + j] =
+          accelMsg.accel.covariance[POSE_SIZE * i + j] =
               estimateErrorCovariance(i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
         }
       }
 
       // Fill header information
-      accel_msg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
-      accel_msg.header.frame_id = baseLinkFrameId_;
+      accelMsg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
+      accelMsg.header.frame_id = baseLinkFrameId_;
     }
 
     return filter_.getInitializedStatus();
