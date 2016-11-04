@@ -60,6 +60,7 @@ namespace RobotLocalization
       nhLocal_("~"),
       printDiagnostics_(true),
       publishTransform_(true),
+      publishAcceleration_(false),
       twoDMode_(false),
       useControl_(false),
       smoothLaggedData_(false)
@@ -254,7 +255,7 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::Odometry &message)
+  bool RosFilter<T>::getFilteredOdometryAndAccelMessage(nav_msgs::Odometry &odom_msg, geometry_msgs::AccelWithCovarianceStamped &accel_msg)
   {
     // If the filter has received a measurement at some point...
     if (filter_.getInitializedStatus())
@@ -268,27 +269,27 @@ namespace RobotLocalization
       tf2::Quaternion quat;
       quat.setRPY(state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
 
-      // Fill out the message
-      message.pose.pose.position.x = state(StateMemberX);
-      message.pose.pose.position.y = state(StateMemberY);
-      message.pose.pose.position.z = state(StateMemberZ);
-      message.pose.pose.orientation.x = quat.x();
-      message.pose.pose.orientation.y = quat.y();
-      message.pose.pose.orientation.z = quat.z();
-      message.pose.pose.orientation.w = quat.w();
-      message.twist.twist.linear.x = state(StateMemberVx);
-      message.twist.twist.linear.y = state(StateMemberVy);
-      message.twist.twist.linear.z = state(StateMemberVz);
-      message.twist.twist.angular.x = state(StateMemberVroll);
-      message.twist.twist.angular.y = state(StateMemberVpitch);
-      message.twist.twist.angular.z = state(StateMemberVyaw);
+      //! Fill out the odometry message
+      odom_msg.pose.pose.position.x = state(StateMemberX);
+      odom_msg.pose.pose.position.y = state(StateMemberY);
+      odom_msg.pose.pose.position.z = state(StateMemberZ);
+      odom_msg.pose.pose.orientation.x = quat.x();
+      odom_msg.pose.pose.orientation.y = quat.y();
+      odom_msg.pose.pose.orientation.z = quat.z();
+      odom_msg.pose.pose.orientation.w = quat.w();
+      odom_msg.twist.twist.linear.x = state(StateMemberVx);
+      odom_msg.twist.twist.linear.y = state(StateMemberVy);
+      odom_msg.twist.twist.linear.z = state(StateMemberVz);
+      odom_msg.twist.twist.angular.x = state(StateMemberVroll);
+      odom_msg.twist.twist.angular.y = state(StateMemberVpitch);
+      odom_msg.twist.twist.angular.z = state(StateMemberVyaw);
 
       // Our covariance matrix layout doesn't quite match
       for (size_t i = 0; i < POSE_SIZE; i++)
       {
         for (size_t j = 0; j < POSE_SIZE; j++)
         {
-          message.pose.covariance[POSE_SIZE * i + j] = estimateErrorCovariance(i, j);
+          odom_msg.pose.covariance[POSE_SIZE * i + j] = estimateErrorCovariance(i, j);
         }
       }
 
@@ -299,14 +300,35 @@ namespace RobotLocalization
       {
         for (size_t j = 0; j < TWIST_SIZE; j++)
         {
-          message.twist.covariance[TWIST_SIZE * i + j] =
+          odom_msg.twist.covariance[TWIST_SIZE * i + j] =
               estimateErrorCovariance(i + POSITION_V_OFFSET, j + POSITION_V_OFFSET);
         }
       }
 
-      message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
-      message.header.frame_id = worldFrameId_;
-      message.child_frame_id = baseLinkFrameId_;
+      odom_msg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
+      odom_msg.header.frame_id = worldFrameId_;
+      odom_msg.child_frame_id = baseLinkFrameId_;
+
+      //! Fill out the accel_msg
+      accel_msg.accel.accel.linear.x = state(StateMemberAx);
+      accel_msg.accel.accel.linear.y = state(StateMemberAy);
+      accel_msg.accel.accel.linear.z = state(StateMemberAz);
+
+      // Fill the covariance (only the left-upper matrix since we are not estimating
+      // the rotational accelerations arround the axes
+      for (size_t i = 0; i < ACCELERATION_SIZE; i++)
+      {
+        for (size_t j = 0; j < ACCELERATION_SIZE; j++)
+        {
+          // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
+          accel_msg.accel.covariance[POSE_SIZE * i + j] =
+              estimateErrorCovariance(i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
+        }
+      }
+
+      // Fill header information
+      accel_msg.header.stamp = ros::Time(filter_.getLastMeasurementTime());
+      accel_msg.header.frame_id = baseLinkFrameId_;
     }
 
     return filter_.getInitializedStatus();
@@ -646,8 +668,11 @@ namespace RobotLocalization
     FilterUtilities::appendPrefix(tfPrefix, baseLinkFrameId_);
     FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
 
-    // Whether we're publshing the world_frame->base_link_frame transform
+    // Whether we're publishing the world_frame->base_link_frame transform
     nhLocal_.param("publish_tf", publishTransform_, true);
+
+    // Whether we're publishing the acceleration state transform
+    nhLocal_.param("publish_acceleration", publishAcceleration_, false);
 
     // Transform future dating
     double offsetTmp;
@@ -1630,8 +1655,11 @@ namespace RobotLocalization
     worldBaseLinkTransMsg_.transform = tf2::toMsg(tf2::Transform::getIdentity());
     mapOdomTransMsg.transform = tf2::toMsg(tf2::Transform::getIdentity());
 
-    // Publisher
-    ros::Publisher positionPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
+    // Publishers
+    ros::Publisher odomPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
+    ros::Publisher accelPub;
+    if (publishAcceleration_)
+      accelPub = nh_.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 20);
     tf2_ros::TransformBroadcaster worldTransformBroadcaster;
 
     ros::Rate loop_rate(frequency_);
@@ -1647,28 +1675,29 @@ namespace RobotLocalization
       integrateMeasurements(curTime);
 
       // Get latest state and publish it
-      nav_msgs::Odometry filteredPosition;
+      nav_msgs::Odometry odomMsg;
+      geometry_msgs::AccelWithCovarianceStamped accelMsg;
 
-      if (getFilteredOdometryMessage(filteredPosition))
+      if (getFilteredOdometryAndAccelMessage(odomMsg, accelMsg))
       {
-        worldBaseLinkTransMsg_.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
-        worldBaseLinkTransMsg_.header.frame_id = filteredPosition.header.frame_id;
-        worldBaseLinkTransMsg_.child_frame_id = filteredPosition.child_frame_id;
+        worldBaseLinkTransMsg_.header.stamp = odomMsg.header.stamp + tfTimeOffset_;
+        worldBaseLinkTransMsg_.header.frame_id = odomMsg.header.frame_id;
+        worldBaseLinkTransMsg_.child_frame_id = odomMsg.child_frame_id;
 
-        worldBaseLinkTransMsg_.transform.translation.x = filteredPosition.pose.pose.position.x;
-        worldBaseLinkTransMsg_.transform.translation.y = filteredPosition.pose.pose.position.y;
-        worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
-        worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
+        worldBaseLinkTransMsg_.transform.translation.x = odomMsg.pose.pose.position.x;
+        worldBaseLinkTransMsg_.transform.translation.y = odomMsg.pose.pose.position.y;
+        worldBaseLinkTransMsg_.transform.translation.z = odomMsg.pose.pose.position.z;
+        worldBaseLinkTransMsg_.transform.rotation = odomMsg.pose.pose.orientation;
 
         // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
         // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
         if (publishTransform_)
         {
-          if (filteredPosition.header.frame_id == odomFrameId_)
+          if (odomMsg.header.frame_id == odomFrameId_)
           {
             worldTransformBroadcaster.sendTransform(worldBaseLinkTransMsg_);
           }
-          else if (filteredPosition.header.frame_id == mapFrameId_)
+          else if (odomMsg.header.frame_id == mapFrameId_)
           {
             try
             {
@@ -1699,7 +1728,7 @@ namespace RobotLocalization
               mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
 
               mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
-              mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
+              mapOdomTransMsg.header.stamp = odomMsg.header.stamp + tfTimeOffset_;
               mapOdomTransMsg.header.frame_id = mapFrameId_;
               mapOdomTransMsg.child_frame_id = odomFrameId_;
 
@@ -1712,13 +1741,19 @@ namespace RobotLocalization
           }
           else
           {
-            ROS_ERROR_STREAM("Odometry message frame_id was " << filteredPosition.header.frame_id <<
+            ROS_ERROR_STREAM("Odometry message frame_id was " << odomMsg.header.frame_id <<
                              ", expected " << mapFrameId_ << " or " << odomFrameId_);
           }
         }
 
         // Fire off the position and the transform
-        positionPub.publish(filteredPosition);
+        odomPub.publish(odomMsg);
+
+        // Publish the acceleration if desired
+        if (publishAcceleration_)
+        {
+          accelPub.publish(accelMsg);
+        }
 
         if (printDiagnostics_)
         {
