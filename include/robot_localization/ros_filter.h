@@ -166,11 +166,11 @@ template<class T> class RosFilter
                    std::vector<int> &updateVector);
 
     //! @brief Retrieves the EKF's output for broadcasting
-    //! @param[out] odom_msg - The standard ROS odometry message to be filled
-    //! @param[out] accel_msg - The standard ROS acceleration message to be filled
+    //! @param[out] odomMsg - The standard ROS odometry message to be filled
+    //! @param[out] accelMsg - The standard ROS acceleration message to be filled
     //! @return true if the filter is initialized, false otherwise
     //!
-    bool getFilteredOdometryAndAccelMessage(nav_msgs::Odometry &odom_msg, geometry_msgs::AccelWithCovarianceStamped& accel_msg);
+    bool getFilteredOdometryAndAccelMessage(nav_msgs::Odometry &odomMsg, geometry_msgs::AccelWithCovarianceStamped& accelMsg);
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
