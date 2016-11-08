@@ -48,6 +48,7 @@ namespace RobotLocalization
     magnetic_declination_(0.0),
     utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
+    transform_timeout_(ros::Duration(0)),
     broadcast_utm_transform_(false),
     has_transform_odom_(false),
     has_transform_gps_(false),
@@ -79,6 +80,7 @@ namespace RobotLocalization
 
     double frequency = 10.0;
     double delay = 0.0;
+    double transform_timeout = 0.0;
 
     ros::NodeHandle nh;
     ros::NodeHandle nh_priv("~");
@@ -93,6 +95,8 @@ namespace RobotLocalization
     nh_priv.param("wait_for_datum", use_manual_datum_, false);
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
+    nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    transform_timeout_.fromSec(transform_timeout);
 
     // Subscribe to the messages and services we need
     ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
@@ -356,6 +360,7 @@ namespace RobotLocalization
                                                                  base_link_frame_id_,
                                                                  gps_frame_id_,
                                                                  transform_time,
+                                                                 ros::Duration(transform_timeout_),
                                                                  offset);
 
     if (can_transform)
@@ -405,6 +410,7 @@ namespace RobotLocalization
                                                                  base_link_frame_id_,
                                                                  gps_frame_id_,
                                                                  transform_time,
+                                                                 transform_timeout_,
                                                                  gps_offset_rotated);
 
     if (can_transform)
@@ -414,6 +420,7 @@ namespace RobotLocalization
                                                               world_frame_id_,
                                                               base_link_frame_id_,
                                                               transform_time,
+                                                              transform_timeout_,
                                                               robot_orientation);
 
       if (can_transform)
@@ -498,6 +505,7 @@ namespace RobotLocalization
                                                                    base_link_frame_id_,
                                                                    msg->header.frame_id,
                                                                    msg->header.stamp,
+                                                                   transform_timeout_,
                                                                    target_frame_trans);
 
       if (can_transform)
