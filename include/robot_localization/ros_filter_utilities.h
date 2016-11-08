@@ -64,6 +64,7 @@ double getYaw(const tf2::Quaternion quat);
 //! @param[in] targetFrame - The target frame of the desired transform
 //! @param[in] sourceFrame - The source frame of the desired transform
 //! @param[in] time - The time at which we want the transform
+//! @param[in] timeout - How long to block before falling back to last transform
 //! @param[out] targetFrameTrans - The resulting transform object
 //! @return Sets the value of @p targetFrameTrans and returns true if successful,
 //! false otherwise.
@@ -79,6 +80,7 @@ bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                          const std::string &targetFrame,
                          const std::string &sourceFrame,
                          const ros::Time &time,
+                         const ros::Duration &timeout,
                          tf2::Transform &targetFrameTrans);
 
 //! @brief Utility method for converting quaternion to RPY
