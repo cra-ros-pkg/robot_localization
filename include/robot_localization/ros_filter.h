@@ -431,6 +431,10 @@ template<class T> class RosFilter
     //!
     ros::Time latestControlTime_;
 
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration tfTimeout_;
+
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
     std::vector<ros::Subscriber> topicSubs_;

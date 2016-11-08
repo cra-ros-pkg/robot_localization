@@ -98,6 +98,7 @@ namespace RosFilterUtilities
                            const std::string &targetFrame,
                            const std::string &sourceFrame,
                            const ros::Time &time,
+                           const ros::Duration &timeout,
                            tf2::Transform &targetFrameTrans)
   {
     bool retVal = true;
@@ -105,7 +106,7 @@ namespace RosFilterUtilities
     // First try to transform the data at the requested time
     try
     {
-      tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time).transform,
+      tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time, timeout).transform,
                    targetFrameTrans);
     }
     catch (tf2::TransformException &ex)
