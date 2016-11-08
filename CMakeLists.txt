@@ -50,6 +50,7 @@ add_library(
   src/filter_base.cpp
   src/filter_utilities.cpp
   src/navsat_transform.cpp
+  src/robot_localization_estimator.cpp
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
 
