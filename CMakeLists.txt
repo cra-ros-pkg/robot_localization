@@ -165,6 +165,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
+  #### OTHER TESTS ####
+  ament_add_gtest(test_robot_localization_estimator test/test_robot_localization_estimator.cpp)
+  target_link_libraries(test_robot_localization_estimator ${library_name})
+
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
   # consider to be C instead.
@@ -187,6 +191,7 @@ if(BUILD_TESTING)
     test_ukf_localization_node_bag1
     test_ukf_localization_node_bag2
     test_ukf_localization_node_bag3
+    test_robot_localization_estimator
     DESTINATION lib/${PROJECT_NAME}
   )
 endif()

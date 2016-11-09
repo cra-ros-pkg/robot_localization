@@ -35,14 +35,16 @@
 
 #include <Eigen/Dense>
 #include <boost/circular_buffer.hpp>
-#include "robot_localization/filter_utilities.h"
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
 
 #include <fstream>
 #include <vector>
 #include <set>
 #include <queue>
 
-namespace RobotLocalization
+namespace robot_localization
 {
 
 //! @brief Robot Localization Estimator State
@@ -78,7 +80,7 @@ struct EstimatorState
 class RobotLocalizationEstimator
 {
   public:
-    //! @brief Constructor for the RobotLocalizationListener class
+    //! @brief Constructor for the robot_localizationListener class
     //!
     //! @param[in] args - Generic argument container (not used here, but
     //! needed so that the ROS filters can pass arbitrary arguments to
@@ -86,7 +88,7 @@ class RobotLocalizationEstimator
     //!
     RobotLocalizationEstimator(unsigned int buffer_capacity);
 
-    //! @brief Destructor for the RobotLocalizationListener class
+    //! @brief Destructor for the robot_localizationListener class
     //!
     ~RobotLocalizationEstimator();
 
@@ -178,7 +180,7 @@ class RobotLocalizationEstimator
     //! @return a usable acceleration estimate for the control vector
     //!
     inline double computeControlAcceleration(const double state, const double control, const double accelerationLimit,
-      const double accelerationGain, const double decelerationLimit, const double decelerationGain)
+      const double accelerationGain, const double decelerationLimit, const double decelerationGain) const
     {
         const double error = control - state;
         const bool sameSign = (::fabs(error) <= ::fabs(control) + 0.01);
@@ -198,15 +200,15 @@ class RobotLocalizationEstimator
       return finalAccel;
     }
 
-    void wrapStateAngles(EstimatorState state)
+    void wrapStateAngles(EstimatorState state) const
     {
-      state.state(StateMemberRoll)  = FilterUtilities::clampRotation(state.state(StateMemberRoll));
-      state.state(StateMemberPitch) = FilterUtilities::clampRotation(state.state(StateMemberPitch));
-      state.state(StateMemberYaw)   = FilterUtilities::clampRotation(state.state(StateMemberYaw));
+      state.state(StateMemberRoll)  = filter_utilities::clampRotation(state.state(StateMemberRoll));
+      state.state(StateMemberPitch) = filter_utilities::clampRotation(state.state(StateMemberPitch));
+      state.state(StateMemberYaw)   = filter_utilities::clampRotation(state.state(StateMemberYaw));
     }
 
 };
 
-}  // namespace RobotLocalization
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION_LISTENER_H

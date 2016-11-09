@@ -30,11 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_common.h"
-#include "robot_localization/robot_localization_estimator.h"
-#include "iostream"
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/robot_localization_estimator.hpp>
+#include <iostream>
 
-namespace RobotLocalization
+namespace robot_localization
 {
 RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity)
 {
@@ -332,12 +332,12 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   wrapStateAngles(state_at_req_time);
 
   // (3) Project the error forward: P = J * P * J' + Q
-  estimateErrorCovariance_ = (transferFunctionJacobian_ *
-                              estimateErrorCovariance_ *
+  estimate_error_covariance_ = (transferFunctionJacobian_ *
+                              estimate_error_covariance_ *
                               transferFunctionJacobian_.transpose());
-  estimateErrorCovariance_.noalias() += (processNoiseCovariance_ * delta);
+  estimate_error_covariance_.noalias() += (process_noise_covariance_ * delta);
 
-  FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
+  FB_DEBUG("Predicted estimate error covariance is:\n" << estimate_error_covariance_ <<
            "\n\n--------------------- /Ekf::predict ----------------------\n");
 
   state_at_req_time = boundary_state;
@@ -345,7 +345,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   return;
 }
 
-void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1, const EstimatorState& given_state_2, const double requested_time, EstimatorState& state_at_req_time) const
+void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1, const EstimatorState& /*given_state_2*/, const double requested_time, EstimatorState& state_at_req_time) const
 {
   /* TODO: Right now, we only extrapolate from the last known state before the requested time.
   *  But as the state after the requested time is also known, we may want to perform
@@ -355,4 +355,4 @@ void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1
   return;
 }
 
-}  // namespace RobotLocalization
+}  // namespace robot_localization
