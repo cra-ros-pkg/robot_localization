@@ -48,6 +48,7 @@ namespace RobotLocalization
     controlAcceleration_(TWIST_SIZE),
     controlTimeout_(0.0),
     controlUpdateVector_(TWIST_SIZE, 0),
+    dynamicProcessNoiseCovariance_(STATE_SIZE, STATE_SIZE),
     latestControlTime_(0.0),
     state_(STATE_SIZE),
     predictedState_(STATE_SIZE),
@@ -59,7 +60,8 @@ namespace RobotLocalization
     identity_(STATE_SIZE, STATE_SIZE),
     debug_(false),
     debugStream_(NULL),
-    useControl_(false)
+    useControl_(false),
+    useDynamicProcessNoiseCovariance_(false)
   {
     initialized_ = false;
 
@@ -114,10 +116,45 @@ namespace RobotLocalization
     processNoiseCovariance_(StateMemberAx, StateMemberAx) = 0.01;
     processNoiseCovariance_(StateMemberAy, StateMemberAy) = 0.01;
     processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.015;
+
+    dynamicProcessNoiseCovariance_ = processNoiseCovariance_;
   }
 
   FilterBase::~FilterBase()
   {
+  }
+
+  void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta)
+  {
+    // Generate a rotation matrix
+    Eigen::AngleAxisd rollAngle(state_(StateMemberRoll), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(state_(StateMemberPitch), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yawAngle(state_(StateMemberYaw), Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
+    Eigen::Matrix3d rot3d = quat.matrix();
+
+    // Make duplicate it in the top-left and bottom-right of a 6x6 matrix
+    Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
+    rot6d.setZero();
+    rot6d.block<3, 3>(0, 0) = rot3d;
+    rot6d.block<3, 3>(3, 3) = rot3d;
+
+    // Make a matrix from the robot's current velocity
+    Eigen::MatrixXd velocityMatrix(TWIST_SIZE, TWIST_SIZE);
+    velocityMatrix.setZero();
+    velocityMatrix.diagonal() = state.segment(POSITION_V_OFFSET, TWIST_SIZE);
+
+    // The product of velocityMatrix * velocityProcessNoise * velocityMatrix.transpose() should have non-zero values
+    // for any entries correlated with velocity variables that had non-zero values. Once we have that, we need to
+    // rotate it by the rotation matrix above to get the data into the world frame. This yields
+    // rot6d * velocityMatrix * velocityProcessNoise * velocityMatrix.transpose() * rot6d.transpose().
+    velocityMatrix = (rot6d * velocityMatrix).eval();
+
+    dynamicProcessNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
+      delta *
+      velocityMatrix *
+      processNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_V_OFFSET, POSITION_V_OFFSET) *
+      velocityMatrix.transpose();
   }
 
   const Eigen::VectorXd& FilterBase::getControl()
@@ -283,6 +320,11 @@ namespace RobotLocalization
     {
       debug_ = false;
     }
+  }
+
+  void FilterBase::setUseDynamicProcessNoiseCovariance(const bool useDynamicProcessNoiseCovariance)
+  {
+    useDynamicProcessNoiseCovariance_ = useDynamicProcessNoiseCovariance;
   }
 
   void FilterBase::setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance)
