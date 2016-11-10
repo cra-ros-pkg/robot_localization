@@ -30,9 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_common.h"
 #include "robot_localization/robot_localization_estimator.h"
-#include "iostream"
 
 namespace RobotLocalization
 {
@@ -155,12 +153,17 @@ unsigned int RobotLocalizationEstimator::size() const
   return state_buffer_.size();
 }
 
-void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_state, const double requested_time, EstimatorState& state_at_req_time) const
+void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_state,
+                                             const double requested_time,
+                                             EstimatorState& state_at_req_time) const
 {
   state_at_req_time = boundary_state;
+  state_at_req_time.time_stamp = requested_time;
 
+  // Calculate how much time we need to extrapolate into the future
   double delta = requested_time - boundary_state.time_stamp;
 
+  // Get the state variables from the boundary state
   double roll = boundary_state.state(StateMemberRoll);
   double pitch = boundary_state.state(StateMemberPitch);
   double yaw = boundary_state.state(StateMemberYaw);
@@ -187,20 +190,8 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   double cy = 0.0;
   ::sincos(yaw, &sy, &cy);
 
-  Eigen::VectorXd controlAcceleration_;
-  controlAcceleration_.setZero();
-
-  for(size_t control_idx = 0; control_idx < TWIST_SIZE; ++control_idx)
-  {
-    if(controlUpdateVector_[control_idx])
-    {
-      controlAcceleration_(control_idx) = computeControlAcceleration(boundary_state.state(control_idx + POSITION_V_OFFSET),
-        boundary_state.input(control_idx), accelerationLimits_[control_idx],
-        accelerationGains_[control_idx], decelerationLimits_[control_idx], decelerationGains_[control_idx]);
-    }
-  }
-
-  Eigen::MatrixXd transfer_function;
+  Eigen::MatrixXd transfer_function(STATE_SIZE, STATE_SIZE);
+  transfer_function.setZero();
 
   // Prepare the transfer function
   transfer_function(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -295,62 +286,48 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   double dFY_dP = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
   // Much of the transfer function Jacobian is identical to the transfer function
-  Eigen::MatrixXd transferFunctionJacobian_ = transfer_function;
-  transferFunctionJacobian_(StateMemberX, StateMemberRoll) = dFx_dR;
-  transferFunctionJacobian_(StateMemberX, StateMemberPitch) = dFx_dP;
-  transferFunctionJacobian_(StateMemberX, StateMemberYaw) = dFx_dY;
-  transferFunctionJacobian_(StateMemberY, StateMemberRoll) = dFy_dR;
-  transferFunctionJacobian_(StateMemberY, StateMemberPitch) = dFy_dP;
-  transferFunctionJacobian_(StateMemberY, StateMemberYaw) = dFy_dY;
-  transferFunctionJacobian_(StateMemberZ, StateMemberRoll) = dFz_dR;
-  transferFunctionJacobian_(StateMemberZ, StateMemberPitch) = dFz_dP;
-  transferFunctionJacobian_(StateMemberRoll, StateMemberRoll) = dFR_dR;
-  transferFunctionJacobian_(StateMemberRoll, StateMemberPitch) = dFR_dP;
-  transferFunctionJacobian_(StateMemberRoll, StateMemberYaw) = dFR_dY;
-  transferFunctionJacobian_(StateMemberPitch, StateMemberRoll) = dFP_dR;
-  transferFunctionJacobian_(StateMemberPitch, StateMemberPitch) = dFP_dP;
-  transferFunctionJacobian_(StateMemberPitch, StateMemberYaw) = dFP_dY;
-  transferFunctionJacobian_(StateMemberYaw, StateMemberRoll) = dFY_dR;
-  transferFunctionJacobian_(StateMemberYaw, StateMemberPitch) = dFY_dP;
+  Eigen::MatrixXd transferFunctionJacobian = transfer_function;
+  transferFunctionJacobian(StateMemberX, StateMemberRoll) = dFx_dR;
+  transferFunctionJacobian(StateMemberX, StateMemberPitch) = dFx_dP;
+  transferFunctionJacobian(StateMemberX, StateMemberYaw) = dFx_dY;
+  transferFunctionJacobian(StateMemberY, StateMemberRoll) = dFy_dR;
+  transferFunctionJacobian(StateMemberY, StateMemberPitch) = dFy_dP;
+  transferFunctionJacobian(StateMemberY, StateMemberYaw) = dFy_dY;
+  transferFunctionJacobian(StateMemberZ, StateMemberRoll) = dFz_dR;
+  transferFunctionJacobian(StateMemberZ, StateMemberPitch) = dFz_dP;
+  transferFunctionJacobian(StateMemberRoll, StateMemberRoll) = dFR_dR;
+  transferFunctionJacobian(StateMemberRoll, StateMemberPitch) = dFR_dP;
+  transferFunctionJacobian(StateMemberRoll, StateMemberYaw) = dFR_dY;
+  transferFunctionJacobian(StateMemberPitch, StateMemberRoll) = dFP_dR;
+  transferFunctionJacobian(StateMemberPitch, StateMemberPitch) = dFP_dP;
+  transferFunctionJacobian(StateMemberPitch, StateMemberYaw) = dFP_dY;
+  transferFunctionJacobian(StateMemberYaw, StateMemberRoll) = dFY_dR;
+  transferFunctionJacobian(StateMemberYaw, StateMemberPitch) = dFY_dP;
 
-  // (1) Apply control terms, which are actually accelerations
-  state_at_req_time.state(StateMemberVroll) += controlAcceleration_(ControlMemberVroll) * delta;
-  state_at_req_time.state(StateMemberVpitch) += controlAcceleration_(ControlMemberVpitch) * delta;
-  state_at_req_time.state(StateMemberVyaw) += controlAcceleration_(ControlMemberVyaw) * delta;
-
-  state_at_req_time.state(StateMemberAx) = (controlUpdateVector_[ControlMemberVx] ?
-    controlAcceleration_(ControlMemberVx) : state_at_req_time.state(StateMemberAx));
-  state_at_req_time.state(StateMemberAy) = (controlUpdateVector_[ControlMemberVy] ?
-    controlAcceleration_(ControlMemberVy) : state_at_req_time.state(StateMemberAy));
-  state_at_req_time.state(StateMemberAz) = (controlUpdateVector_[ControlMemberVz] ?
-    controlAcceleration_(ControlMemberVz) : state_at_req_time.state(StateMemberAz));
-
-  // (2) Project the state forward: x = Ax + Bu (really, x = f(x, u))
+  // Project the state forward: x = Ax (really, x = f(x))
   state_at_req_time.state = transfer_function * state_at_req_time.state;
 
   // Handle wrapping
   wrapStateAngles(state_at_req_time);
 
-  // (3) Project the error forward: P = J * P * J' + Q
-  estimateErrorCovariance_ = (transferFunctionJacobian_ *
-                              estimateErrorCovariance_ *
-                              transferFunctionJacobian_.transpose());
-  estimateErrorCovariance_.noalias() += (processNoiseCovariance_ * delta);
-
-  FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
-           "\n\n--------------------- /Ekf::predict ----------------------\n");
-
-  state_at_req_time = boundary_state;
+  // Project the error forward: P = J * P * J' + Q
+  state_at_req_time.covariance = (transferFunctionJacobian * boundary_state.covariance *
+                                  transferFunctionJacobian.transpose());
+  state_at_req_time.covariance.noalias() += (processNoiseCovariance_ * delta);
 
   return;
 }
 
-void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1, const EstimatorState& given_state_2, const double requested_time, EstimatorState& state_at_req_time) const
+void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1,
+                                             const EstimatorState& given_state_2,
+                                             const double requested_time,
+                                             EstimatorState& state_at_req_time) const
 {
-  /* TODO: Right now, we only extrapolate from the last known state before the requested time.
-  *  But as the state after the requested time is also known, we may want to perform
-  *  interpolation between states.
-  */
+  /*
+   * TODO: Right now, we only extrapolate from the last known state before the requested time.
+   * But as the state after the requested time is also known, we may want to perform
+   * interpolation between states.
+   */
   extrapolate(given_state_1, requested_time, state_at_req_time);
   return;
 }

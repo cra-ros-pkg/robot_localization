@@ -115,7 +115,7 @@ target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
-target_link_libraries(test_robot_localization_estimator robot_localization_estimator ${catkin_LIBRARIES})
+target_link_libraries(test_robot_localization_estimator robot_localization_estimator filter_utilities ${catkin_LIBRARIES})
 
 
 #############
