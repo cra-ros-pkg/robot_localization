@@ -136,11 +136,14 @@ int RobotLocalizationEstimator::getState(const double time, EstimatorState& stat
   return 0;
 }
 
+void RobotLocalizationEstimator::setBufferCapacity(const int capacity)
+{
+  state_buffer_.set_capacity(capacity);
+}
 
 void RobotLocalizationEstimator::clearBuffer()
 {
   state_buffer_.clear();
-
 }
 
 unsigned int RobotLocalizationEstimator::capacity() const

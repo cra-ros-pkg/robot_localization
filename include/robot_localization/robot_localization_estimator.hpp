@@ -117,6 +117,11 @@ class RobotLocalizationEstimator
     //!
     void clearBuffer();
 
+    //! @brief Sets the buffer capacity
+    //!
+    //! @param[in] capacity - The new buffer capacity
+    void setBufferCapacity(const int capacity);
+
     //! @brief Returns the buffer capacity
     //!
     unsigned int capacity() const;
