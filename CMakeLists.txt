@@ -52,7 +52,8 @@ add_library(
   src/navsat_transform.cpp
   src/robot_localization_estimator.cpp
   src/ros_filter.cpp
-  src/ros_filter_utilities.cpp)
+  src/ros_filter_utilities.cpp
+  src/ros_robot_localization_listener.cpp)
 
 rosidl_target_interfaces(${library_name}
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
