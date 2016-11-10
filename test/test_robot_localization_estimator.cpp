@@ -30,12 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/robot_localization_estimator.h"
-#include <ros/ros.h>
+#include <robot_localization/robot_localization_estimator.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "test_robot_localization_estimator");
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("test_robot_localization_estimator");
 
   // Generate a few empty estimator states
   std::vector<robot_localization::EstimatorState> states;
@@ -48,7 +49,7 @@ int main(int argc, char **argv)
   }
 
   // Instantiate a robot localization estimator with a buffer size of 5
-  robot_localization::robot_localizationEstimator estimator(5);
+  robot_localization::RobotLocalizationEstimator estimator(5);
 
   // Add the states in order from old to new
   for ( int i = 0; i < 10; i++ )
