@@ -52,7 +52,7 @@ class RosRobotLocalizationListener
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosRobotLocalizationListener();
+    explicit RosRobotLocalizationListener(const std::string& ns="");
 
     //! @brief Destructor
     //!
