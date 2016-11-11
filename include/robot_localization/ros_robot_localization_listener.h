@@ -49,14 +49,19 @@ class RosRobotLocalizationListener
   public:
     //! @brief Constructor
     //!
-    //! The RosFilter constructor makes sure that anyone using
-    //! this template is doing so with the correct object type
+    //! The RosRobotLocalizationListener constructor initializes
+    //! nodehandles, subscribers, a filter for synchronized listening
+    //! to the topics it subscribes to, and an instance of the
+    //! RobotLocalizationEstimator.
+    //!
+    //! @param[in] ns - namespace to place the subscribers and
+    //! parameters in.
     //!
     explicit RosRobotLocalizationListener(const std::string& ns="");
 
     //! @brief Destructor
     //!
-    //! Clears out the message filters and topic subscribers.
+    //! Empty destructor
     //!
     ~RosRobotLocalizationListener();
 
@@ -69,6 +74,8 @@ class RosRobotLocalizationListener
     //! @param[out] state - state at the requested time
     //! @param[out] covariance - covariance at the requested time
     //!
+    //! @return false if buffer is empty, true otherwise
+    //!
     bool getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 
     //! @brief Get a state from the localization estimator
@@ -78,6 +85,9 @@ class RosRobotLocalizationListener
     //! @param[in] ros_time - ros time of the requested state
     //! @param[out] state - state at the requested time
     //! @param[out] covariance - covariance at the requested time
+    //!
+    //! @return false if buffer is empty, true otherwise
+    //!
     bool getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 
   private:
@@ -98,7 +108,7 @@ class RosRobotLocalizationListener
     //!
     message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
 
-    //! @brief Subscriber to the odometry topic
+    //! @brief Subscriber to the acceleration topic
     //!
     message_filters::Subscriber<geometry_msgs::AccelWithCovarianceStamped> accel_sub_;
 
