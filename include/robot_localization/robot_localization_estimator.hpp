@@ -109,7 +109,7 @@ class RobotLocalizationEstimator
     //!
     //! @param[out] state - The returned (most recent) state
     //!
-    int getState(EstimatorState &state) const;
+    bool getState(EstimatorState &state) const;
 
     //! @brief Returns the state at a given time
     //!
@@ -119,7 +119,7 @@ class RobotLocalizationEstimator
     //! @param[in] time - The time at which the prediction is being made
     //! @param[out] state - The returned state at the given time
     //!
-    int getState(const double time, EstimatorState &state) const;
+    bool getState(const double time, EstimatorState &state) const;
 
     //! @brief Clears the internal state buffer
     //!
