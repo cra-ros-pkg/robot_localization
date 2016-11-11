@@ -60,6 +60,26 @@ class RosRobotLocalizationListener
     //!
     ~RosRobotLocalizationListener();
 
+    //! @brief Get a state from the localization estimator
+    //!
+    //! Requests the predicted state and covariance at a given time
+    //! from the Robot Localization Estimator.
+    //!
+    //! @param[in] time - time of the requested state
+    //! @param[out] state - state at the requested time
+    //! @param[out] covariance - covariance at the requested time
+    //!
+    bool getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+
+    //! @brief Get a state from the localization estimator
+    //!
+    //! Overload of getState method for using ros::Time.
+    //!
+    //! @param[in] ros_time - ros time of the requested state
+    //! @param[out] state - state at the requested time
+    //! @param[out] covariance - covariance at the requested time
+    bool getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+
   private:
     //! @brief The core state estimator that facilitates inter- and
     //! extrapolation between buffered states.
@@ -97,25 +117,6 @@ class RosRobotLocalizationListener
     //!
     void odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel);
 
-    //! @brief Get a state from the localization estimator
-    //!
-    //! Requests the predicted state and covariance at a given time
-    //! from the Robot Localization Estimator.
-    //!
-    //! @param[in] time - time of the requested state
-    //! @param[out] state - state at the requested time
-    //! @param[out] covariance - covariance at the requested time
-    //!
-    void getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
-
-    //! @brief Get a state from the localization estimator
-    //!
-    //! Overload of getState method for using ros::Time.
-    //!
-    //! @param[in] ros_time - ros time of the requested state
-    //! @param[out] state - state at the requested time
-    //! @param[out] covariance - covariance at the requested time
-    void getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 };
 
 }  // namespace RobotLocalization

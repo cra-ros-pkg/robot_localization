@@ -125,18 +125,21 @@ namespace RobotLocalization
     return;
   }
 
-  void RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  bool RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
     EstimatorState estimator_state;
-    estimator_.getState(time,estimator_state);
+    if (!estimator_.getState(time,estimator_state))
+      return false;
     state = estimator_state.state;
     covariance = estimator_state.covariance;
+
+    return true;
   }
 
-  void RosRobotLocalizationListener::getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
     double time = ros_time.toSec();
-    getState(time, state, covariance);
+    return getState(time, state, covariance);
   }
 }  // namespace RobotLocalization
 

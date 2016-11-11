@@ -59,6 +59,7 @@ catkin_package(
     navsat_transform
     ros_filter
     ros_filter_utilities
+    ros_robot_localization_listener
     ukf
   CATKIN_DEPENDS
     cmake_modules
@@ -112,6 +113,8 @@ target_link_libraries(filter_base filter_utilities ${catkin_LIBRARIES} ${EIGEN3_
 target_link_libraries(ekf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ukf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(robot_localization_estimator filter_utilities ${EIGEN3_LIBRARIES})
+target_link_libraries(ros_robot_localization_listener robot_localization_estimator ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
