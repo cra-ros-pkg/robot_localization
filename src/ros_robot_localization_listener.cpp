@@ -54,11 +54,11 @@ namespace RobotLocalization
     sync_.registerCallback(&RosRobotLocalizationListener::odomAndAccelCallback, this);
   }
 
-  RobotLocalizationEstimator::~RobotLocalizationEstimator()
+  RosRobotLocalizationListener::~RosRobotLocalizationListener()
   {
   }
 
-  void odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel)
+  void RosRobotLocalizationListener::odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel)
   {
     EstimatorState state;
     state.time_stamp = odom.header.stamp.toSec();
