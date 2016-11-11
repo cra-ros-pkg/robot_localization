@@ -63,6 +63,7 @@ namespace robot_localization
     const std::shared_ptr<geometry_msgs::msg::AccelWithCovarianceStamped const>& accel)
   {
     EstimatorState state;
+    state.time_stamp = odom.header.stamp.toSec();
 
     // Pose: Position
     state.state(StateMemberX) = odom.pose.pose.position.x;
