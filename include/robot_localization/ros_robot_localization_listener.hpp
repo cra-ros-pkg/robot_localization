@@ -35,7 +35,7 @@
 
 #include <memory>
 
-#include <robot_localization/robot_localization_estimator.hpp>
+#include "robot_localization/robot_localization_estimator.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <message_filters/subscriber.h>
@@ -54,7 +54,8 @@ class RosRobotLocalizationListener
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node);
+    explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node,
+      const std::string& ns="");
 
     //! @brief Destructor
     //!

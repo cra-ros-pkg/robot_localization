@@ -44,12 +44,12 @@
 namespace robot_localization
 {
   RosRobotLocalizationListener::RosRobotLocalizationListener(
-    rclcpp::Node::SharedPtr node):
+    rclcpp::Node::SharedPtr node, const std::string& ns):
     estimator_(0u),
     qos1_(1),
     qos10_(10),
-    odom_sub_(node, "~/odom", qos1_.get_rmw_qos_profile()),
-    accel_sub_(node, "~/acceleration", qos1_.get_rmw_qos_profile()),
+    odom_sub_(node, "~" + ns + "/odom", qos1_.get_rmw_qos_profile()),
+    accel_sub_(node, "~" + ns + "/acceleration", qos1_.get_rmw_qos_profile()),
     sync_(odom_sub_, accel_sub_, 10u)
   {
     int buffer_size = node->declare_parameter<int>("~/buffer_size", 10);
