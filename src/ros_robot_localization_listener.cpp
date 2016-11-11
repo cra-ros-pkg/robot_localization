@@ -38,11 +38,11 @@
 
 namespace RobotLocalization
 {
-  RosRobotLocalizationListener::RosRobotLocalizationListener():
-    nh_(""),
-    nh_p_("~"),
-    odom_sub_(nh_, "odom", 1),
-    accel_sub_(nh_, "acceleration", 1),
+  RosRobotLocalizationListener::RosRobotLocalizationListener(const std::string& ns):
+    nh_(ns),
+    nh_p_("~"+ns),
+    odom_sub_(nh_, "odometry", 1),
+    accel_sub_(nh_, "accel", 1),
     sync_(odom_sub_, accel_sub_, 10),
     estimator_(0)
   {
