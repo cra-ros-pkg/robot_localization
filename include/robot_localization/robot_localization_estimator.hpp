@@ -59,9 +59,6 @@ struct EstimatorState
     //! @brief System state covariance at time = time_stamp
     Eigen::MatrixXd covariance;
 
-    //! @brief System input at time = time_stamp
-    Eigen::VectorXd input;
-
     friend std::ostream& operator<<(std::ostream &os, const EstimatorState& state)
     {
         return os << "state:\n - time_stamp: " << state.time_stamp;
