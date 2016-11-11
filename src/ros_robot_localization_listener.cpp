@@ -125,6 +125,18 @@ namespace RobotLocalization
     return;
   }
 
+  void RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  {
+    EstimatorState estimator_state;
+    estimator_.getState(time,estimator_state);
+    state = estimator_state.state;
+    covariance = estimator_state.covariance;
+  }
 
+  void RosRobotLocalizationListener::getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  {
+    double time = ros_time.toSec();
+    getState(time, state, covariance);
+  }
 }  // namespace RobotLocalization
 
