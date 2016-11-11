@@ -31,22 +31,27 @@
  */
 
 #include "robot_localization/ros_robot_localization_listener.h"
+#include <Eigen/Dense>
+#include <eigen_conversions/eigen_msg.h>
+#include <tf/tf.h>
+//#include <tf/transform_datatypes.h>
 
 namespace RobotLocalization
 {
   RosRobotLocalizationListener::RosRobotLocalizationListener():
-    nh_("~"),
+    nh_(""),
+    nh_p_("~"),
     odom_sub_(nh_, "odom", 1),
     accel_sub_(nh_, "acceleration", 1),
     sync_(odom_sub_, accel_sub_, 10),
     estimator_(0)
   {
-    int buffer_size = 0;
-    nh_.getParam("buffer_size",buffer_size);
+    int buffer_size;
+    nh_p_.param("buffer_size", buffer_size, 10);
 
     estimator_.setBufferCapacity(buffer_size);
 
-    sync_.registerCallback(boost::bind(&odomAndAccelCallback, _1, _2));
+    sync_.registerCallback(&RosRobotLocalizationListener::odomAndAccelCallback, this);
   }
 
   RobotLocalizationEstimator::~RobotLocalizationEstimator()

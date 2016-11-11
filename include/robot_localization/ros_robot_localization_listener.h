@@ -72,6 +72,11 @@ class RosRobotLocalizationListener
     //! A handle to the ROS node
     ros::NodeHandle nh_;
 
+    //! @brief ROS Nodehandle
+    //!
+    //! A handle to the ROS node
+    ros::NodeHandle nh_p_;
+
     message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
     message_filters::Subscriber<geometry_msgs::AccelWithCovarianceStamped> accel_sub_;
     message_filters::TimeSynchronizer<nav_msgs::Odometry, geometry_msgs::AccelWithCovarianceStamped> sync_;
