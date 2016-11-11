@@ -80,6 +80,9 @@ class RosRobotLocalizationListener
       const std::shared_ptr<nav_msgs::msg::Odometry const>& odom,
       const std::shared_ptr<geometry_msgs::msg::AccelWithCovarianceStamped const>& accel);
 
+    void getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+
+    void getState(const rclcpp::Time& rclcpp_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 };
 
 }  // namespace robot_localization

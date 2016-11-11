@@ -33,7 +33,7 @@
 #include <functional>
 #include <rclcpp/qos.hpp>
 
-//#include <Eigen/Dense>
+#include <Eigen/Dense>
 //#include <eigen_conversions/eigen_msg.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -133,6 +133,18 @@ namespace robot_localization
     return;
   }
 
+  void RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  {
+    EstimatorState estimator_state;
+    estimator_.getState(time, estimator_state);
+    state = estimator_state.state;
+    covariance = estimator_state.covariance;
+  }
 
+  void RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  {
+    double time = rclcpp_time.nanoseconds() / 100000000;
+    getState(time, state, covariance);
+  }
 }  // namespace robot_localization
 
