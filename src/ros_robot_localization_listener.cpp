@@ -60,6 +60,38 @@ namespace RobotLocalization
 
   void odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel)
   {
+    EstimatorState state;
+
+    // Pose: Position
+    state.state(StateMemberX) = odom.pose.pose.position.x;
+    state.state(StateMemberY) = odom.pose.pose.position.y;
+    state.state(StateMemberZ) = odom.pose.pose.position.z;
+
+    // Pose: Orientation
+    tf::Quaternion orientation_quat;
+    tf::quaternionMsgToEigen(odom.pose.pose.orientation, orientation_quat);
+    double roll, pitch, yaw;
+    tf::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
+
+    state.state(StateMemberRoll) = roll;
+    state.state(StateMemberPitch) = pitch;
+    state.state(StateMemberYaw) = yaw;
+
+    // Velocity: Linear
+    state.state(StateMemberVx) = odom.twist.twist.linear.x;
+    state.state(StateMemberVy) = odom.twist.twist.linear.y;
+    state.state(StateMemberVz) = odom.twist.twist.linear.z;
+
+    // Velocity: Angular
+    state.state(StateMemberVroll) = odom.twist.twist.angular.x;
+    state.state(StateMemberVpitch) = odom.twist.twist.angular.y;
+    state.state(StateMemberVyaw) = odom.twist.twist.angular.z;
+
+    // Acceleration: Linear
+    state.state(StateMemberAx) = accel.accel.accel.linear.x;
+    state.state(StateMemberAy) = accel.accel.accel.linear.y;
+    state.state(StateMemberAz) = accel.accel.accel.linear.z;
+
     return;
   }
 
