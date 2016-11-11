@@ -83,6 +83,9 @@ class RosRobotLocalizationListener
 
     void odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel);
 
+    void getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+
+    void getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 };
 
 }  // namespace RobotLocalization
