@@ -128,6 +128,8 @@ namespace robot_localization
       }
     }
 
+    estimator_.setState(state);
+
     return;
   }
 
