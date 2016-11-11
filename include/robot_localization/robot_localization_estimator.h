@@ -50,6 +50,15 @@ namespace RobotLocalization
 //!
 struct EstimatorState
 {
+    EstimatorState():
+        time_stamp(0.0),
+        state(STATE_SIZE),
+        covariance(STATE_SIZE,STATE_SIZE)
+    {
+        state.setZero();
+        covariance.setZero();
+    }
+
     //! @brief Time at which this state is/was achieved
     double time_stamp;
 
@@ -61,7 +70,9 @@ struct EstimatorState
 
     friend std::ostream& operator<<(std::ostream &os, const EstimatorState& state)
     {
-        return os << "state:\n - time_stamp: " << state.time_stamp;
+        return os << "state:\n - time_stamp: " << state.time_stamp <<
+                     "\n - state: \n" << state.state <<
+                     " - covariance: \n" << state.covariance;
     }
 };
 

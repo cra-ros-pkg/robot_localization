@@ -34,8 +34,10 @@
 
 namespace RobotLocalization
 {
-RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity)
+RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity):
+  processNoiseCovariance_(STATE_SIZE,STATE_SIZE)
 {
+  processNoiseCovariance_.setZero();
   state_buffer_.set_capacity(buffer_capacity);
 }
 
@@ -194,7 +196,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   ::sincos(yaw, &sy, &cy);
 
   Eigen::MatrixXd transfer_function(STATE_SIZE, STATE_SIZE);
-  transfer_function.setZero();
+  transfer_function.setIdentity();
 
   // Prepare the transfer function
   transfer_function(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -308,7 +310,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   transferFunctionJacobian(StateMemberYaw, StateMemberPitch) = dFY_dP;
 
   // Project the state forward: x = Ax (really, x = f(x))
-  state_at_req_time.state = transfer_function * state_at_req_time.state;
+  state_at_req_time.state = transfer_function * boundary_state.state;
 
   // Handle wrapping
   wrapStateAngles(state_at_req_time);
