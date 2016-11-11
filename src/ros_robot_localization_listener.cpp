@@ -61,6 +61,7 @@ namespace RobotLocalization
   void odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel)
   {
     EstimatorState state;
+    state.time_stamp = odom.header.stamp.toSec();
 
     // Pose: Position
     state.state(StateMemberX) = odom.pose.pose.position.x;
