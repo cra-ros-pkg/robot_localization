@@ -120,6 +120,8 @@ namespace RobotLocalization
       }
     }
 
+    estimator_.setState(state);
+
     return;
   }
 
