@@ -33,7 +33,7 @@
 #include <functional>
 #include <rclcpp/qos.hpp>
 
-#include <robot_localization/ros_robot_localization_listener.hpp>
+#include "robot_localization/ros_robot_localization_listener.hpp"
 
 namespace robot_localization
 {
@@ -46,10 +46,7 @@ namespace robot_localization
     accel_sub_(node, "~/acceleration", qos1_.get_rmw_qos_profile()),
     sync_(odom_sub_, accel_sub_, 10u)
   {
-    int buffer_size = 0;
-    node->declare_parameter<int>("~/buffer_size", buffer_size);
-    node->get_parameter_or<int>("~/buffer_size", buffer_size, buffer_size);
-
+    int buffer_size = node->declare_parameter<int>("~/buffer_size", 10);
     estimator_.setBufferCapacity(buffer_size);
 
     sync_.registerCallback(std::bind(
