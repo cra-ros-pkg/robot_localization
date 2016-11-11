@@ -69,7 +69,7 @@ namespace RobotLocalization
 
     // Pose: Orientation
     tf::Quaternion orientation_quat;
-    tf::quaternionMsgToEigen(odom.pose.pose.orientation, orientation_quat);
+    tf::quaternionMsgToTF(odom.pose.pose.orientation, orientation_quat);
     double roll, pitch, yaw;
     tf::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
 
