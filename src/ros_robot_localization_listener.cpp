@@ -77,6 +77,15 @@ namespace RobotLocalization
     state.state(StateMemberPitch) = pitch;
     state.state(StateMemberYaw) = yaw;
 
+    // Pose: Covariance
+    for ( unsigned int i = 0; i < POSE_SIZE; i++ )
+    {
+      for ( unsigned int j = 0; j < POSE_SIZE; j++ )
+      {
+        state.covariance(POSITION_OFFSET + i, POSITION_OFFSET + j) = odom.pose.covariance[i*POSE_SIZE + j];
+      }
+    }
+
     // Velocity: Linear
     state.state(StateMemberVx) = odom.twist.twist.linear.x;
     state.state(StateMemberVy) = odom.twist.twist.linear.y;
@@ -87,10 +96,28 @@ namespace RobotLocalization
     state.state(StateMemberVpitch) = odom.twist.twist.angular.y;
     state.state(StateMemberVyaw) = odom.twist.twist.angular.z;
 
+    // Velocity: Covariance
+    for ( unsigned int i = 0; i < TWIST_SIZE; i++ )
+    {
+      for ( unsigned int j = 0; j < TWIST_SIZE; j++ )
+      {
+        state.covariance(POSITION_V_OFFSET + i, POSITION_V_OFFSET + j) = odom.twist.covariance[i*TWIST_SIZE + j];
+      }
+    }
+
     // Acceleration: Linear
     state.state(StateMemberAx) = accel.accel.accel.linear.x;
     state.state(StateMemberAy) = accel.accel.accel.linear.y;
     state.state(StateMemberAz) = accel.accel.accel.linear.z;
+
+    // Acceleration: Covariance
+    for ( unsigned int i = 0; i < ACCELERATION_SIZE; i++ )
+    {
+      for ( unsigned int j = 0; j < ACCELERATION_SIZE; j++ )
+      {
+        state.covariance(POSITION_A_OFFSET + i, POSITION_A_OFFSET + j) = accel.accel.covariance[i*TWIST_SIZE + j];
+      }
+    }
 
     return;
   }
