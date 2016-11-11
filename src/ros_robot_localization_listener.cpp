@@ -33,6 +33,12 @@
 #include <functional>
 #include <rclcpp/qos.hpp>
 
+//#include <Eigen/Dense>
+//#include <eigen_conversions/eigen_msg.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include "robot_localization/ros_robot_localization_listener.hpp"
 
 namespace robot_localization
@@ -54,7 +60,7 @@ namespace robot_localization
       this, std::placeholders::_1, std::placeholders::_2));
   }
 
-  RobotLocalizationEstimator::~RobotLocalizationEstimator()
+  RosRobotLocalizationListener::~RosRobotLocalizationListener()
   {
   }
 
@@ -63,18 +69,18 @@ namespace robot_localization
     const std::shared_ptr<geometry_msgs::msg::AccelWithCovarianceStamped const>& accel)
   {
     EstimatorState state;
-    state.time_stamp = odom.header.stamp.toSec();
+    state.time_stamp = odom->header.stamp.sec;
 
     // Pose: Position
-    state.state(StateMemberX) = odom.pose.pose.position.x;
-    state.state(StateMemberY) = odom.pose.pose.position.y;
-    state.state(StateMemberZ) = odom.pose.pose.position.z;
+    state.state(StateMemberX) = odom->pose.pose.position.x;
+    state.state(StateMemberY) = odom->pose.pose.position.y;
+    state.state(StateMemberZ) = odom->pose.pose.position.z;
 
     // Pose: Orientation
-    tf::Quaternion orientation_quat;
-    tf::quaternionMsgToTF(odom.pose.pose.orientation, orientation_quat);
+    tf2::Quaternion orientation_quat;
+    tf2::fromMsg(odom->pose.pose.orientation, orientation_quat);
     double roll, pitch, yaw;
-    tf::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
+    tf2::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
 
     state.state(StateMemberRoll) = roll;
     state.state(StateMemberPitch) = pitch;
@@ -85,40 +91,40 @@ namespace robot_localization
     {
       for ( unsigned int j = 0; j < POSE_SIZE; j++ )
       {
-        state.covariance(POSITION_OFFSET + i, POSITION_OFFSET + j) = odom.pose.covariance[i*POSE_SIZE + j];
+        state.covariance(POSITION_OFFSET + i, POSITION_OFFSET + j) = odom->pose.covariance[i*POSE_SIZE + j];
       }
     }
 
     // Velocity: Linear
-    state.state(StateMemberVx) = odom.twist.twist.linear.x;
-    state.state(StateMemberVy) = odom.twist.twist.linear.y;
-    state.state(StateMemberVz) = odom.twist.twist.linear.z;
+    state.state(StateMemberVx) = odom->twist.twist.linear.x;
+    state.state(StateMemberVy) = odom->twist.twist.linear.y;
+    state.state(StateMemberVz) = odom->twist.twist.linear.z;
 
     // Velocity: Angular
-    state.state(StateMemberVroll) = odom.twist.twist.angular.x;
-    state.state(StateMemberVpitch) = odom.twist.twist.angular.y;
-    state.state(StateMemberVyaw) = odom.twist.twist.angular.z;
+    state.state(StateMemberVroll) = odom->twist.twist.angular.x;
+    state.state(StateMemberVpitch) = odom->twist.twist.angular.y;
+    state.state(StateMemberVyaw) = odom->twist.twist.angular.z;
 
     // Velocity: Covariance
     for ( unsigned int i = 0; i < TWIST_SIZE; i++ )
     {
       for ( unsigned int j = 0; j < TWIST_SIZE; j++ )
       {
-        state.covariance(POSITION_V_OFFSET + i, POSITION_V_OFFSET + j) = odom.twist.covariance[i*TWIST_SIZE + j];
+        state.covariance(POSITION_V_OFFSET + i, POSITION_V_OFFSET + j) = odom->twist.covariance[i*TWIST_SIZE + j];
       }
     }
 
     // Acceleration: Linear
-    state.state(StateMemberAx) = accel.accel.accel.linear.x;
-    state.state(StateMemberAy) = accel.accel.accel.linear.y;
-    state.state(StateMemberAz) = accel.accel.accel.linear.z;
+    state.state(StateMemberAx) = accel->accel.accel.linear.x;
+    state.state(StateMemberAy) = accel->accel.accel.linear.y;
+    state.state(StateMemberAz) = accel->accel.accel.linear.z;
 
     // Acceleration: Covariance
     for ( unsigned int i = 0; i < ACCELERATION_SIZE; i++ )
     {
       for ( unsigned int j = 0; j < ACCELERATION_SIZE; j++ )
       {
-        state.covariance(POSITION_A_OFFSET + i, POSITION_A_OFFSET + j) = accel.accel.covariance[i*TWIST_SIZE + j];
+        state.covariance(POSITION_A_OFFSET + i, POSITION_A_OFFSET + j) = accel->accel.covariance[i*TWIST_SIZE + j];
       }
     }
 
