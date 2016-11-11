@@ -126,34 +126,20 @@ namespace RobotLocalization
 
   void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta)
   {
-    // Generate a rotation matrix
-    Eigen::AngleAxisd rollAngle(state_(StateMemberRoll), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(state_(StateMemberPitch), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd yawAngle(state_(StateMemberYaw), Eigen::Vector3d::UnitZ());
-    Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
-    Eigen::Matrix3d rot3d = quat.matrix();
-
-    // Make duplicate it in the top-left and bottom-right of a 6x6 matrix
-    Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
-    rot6d.setZero();
-    rot6d.block<3, 3>(0, 0) = rot3d;
-    rot6d.block<3, 3>(3, 3) = rot3d;
-
-    // Make a matrix from the robot's current velocity
+    // A more principled approach would be to get the current velocity from the state, make a diagonal matrix from it,
+    // and then rotate it to be in the world frame (i.e., the same frame as the pose data). We could then use this
+    // rotated velocity matrix to scale the process noise covariance for the pose variables as
+    // rotatedVelocityMatrix * poseCovariance * rotatedVelocityMatrix'
+    // However, this presents trouble for robots that may incur rotational error as a result of linear motion (and
+    // vice-versa). Instead, we create a diagonal matrix whose diagonal values are the vector norm of the state's
+    // velocity. We use that to scale the process noise covariance.
     Eigen::MatrixXd velocityMatrix(TWIST_SIZE, TWIST_SIZE);
-    velocityMatrix.setZero();
-    velocityMatrix.diagonal() = state.segment(POSITION_V_OFFSET, TWIST_SIZE);
-
-    // The product of velocityMatrix * velocityProcessNoise * velocityMatrix.transpose() should have non-zero values
-    // for any entries correlated with velocity variables that had non-zero values. Once we have that, we need to
-    // rotate it by the rotation matrix above to get the data into the world frame. This yields
-    // rot6d * velocityMatrix * velocityProcessNoise * velocityMatrix.transpose() * rot6d.transpose().
-    velocityMatrix = (rot6d * velocityMatrix).eval();
+    velocityMatrix.setIdentity();
+    velocityMatrix.diagonal() *= state.segment(POSITION_V_OFFSET, TWIST_SIZE).norm();
 
     dynamicProcessNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
-      delta *
       velocityMatrix *
-      processNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_V_OFFSET, POSITION_V_OFFSET) *
+      processNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) *
       velocityMatrix.transpose();
   }
 
