@@ -45,6 +45,9 @@ int main(int argc, char **argv)
   {
     robot_localization::EstimatorState state;
     state.time_stamp = i;
+    state.state(0) = i;
+    state.state(6) = 1.0;
+    state.state(12) = 0.0;
     states.push_back(state);
   }
 
