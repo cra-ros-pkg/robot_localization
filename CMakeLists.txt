@@ -20,11 +20,13 @@ find_package(catkin REQUIRED COMPONENTS
 # Attempt to find Eigen using its own CMake module.
 # If that fails, fall back to cmake_modules package.
 find_package(Eigen3)
+set(EIGEN_PACKAGE EIGEN3)
 if(NOT EIGEN3_FOUND)
   find_package(cmake_modules REQUIRED)
   find_package(Eigen REQUIRED)
   set(EIGEN3_INCLUDE_DIRS ${EIGEN_INCLUDE_DIRS})
   set(EIGEN3_LIBRARIES ${EIGEN_LIBRARIES})
+  set(EIGEN_PACKAGE Eigen)
 endif()
 
 add_definitions(-DEIGEN_NO_DEBUG -DEIGEN_MPL2_ONLY)
@@ -73,7 +75,7 @@ catkin_package(
     tf2
     tf2_geometry_msgs
     tf2_ros
-  DEPENDS Eigen
+  DEPENDS ${EIGEN_PACKAGE}
 )
 
 ###########
