@@ -63,25 +63,57 @@ class RosRobotLocalizationListener
     ~RosRobotLocalizationListener();
 
   private:
-    //! @brief Robot Localization Estimator
-    //!
-    //! The core state estimator that facilitates inter- and
+    //! @brief The core state estimator that facilitates inter- and
     //! extrapolation between buffered states.
+    //!
     RobotLocalizationEstimator estimator_;
 
     rclcpp::QoS qos1_, qos10_;
 
+    //! @brief Subscriber to the odometry topic
+    //!
     message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
+
+    //! @brief Subscriber to the odometry topic
+    //!
     message_filters::Subscriber<geometry_msgs::msg::AccelWithCovarianceStamped> accel_sub_;
+
+    //! @brief Synchronizer for callback of odom and accel
+    //!
     message_filters::TimeSynchronizer<nav_msgs::msg::Odometry,
       geometry_msgs::msg::AccelWithCovarianceStamped> sync_;
 
+    //! @brief Callback for odom and accel
+    //!
+    //! Puts the information from the odom and accel messages in a
+    //! Robot Localization Estimator state and sets the most recent
+    //! state of the estimator.
+    //!
+    //! @param[in] odometry message
+    //! @param[in] accel message
+    //!
     void odomAndAccelCallback(
       const std::shared_ptr<nav_msgs::msg::Odometry const>& odom,
       const std::shared_ptr<geometry_msgs::msg::AccelWithCovarianceStamped const>& accel);
 
+    //! @brief Get a state from the localization estimator
+    //!
+    //! Requests the predicted state and covariance at a given time
+    //! from the Robot Localization Estimator.
+    //!
+    //! @param[in] time - time of the requested state
+    //! @param[out] state - state at the requested time
+    //! @param[out] covariance - covariance at the requested time
+    //!
     void getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 
+    //! @brief Get a state from the localization estimator
+    //!
+    //! Overload of getState method for using ros::Time.
+    //!
+    //! @param[in] ros_time - ros time of the requested state
+    //! @param[out] state - state at the requested time
+    //! @param[out] covariance - covariance at the requested time
     void getState(const rclcpp::Time& rclcpp_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 };
 
