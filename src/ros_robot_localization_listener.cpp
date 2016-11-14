@@ -50,8 +50,11 @@ namespace robot_localization
     qos10_(10),
     odom_sub_(node, "~" + ns + "/odom", qos1_.get_rmw_qos_profile()),
     accel_sub_(node, "~" + ns + "/acceleration", qos1_.get_rmw_qos_profile()),
-    sync_(odom_sub_, accel_sub_, 10u)
+    sync_(odom_sub_, accel_sub_, 10u),
+    node_clock_(node->get_node_clock_interface()->get_clock()),
+    node_logger_(node->get_node_logging_interface())
   {
+
     int buffer_size = node->declare_parameter<int>("~/buffer_size", 10);
     estimator_.setBufferCapacity(buffer_size);
 
@@ -143,13 +146,15 @@ namespace robot_localization
     EstimatorState estimator_state;
     if ( estimator_.getState(time,estimator_state) == -1 )
     {
-      ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
+      RCLCPP_ERROR(node_logger_->get_logger(),
+        "Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
       return false;
     }
 
     if ( estimator_.getState(time,estimator_state) == -2 )
     {
-      ROS_WARN("Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
+      RCLCPP_WARN(node_logger_->get_logger(),
+        "Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
     }
 
     state = estimator_state.state;
@@ -160,7 +165,18 @@ namespace robot_localization
 
   bool RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
-    double time = rclcpp_time.nanoseconds() / 100000000;
+    double time;
+    if (rclcpp_time.nanoseconds() == 0)
+    {
+      RCLCPP_INFO(node_logger_->get_logger(),
+        "Ros Robot Localization Listener: State requested at time = zero, returning state at current time");
+      time = node_clock_->now().nanoseconds() / 1000000000;
+    }
+    else
+    {
+      time = rclcpp_time.nanoseconds() / 1000000000;
+    }
+
     return getState(time, state, covariance);
   }
 }  // namespace robot_localization

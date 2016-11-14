@@ -126,6 +126,9 @@ class RosRobotLocalizationListener
     message_filters::TimeSynchronizer<nav_msgs::msg::Odometry,
       geometry_msgs::msg::AccelWithCovarianceStamped> sync_;
 
+    rclcpp::Clock::SharedPtr node_clock_;
+    rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logger_;
+
     //! @brief Callback for odom and accel
     //!
     //! Puts the information from the odom and accel messages in a
