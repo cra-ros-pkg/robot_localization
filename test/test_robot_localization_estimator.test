@@ -1,0 +1,7 @@
+<!-- Launch file for ekf_test -->
+
+<launch>
+
+    <test test-name="test_rle" pkg="robot_localization" type="test_robot_localization_estimator" clear_params="true" time-limit="100.0" />
+
+</launch>
