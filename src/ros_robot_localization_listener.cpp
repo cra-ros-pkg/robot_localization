@@ -134,8 +134,17 @@ namespace RobotLocalization
   bool RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
     EstimatorState estimator_state;
-    if (!estimator_.getState(time,estimator_state))
+    if ( estimator_.getState(time,estimator_state) == -1 )
+    {
+      ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
       return false;
+    }
+
+    if ( estimator_.getState(time,estimator_state) == -2 )
+    {
+      ROS_WARN("Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
+    }
+
     state = estimator_state.state;
     covariance = estimator_state.covariance;
 
