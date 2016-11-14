@@ -237,9 +237,9 @@ if (CATKIN_ENABLE_TESTING)
   target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
   #### RLE/RLL TESTS #####
-  add_rostest_gtest(test_rle
+  add_rostest_gtest(test_robot_localization_estimator
                     test/test_robot_localization_estimator.test
                     test/test_robot_localization_estimator.cpp)
-  target_link_libraries(test_rle robot_localization_estimator ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  target_link_libraries(test_robot_localization_estimator robot_localization_estimator ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
 endif()
