@@ -33,11 +33,10 @@
 #include <robot_localization/robot_localization_estimator.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-int main(int argc, char **argv)
-{
-  rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("test_robot_localization_estimator");
+#include <gtest/gtest.h>
 
+TEST(EkfTest, Measurements)
+{
   // Generate a few empty estimator states
   std::vector<robot_localization::EstimatorState> states;
 
@@ -51,82 +50,80 @@ int main(int argc, char **argv)
     states.push_back(state);
   }
 
-  // Instantiate a robot localization estimator with a buffer size of 5
-  robot_localization::RobotLocalizationEstimator estimator(5);
+  // Instantiate a robot localization estimator with a buffer capacity of 5
+  unsigned int buffer_capacity = 5;
+  robot_localization::RobotLocalizationEstimator estimator(buffer_capacity);
 
-  // Add the states in order from old to new
-  for ( int i = 0; i < 10; i++ )
+  robot_localization::EstimatorState state;
+
+  // Add the states in chronological order
+  for ( int i = 0; i < 6; i++ )
   {
     estimator.setState(states[i]);
-    std::cout << "setting state " << states[i] << "\n" << std::endl;
 
-    // inspect estimator
-    std::cout << "estimator content: " << estimator << std::endl;
-    std::cout << " ------------------------\n " << std::endl;
+    // Check that the state is added correctly
+    estimator.getState(states[i].time_stamp, state);
+    EXPECT_EQ(state.time_stamp, states[i].time_stamp);
   }
 
-  // Clear the estimator buffer
+  EXPECT_EQ(estimator.size(), buffer_capacity);
+
+  // Clear the buffer
   estimator.clearBuffer();
 
-  std::cout << "---------------------------\n\nCLEARING BUFFER!!!\n\n" << std::endl;
+  EXPECT_EQ(estimator.size(), 0u);
 
-  // inspect estimator
-  std::cout << "estimator content: " << estimator << std::endl;
-  std::cout << " ------------------------\n " << std::endl;
-
-  // Set states in another order than linearly
+  // Add states in non-chronological order
   for ( int i = 1; i < 4; i++ )
   {
     estimator.setState(states[i]);
-    std::cout << "setting state " << states[i] << "\n" << std::endl;
-
-    // inspect estimator
-    std::cout << "estimator content: " << estimator << std::endl;
-    std::cout << " ------------------------\n " << std::endl;
   }
 
   // Add a state that came late, but there's space in the buffer
-  estimator.setState(states[0]);
-  std::cout << "setting state " << states[0] << "\n" << std::endl;
+  robot_localization::EstimatorState state_2 = states[0];
 
-  // inspect estimator
-  std::cout << "estimator content: " << estimator << std::endl;
-  std::cout << " ------------------------\n " << std::endl;
+  // The predicted state would have StateMemberY 0, so let's set it to another
+  // value, so that we can check that we actually added this state to the buffer.
+  state_2.state(robot_localization::StateMemberY) = 12;
+  estimator.setState(state_2);
 
-  // Add some more states
+  EXPECT_EQ(estimator.getState(states[0].time_stamp, state), -2);
+  EXPECT_EQ(state.state, state_2.state);
+
+  // Add some more states. State at t=0 should now be dropped
   for ( int i = 5; i < 8; i++ )
   {
     estimator.setState(states[i]);
-    std::cout << "setting state " << states[i] << "\n" << std::endl;
-
-    // inspect estimator
-    std::cout << "estimator content: " << estimator << std::endl;
-    std::cout << " ------------------------\n " << std::endl;
   }
+
+  // Estimate a state that is not in the buffer, but can be determined from other
+  // states. The predicted state vector should be equal to the designed state at
+  // t=4.
+  estimator.getState(states[4].time_stamp, state);
+  EXPECT_EQ(state.state,states[4].state);
 
   // Add state somewhere in the middle
   estimator.setState(states[4]);
-  std::cout << "setting state " << states[4] << "\n" << std::endl;
 
-  // inspect estimator
-  std::cout << "estimator content: " << estimator << std::endl;
-  std::cout << " ------------------------\n " << std::endl;
+  // Overwrite state at t=3 (oldest state now in the buffer)
+  estimator.getState(states[3].time_stamp,state);
+  state.state(robot_localization::StateMemberVy) = -1.0;
+  estimator.setState(state);
 
   // Add state that came too late
   estimator.setState(states[0]);
-  std::cout << "setting state " << states[0] << "\n" << std::endl;
 
-  // inspect estimator
-  std::cout << "estimator content: " << estimator << std::endl;
-  std::cout << " ------------------------\n " << std::endl;
+  // Get state at t=0. This can only work correctly if the state at t=3 is
+  // overwritten and the state at zero is not in the buffer.
+  estimator.getState(states[0].time_stamp, state);
+  EXPECT_DOUBLE_EQ(state.state(robot_localization::StateMemberY), 3.0);
+}
 
-  for ( int i = 0; i < 10; i+=3 )
-  {
-    robot_localization::EstimatorState state;
-    estimator.getState(i, state);
-    std::cout << "state at " << i << ":\n" << state << std::endl;
-  }
+int main(int argc, char **argv)
+{
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("test_robot_localization_estimator");
 
-
-  return 0;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

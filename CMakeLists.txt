@@ -29,6 +29,7 @@ set(library_name rl_lib)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
+  #"srv/GetState.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
@@ -166,9 +167,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
-  #### OTHER TESTS ####
-  ament_add_gtest(test_robot_localization_estimator test/test_robot_localization_estimator.cpp)
-  target_link_libraries(test_robot_localization_estimator ${library_name})
+  #### RLE/RLL TESTS #####
+  ament_add_gtest(test_rle test/test_robot_localization_estimator.cpp
+    test/test_robot_localization_estimator.test)
+  target_link_libraries(test_rle ${library_name})
 
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
@@ -192,7 +194,7 @@ if(BUILD_TESTING)
     test_ukf_localization_node_bag1
     test_ukf_localization_node_bag2
     test_ukf_localization_node_bag3
-    test_robot_localization_estimator
+    test_rle
     DESTINATION lib/${PROJECT_NAME}
   )
 endif()
