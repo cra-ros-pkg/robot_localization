@@ -79,13 +79,14 @@ bool RobotLocalizationEstimator::getState(EstimatorState& state) const
   return true;
 }
 
-bool RobotLocalizationEstimator::getState(const double time, EstimatorState& state) const
+int RobotLocalizationEstimator::getState(const double time, EstimatorState& state) const
 {
   // If there's nothing in the buffer, there's nothing to give.
   if ( state_buffer_.size() == 0 )
   {
-    return false;
+    return -1;
   }
+  int return_value = 0;
 
   // Set state to the most recent one for now
   state = state_buffer_.back();
@@ -131,11 +132,13 @@ bool RobotLocalizationEstimator::getState(const double time, EstimatorState& sta
   // If only a next state is found, we'll have to extrapolate into the past.
   else if ( next_state_found )
   {
-    // Warn the user that the buffer may be too small!
     extrapolate(next_state_after_time, time, state);
+
+    // Warn the user that the buffer may be too small!
+    return_value = -2;
   }
 
-  return true;
+  return return_value;
 }
 
 void RobotLocalizationEstimator::setBufferCapacity(const int capacity)

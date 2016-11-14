@@ -121,9 +121,10 @@ class RobotLocalizationEstimator
     //! @param[in] time - The time at which the prediction is being made
     //! @param[out] state - The returned state at the given time
     //!
-    //! @return false if buffer is empty, true otherwise
+    //! @return -1 if buffer is empty, -2 if extrapolating into the past, true
+    //! otherwise.
     //!
-    bool getState(const double time, EstimatorState &state) const;
+    int getState(const double time, EstimatorState &state) const;
 
     //! @brief Clears the internal state buffer
     //!
