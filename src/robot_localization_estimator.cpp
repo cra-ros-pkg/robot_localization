@@ -57,7 +57,7 @@ void RobotLocalizationEstimator::setState(const EstimatorState& state)
   {
     for ( boost::circular_buffer<EstimatorState>::iterator it = state_buffer_.begin(); it != state_buffer_.end(); ++it )
     {
-      if ( state.time_stamp <= it->time_stamp )
+      if ( state.time_stamp < it->time_stamp )
       {
         state_buffer_.insert(it, state);
         return;
