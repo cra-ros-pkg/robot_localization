@@ -102,17 +102,6 @@ class RobotLocalizationEstimator
     //!
     void setState(const EstimatorState& state);
 
-    //! @brief Returns the most recent state
-    //!
-    //! Projects the current state and error matrices forward using a model of
-    //! the vehicle's motion.
-    //!
-    //! @param[out] state - The returned (most recent) state
-    //!
-    //! @return false if buffer is empty, true otherwise
-    //!
-    bool getState(EstimatorState &state) const;
-
     //! @brief Returns the state at a given time
     //!
     //! Projects the current state and error matrices forward using a model of

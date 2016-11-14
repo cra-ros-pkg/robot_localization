@@ -66,19 +66,6 @@ void RobotLocalizationEstimator::setState(const EstimatorState& state)
   }
 }
 
-bool RobotLocalizationEstimator::getState(EstimatorState& state) const
-{
-  // If there's nothing in the buffer, there's nothing to give.
-  if ( state_buffer_.empty() )
-  {
-    return false;
-  }
-
-  state = state_buffer_.back();
-
-  return true;
-}
-
 int RobotLocalizationEstimator::getState(const double time, EstimatorState& state) const
 {
   // If there's nothing in the buffer, there's nothing to give.
