@@ -153,7 +153,17 @@ namespace RobotLocalization
 
   bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
-    double time = ros_time.toSec();
+    double time;
+    if ( ros_time.isZero() )
+    {
+      ROS_INFO("Ros Robot Localization Listener: State requested at time = zero, returning state at current time");
+      time = ros::Time::now().toSec();
+    }
+    else
+    {
+      time = ros_time.toSec();
+    }
+
     return getState(time, state, covariance);
   }
 }  // namespace RobotLocalization
