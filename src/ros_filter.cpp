@@ -809,6 +809,10 @@ namespace RobotLocalization
       }
     }
 
+    bool dynamicProcessNoiseCovariance = false;
+    nhLocal_.param("dynamic_process_noise_covariance", dynamicProcessNoiseCovariance, false);
+    filter_.setUseDynamicProcessNoiseCovariance(dynamicProcessNoiseCovariance);
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -829,6 +833,7 @@ namespace RobotLocalization
              "\nacceleration_gains are " << accelerationLimits <<
              "\ndeceleration_limits are " << decelerationLimits <<
              "\ndeceleration_gains are " << decelerationLimits <<
+             "\ndynamic_process_noise_covariance is " << (dynamicProcessNoiseCovariance ? "true" : "false") <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
     // Create a subscriber for manually setting/resetting pose
