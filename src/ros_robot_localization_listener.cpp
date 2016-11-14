@@ -60,7 +60,10 @@ namespace RobotLocalization
 
   void RosRobotLocalizationListener::odomAndAccelCallback(const nav_msgs::Odometry& odom, const geometry_msgs::AccelWithCovarianceStamped& accel)
   {
+    // Instantiate a state that can be added to the robot localization estimator
     EstimatorState state;
+
+    // Set its time stamp and the state received from the messages
     state.time_stamp = odom.header.stamp.toSec();
 
     // Pose: Position
@@ -111,6 +114,8 @@ namespace RobotLocalization
     state.state(StateMemberAy) = accel.accel.accel.linear.y;
     state.state(StateMemberAz) = accel.accel.accel.linear.z;
 
+    // Acceleration: Angular is not available in state
+
     // Acceleration: Covariance
     for ( unsigned int i = 0; i < ACCELERATION_SIZE; i++ )
     {
@@ -120,6 +125,7 @@ namespace RobotLocalization
       }
     }
 
+    // Add the state to the buffer, so that we can later interpolate between this and earlier states
     estimator_.setState(state);
 
     return;
