@@ -68,7 +68,9 @@ namespace robot_localization
     const std::shared_ptr<nav_msgs::msg::Odometry const>& odom,
     const std::shared_ptr<geometry_msgs::msg::AccelWithCovarianceStamped const>& accel)
   {
+    // Instantiate a state that can be added to the robot localization estimator
     EstimatorState state;
+    // Set its time stamp and the state received from the messages
     state.time_stamp = odom->header.stamp.sec;
 
     // Pose: Position
@@ -119,6 +121,8 @@ namespace robot_localization
     state.state(StateMemberAy) = accel->accel.accel.linear.y;
     state.state(StateMemberAz) = accel->accel.accel.linear.z;
 
+    // Acceleration: Angular is not available in state
+
     // Acceleration: Covariance
     for ( unsigned int i = 0; i < ACCELERATION_SIZE; i++ )
     {
@@ -128,6 +132,7 @@ namespace robot_localization
       }
     }
 
+    // Add the state to the buffer, so that we can later interpolate between this and earlier states
     estimator_.setState(state);
 
     return;

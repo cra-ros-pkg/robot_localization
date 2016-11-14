@@ -46,6 +46,18 @@
 namespace robot_localization
 {
 
+//! @brief RosRobotLocalizationListener class
+//!
+//! This class wraps the RobotLocalizationEstimator. It listens to
+//! topics over which the (filtered) robot state is published (odom
+//! and accel) and pushes them into its instance of the
+//! RobotLocalizationEstimator. It exposes a getState method to
+//! offer the user the estimated state at a requested time. This
+//! class offers the option to run this listener without the need to
+//! to run a separate node. If you do wish to run this functionality
+//! in a separate node, consider the robot localization listener
+//! node.
+//!
 class RosRobotLocalizationListener
 {
   public:
@@ -101,15 +113,15 @@ class RosRobotLocalizationListener
 
     rclcpp::QoS qos1_, qos10_;
 
-    //! @brief Subscriber to the odometry topic
+    //! @brief Subscriber to the odometry state topic (output of a filter node)
     //!
     message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
 
-    //! @brief Subscriber to the acceleration topic
+    //! @brief Subscriber to the acceleration state topic (output of a filter node)
     //!
     message_filters::Subscriber<geometry_msgs::msg::AccelWithCovarianceStamped> accel_sub_;
 
-    //! @brief Synchronizer for callback of odom and accel
+    //! @brief Waits for both an Odometry and an Accel message before calling a single callback function
     //!
     message_filters::TimeSynchronizer<nav_msgs::msg::Odometry,
       geometry_msgs::msg::AccelWithCovarianceStamped> sync_;
