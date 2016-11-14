@@ -374,7 +374,15 @@ namespace RobotLocalization
 
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
     // to ensure that we actually incorporate the processNoiseCovariance_
-    estimateErrorCovariance_.noalias() += delta * processNoiseCovariance_;
+    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
+
+    if (useDynamicProcessNoiseCovariance_)
+    {
+      computeDynamicProcessNoiseCovariance(state_, delta);
+      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
+    }
+
+    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
 
     // Keep the angles bounded
     wrapStateAngles();
