@@ -35,7 +35,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(EkfTest, Measurements)
+TEST(RLETest, StateBuffer)
 {
   // Generate a few estimator states
   std::vector<RobotLocalization::EstimatorState> states;
@@ -86,8 +86,9 @@ TEST(EkfTest, Measurements)
   // value, so that we can check that we actually added this state to the buffer.
   state_2.state(RobotLocalization::StateMemberY) = 12;
   estimator.setState(state_2);
+  estimator.getState(states[0].time_stamp, state);
 
-  EXPECT_EQ(estimator.getState(states[0].time_stamp, state), -2);
+  // Check if the state is correctly added
   EXPECT_EQ(state.state, state_2.state);
 
   // Add some more states. State at t=0 should now be dropped
@@ -113,9 +114,11 @@ TEST(EkfTest, Measurements)
   // Add state that came too late
   estimator.setState(states[0]);
 
-  // Get state at t=0. This can only work correctly if the state at t=3 is
+  // Check if getState needed to do extrapolation into the past (return value: -2)
+  EXPECT_EQ(estimator.getState(states[0].time_stamp, state), -2);
+
+  // Check state at t=0. This can only work correctly if the state at t=3 is
   // overwritten and the state at zero is not in the buffer.
-  estimator.getState(states[0].time_stamp, state);
   EXPECT_DOUBLE_EQ(state.state(RobotLocalization::StateMemberY), 3.0);
 
 }
