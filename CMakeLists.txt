@@ -40,6 +40,7 @@ add_service_files(
   FILES
   SetPose.srv
   SetDatum.srv
+  GetState.srv
 )
 
 generate_messages(
@@ -104,7 +105,6 @@ add_dependencies(navsat_transform robot_localization_gencpp)
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
 add_executable(ukf_localization_node src/ukf_localization_node.cpp)
 add_executable(navsat_transform_node src/navsat_transform_node.cpp)
-add_executable(test_robot_localization_estimator test/test_robot_localization_estimator.cpp)
 
 # Linking
 target_link_libraries(ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
@@ -119,7 +119,6 @@ target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
-target_link_libraries(test_robot_localization_estimator robot_localization_estimator filter_utilities ${catkin_LIBRARIES})
 
 
 #############
@@ -232,5 +231,11 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ukf_localization_node_bag3.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+
+  #### RLE/RLL TESTS #####
+  add_rostest_gtest(test_rle
+                    test/test_robot_localization_estimator.test
+                    test/test_robot_localization_estimator.cpp)
+  target_link_libraries(test_rle robot_localization_estimator ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
 endif()
