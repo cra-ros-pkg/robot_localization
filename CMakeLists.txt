@@ -29,7 +29,7 @@ set(library_name rl_lib)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
-  #"srv/GetState.srv"
+  "srv/GetState.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
@@ -67,6 +67,11 @@ add_executable(
 add_executable(
   navsat_transform_node
   src/navsat_transform_node.cpp
+)
+
+add_executable(
+  robot_localization_listener_node
+  src/robot_localization_listener_node.cpp
 )
 
 target_link_libraries(
@@ -108,9 +113,20 @@ ament_target_dependencies(
   rclcpp
 )
 
+target_link_libraries(
+  robot_localization_listener_node
+  ${library_name}
+)
+
+ament_target_dependencies(
+  robot_localization_listener_node
+  rclcpp
+)
+
 install(
   TARGETS
   navsat_transform_node
+  robot_localization_listener_node
   se_node
   ${library_name}
   DESTINATION lib/${PROJECT_NAME}
