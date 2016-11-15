@@ -32,7 +32,9 @@
 
 #include "robot_localization/ros_robot_localization_listener.h"
 #include <Eigen/Dense>
-#include <tf/tf.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace RobotLocalization
 {
@@ -70,10 +72,10 @@ namespace RobotLocalization
     state.state(StateMemberZ) = odom.pose.pose.position.z;
 
     // Pose: Orientation
-    tf::Quaternion orientation_quat;
-    tf::quaternionMsgToTF(odom.pose.pose.orientation, orientation_quat);
+    tf2::Quaternion orientation_quat;
+    tf2::fromMsg(odom.pose.pose.orientation, orientation_quat);
     double roll, pitch, yaw;
-    tf::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
+    tf2::Matrix3x3(orientation_quat).getRPY(roll, pitch, yaw);
 
     state.state(StateMemberRoll) = roll;
     state.state(StateMemberPitch) = pitch;
