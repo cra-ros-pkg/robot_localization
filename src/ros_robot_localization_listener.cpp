@@ -32,9 +32,7 @@
 
 #include "robot_localization/ros_robot_localization_listener.h"
 #include <Eigen/Dense>
-#include <eigen_conversions/eigen_msg.h>
 #include <tf/tf.h>
-//#include <tf/transform_datatypes.h>
 
 namespace RobotLocalization
 {
