@@ -35,8 +35,8 @@
 
 #include <Eigen/Dense>
 //#include <eigen_conversions/eigen_msg.h>
-#include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
