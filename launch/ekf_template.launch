@@ -4,6 +4,7 @@
 
    <!--  Placeholder for output topic remapping
     <remap from="odometry/filtered" to=""/>
+    <remap from="accel/filtered" to=""/>
     -->
 
   </node>

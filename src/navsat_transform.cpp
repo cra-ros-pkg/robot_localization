@@ -637,6 +637,10 @@ namespace RobotLocalization
       transformed_utm_gps.mult(utm_world_transform_, latest_utm_pose_);
       transformed_utm_gps.setRotation(tf2::Quaternion::getIdentity());
 
+      // Set header information stamp because we would like to know the robot's position at that timestamp
+      gps_odom.header.frame_id = world_frame_id_;
+      gps_odom.header.stamp = gps_update_time_;
+
       // Want the pose of the vehicle origin, not the GPS
       tf2::Transform transformed_utm_robot;
       getRobotOriginWorldPose(transformed_utm_gps, transformed_utm_robot, gps_odom.header.stamp);
@@ -671,9 +675,6 @@ namespace RobotLocalization
           gps_odom.pose.covariance[POSE_SIZE * i + j] = latest_utm_covariance_(i, j);
         }
       }
-
-      gps_odom.header.frame_id = world_frame_id_;
-      gps_odom.header.stamp = gps_update_time_;
 
       // Mark this GPS as used
       gps_updated_ = false;
