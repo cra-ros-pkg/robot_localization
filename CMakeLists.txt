@@ -20,6 +20,7 @@ find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -83,12 +84,15 @@ ament_target_dependencies(
   ${library_name}
   diagnostic_msgs
   diagnostic_updater
+  eigen_conversions
+  geographic_msgs
   geometry_msgs
   nav_msgs
   rcl
   rclcpp
   sensor_msgs
   tf2
+  tf2_eigen
   tf2_geometry_msgs
   tf2_ros
 )
