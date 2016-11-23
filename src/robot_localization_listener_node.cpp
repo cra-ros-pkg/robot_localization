@@ -71,7 +71,7 @@ private:
     Eigen::VectorXd state(robot_localization::STATE_SIZE);
     Eigen::MatrixXd covariance(robot_localization::STATE_SIZE,robot_localization::STATE_SIZE);
 
-    if ( !rll_->getState(req->time_stamp, state, covariance) )
+    if (!rll_->getState(req->time_stamp, req->frame_id, state, covariance))
     {
       RCLCPP_ERROR(this->get_logger(),
         "Robot Localization Listener Node: Listener instance returned false at getState call.");
