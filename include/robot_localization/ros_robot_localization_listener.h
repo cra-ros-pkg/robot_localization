@@ -40,6 +40,7 @@
 #include <message_filters/time_synchronizer.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/AccelWithCovarianceStamped.h>
+#include <tf2_ros/transform_listener.h>
 
 namespace RobotLocalization
 {
@@ -134,6 +135,14 @@ class RosRobotLocalizationListener
     //! @brief Waits for both an Odometry and an Accel message before calling a single callback function
     //!
     std::string base_frame_id_;
+
+    //! @brief Tf buffer for looking up transforms
+    //!
+    tf2_ros::Buffer tf_buffer_;
+
+    //! @brief Transform listener to fill the tf_buffer
+    //!
+    tf2_ros::TransformListener tf_listener_;
 
     //! @brief Callback for odom and accel
     //!
