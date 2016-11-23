@@ -43,6 +43,12 @@
 namespace RobotLocalization
 {
 
+struct Twist
+{
+    Eigen::Vector3d linear;
+    Eigen::Vector3d angular;
+};
+
 //! @brief Robot Localization Estimator State
 //!
 //! The Estimator State data structure bundles the state information of the

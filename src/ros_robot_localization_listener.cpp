@@ -35,6 +35,7 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <eigen_conversions/eigen_msg.h>
 
 namespace RobotLocalization
 {
@@ -45,6 +46,7 @@ namespace RobotLocalization
     accel_sub_(nh_, "accel", 1),
     sync_(odom_sub_, accel_sub_, 10),
     estimator_(0),
+    tf_listener_(tf_buffer_),
     base_frame_id_("")
   {
     int buffer_size;
@@ -164,7 +166,80 @@ namespace RobotLocalization
       ROS_WARN("Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
     }
 
-    state = estimator_state.state;
+    if ( frame_id == base_frame_id_ )
+    {
+      ROS_INFO_STREAM("Ros Robot Localization Listener: State is requested for the base frame id:" << base_frame_id_ << ". Not performing any coordinate transformation.");
+      state = estimator_state.state;
+      covariance = estimator_state.covariance;
+      return true;
+    }
+
+    ROS_INFO_STREAM("Ros Robot Localization Listener: State is requested for frame id:" << frame_id << ". Performing coordinate transformation.");
+
+    Eigen::Vector3d base_position(estimator_state.state(StateMemberX),
+                                  estimator_state.state(StateMemberY),
+                                  estimator_state.state(StateMemberZ));
+
+    // Calculate velocity of requested frame using the transform from base to sensor and the base's twist.
+    // First get the transform from base to sensor
+    geometry_msgs::TransformStamped base_to_sensor_transform;
+    base_to_sensor_transform = tf_buffer_.lookupTransform(frame_id,
+                                                          base_frame_id_,
+                                                          ros::Time(time),
+                                                          ros::Duration(0.1)); // TODO: magid number
+
+    // And get the Eigen Affine transformation from that
+    Eigen::Affine3d sensor_pose_base;
+    tf::transformMsgToEigen(base_to_sensor_transform.transform, sensor_pose_base);
+
+    // Convert the base pose to an Eigen Affine transformation
+    Eigen::AngleAxisd roll_angle(estimator_state.state(StateMemberRoll), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitch_angle(estimator_state.state(StateMemberPitch), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yaw_angle(estimator_state.state(StateMemberYaw), Eigen::Vector3d::UnitZ());
+
+    Eigen::Quaterniond base_orientation(yaw_angle * pitch_angle * roll_angle);
+
+    Eigen::Affine3d base_pose(Eigen::Translation3d(base_position) * base_orientation);
+
+    // Get the transform from odom to sensor frame and put it in output state
+    Eigen::Affine3d sensor_pose_odom = base_pose * sensor_pose_base;
+
+    state(StateMemberX) = sensor_pose_odom.translation()(0);
+    state(StateMemberY) = sensor_pose_odom.translation()(1);
+    state(StateMemberZ) = sensor_pose_odom.translation()(2);
+
+    Eigen::Vector3d ypr = sensor_pose_odom.rotation().eulerAngles(2, 1, 0);
+
+    state(StateMemberRoll)  = ypr[2];
+    state(StateMemberPitch) = ypr[1];
+    state(StateMemberYaw)   = ypr[0];
+
+    // Convert the base twist to the sensor twist (in the base frame)
+    Twist base_vel, sensor_vel_base;
+    base_vel.linear = Eigen::Vector3d(estimator_state.state(StateMemberVx),
+                                      estimator_state.state(StateMemberVy),
+                                      estimator_state.state(StateMemberVz));
+    base_vel.angular = Eigen::Vector3d(estimator_state.state(StateMemberVroll),
+                                       estimator_state.state(StateMemberVpitch),
+                                       estimator_state.state(StateMemberVyaw));
+
+    Eigen::Vector3d sensor_position_base = sensor_pose_base.translation();
+    sensor_vel_base.linear = base_vel.linear + base_vel.angular.cross(sensor_position_base);
+    sensor_vel_base.angular = base_vel.angular;
+    Twist sensor_vel;
+
+    sensor_vel.linear = sensor_pose_base.rotation() * sensor_vel_base.linear;
+    sensor_vel.angular = sensor_pose_base.rotation() * sensor_vel_base.angular;
+
+    state(StateMemberVx) = sensor_vel.linear(0);
+    state(StateMemberVy) = sensor_vel.linear(1);
+    state(StateMemberVz) = sensor_vel.linear(2);
+
+    state(StateMemberVroll) = sensor_vel.angular(1);
+    state(StateMemberVpitch) = sensor_vel.angular(2);
+    state(StateMemberVyaw) = sensor_vel.angular(3);
+
+    // TODO: transform covariance
     covariance = estimator_state.covariance;
 
     return true;

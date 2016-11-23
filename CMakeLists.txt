@@ -4,6 +4,7 @@ project(robot_localization)
 find_package(catkin REQUIRED COMPONENTS
   diagnostic_msgs
   diagnostic_updater
+  eigen_conversions
   geographic_msgs
   geometry_msgs
   message_filters
@@ -68,6 +69,7 @@ catkin_package(
     cmake_modules
     diagnostic_msgs
     diagnostic_updater
+    eigen_conversions
     geographic_msgs
     geometry_msgs
     message_filters
