@@ -83,12 +83,14 @@ class RosRobotLocalizationListener
     //! from the Robot Localization Estimator.
     //!
     //! @param[in] time - time of the requested state
+    //! @param[out] frame_id - state at the requested time
     //! @param[out] state - state at the requested time
     //! @param[out] covariance - covariance at the requested time
     //!
     //! @return false if buffer is empty, true otherwise
     //!
-    bool getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+    bool getState(const double time, const std::string &frame_id,
+                  Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 
     //! @brief Get a state from the localization estimator
     //!
@@ -100,7 +102,8 @@ class RosRobotLocalizationListener
     //!
     //! @return false if buffer is empty, true otherwise
     //!
-    bool getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+    bool getState(const ros::Time& ros_time, const std::string &frame_id,
+                  Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
 
   private:
     //! @brief The core state estimator that facilitates inter- and
@@ -127,6 +130,10 @@ class RosRobotLocalizationListener
     //! @brief Waits for both an Odometry and an Accel message before calling a single callback function
     //!
     message_filters::TimeSynchronizer<nav_msgs::Odometry, geometry_msgs::AccelWithCovarianceStamped> sync_;
+
+    //! @brief Waits for both an Odometry and an Accel message before calling a single callback function
+    //!
+    std::string base_frame_id_;
 
     //! @brief Callback for odom and accel
     //!

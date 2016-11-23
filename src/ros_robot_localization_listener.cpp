@@ -44,7 +44,8 @@ namespace RobotLocalization
     odom_sub_(nh_, "odometry", 1),
     accel_sub_(nh_, "accel", 1),
     sync_(odom_sub_, accel_sub_, 10),
-    estimator_(0)
+    estimator_(0),
+    base_frame_id_("")
   {
     int buffer_size;
     nh_p_.param("buffer_size", buffer_size, 10);
@@ -65,6 +66,10 @@ namespace RobotLocalization
 
     // Set its time stamp and the state received from the messages
     state.time_stamp = odom.header.stamp.toSec();
+
+    // Get the base frame id from the odom message
+    if ( base_frame_id_.empty() )
+      base_frame_id_ = odom.child_frame_id;
 
     // Pose: Position
     state.state(StateMemberX) = odom.pose.pose.position.x;
@@ -131,16 +136,30 @@ namespace RobotLocalization
     return;
   }
 
-  bool RosRobotLocalizationListener::getState(const double time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  bool RosRobotLocalizationListener::getState(const double time, const std::string& frame_id,
+                                              Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
     EstimatorState estimator_state;
-    if ( estimator_.getState(time,estimator_state) == -1 )
+
+    if ( base_frame_id_.empty() )
     {
-      ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
+      ROS_ERROR("Ros Robot Localization Listener: The base frame id is not set.");
+
+      if ( estimator_.getState(time, estimator_state) == -1 )
+      {
+        ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
+      }
+      else
+      {
+        ROS_ERROR("Ros Robot Localization Listener: Is the incoming odom message stamped with a valid child_frame_id?");
+      }
+
       return false;
     }
 
-    if ( estimator_.getState(time,estimator_state) == -2 )
+    int res = estimator_.getState(time,estimator_state);
+
+    if ( res == -2 )
     {
       ROS_WARN("Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
     }
@@ -151,7 +170,8 @@ namespace RobotLocalization
     return true;
   }
 
-  bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+  bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, const std::string& frame_id,
+                                              Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
   {
     double time;
     if ( ros_time.isZero() )
@@ -164,7 +184,7 @@ namespace RobotLocalization
       time = ros_time.toSec();
     }
 
-    return getState(time, state, covariance);
+    return getState(time, frame_id, state, covariance);
   }
 }  // namespace RobotLocalization
 
