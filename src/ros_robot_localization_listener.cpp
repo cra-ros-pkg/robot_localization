@@ -55,6 +55,9 @@ namespace RobotLocalization
     estimator_.setBufferCapacity(buffer_size);
 
     sync_.registerCallback(&RosRobotLocalizationListener::odomAndAccelCallback, this);
+
+    ROS_INFO_STREAM("Ros Robot Localization Listener: Listening to topics " <<
+                     odom_sub_.getTopic() << " and " << accel_sub_.getTopic());
   }
 
   RosRobotLocalizationListener::~RosRobotLocalizationListener()
@@ -143,22 +146,25 @@ namespace RobotLocalization
   {
     EstimatorState estimator_state;
     state.resize(STATE_SIZE);
+    state.setZero();
     covariance.resize(STATE_SIZE,STATE_SIZE);
+    covariance.setZero();
 
     if ( base_frame_id_.empty() )
     {
-      ROS_ERROR("Ros Robot Localization Listener: The base frame id is not set.");
+      if ( estimator_.size() == 0 )
+      {
+        ROS_WARN("Ros Robot Localization Listener: The base frame id is not set. No odom/accel messages have come in.");
+      }
+      else
+      {
+        ROS_ERROR("Ros Robot Localization Listener: The base frame id is not set. Is the child_frame_id in the odom messages set?");
+      }
+
       return false;
     }
 
-    int res = estimator_.getState(time, estimator_state);
-    if ( res == -1 )
-    {
-      ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
-      return false;
-    }
-
-    if ( res == -2 )
+    if ( estimator_.getState(time, estimator_state) == -2 )
     {
       ROS_WARN("Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
     }
