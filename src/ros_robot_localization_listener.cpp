@@ -63,8 +63,12 @@ namespace robot_localization
     estimator_.setBufferCapacity(buffer_size);
 
     sync_.registerCallback(std::bind(
-      &robot_localization::RosRobotLocalizationListener::odomAndAccelCallback,
+      &RosRobotLocalizationListener::odomAndAccelCallback,
       this, std::placeholders::_1, std::placeholders::_2));
+
+    RCLCPP_INFO(node_logger_->get_logger(),
+      "Ros Robot Localization Listener: Listening to topics %s and %s",
+      odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str());
   }
 
   RosRobotLocalizationListener::~RosRobotLocalizationListener()
@@ -154,23 +158,27 @@ namespace robot_localization
   {
     EstimatorState estimator_state;
     state.resize(STATE_SIZE);
+    state.setZero();
     covariance.resize(STATE_SIZE,STATE_SIZE);
+    covariance.setZero();
 
     if ( base_frame_id_.empty() )
     {
-      RCLCPP_ERROR(node_logger_->get_logger(),
-        "Ros Robot Localization Listener: The base frame id is not set.");
+      if ( estimator_.size() == 0 )
+      {
+        RCLCPP_WARN(node_logger_->get_logger(),
+          "Ros Robot Localization Listener: The base frame id is not set. No odom/accel messages have come in.");
+      }
+      else
+      {
+        RCLCPP_ERROR(node_logger_->get_logger(),
+          "Ros Robot Localization Listener: The base frame id is not set. Is the child_frame_id in the odom messages set?");
+      }
+
       return false;
     }
 
-    int res = estimator_.getState(time, estimator_state);
-    if ( res == -1 )
-    {
-      ROS_ERROR("Ros Robot Localization Listener: the estimator's buffer is empty. No odom/accel messages have come in.");
-      return false;
-    }
-
-    if ( res == -2 )
+    if ( estimator_.getState(time, estimator_state) == -2 )
     {
       RCLCPP_WARN(node_logger_->get_logger(),
         "Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the estimator buffer. The result is an extrapolation into the past. Maybe you should increase the buffer size?");
@@ -189,7 +197,7 @@ namespace robot_localization
     // - - - - - - - - - - - - - - - - - -
 
     // First get the transform from base to target
-    geometry_msgs::TransformStamped base_to_target_transform;
+    geometry_msgs::msg::TransformStamped base_to_target_transform;
     base_to_target_transform = tf_buffer_.lookupTransform(frame_id,
                                                           base_frame_id_,
                                                           tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
