@@ -248,9 +248,9 @@ namespace RobotLocalization
     state(StateMemberVy) = target_vel.linear(1);
     state(StateMemberVz) = target_vel.linear(2);
 
-    state(StateMemberVroll) = target_vel.angular(1);
-    state(StateMemberVpitch) = target_vel.angular(2);
-    state(StateMemberVyaw) = target_vel.angular(3);
+    state(StateMemberVroll) = target_vel.angular(0);
+    state(StateMemberVpitch) = target_vel.angular(1);
+    state(StateMemberVyaw) = target_vel.angular(2);
 
     // TODO: transform covariance
     covariance = estimator_state.covariance;
