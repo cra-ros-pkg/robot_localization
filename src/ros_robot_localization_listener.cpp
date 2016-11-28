@@ -198,10 +198,19 @@ namespace robot_localization
 
     // First get the transform from base to target
     geometry_msgs::msg::TransformStamped base_to_target_transform;
-    base_to_target_transform = tf_buffer_.lookupTransform(frame_id,
-                                                          base_frame_id_,
-                                                          tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
-                                                          tf2::durationFromSec(0.1)); // TODO: magic number
+    try
+    {
+      base_to_target_transform = tf_buffer_.lookupTransform(frame_id,
+                                                            base_frame_id_,
+                                                            tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
+                                                            tf2::durationFromSec(0.1)); // TODO: magic number
+    }
+    catch ( tf2::LookupException e )
+    {
+      RCLCPP_WARN(node_logger_->get_logger(),
+        "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
+      return false;
+    }
 
     // And convert it to an eigen Affine transformation
     Eigen::Affine3d target_pose_base = tf2::transformToEigen(base_to_target_transform);
