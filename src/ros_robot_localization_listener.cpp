@@ -200,8 +200,8 @@ namespace robot_localization
     geometry_msgs::msg::TransformStamped base_to_target_transform;
     try
     {
-      base_to_target_transform = tf_buffer_.lookupTransform(frame_id,
-                                                            base_frame_id_,
+      base_to_target_transform = tf_buffer_.lookupTransform(base_frame_id_,
+                                                            frame_id,
                                                             tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
                                                             tf2::durationFromSec(0.1)); // TODO: magic number
     }
