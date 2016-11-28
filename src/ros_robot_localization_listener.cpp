@@ -185,8 +185,8 @@ namespace RobotLocalization
     geometry_msgs::TransformStamped base_to_target_transform;
     try
     {
-      base_to_target_transform = tf_buffer_.lookupTransform(frame_id,
-                                                            base_frame_id_,
+      base_to_target_transform = tf_buffer_.lookupTransform(base_frame_id_,
+                                                            frame_id,
                                                             ros::Time(time),
                                                             ros::Duration(0.1)); // TODO: magic number
     }
