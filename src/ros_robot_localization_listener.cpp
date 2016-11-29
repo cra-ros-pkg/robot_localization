@@ -241,8 +241,8 @@ namespace RobotLocalization
     target_vel_base.angular = base_vel.angular;
     Twist target_vel;
 
-    target_vel.linear = target_pose_base.rotation() * target_vel_base.linear;
-    target_vel.angular = target_pose_base.rotation() * target_vel_base.angular;
+    target_vel.linear = target_pose_base.rotation().transpose() * target_vel_base.linear;
+    target_vel.angular = target_pose_base.rotation().transpose() * target_vel_base.angular;
 
     state(StateMemberVx) = target_vel.linear(0);
     state(StateMemberVy) = target_vel.linear(1);
