@@ -242,6 +242,17 @@ if (CATKIN_ENABLE_TESTING)
   add_rostest_gtest(test_robot_localization_estimator
                     test/test_robot_localization_estimator.test
                     test/test_robot_localization_estimator.cpp)
-  target_link_libraries(test_robot_localization_estimator robot_localization_estimator ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  target_link_libraries(test_robot_localization_estimator
+                        robot_localization_estimator
+                        ${catkin_LIBRARIES}
+                        ${rostest_LIBRARIES})
+
+  add_rostest_gtest(test_ros_robot_localization_listener
+                    test/test_ros_robot_localization_listener.test
+                    test/test_ros_robot_localization_listener.cpp)
+  target_link_libraries(test_ros_robot_localization_listener
+                        ros_robot_localization_listener
+                        ${catkin_LIBRARIES}
+                        ${rostest_LIBRARIES})
 
 endif()
