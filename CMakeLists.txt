@@ -142,7 +142,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_cpplint REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)
   find_package(ament_cmake_uncrustify REQUIRED)
-
+  find_package(launch_testing_ament_cmake)
 
   #### FILTER BASE TESTS ####
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
@@ -193,6 +193,11 @@ if(BUILD_TESTING)
                   test/test_robot_localization_estimator.cpp)
   target_link_libraries(test_robot_localization_estimator ${library_name})
 
+  ament_add_gtest(test_ros_robot_localization_listener
+                  test/test_ros_robot_localization_listener.test
+                  test/test_ros_robot_localization_listener.cpp)
+  target_link_libraries(test_ros_robot_localization_listener ${library_name})
+
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
   # consider to be C instead.
@@ -216,6 +221,7 @@ if(BUILD_TESTING)
     test_ukf_localization_node_bag2
     test_ukf_localization_node_bag3
     test_robot_localization_estimator
+    test_ros_robot_localization_listener
     DESTINATION lib/${PROJECT_NAME}
   )
 endif()
