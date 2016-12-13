@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ROBOT_LOCALIZATION_LISTENER_H
-#define ROBOT_LOCALIZATION_LISTENER_H
+#ifndef ROBOT_LOCALIZATION_ROBOT_LOCALIZATION_ESTIMATOR_H
+#define ROBOT_LOCALIZATION_ROBOT_LOCALIZATION_ESTIMATOR_H
 
 #include <Eigen/Dense>
 #include <boost/circular_buffer.hpp>
@@ -45,152 +45,166 @@ namespace RobotLocalization
 
 struct Twist
 {
-    Eigen::Vector3d linear;
-    Eigen::Vector3d angular;
+  Eigen::Vector3d linear;
+  Eigen::Vector3d angular;
 };
 
 //! @brief Robot Localization Estimator State
 //!
-//! The Estimator State data structure bundles the state information of the
-//! estimator.
+//! The Estimator State data structure bundles the state information of the estimator.
 //!
 struct EstimatorState
 {
-    EstimatorState():
-        time_stamp(0.0),
-        state(STATE_SIZE),
-        covariance(STATE_SIZE,STATE_SIZE)
-    {
-        state.setZero();
-        covariance.setZero();
-    }
+  EstimatorState():
+    time_stamp(0.0),
+    state(STATE_SIZE),
+    covariance(STATE_SIZE, STATE_SIZE)
+  {
+    state.setZero();
+    covariance.setZero();
+  }
 
-    //! @brief Time at which this state is/was achieved
-    double time_stamp;
+  //! @brief Time at which this state is/was achieved
+  double time_stamp;
 
-    //! @brief System state at time = time_stamp
-    Eigen::VectorXd state;
+  //! @brief System state at time = time_stamp
+  Eigen::VectorXd state;
 
-    //! @brief System state covariance at time = time_stamp
-    Eigen::MatrixXd covariance;
+  //! @brief System state covariance at time = time_stamp
+  Eigen::MatrixXd covariance;
 
-    friend std::ostream& operator<<(std::ostream &os, const EstimatorState& state)
-    {
-        return os << "state:\n - time_stamp: " << state.time_stamp <<
-                     "\n - state: \n" << state.state <<
-                     " - covariance: \n" << state.covariance;
-    }
+  friend std::ostream& operator<<(std::ostream &os, const EstimatorState& state)
+  {
+    return os << "state:\n - time_stamp: " << state.time_stamp <<
+                 "\n - state: \n" << state.state <<
+                 " - covariance: \n" << state.covariance;
+  }
 };
+
+namespace EstimatorResults
+{
+enum EstimatorResult
+{
+  ExtrapolationIntoFuture = 0,
+  Interpolation,
+  ExtrapolationIntoPast,
+  EmptyBuffer,
+  Failed
+};
+}  // namespace EstimatorResults
+typedef EstimatorResults::EstimatorResult EstimatorResult;
 
 //! @brief Robot Localization Listener class
 //!
-//! The Robot Localization Estimator class buffers states of and inputs to a
-//! system and can interpolate and extrapolate based on a given system model.
+//! The Robot Localization Estimator class buffers states of and inputs to a system and can interpolate and extrapolate
+//! based on a given system model.
 //!
 class RobotLocalizationEstimator
 {
-  public:
-    //! @brief Constructor for the RobotLocalizationListener class
-    //!
-    //! @param[in] args - Generic argument container (not used here, but
-    //! needed so that the ROS filters can pass arbitrary arguments to
-    //! templated filter types).
-    //!
-    RobotLocalizationEstimator(unsigned int buffer_capacity);
+public:
+  //! @brief Constructor for the RobotLocalizationListener class
+  //!
+  //! @param[in] args - Generic argument container (not used here, but needed so that the ROS filters can pass arbitrary
+  //! arguments to templated filter types).
+  //!
+  explicit RobotLocalizationEstimator(unsigned int buffer_capacity);
 
-    //! @brief Destructor for the RobotLocalizationListener class
-    //!
-    ~RobotLocalizationEstimator();
+  //! @brief Destructor for the RobotLocalizationListener class
+  //!
+  virtual ~RobotLocalizationEstimator();
 
-    //! @brief Sets the current internal state of the listener.
-    //!
-    //! @param[in] state - The new state vector to set the internal state to
-    //!
-    void setState(const EstimatorState& state);
+  //! @brief Sets the current internal state of the listener.
+  //!
+  //! @param[in] state - The new state vector to set the internal state to
+  //!
+  void setState(const EstimatorState& state);
 
-    //! @brief Returns the state at a given time
-    //!
-    //! Projects the current state and error matrices forward using a model of
-    //! the vehicle's motion.
-    //!
-    //! @param[in] time - The time at which the prediction is being made
-    //! @param[out] state - The returned state at the given time
-    //!
-    //! @return -1 if buffer is empty, -2 if extrapolating into the past, true
-    //! otherwise.
-    //!
-    int getState(const double time, EstimatorState &state) const;
+  //! @brief Returns the state at a given time
+  //!
+  //! Projects the current state and error matrices forward using a model of the robot's motion.
+  //!
+  //! @param[in] time - The time to which the prediction is being made
+  //! @param[out] state - The returned state at the given time
+  //!
+  //! @return GetStateResult enum
+  //!
+  EstimatorResult getState(const double time, EstimatorState &state) const;
 
-    //! @brief Clears the internal state buffer
-    //!
-    void clearBuffer();
+  //! @brief Clears the internal state buffer
+  //!
+  void clearBuffer();
 
-    //! @brief Sets the buffer capacity
-    //!
-    //! @param[in] capacity - The new buffer capacity
-    //!
-    void setBufferCapacity(const int capacity);
+  //! @brief Sets the buffer capacity
+  //!
+  //! @param[in] capacity - The new buffer capacity
+  //!
+  void setBufferCapacity(const int capacity);
 
-    //! @brief Returns the buffer capacity
-    //!
-    //! @return buffer capacity
-    //!
-    unsigned int capacity() const;
+  //! @brief Returns the buffer capacity (the number of EstimatorState objects that can be pushed to the buffer before
+  //! old ones are dropped.
+  //!
+  //! @return buffer capacity
+  //!
+  unsigned int getBufferCapacity() const;
 
-    //! @brief Returns the current buffer size
-    //!
-    //! @return current buffer size
-    //!
-    unsigned int size() const;
+  //! @brief Returns the current buffer size (the number of EstimatorState objects currently in the buffer).
+  //!
+  //! @return current buffer size
+  //!
+  unsigned int getSize() const;
 
-  private:
-
-    boost::circular_buffer<EstimatorState> state_buffer_;
-
-    friend std::ostream& operator<<(std::ostream &os, const RobotLocalizationEstimator& rle)
+private:
+  friend std::ostream& operator<<(std::ostream &os, const RobotLocalizationEstimator& rle)
+  {
+    for ( boost::circular_buffer<EstimatorState>::const_iterator it = rle.state_buffer_.begin();
+          it != rle.state_buffer_.end(); ++it )
     {
-      for ( boost::circular_buffer<EstimatorState>::const_iterator it = rle.state_buffer_.begin(); it != rle.state_buffer_.end(); ++it )
-      {
-        os << *it << "\n";
-      }
-      return os;
+      os << *it << "\n";
     }
+    return os;
+  }
 
-    //! @brief Extrapolates the given state to a requested time stamp
-    //!
-    //! @param[in] boundary_state - state from which to extrapolate
-    //! @param[in] requested_time - time stamp to extrapolate to
-    //! @param[out] state_at_req_time - predicted state at requested time
-    //!
-    void extrapolate(const EstimatorState& boundary_state, const double requested_time, EstimatorState& state_at_req_time) const;
+  //! @brief Extrapolates the given state to a requested time stamp
+  //!
+  //! @param[in] boundary_state - state from which to extrapolate
+  //! @param[in] requested_time - time stamp to extrapolate to
+  //! @param[out] state_at_req_time - predicted state at requested time
+  //!
+  void extrapolate(const EstimatorState& boundary_state,
+                   const double requested_time,
+                   EstimatorState& state_at_req_time) const;
 
-    //! @brief Interpolates the given state to a requested time stamp
-    //!
-    //! @param[in] given_state_1 - last state update before requested time
-    //! @param[in] given_state_2 - next state update after requested time
-    //! @param[in] requested_time - time stamp to extrapolate to
-    //! @param[out] state_at_req_time - predicted state at requested time
-    //!
-    void interpolate(const EstimatorState& given_state_1, const EstimatorState& given_state_2, const double requested_time, EstimatorState& state_at_req_time) const;
+  //! @brief Interpolates the given state to a requested time stamp
+  //!
+  //! @param[in] given_state_1 - last state update before requested time
+  //! @param[in] given_state_2 - next state update after requested time
+  //! @param[in] requested_time - time stamp to extrapolate to
+  //! @param[out] state_at_req_time - predicted state at requested time
+  //!
+  void interpolate(const EstimatorState& given_state_1, const EstimatorState& given_state_2,
+                   const double requested_time, EstimatorState& state_at_req_time) const;
 
-    //! @brief When we make a prediction using the transfer function, we
-    //! add this matrix (times deltaT) to the state estimate covariance
-    //! matrix. This models the fact that the prediction is never perfect.
-    //!
-    Eigen::MatrixXd processNoiseCovariance_;
+  //!
+  //! @brief The buffer holding the system states that have come in. Interpolation and extrapolation is done starting
+  //! from these states.
+  //!
+  boost::circular_buffer<EstimatorState> state_buffer_;
 
-    //! @brief Keeps the state's Roll, Pitch, Yaw angles in the range
-    //! [-pi, pi]
-    //!
-    void wrapStateAngles(EstimatorState state) const
-    {
-      state.state(StateMemberRoll)  = FilterUtilities::clampRotation(state.state(StateMemberRoll));
-      state.state(StateMemberPitch) = FilterUtilities::clampRotation(state.state(StateMemberPitch));
-      state.state(StateMemberYaw)   = FilterUtilities::clampRotation(state.state(StateMemberYaw));
-    }
+  //! @brief When we make a prediction using the transfer function, we add this matrix (times deltaT) to the state
+  //! estimate covariance matrix. This models the fact that the prediction is never perfect.
+  //!
+  Eigen::MatrixXd process_noise_covariance_;
 
+  //! @brief Keeps the state's Roll, Pitch, Yaw angles in the range [-pi, pi]
+  //!
+  void wrapStateAngles(EstimatorState state) const
+  {
+    state.state(StateMemberRoll)  = FilterUtilities::clampRotation(state.state(StateMemberRoll));
+    state.state(StateMemberPitch) = FilterUtilities::clampRotation(state.state(StateMemberPitch));
+    state.state(StateMemberYaw)   = FilterUtilities::clampRotation(state.state(StateMemberYaw));
+  }
 };
 
 }  // namespace RobotLocalization
 
-#endif  // ROBOT_LOCALIZATION_LISTENER_H
+#endif  // ROBOT_LOCALIZATION_ROBOT_LOCALIZATION_ESTIMATOR_H

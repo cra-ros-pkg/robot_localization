@@ -35,9 +35,9 @@
 namespace RobotLocalization
 {
 RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity):
-  processNoiseCovariance_(STATE_SIZE,STATE_SIZE)
+  process_noise_covariance_(STATE_SIZE, STATE_SIZE)
 {
-  processNoiseCovariance_.setZero();
+  process_noise_covariance_.setZero();
   state_buffer_.set_capacity(buffer_capacity);
 }
 
@@ -66,14 +66,14 @@ void RobotLocalizationEstimator::setState(const EstimatorState& state)
   }
 }
 
-int RobotLocalizationEstimator::getState(const double time, EstimatorState& state) const
+EstimatorResult RobotLocalizationEstimator::getState(const double time,
+                                                     EstimatorState& state) const
 {
   // If there's nothing in the buffer, there's nothing to give.
   if ( state_buffer_.size() == 0 )
   {
-    return -1;
+    return EstimatorResults::EmptyBuffer;
   }
-  int return_value = 0;
 
   // Set state to the most recent one for now
   state = state_buffer_.back();
@@ -84,7 +84,8 @@ int RobotLocalizationEstimator::getState(const double time, EstimatorState& stat
   bool previous_state_found = false;
   bool next_state_found = false;
 
-  for (boost::circular_buffer<EstimatorState>::const_reverse_iterator it = state_buffer_.rbegin(); it != state_buffer_.rend(); ++it)
+  for (boost::circular_buffer<EstimatorState>::const_reverse_iterator it = state_buffer_.rbegin();
+       it != state_buffer_.rend(); ++it)
   {
     /* If the time stamp of the current state from the buffer is
        * older than the requested time, store it as the last state
@@ -108,24 +109,27 @@ int RobotLocalizationEstimator::getState(const double time, EstimatorState& stat
   if ( previous_state_found && next_state_found )
   {
     interpolate(last_state_before_time, next_state_after_time, time, state);
+    return EstimatorResults::Interpolation;
   }
 
   // If only a previous state is found, we can do extrapolation into the future
   else if ( previous_state_found )
   {
     extrapolate(last_state_before_time, time, state);
+    return EstimatorResults::ExtrapolationIntoFuture;
   }
 
   // If only a next state is found, we'll have to extrapolate into the past.
   else if ( next_state_found )
   {
     extrapolate(next_state_after_time, time, state);
-
-    // Warn the user that the buffer may be too small!
-    return_value = -2;
+    return EstimatorResults::ExtrapolationIntoPast;
   }
 
-  return return_value;
+  else
+  {
+    return EstimatorResults::Failed;
+  }
 }
 
 void RobotLocalizationEstimator::setBufferCapacity(const int capacity)
@@ -138,12 +142,12 @@ void RobotLocalizationEstimator::clearBuffer()
   state_buffer_.clear();
 }
 
-unsigned int RobotLocalizationEstimator::capacity() const
+unsigned int RobotLocalizationEstimator::getBufferCapacity() const
 {
   return state_buffer_.capacity();
 }
 
-unsigned int RobotLocalizationEstimator::size() const
+unsigned int RobotLocalizationEstimator::getSize() const
 {
   return state_buffer_.size();
 }
@@ -220,8 +224,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   transfer_function(StateMemberVy, StateMemberAy) = delta;
   transfer_function(StateMemberVz, StateMemberAz) = delta;
 
-  // Prepare the transfer function Jacobian. This function is analytically derived from the
-  // transfer function.
+  // Prepare the transfer function Jacobian. This function is analytically derived from the transfer function.
   double xCoeff = 0.0;
   double yCoeff = 0.0;
   double zCoeff = 0.0;
@@ -308,7 +311,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   // Project the error forward: P = J * P * J' + Q
   state_at_req_time.covariance = (transferFunctionJacobian * boundary_state.covariance *
                                   transferFunctionJacobian.transpose());
-  state_at_req_time.covariance.noalias() += (processNoiseCovariance_ * delta);
+  state_at_req_time.covariance.noalias() += (process_noise_covariance_ * delta);
 
   return;
 }
@@ -319,9 +322,8 @@ void RobotLocalizationEstimator::interpolate(const EstimatorState& given_state_1
                                              EstimatorState& state_at_req_time) const
 {
   /*
-   * TODO: Right now, we only extrapolate from the last known state before the requested time.
-   * But as the state after the requested time is also known, we may want to perform
-   * interpolation between states.
+   * TODO: Right now, we only extrapolate from the last known state before the requested time. But as the state after
+   * the requested time is also known, we may want to perform interpolation between states.
    */
   extrapolate(given_state_1, requested_time, state_at_req_time);
   return;

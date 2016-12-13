@@ -31,6 +31,8 @@
  */
 
 #include "robot_localization/robot_localization_estimator.h"
+
+#include <vector>
 #include <ros/ros.h>
 
 #include <gtest/gtest.h>
@@ -66,12 +68,12 @@ TEST(RLETest, StateBuffer)
     EXPECT_EQ(state.time_stamp, states[i].time_stamp);
   }
 
-  EXPECT_EQ(estimator.size(), buffer_capacity);
+  EXPECT_EQ(estimator.getSize(), buffer_capacity);
 
   // Clear the buffer
   estimator.clearBuffer();
 
-  EXPECT_EQ(estimator.size(),0);
+  EXPECT_EQ(estimator.getSize(), 0);
 
   // Add states in non-chronological order
   for ( int i = 1; i < 4; i++ )
@@ -101,13 +103,13 @@ TEST(RLETest, StateBuffer)
   // states. The predicted state vector should be equal to the designed state at
   // t=4.
   estimator.getState(states[4].time_stamp, state);
-  EXPECT_EQ(state.state,states[4].state);
+  EXPECT_EQ(state.state, states[4].state);
 
   // Add state somewhere in the middle
   estimator.setState(states[4]);
 
   // Overwrite state at t=3 (oldest state now in the buffer)
-  estimator.getState(states[3].time_stamp,state);
+  estimator.getState(states[3].time_stamp, state);
   state.state(RobotLocalization::StateMemberVy) = -1.0;
   estimator.setState(state);
 
@@ -115,12 +117,12 @@ TEST(RLETest, StateBuffer)
   estimator.setState(states[0]);
 
   // Check if getState needed to do extrapolation into the past (return value: -2)
-  EXPECT_EQ(estimator.getState(states[0].time_stamp, state), -2);
+  EXPECT_EQ(estimator.getState(states[0].time_stamp, state),
+      RobotLocalization::EstimatorResults::ExtrapolationIntoPast);
 
   // Check state at t=0. This can only work correctly if the state at t=3 is
   // overwritten and the state at zero is not in the buffer.
   EXPECT_DOUBLE_EQ(state.state(RobotLocalization::StateMemberY), 3.0);
-
 }
 
 int main(int argc, char **argv)
