@@ -31,18 +31,29 @@
  */
 
 #include "robot_localization/robot_localization_estimator.h"
+#include "robot_localization/ekf.h"
+#include "robot_localization/ukf.h"
 
 namespace RobotLocalization
 {
-RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity):
-  process_noise_covariance_(STATE_SIZE, STATE_SIZE)
+RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity,
+                                                       FilterType filter_type,
+                                                       const std::vector<double>& filter_args)
 {
-  process_noise_covariance_.setZero();
   state_buffer_.set_capacity(buffer_capacity);
+  if ( filter_type == FilterTypes::EKF )
+  {
+    filter_ = new Ekf;
+  }
+  else if ( filter_type == FilterTypes::UKF )
+  {
+    filter_ = new Ukf(filter_args);
+  }
 }
 
 RobotLocalizationEstimator::~RobotLocalizationEstimator()
 {
+  delete filter_;
 }
 
 void RobotLocalizationEstimator::setState(const EstimatorState& state)
@@ -156,162 +167,19 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
                                              const double requested_time,
                                              EstimatorState& state_at_req_time) const
 {
-  state_at_req_time = boundary_state;
-  state_at_req_time.time_stamp = requested_time;
+  // Set up the filter with the boundary state
+  filter_->setState(boundary_state.state);
+  filter_->setEstimateErrorCovariance(boundary_state.covariance);
 
   // Calculate how much time we need to extrapolate into the future
   double delta = requested_time - boundary_state.time_stamp;
 
-  // Get the state variables from the boundary state
-  double roll = boundary_state.state(StateMemberRoll);
-  double pitch = boundary_state.state(StateMemberPitch);
-  double yaw = boundary_state.state(StateMemberYaw);
-  double xVel = boundary_state.state(StateMemberVx);
-  double yVel = boundary_state.state(StateMemberVy);
-  double zVel = boundary_state.state(StateMemberVz);
-  double rollVel = boundary_state.state(StateMemberVroll);
-  double pitchVel = boundary_state.state(StateMemberVpitch);
-  double yawVel = boundary_state.state(StateMemberVyaw);
-  double xAcc = boundary_state.state(StateMemberAx);
-  double yAcc = boundary_state.state(StateMemberAy);
-  double zAcc = boundary_state.state(StateMemberAz);
+  // Use the filter to predict
+  filter_->predict(boundary_state.time_stamp, delta);
 
-  // We'll need these trig calculations a lot.
-  double sp = 0.0;
-  double cp = 0.0;
-  ::sincos(pitch, &sp, &cp);
-
-  double sr = 0.0;
-  double cr = 0.0;
-  ::sincos(roll, &sr, &cr);
-
-  double sy = 0.0;
-  double cy = 0.0;
-  ::sincos(yaw, &sy, &cy);
-
-  Eigen::MatrixXd transfer_function(STATE_SIZE, STATE_SIZE);
-  transfer_function.setIdentity();
-
-  // Prepare the transfer function
-  transfer_function(StateMemberX, StateMemberVx) = cy * cp * delta;
-  transfer_function(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
-  transfer_function(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
-  transfer_function(StateMemberX, StateMemberAx) = 0.5 * transfer_function(StateMemberX, StateMemberVx) * delta;
-  transfer_function(StateMemberX, StateMemberAy) = 0.5 * transfer_function(StateMemberX, StateMemberVy) * delta;
-  transfer_function(StateMemberX, StateMemberAz) = 0.5 * transfer_function(StateMemberX, StateMemberVz) * delta;
-  transfer_function(StateMemberY, StateMemberVx) = sy * cp * delta;
-  transfer_function(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
-  transfer_function(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
-  transfer_function(StateMemberY, StateMemberAx) = 0.5 * transfer_function(StateMemberY, StateMemberVx) * delta;
-  transfer_function(StateMemberY, StateMemberAy) = 0.5 * transfer_function(StateMemberY, StateMemberVy) * delta;
-  transfer_function(StateMemberY, StateMemberAz) = 0.5 * transfer_function(StateMemberY, StateMemberVz) * delta;
-  transfer_function(StateMemberZ, StateMemberVx) = -sp * delta;
-  transfer_function(StateMemberZ, StateMemberVy) = cp * sr * delta;
-  transfer_function(StateMemberZ, StateMemberVz) = cp * cr * delta;
-  transfer_function(StateMemberZ, StateMemberAx) = 0.5 * transfer_function(StateMemberZ, StateMemberVx) * delta;
-  transfer_function(StateMemberZ, StateMemberAy) = 0.5 * transfer_function(StateMemberZ, StateMemberVy) * delta;
-  transfer_function(StateMemberZ, StateMemberAz) = 0.5 * transfer_function(StateMemberZ, StateMemberVz) * delta;
-  transfer_function(StateMemberRoll, StateMemberVroll) = transfer_function(StateMemberX, StateMemberVx);
-  transfer_function(StateMemberRoll, StateMemberVpitch) = transfer_function(StateMemberX, StateMemberVy);
-  transfer_function(StateMemberRoll, StateMemberVyaw) = transfer_function(StateMemberX, StateMemberVz);
-  transfer_function(StateMemberPitch, StateMemberVroll) = transfer_function(StateMemberY, StateMemberVx);
-  transfer_function(StateMemberPitch, StateMemberVpitch) = transfer_function(StateMemberY, StateMemberVy);
-  transfer_function(StateMemberPitch, StateMemberVyaw) = transfer_function(StateMemberY, StateMemberVz);
-  transfer_function(StateMemberYaw, StateMemberVroll) = transfer_function(StateMemberZ, StateMemberVx);
-  transfer_function(StateMemberYaw, StateMemberVpitch) = transfer_function(StateMemberZ, StateMemberVy);
-  transfer_function(StateMemberYaw, StateMemberVyaw) = transfer_function(StateMemberZ, StateMemberVz);
-  transfer_function(StateMemberVx, StateMemberAx) = delta;
-  transfer_function(StateMemberVy, StateMemberAy) = delta;
-  transfer_function(StateMemberVz, StateMemberAz) = delta;
-
-  // Prepare the transfer function Jacobian. This function is analytically derived from the transfer function.
-  double xCoeff = 0.0;
-  double yCoeff = 0.0;
-  double zCoeff = 0.0;
-  double oneHalfATSquared = 0.5 * delta * delta;
-
-  yCoeff = cy * sp * cr + sy * sr;
-  zCoeff = -cy * sp * sr + sy * cr;
-  double dFx_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
-                  (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFR_dR = 1 + (yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  xCoeff = -cy * sp;
-  yCoeff = cy * cp * sr;
-  zCoeff = cy * cp * cr;
-  double dFx_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                  (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFR_dP = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  xCoeff = -sy * cp;
-  yCoeff = -sy * sp * sr - cy * cr;
-  zCoeff = -sy * sp * cr + cy * sr;
-  double dFx_dY = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                  (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFR_dY = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  yCoeff = sy * sp * cr - cy * sr;
-  zCoeff = -sy * sp * sr - cy * cr;
-  double dFy_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
-                  (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFP_dR = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  xCoeff = -sy * sp;
-  yCoeff = sy * cp * sr;
-  zCoeff = sy * cp * cr;
-  double dFy_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                  (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFP_dP = 1 + (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  xCoeff = cy * cp;
-  yCoeff = cy * sp * sr - sy * cr;
-  zCoeff = cy * sp * cr + sy * sr;
-  double dFy_dY = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                  (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFP_dY = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  yCoeff = cp * cr;
-  zCoeff = -cp * sr;
-  double dFz_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
-                  (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFY_dR = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  xCoeff = -cp;
-  yCoeff = -sp * sr;
-  zCoeff = -sp * cr;
-  double dFz_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
-                  (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-  double dFY_dP = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
-
-  // Much of the transfer function Jacobian is identical to the transfer function
-  Eigen::MatrixXd transferFunctionJacobian = transfer_function;
-  transferFunctionJacobian(StateMemberX, StateMemberRoll) = dFx_dR;
-  transferFunctionJacobian(StateMemberX, StateMemberPitch) = dFx_dP;
-  transferFunctionJacobian(StateMemberX, StateMemberYaw) = dFx_dY;
-  transferFunctionJacobian(StateMemberY, StateMemberRoll) = dFy_dR;
-  transferFunctionJacobian(StateMemberY, StateMemberPitch) = dFy_dP;
-  transferFunctionJacobian(StateMemberY, StateMemberYaw) = dFy_dY;
-  transferFunctionJacobian(StateMemberZ, StateMemberRoll) = dFz_dR;
-  transferFunctionJacobian(StateMemberZ, StateMemberPitch) = dFz_dP;
-  transferFunctionJacobian(StateMemberRoll, StateMemberRoll) = dFR_dR;
-  transferFunctionJacobian(StateMemberRoll, StateMemberPitch) = dFR_dP;
-  transferFunctionJacobian(StateMemberRoll, StateMemberYaw) = dFR_dY;
-  transferFunctionJacobian(StateMemberPitch, StateMemberRoll) = dFP_dR;
-  transferFunctionJacobian(StateMemberPitch, StateMemberPitch) = dFP_dP;
-  transferFunctionJacobian(StateMemberPitch, StateMemberYaw) = dFP_dY;
-  transferFunctionJacobian(StateMemberYaw, StateMemberRoll) = dFY_dR;
-  transferFunctionJacobian(StateMemberYaw, StateMemberPitch) = dFY_dP;
-
-  // Project the state forward: x = Ax (really, x = f(x))
-  state_at_req_time.state = transfer_function * boundary_state.state;
-
-  // Handle wrapping
-  wrapStateAngles(state_at_req_time);
-
-  // Project the error forward: P = J * P * J' + Q
-  state_at_req_time.covariance = (transferFunctionJacobian * boundary_state.covariance *
-                                  transferFunctionJacobian.transpose());
-  state_at_req_time.covariance.noalias() += (process_noise_covariance_ * delta);
+  state_at_req_time.time_stamp = requested_time;
+  state_at_req_time.state = filter_->getPredictedState();
+  state_at_req_time.covariance = filter_->getEstimateErrorCovariance();
 
   return;
 }

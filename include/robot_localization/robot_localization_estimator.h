@@ -33,12 +33,14 @@
 #ifndef ROBOT_LOCALIZATION_ROBOT_LOCALIZATION_ESTIMATOR_H
 #define ROBOT_LOCALIZATION_ROBOT_LOCALIZATION_ESTIMATOR_H
 
-#include <Eigen/Dense>
+#include <iostream>
+#include <vector>
 #include <boost/circular_buffer.hpp>
+#include <Eigen/Dense>
+
+#include "robot_localization/filter_base.h"
 #include "robot_localization/filter_utilities.h"
 #include "robot_localization/filter_common.h"
-
-#include <iostream>
 
 namespace RobotLocalization
 {
@@ -94,6 +96,17 @@ enum EstimatorResult
 }  // namespace EstimatorResults
 typedef EstimatorResults::EstimatorResult EstimatorResult;
 
+namespace FilterTypes
+{
+enum FilterType
+{
+  EKF = 0,
+  UKF,
+  NotDefined
+};
+}  // namespace EstimatorResults
+typedef FilterTypes::FilterType FilterType;
+
 //! @brief Robot Localization Listener class
 //!
 //! The Robot Localization Estimator class buffers states of and inputs to a system and can interpolate and extrapolate
@@ -107,7 +120,9 @@ public:
   //! @param[in] args - Generic argument container (not used here, but needed so that the ROS filters can pass arbitrary
   //! arguments to templated filter types).
   //!
-  explicit RobotLocalizationEstimator(unsigned int buffer_capacity);
+  explicit RobotLocalizationEstimator(unsigned int buffer_capacity,
+                                      FilterType filter_type,
+                                      const std::vector<double>& filter_args);
 
   //! @brief Destructor for the RobotLocalizationListener class
   //!
@@ -140,14 +155,18 @@ public:
   //!
   void setBufferCapacity(const int capacity);
 
-  //! @brief Returns the buffer capacity (the number of EstimatorState objects that can be pushed to the buffer before
-  //! old ones are dropped.
+  //! @brief Returns the buffer capacity
+  //!
+  //! Returns the number of EstimatorState objects that can be pushed to the buffer before old ones are dropped. (The
+  //! capacity of the buffer).
   //!
   //! @return buffer capacity
   //!
   unsigned int getBufferCapacity() const;
 
-  //! @brief Returns the current buffer size (the number of EstimatorState objects currently in the buffer).
+  //! @brief Returns the current buffer size
+  //!
+  //! Returns the number of EstimatorState objects currently in the buffer.
   //!
   //! @return current buffer size
   //!
@@ -190,19 +209,10 @@ private:
   //!
   boost::circular_buffer<EstimatorState> state_buffer_;
 
-  //! @brief When we make a prediction using the transfer function, we add this matrix (times deltaT) to the state
-  //! estimate covariance matrix. This models the fact that the prediction is never perfect.
   //!
-  Eigen::MatrixXd process_noise_covariance_;
-
-  //! @brief Keeps the state's Roll, Pitch, Yaw angles in the range [-pi, pi]
+  //! @brief A pointer to the filter instance that is used for extrapolation
   //!
-  void wrapStateAngles(EstimatorState state) const
-  {
-    state.state(StateMemberRoll)  = FilterUtilities::clampRotation(state.state(StateMemberRoll));
-    state.state(StateMemberPitch) = FilterUtilities::clampRotation(state.state(StateMemberPitch));
-    state.state(StateMemberYaw)   = FilterUtilities::clampRotation(state.state(StateMemberYaw));
-  }
+  FilterBase* filter_;
 };
 
 }  // namespace RobotLocalization
