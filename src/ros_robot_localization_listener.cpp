@@ -32,6 +32,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 #include <rclcpp/qos.hpp>
 
@@ -49,9 +50,24 @@
 
 namespace robot_localization
 {
+FilterType filterTypeFromString(const std::string& filter_type_str)
+{
+  if ( filter_type_str == "ekf" )
+  {
+    return FilterTypes::EKF;
+  }
+  else if ( filter_type_str == "ukf" )
+  {
+    return FilterTypes::UKF;
+  }
+  else
+  {
+    return FilterTypes::NotDefined;
+  }
+}
+
 RosRobotLocalizationListener::RosRobotLocalizationListener(
   rclcpp::Node::SharedPtr node, const std::string& ns):
-  estimator_(0u),
   qos1_(1),
   qos10_(10),
   odom_sub_(node, "~/" + ns + "/odom", qos1_.get_rmw_qos_profile()),
@@ -63,9 +79,22 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   tf_buffer_(node_clock_),
   tf_listener_(tf_buffer_)
 {
-
   int buffer_size = node->declare_parameter<int>("~/buffer_size", 10);
-  estimator_.setBufferCapacity(buffer_size);
+
+  std::string filter_type_str = node->declare_parameter<std::string>(
+    "~/filter_type", std::string("ekf"));
+  FilterType filter_type = filterTypeFromString(filter_type_str);
+  if ( filter_type == FilterTypes::NotDefined )
+  {
+    RCLCPP_FATAL(node_logger_->get_logger(),
+      "RosRobotLocalizationListener: Parameter filter_type invalid");
+    return;
+  }
+
+  std::vector<double> filter_args = node->declare_parameter<
+    std::vector<double>>("~/filter_args", std::vector<double>());
+
+  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, filter_args);
 
   sync_.registerCallback(std::bind(
     &RosRobotLocalizationListener::odomAndAccelCallback,
@@ -78,6 +107,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
 
 RosRobotLocalizationListener::~RosRobotLocalizationListener()
 {
+  delete estimator_;
 }
 
 void RosRobotLocalizationListener::odomAndAccelCallback(
@@ -153,7 +183,7 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   }
 
   // Add the state to the buffer, so that we can later interpolate between this and earlier states
-  estimator_.setState(state);
+  estimator_->setState(state);
 
   return;
 }
@@ -171,7 +201,7 @@ bool RosRobotLocalizationListener::getState(const double time,
 
   if ( base_frame_id_.empty() )
   {
-    if ( estimator_.getSize() == 0 )
+    if ( estimator_->getSize() == 0 )
     {
       RCLCPP_WARN(node_logger_->get_logger(),
         "Ros Robot Localization Listener: The base frame id is not set. No odom/accel messages have come in.");
@@ -186,7 +216,7 @@ bool RosRobotLocalizationListener::getState(const double time,
     return false;
   }
 
-  if ( estimator_.getState(time, estimator_state) == EstimatorResults::ExtrapolationIntoPast )
+  if ( estimator_->getState(time, estimator_state) == EstimatorResults::ExtrapolationIntoPast )
   {
     RCLCPP_WARN(node_logger_->get_logger(),
       "Ros Robot Localization Listener: A state is requested at a time stamp older than the oldest in the "
