@@ -32,8 +32,11 @@
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
 #include "robot_localization/filter_common.hpp"
-#include "tf2_ros/static_transform_broadcaster.h"
+
+#include <string>
+
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <gtest/gtest.h>
 
@@ -42,10 +45,10 @@ robot_localization::RosRobotLocalizationListener* g_listener;
 rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub;
 rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr accel_pub;
 
-TEST( LocalizationListenerTest, testGetStateBeforeReceivingMessages )
+TEST(LocalizationListenerTest, testGetStateBeforeReceivingMessages)
 {
   Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE,robot_localization::STATE_SIZE);
+  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
 
   rclcpp::Time time(0);
   std::string base_frame("base_link");
@@ -53,10 +56,10 @@ TEST( LocalizationListenerTest, testGetStateBeforeReceivingMessages )
   EXPECT_FALSE(g_listener->getState(time, base_frame, state, covariance));
 }
 
-TEST(LocalizationListenerTest, testGetStateOfBaseLink )
+TEST(LocalizationListenerTest, testGetStateOfBaseLink)
 {
   Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE,robot_localization::STATE_SIZE);
+  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
 
   double x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az;
   x = y = z = roll = pitch = yaw = vy = vz = vroll = vpitch = vyaw = ax = ay = az = 0.0;
@@ -107,102 +110,35 @@ TEST(LocalizationListenerTest, testGetStateOfBaseLink )
   odom_pub->publish(odom_msg);
   accel_pub->publish(accel_msg);
 
-  std::stringstream pose_ss;
-  pose_ss <<
-    "position:\n"
-    "  x: " << odom_msg.pose.pose.position.x << "\n"
-    "  y: " << odom_msg.pose.pose.position.y << "\n"
-    "  z: " << odom_msg.pose.pose.position.z << "\n"
-    "orientation:\n"
-    "  x: " << odom_msg.pose.pose.orientation.x << "\n"
-    "  y: " << odom_msg.pose.pose.orientation.y << "\n"
-    "  z: " << odom_msg.pose.pose.orientation.z << "\n"
-    "  w: " << odom_msg.pose.pose.orientation.w << "\n";
-
-  std::stringstream twist_ss;
-  twist_ss <<
-    "linear:\n"
-    "  x: " << odom_msg.twist.twist.linear.x << "\n"
-    "  y: " << odom_msg.twist.twist.linear.y << "\n"
-    "  z: " << odom_msg.twist.twist.linear.z << "\n"
-    "angular:\n"
-    "  x: " << odom_msg.twist.twist.angular.x << "\n"
-    "  y: " << odom_msg.twist.twist.angular.y << "\n"
-    "  z: " << odom_msg.twist.twist.angular.z << "\n";
-
-  std::stringstream accel_ss;
-  accel_ss << 
-    "linear:\n"
-    "  x: " << accel_msg.accel.accel.linear.x << "\n"
-    "  y: " << accel_msg.accel.accel.linear.y << "\n"
-    "  z: " << accel_msg.accel.accel.linear.z << "\n"
-    "angular:\n"
-    "  x: " << accel_msg.accel.accel.angular.x << "\n"
-    "  y: " << accel_msg.accel.accel.angular.y << "\n"
-    "  z: " << accel_msg.accel.accel.angular.z << "\n";
-  RCLCPP_INFO(node->get_logger(), "Publishing odom:\n%s\n%s", pose_ss.str().c_str(), twist_ss.str().c_str());
-  RCLCPP_INFO(node->get_logger(), "Publishing accel:\n%s", accel_ss.str().c_str());
-
   rclcpp::Rate(10).sleep();
-
   rclcpp::spin_some(node);
 
   std::string base_frame("base_link");
 
   EXPECT_TRUE(g_listener->getState(time1, base_frame, state, covariance));
 
-  {
-    std::stringstream time1_ss;
-    time1_ss << (static_cast<double>(time1.nanoseconds()) / 10e9);
-    std::stringstream state_ss;
-    state_ss << state;
-    std::stringstream covariance_ss;
-    covariance_ss << covariance;
-    RCLCPP_INFO(node->get_logger(),
-                    "\ngetState at time = %s returned:\n"
-                    " - state\n"
-                    " x           y           z        roll       pitch         yaw          vx          vy          vz       vroll      vpitch        vyaw          ax          ay          az\n%s\n"
-                    " - covariance\n%s",
-                    time1_ss.str().c_str(), state_ss.str().c_str(), covariance_ss.str().c_str());
-  }
-
   state.setZero();
   covariance.setZero();
 
   g_listener->getState(time2, base_frame, state, covariance);
 
-  {
-    std::stringstream time2_ss;
-    time2_ss << (static_cast<double>(time2.nanoseconds()) / 10e9);
-    std::stringstream state_ss;
-    state_ss << state;
-    std::stringstream covariance_ss;
-    covariance_ss << covariance;
-    RCLCPP_INFO(node->get_logger(),
-                    "\ngetState at time = %s returned:\n"
-                    " - state\n"
-                    " x           y           z        roll       pitch         yaw          vx          vy          vz       vroll      vpitch        vyaw          ax          ay          az\n%s\n"
-                    " - covariance\n%s",
-                    time2_ss.str().c_str(), state_ss.str().c_str(), covariance_ss.str().c_str());
-  }
+  EXPECT_DOUBLE_EQ(1.0, state(robot_localization::StateMemberX));
+  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberY));
+  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberZ));
 
-  EXPECT_DOUBLE_EQ(1.0,state(robot_localization::StateMemberX));
-  EXPECT_DOUBLE_EQ(0.0,state(robot_localization::StateMemberY));
-  EXPECT_DOUBLE_EQ(0.0,state(robot_localization::StateMemberZ));
+  EXPECT_FLOAT_EQ(M_PI/4, state(robot_localization::StateMemberRoll));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberPitch));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberYaw));
 
-  EXPECT_FLOAT_EQ(M_PI/4,state(robot_localization::StateMemberRoll));
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberPitch));
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberYaw));
-
-  EXPECT_DOUBLE_EQ(M_PI/4.0,state(robot_localization::StateMemberVroll));
-  EXPECT_DOUBLE_EQ(0.0,state(robot_localization::StateMemberVpitch));
-  EXPECT_DOUBLE_EQ(0.0,state(robot_localization::StateMemberVyaw));
+  EXPECT_DOUBLE_EQ(M_PI/4.0, state(robot_localization::StateMemberVroll));
+  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberVpitch));
+  EXPECT_DOUBLE_EQ(0.0, state(robot_localization::StateMemberVyaw));
 }
 
-TEST( LocalizationListenerTest, GetStateOfRelatedFrame )
+TEST(LocalizationListenerTest, GetStateOfRelatedFrame)
 {
   Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE,robot_localization::STATE_SIZE);
+  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
 
   tf2_ros::StaticTransformBroadcaster transform_broadcaster(node);
 
@@ -215,7 +151,7 @@ TEST( LocalizationListenerTest, GetStateOfRelatedFrame )
   transformStamped.transform.translation.y = 1.0;
   transformStamped.transform.translation.z = 0.0;
   tf2::Quaternion q;
-  q.setRPY(0, 0, M_PI/2); // Fixed axes rpy, so new z points in the original negative x-direction and y in the original negative z.
+  q.setRPY(0, 0, M_PI/2);
   transformStamped.transform.rotation.x = q.x();
   transformStamped.transform.rotation.y = q.y();
   transformStamped.transform.rotation.z = q.z();
@@ -235,69 +171,39 @@ TEST( LocalizationListenerTest, GetStateOfRelatedFrame )
 
   EXPECT_TRUE(g_listener->getState(time1, sensor_frame, state, covariance) );
 
-  {
-    std::stringstream time1_ss;
-    time1_ss << (static_cast<double>(time1.nanoseconds()) / 10e9);
-    std::stringstream state_ss;
-    state_ss << state;
-    std::stringstream covariance_ss;
-    covariance_ss << covariance;
-    RCLCPP_WARN(node->get_logger(),
-                    "\ngetState for %s at time = %s returned:\n"
-                    " - state\n"
-                    " x           y           z        roll       pitch         yaw          vx          vy          vz       vroll      vpitch        vyaw          ax          ay          az\n%s\n"
-                    " - covariance\n%s",
-                    sensor_frame.c_str(), time1_ss.str().c_str(), state_ss.str().c_str(), covariance_ss.str().c_str());
-  }
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberX));
+  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberY));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberZ));
 
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberX));
-  EXPECT_FLOAT_EQ(1.0,state(robot_localization::StateMemberY));
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberZ));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberRoll));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberPitch));
+  EXPECT_FLOAT_EQ(M_PI/2, state(robot_localization::StateMemberYaw));
 
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberRoll));
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberPitch));
-  EXPECT_FLOAT_EQ(M_PI/2,state(robot_localization::StateMemberYaw));
-
-  EXPECT_TRUE( 1e-12 > state(robot_localization::StateMemberVx));
+  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVx));
   EXPECT_FLOAT_EQ(-1.0, state(robot_localization::StateMemberVy));
-  EXPECT_FLOAT_EQ(M_PI/4.0,state(robot_localization::StateMemberVz));
+  EXPECT_FLOAT_EQ(M_PI/4.0, state(robot_localization::StateMemberVz));
 
-  EXPECT_TRUE( 1e-12 > state(robot_localization::StateMemberVroll));
-  EXPECT_FLOAT_EQ(-M_PI/4.0,state(robot_localization::StateMemberVpitch));
-  EXPECT_FLOAT_EQ(0.0,state(robot_localization::StateMemberVyaw));
+  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVroll));
+  EXPECT_FLOAT_EQ(-M_PI/4.0, state(robot_localization::StateMemberVpitch));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberVyaw));
 
   EXPECT_TRUE(g_listener->getState(time2, sensor_frame, state, covariance));
 
-  {
-    std::stringstream time2_ss;
-    time2_ss << (static_cast<double>(time2.nanoseconds()) / 10e9);
-    std::stringstream state_ss;
-    state_ss << state;
-    std::stringstream covariance_ss;
-    covariance_ss << covariance;
-    RCLCPP_WARN(node->get_logger(),
-                    "\n\ngetState for %s at time = %s returned:\n"
-                    " - state\n"
-                    " x           y           z        roll       pitch         yaw          vx          vy          vz       vroll      vpitch        vyaw          ax          ay          az\n%s\n"
-                    " - covariance\n%s",
-                    sensor_frame.c_str(), time2_ss.str().c_str(), state_ss.str().c_str(), covariance_ss.str().c_str());
-  }
+  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberX));
+  EXPECT_FLOAT_EQ(sqrt(2)/2.0, state(robot_localization::StateMemberY));
+  EXPECT_FLOAT_EQ(sqrt(2)/2.0, state(robot_localization::StateMemberZ));
 
-  EXPECT_FLOAT_EQ(1.0,state(robot_localization::StateMemberX));
-  EXPECT_FLOAT_EQ(sqrt(2)/2.0,state(robot_localization::StateMemberY));
-  EXPECT_FLOAT_EQ(sqrt(2)/2.0,state(robot_localization::StateMemberZ));
+  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberRoll));
+  EXPECT_TRUE(1e-12 > fabs(-M_PI/4.0 - state(robot_localization::StateMemberPitch)));
+  EXPECT_FLOAT_EQ(M_PI/2, state(robot_localization::StateMemberYaw));
 
-  EXPECT_TRUE( 1e-12 > state(robot_localization::StateMemberRoll));
-  EXPECT_TRUE( 1e-12 > fabs(-M_PI/4.0 - state(robot_localization::StateMemberPitch)));
-  EXPECT_FLOAT_EQ(M_PI/2,state(robot_localization::StateMemberYaw));
-
-  EXPECT_TRUE( 1e-12 > state(robot_localization::StateMemberVx));
+  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVx));
   EXPECT_FLOAT_EQ(-1.0, state(robot_localization::StateMemberVy));
   EXPECT_FLOAT_EQ(M_PI/4, state(robot_localization::StateMemberVz));
 
-  EXPECT_TRUE( 1e-12 > state(robot_localization::StateMemberVroll));
-  EXPECT_FLOAT_EQ(-M_PI/4.0,state(robot_localization::StateMemberVpitch));
-  EXPECT_FLOAT_EQ(0,state(robot_localization::StateMemberVyaw));
+  EXPECT_TRUE(1e-12 > state(robot_localization::StateMemberVroll));
+  EXPECT_FLOAT_EQ(-M_PI/4.0, state(robot_localization::StateMemberVpitch));
+  EXPECT_FLOAT_EQ(0, state(robot_localization::StateMemberVyaw));
 }
 
 int main(int argc, char **argv)

@@ -28,9 +28,9 @@ find_package(Eigen3 REQUIRED)
 set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
-  "srv/GetState.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
