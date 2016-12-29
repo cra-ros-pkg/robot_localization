@@ -158,6 +158,14 @@ class FilterBase
     //!
     virtual ~FilterBase();
 
+    //! @brief Computes a dynamic process noise covariance matrix using the parameterized state
+    //!
+    //! This allows us to, e.g., not increase the pose covariance values when the vehicle is not moving
+    //!
+    //! @param[in] state - The STATE_SIZE state vector that is used to generate the dynamic process noise covariance
+    //!
+    void computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta);
+
     //! @brief Carries out the correct step in the predict/update cycle. This method
     //! must be implemented by subclasses.
     //!
@@ -279,6 +287,12 @@ class FilterBase
     //! false, outStream is ignored.
     //!
     void setDebug(const bool debug, std::ostream *outStream = NULL);
+
+    //! @brief Enables dynamic process noise covariance calculation
+    //!
+    //! @param[in] dynamicProcessNoiseCovariance - Whether or not to compute dynamic process noise covariance matrices
+    //!
+    void setUseDynamicProcessNoiseCovariance(const bool dynamicProcessNoiseCovariance);
 
     //! @brief Manually sets the filter's estimate error covariance
     //!
@@ -434,6 +448,10 @@ class FilterBase
     //!
     std::ostream *debugStream_;
 
+    //! @brief Gets updated when useDynamicProcessNoise_ is true
+    //!
+    Eigen::MatrixXd dynamicProcessNoiseCovariance_;
+
     //! @brief This matrix stores the total error in our position
     //! estimate (the state_ variable).
     //!
@@ -525,6 +543,11 @@ class FilterBase
     //! @brief Whether or not we apply the control term
     //!
     bool useControl_;
+
+    //! @brief If true, uses the robot's vehicle state and the static process noise covariance matrix to generate a
+    //! dynamic process noise covariance matrix
+    //!
+    bool useDynamicProcessNoiseCovariance_;
 
   private:
     //! @brief Whether or not the filter is in debug mode

@@ -353,6 +353,14 @@ namespace RobotLocalization
              "\nProcess noise covariance is:\n" << processNoiseCovariance_ <<
              "\nCurrent state is:\n" << state_ << "\n");
 
+    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
+
+    if (useDynamicProcessNoiseCovariance_)
+    {
+      computeDynamicProcessNoiseCovariance(state_, delta);
+      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
+    }
+
     // (1) Apply control terms, which are actually accelerations
     state_(StateMemberVroll) += controlAcceleration_(ControlMemberVroll) * delta;
     state_(StateMemberVpitch) += controlAcceleration_(ControlMemberVpitch) * delta;
@@ -378,7 +386,7 @@ namespace RobotLocalization
     estimateErrorCovariance_ = (transferFunctionJacobian_ *
                                 estimateErrorCovariance_ *
                                 transferFunctionJacobian_.transpose());
-    estimateErrorCovariance_.noalias() += (processNoiseCovariance_ * delta);
+    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
 
     FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
              "\n\n--------------------- /Ekf::predict ----------------------\n");
