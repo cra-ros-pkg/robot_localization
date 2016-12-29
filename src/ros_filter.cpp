@@ -60,6 +60,7 @@ namespace RobotLocalization
       nhLocal_("~"),
       printDiagnostics_(true),
       publishTransform_(true),
+      publishAcceleration_(false),
       twoDMode_(false),
       useControl_(false),
       smoothLaggedData_(false)
@@ -307,6 +308,41 @@ namespace RobotLocalization
       message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
       message.header.frame_id = worldFrameId_;
       message.child_frame_id = baseLinkFrameId_;
+    }
+
+    return filter_.getInitializedStatus();
+  }
+
+  template<typename T>
+  bool RosFilter<T>::getFilteredAccelMessage(geometry_msgs::AccelWithCovarianceStamped &message)
+  {
+    // If the filter has received a measurement at some point...
+    if (filter_.getInitializedStatus())
+    {
+      // Grab our current state and covariance estimates
+      const Eigen::VectorXd &state = filter_.getState();
+      const Eigen::MatrixXd &estimateErrorCovariance = filter_.getEstimateErrorCovariance();
+
+      //! Fill out the accel_msg
+      message.accel.accel.linear.x = state(StateMemberAx);
+      message.accel.accel.linear.y = state(StateMemberAy);
+      message.accel.accel.linear.z = state(StateMemberAz);
+
+      // Fill the covariance (only the left-upper matrix since we are not estimating
+      // the rotational accelerations arround the axes
+      for (size_t i = 0; i < ACCELERATION_SIZE; i++)
+      {
+        for (size_t j = 0; j < ACCELERATION_SIZE; j++)
+        {
+          // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
+          message.accel.covariance[POSE_SIZE * i + j] =
+              estimateErrorCovariance(i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
+        }
+      }
+
+      // Fill header information
+      message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
+      message.header.frame_id = baseLinkFrameId_;
     }
 
     return filter_.getInitializedStatus();
@@ -648,6 +684,9 @@ namespace RobotLocalization
 
     // Whether we're publshing the world_frame->base_link_frame transform
     nhLocal_.param("publish_tf", publishTransform_, true);
+
+    // Whether we're publishing the acceleration state transform
+    nhLocal_.param("publish_acceleration", publishAcceleration_, false);
 
     // Transform future dating
     double offsetTmp;
@@ -1639,6 +1678,13 @@ namespace RobotLocalization
     ros::Publisher positionPub = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
     tf2_ros::TransformBroadcaster worldTransformBroadcaster;
 
+    // Optional acceleration publisher
+    ros::Publisher accelPub;
+    if (publishAcceleration_)
+    {
+      accelPub = nh_.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 20);
+    }
+
     ros::Rate loop_rate(frequency_);
 
     while (ros::ok())
@@ -1729,6 +1775,13 @@ namespace RobotLocalization
         {
           freqDiag.tick();
         }
+      }
+
+      // Publish the acceleration if desired and filter is initialized
+      geometry_msgs::AccelWithCovarianceStamped filteredAcceleration;
+      if (publishAcceleration_ && getFilteredAccelMessage(filteredAcceleration))
+      {
+        accelPub.publish(filteredAcceleration);
       }
 
       /* Diagnostics can behave strangely when playing back from bag
