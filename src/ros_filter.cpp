@@ -814,10 +814,6 @@ namespace RobotLocalization
     filter_.setUseDynamicProcessNoiseCovariance(dynamicProcessNoiseCovariance);
 
     std::vector<double> initial_state(STATE_SIZE, 0.0);
-    if (nhLocal_.hasParam("initial_state"))
-    {
-      std::cerr << "TAM: it's here!\n\n\n\n";
-    }
     if(nhLocal_.getParam("initial_state", initial_state))
     {
       if(initial_state.size() != STATE_SIZE)
