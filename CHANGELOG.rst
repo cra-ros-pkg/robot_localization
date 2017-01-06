@@ -4,6 +4,9 @@ Changelog for package robot_localization
 
 2.3.1 (2016-10-27)
 ------------------
+* 2.3.1-2
+* Adding initial state parameter
+* First set gps_odom timestamp before tf2 lookuptransform
 * Adding gitignore
 * Adding remaining wiki pages
 * Adding config and prep pages
