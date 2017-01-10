@@ -158,6 +158,10 @@ class FilterBase
     //!
     virtual ~FilterBase();
 
+    //! @brief Resets filter to its unintialized state
+    //!
+    void reset();
+
     //! @brief Computes a dynamic process noise covariance matrix using the parameterized state
     //!
     //! This allows us to, e.g., not increase the pose covariance values when the vehicle is not moving

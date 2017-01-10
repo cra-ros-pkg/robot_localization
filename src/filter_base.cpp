@@ -63,6 +63,15 @@ namespace RobotLocalization
     useControl_(false),
     useDynamicProcessNoiseCovariance_(false)
   {
+    reset();
+  }
+
+  FilterBase::~FilterBase()
+  {
+  }
+
+  void FilterBase::reset()
+  {
     initialized_ = false;
 
     // Clear the state and predicted state
@@ -118,10 +127,6 @@ namespace RobotLocalization
     processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.015;
 
     dynamicProcessNoiseCovariance_ = processNoiseCovariance_;
-  }
-
-  FilterBase::~FilterBase()
-  {
   }
 
   void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta)

@@ -270,6 +270,11 @@ If *true*, will dynamically scale the ``process_noise_covariance`` based on the 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The estimate covariance, commonly denoted *P*, defines the error in the current state estimate. The parameter allows users to set the initial value for the matrix, which will affect how quickly the filter converges. For example, if users set the value at position :math:`[0, 0]` to a very small value, e.g., `1e-12`, and then attempt to fuse measurements of X position with a high variance value for :math:`X`, then the filter will be very slow to "trust" those measurements, and the time required for convergence will increase. Again, users should take care with this parameter. When only fusing velocity data (e.g., no absolute pose information), users will likely *not* want to set the initial covariance values for the absolute pose variables to large numbers. This is because those errors are going to grow without bound (owing to the lack of absolute pose measurements to reduce the error), and starting them with large values will not benefit the state estimate.
 
+~reset_on_time_jump
+^^^^^^^^^^^^^^^^^^^
+If set to *true* and ``ros::Time::isSimTime()`` is *true*, the filter will reset to uninitial state when a jump back in time is noticed on a topic.
+This is useful while playing a bag file and jumping forwards and backwards in time.
+
 Node-specific Parameters
 ------------------------
 The standard and advanced parameters are common to all state estimation nodes in ``robot_localization``. This section details parameters that are unique to their respective state estimation nodes.
