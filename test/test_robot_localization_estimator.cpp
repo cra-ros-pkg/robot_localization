@@ -54,7 +54,8 @@ TEST(RLETest, StateBuffer)
 
   // Instantiate a robot localization estimator with a buffer capacity of 5
   unsigned int buffer_capacity = 5;
-  robot_localization::RobotLocalizationEstimator estimator(buffer_capacity);
+  robot_localization::RobotLocalizationEstimator estimator(buffer_capacity,
+    robot_localization::FilterTypes::EKF);
 
   robot_localization::EstimatorState state;
 
