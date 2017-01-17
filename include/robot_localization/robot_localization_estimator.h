@@ -122,7 +122,7 @@ public:
   //!
   explicit RobotLocalizationEstimator(unsigned int buffer_capacity,
                                       FilterType filter_type,
-                                      const std::vector<double>& filter_args);
+                                      const std::vector<double>& filter_args=std::vector<double>());
 
   //! @brief Destructor for the RobotLocalizationListener class
   //!
