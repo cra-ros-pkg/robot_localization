@@ -268,6 +268,7 @@ bool RosRobotLocalizationListener::getState(const double time,
   state(StateMemberYaw)   = ypr[0];
 
   // Now let's calculate the twist of the target frame
+  // First get the base's twist
   Twist base_velocity;
   Twist target_velocity_base;
   base_velocity.linear = Eigen::Vector3d(estimator_state.state(StateMemberVx),
@@ -277,11 +278,17 @@ bool RosRobotLocalizationListener::getState(const double time,
                                           estimator_state.state(StateMemberVpitch),
                                           estimator_state.state(StateMemberVyaw));
 
-  Eigen::Vector3d target_position_base = target_pose_base.translation();
-  target_velocity_base.linear = base_velocity.linear + base_velocity.angular.cross(target_position_base);
+  // Then calculate the target frame's twist as a result of the base's twist.
+  /*
+   * We first calculate the coordinates of the velocity vectors (linear and angular) in the base frame. We have to keep
+   * in mind that a rotation of the base frame, together with the translational offset of the target frame from the base
+   * frame, induces a translational velocity of the target frame.
+   */
+  target_velocity_base.linear = base_velocity.linear + base_velocity.angular.cross(target_pose_base.translation());
   target_velocity_base.angular = base_velocity.angular;
-  Twist target_velocity;
 
+  // Now we can transform that to the target frame
+  Twist target_velocity;
   target_velocity.linear = target_pose_base.rotation().transpose() * target_velocity_base.linear;
   target_velocity.angular = target_pose_base.rotation().transpose() * target_velocity_base.angular;
 
