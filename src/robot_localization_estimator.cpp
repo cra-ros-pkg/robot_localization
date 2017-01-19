@@ -201,7 +201,7 @@ void RobotLocalizationEstimator::extrapolate(const EstimatorState& boundary_stat
   filter_->predict(time_stamp, delta_duration);
 
   state_at_req_time.time_stamp = requested_time;
-  state_at_req_time.state = filter_->getPredictedState();
+  state_at_req_time.state = filter_->getState();
   state_at_req_time.covariance = filter_->getEstimateErrorCovariance();
 
   return;
