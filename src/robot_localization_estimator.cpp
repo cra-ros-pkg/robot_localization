@@ -34,13 +34,18 @@
 #include "robot_localization/ekf.h"
 #include "robot_localization/ukf.h"
 
+#include <vector>
+
 namespace RobotLocalization
 {
 RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity,
                                                        FilterType filter_type,
+                                                       const Eigen::MatrixXd& process_noise_covariance,
                                                        const std::vector<double>& filter_args)
 {
   state_buffer_.set_capacity(buffer_capacity);
+
+  // Set up the filter that is used for predictions
   if ( filter_type == FilterTypes::EKF )
   {
     filter_ = new Ekf;
@@ -49,6 +54,8 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capac
   {
     filter_ = new Ukf(filter_args);
   }
+
+  filter_->setProcessNoiseCovariance(process_noise_covariance);
 }
 
 RobotLocalizationEstimator::~RobotLocalizationEstimator()

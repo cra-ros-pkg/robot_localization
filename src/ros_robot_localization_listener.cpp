@@ -42,6 +42,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <eigen_conversions/eigen_msg.h>
 
+#include <XmlRpcException.h>
+
 namespace RobotLocalization
 {
 
@@ -78,14 +80,71 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(const std::string& ns
   FilterType filter_type = filterTypeFromString(filter_type_str);
   if ( filter_type == FilterTypes::NotDefined )
   {
-    ROS_FATAL("RosRobotLocalizationListener: Parameter filter_type invalid");
+    ROS_ERROR("RosRobotLocalizationListener: Parameter filter_type invalid");
     return;
+  }
+
+  // Load up the process noise covariance (from the launch file/parameter server)
+  // todo: this is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
+  Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
+  process_noise_covariance.setZero();
+  XmlRpc::XmlRpcValue process_noise_covar_config;
+
+  if (!nh_p_.hasParam("process_noise_covariance"))
+  {
+    ROS_FATAL_STREAM("Process noise covariance not found in the robot localization listener config (namespace " <<
+                     nh_p_.getNamespace() << ")!");
+  }
+  else
+  {
+    try
+    {
+      nh_p_.getParam("process_noise_covariance", process_noise_covar_config);
+
+      ROS_ASSERT(process_noise_covar_config.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+      int mat_size = process_noise_covariance.rows();
+
+      for (int i = 0; i < mat_size; i++)
+      {
+        for (int j = 0; j < mat_size; j++)
+        {
+          try
+          {
+            // These matrices can cause problems if all the types
+            // aren't specified with decimal points. Handle that
+            // using string streams.
+            std::ostringstream ostr;
+            process_noise_covar_config[mat_size * i + j].write(ostr);
+            std::istringstream istr(ostr.str());
+            istr >> process_noise_covariance(i, j);
+          }
+          catch(XmlRpc::XmlRpcException &e)
+          {
+            throw e;
+          }
+          catch(...)
+          {
+            throw;
+          }
+        }
+      }
+
+      ROS_DEBUG_STREAM("Process noise covariance is:\n" << process_noise_covariance << "\n");
+    }
+    catch (XmlRpc::XmlRpcException &e)
+    {
+      ROS_ERROR_STREAM("ERROR reading robot localization listener config: " <<
+                       e.getMessage() <<
+                       " for process_noise_covariance (type: " <<
+                       process_noise_covar_config.getType() << ")");
+    }
   }
 
   std::vector<double> filter_args;
   nh_p_.param("filter_args", filter_args, std::vector<double>());
 
-  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, filter_args);
+  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, process_noise_covariance, filter_args);
 
   sync_.registerCallback(&RosRobotLocalizationListener::odomAndAccelCallback, this);
 
