@@ -90,6 +90,7 @@ enum EstimatorResult
   ExtrapolationIntoFuture = 0,
   Interpolation,
   ExtrapolationIntoPast,
+  Exact,
   EmptyBuffer,
   Failed
 };
@@ -104,7 +105,7 @@ enum FilterType
   UKF,
   NotDefined
 };
-}  // namespace EstimatorResults
+}  // namespace FilterTypes
 typedef FilterTypes::FilterType FilterType;
 
 //! @brief Robot Localization Listener class

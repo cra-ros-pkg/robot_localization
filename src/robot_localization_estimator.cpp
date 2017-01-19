@@ -99,11 +99,16 @@ EstimatorResult RobotLocalizationEstimator::getState(const double time,
        it != state_buffer_.rend(); ++it)
   {
     /* If the time stamp of the current state from the buffer is
-       * older than the requested time, store it as the last state
-       * before the requested time. If it is younger, save it as the
-       * next one after, and go on to find the last one before.
-       */
-    if ( it->time_stamp <= time )
+     * older than the requested time, store it as the last state
+     * before the requested time. If it is younger, save it as the
+     * next one after, and go on to find the last one before.
+     */
+    if ( it->time_stamp == time )
+    {
+      state = *it;
+      return EstimatorResults::Exact;
+    }
+    else if ( it->time_stamp <= time )
     {
       last_state_before_time = *it;
       previous_state_found = true;
