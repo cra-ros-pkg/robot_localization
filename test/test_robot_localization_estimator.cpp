@@ -54,8 +54,10 @@ TEST(RLETest, StateBuffer)
 
   // Instantiate a robot localization estimator with a buffer capacity of 5
   unsigned int buffer_capacity = 5;
+  Eigen::MatrixXd process_noise_covariance = Eigen::MatrixXd::Identity(robot_localization::STATE_SIZE,
+                                                                       robot_localization::STATE_SIZE);
   robot_localization::RobotLocalizationEstimator estimator(buffer_capacity,
-    robot_localization::FilterTypes::EKF);
+    robot_localization::FilterTypes::EKF, process_noise_covariance);
 
   robot_localization::EstimatorState state;
 

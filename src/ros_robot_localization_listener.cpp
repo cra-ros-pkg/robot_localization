@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <exception>
 #include <functional>
 #include <string>
 #include <vector>
@@ -45,8 +46,6 @@
 #include <tf2/time.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
-#include "robot_localization/ros_robot_localization_listener.hpp"
 
 namespace robot_localization
 {
@@ -86,15 +85,68 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   FilterType filter_type = filterTypeFromString(filter_type_str);
   if ( filter_type == FilterTypes::NotDefined )
   {
-    RCLCPP_FATAL(node_logger_->get_logger(),
+    RCLCPP_ERROR(node_logger_->get_logger(),
       "RosRobotLocalizationListener: Parameter filter_type invalid");
     return;
+  }
+
+  // Load up the process noise covariance (from the launch file/parameter server)
+  // todo: this is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
+  Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
+  process_noise_covariance.setZero();
+  std::vector<double> process_noise_covar_config;
+
+  if (!node->has_parameter("process_noise_covariance"))
+  {
+    RCLCPP_FATAL(node_logger_->get_logger(),
+      "Process noise covariance not found in the robot localization listener config (namespace %s)!",
+      node->get_namespace());
+  }
+  else
+  {
+    try
+    {
+      node->get_parameter<std::vector<double>>("process_noise_covariance", process_noise_covar_config);
+      if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE)
+      {
+        RCLCPP_ERROR(node_logger_->get_logger(),
+          "ERROR unexpected process noise covariance matrix size (%d)",
+          process_noise_covar_config.size());
+      }
+
+      int mat_size = process_noise_covariance.rows();
+
+      for (int i = 0; i < mat_size; i++)
+      {
+        for (int j = 0; j < mat_size; j++)
+        {
+          // These matrices can cause problems if all the types
+          // aren't specified with decimal points. Handle that
+          // using string streams.
+          std::ostringstream ostr;
+          ostr << process_noise_covar_config[mat_size * i + j];
+          std::istringstream istr(ostr.str());
+          istr >> process_noise_covariance(i, j);
+        }
+      }
+
+      std::stringstream pnc_ss;
+      pnc_ss << process_noise_covariance;
+      RCLCPP_DEBUG(node_logger_->get_logger(),
+        "Process noise covariance is:\n%s\n", pnc_ss.str().c_str());
+    }
+    catch (std::exception& e)
+    {
+      RCLCPP_ERROR(node_logger_->get_logger(),
+        "ERROR reading robot localization listener config: %s"
+        " for process_noise_covariance", e.what());
+    }
   }
 
   std::vector<double> filter_args = node->declare_parameter<
     std::vector<double>>("~/filter_args", std::vector<double>());
 
-  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, filter_args);
+  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, process_noise_covariance, filter_args);
 
   sync_.registerCallback(std::bind(
     &RosRobotLocalizationListener::odomAndAccelCallback,

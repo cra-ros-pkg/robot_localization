@@ -125,7 +125,8 @@ public:
   //!
   explicit RobotLocalizationEstimator(unsigned int buffer_capacity,
                                       FilterType filter_type,
-                                      const std::vector<double>& filter_args=std::vector<double>());
+                                      const Eigen::MatrixXd& process_noise_covariance,
+                                      const std::vector<double>& filter_args = std::vector<double>());
 
   //! @brief Destructor for the RobotLocalizationListener class
   //!

@@ -34,15 +34,20 @@
 #include "robot_localization/robot_localization_estimator.hpp"
 #include "robot_localization/ukf.hpp"
 
+#include <vector>
+
 namespace robot_localization
 {
 // TODO: Port to ROS 2 Ukf where 3 separate parameters are accepted for alpha,
 // kappa, beta, not just a vector, for filter_args
 RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity,
                                                        FilterType filter_type,
+                                                       const Eigen::MatrixXd& process_noise_covariance,
                                                        const std::vector<double>& filter_args)
 {
   state_buffer_.set_capacity(buffer_capacity);
+
+  // Set up the filter that is used for predictions
   if ( filter_type == FilterTypes::EKF )
   {
     filter_ = new Ekf;
@@ -58,6 +63,8 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capac
       filter_ = new Ukf(filter_args[0], filter_args[1], filter_args[2]);
     }
   }
+
+  filter_->setProcessNoiseCovariance(process_noise_covariance);
 }
 
 RobotLocalizationEstimator::~RobotLocalizationEstimator()
