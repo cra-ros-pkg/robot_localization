@@ -44,11 +44,32 @@ TEST(RLETest, StateBuffer)
 
   for ( int i = 0; i < 10; i++ )
   {
+    /*
+     * t = i s;
+     * x = i m;
+     * vx = 1.0 m/s;
+     */
     RobotLocalization::EstimatorState state;
     state.time_stamp = i;
-    state.state(0) = i;
-    state.state(6) = 1.0;
-    state.state(12) = 0.0;
+    state.state(RobotLocalization::StateMemberX) = i;
+    state.state(RobotLocalization::StateMemberY) = 0;
+    state.state(RobotLocalization::StateMemberZ) = 0;
+
+    state.state(RobotLocalization::StateMemberRoll) = 0;
+    state.state(RobotLocalization::StateMemberPitch) = 0;
+    state.state(RobotLocalization::StateMemberYaw) = 0;
+
+    state.state(RobotLocalization::StateMemberVx) = 1;
+    state.state(RobotLocalization::StateMemberVy) = 0;
+    state.state(RobotLocalization::StateMemberVz) = 0;
+
+    state.state(RobotLocalization::StateMemberVroll) = 0;
+    state.state(RobotLocalization::StateMemberVpitch) = 0;
+    state.state(RobotLocalization::StateMemberVyaw) = 0;
+
+    state.state(RobotLocalization::StateMemberAx) = 0;
+    state.state(RobotLocalization::StateMemberAy) = 0;
+    state.state(RobotLocalization::StateMemberAz) = 0;
     states.push_back(state);
   }
 
@@ -71,61 +92,72 @@ TEST(RLETest, StateBuffer)
     EXPECT_EQ(state.time_stamp, states[i].time_stamp);
   }
 
+  // We filled the buffer with more states that it can hold, so its size should now be equal to the capacity
   EXPECT_EQ(estimator.getSize(), buffer_capacity);
 
-  // Clear the buffer
+  // Clear the buffer and check if it's really empty afterwards
   estimator.clearBuffer();
-
   EXPECT_EQ(estimator.getSize(), 0);
 
-  // Add states in non-chronological order
+  // Add states at time 1 through 3 inclusive to the buffer (buffer is not yet full)
   for ( int i = 1; i < 4; i++ )
   {
     estimator.setState(states[i]);
   }
 
-  // Add a state that came late, but there's space in the buffer
+  // Now add a state at time 0, but let's change it a bit (set StateMemberY=12) so that we can inspect if it is
+  // correctly added to the buffer.
   RobotLocalization::EstimatorState state_2 = states[0];
-
-  // The predicted state would have StateMemberY 0, so let's set it to another
-  // value, so that we can check that we actually added this state to the buffer.
   state_2.state(RobotLocalization::StateMemberY) = 12;
   estimator.setState(state_2);
-  estimator.getState(states[0].time_stamp, state);
+  EXPECT_EQ(RobotLocalization::EstimatorResults::Exact,
+            estimator.getState(states[0].time_stamp, state));
 
   // Check if the state is correctly added
   EXPECT_EQ(state.state, state_2.state);
 
-  // Add some more states. State at t=0 should now be dropped
+  // Add some more states. State at t=0 should now be dropped, so we should get the prediction, which means y=0
   for ( int i = 5; i < 8; i++ )
   {
     estimator.setState(states[i]);
   }
+  EXPECT_EQ(RobotLocalization::EstimatorResults::ExtrapolationIntoPast,
+            estimator.getState(states[0].time_stamp, state));
+  EXPECT_EQ(states[0].state, state.state);
 
-  // Estimate a state that is not in the buffer, but can be determined from other
-  // states. The predicted state vector should be equal to the designed state at
-  // t=4.
-  estimator.getState(states[4].time_stamp, state);
-  EXPECT_EQ(state.state, states[4].state);
+  // Estimate a state that is not in the buffer, but can be determined by interpolation. The predicted state vector
+  // should be equal to the designed state at the requested time.
+  EXPECT_EQ(RobotLocalization::EstimatorResults::Interpolation,
+            estimator.getState(states[4].time_stamp, state));
+  EXPECT_EQ(states[4].state, state.state);
 
-  // Add state somewhere in the middle
+  // Estimate a state that is not in the buffer, but can be determined by extrapolation into the future. The predicted
+  // state vector should be equal to the designed state at the requested time.
+  EXPECT_EQ(RobotLocalization::EstimatorResults::ExtrapolationIntoFuture,
+            estimator.getState(states[8].time_stamp, state));
+  EXPECT_EQ(states[8].state, state.state);
+
+  // Add missing state somewhere in the middle
   estimator.setState(states[4]);
 
-  // Overwrite state at t=3 (oldest state now in the buffer)
-  estimator.getState(states[3].time_stamp, state);
-  state.state(RobotLocalization::StateMemberVy) = -1.0;
-  estimator.setState(state);
+  // Overwrite state at t=3 (oldest state now in the buffer) and check if it's correctly overwritten.
+  state_2 = states[3];
+  state_2.state(RobotLocalization::StateMemberVy) = -1.0;
+  estimator.setState(state_2);
+  EXPECT_EQ(RobotLocalization::EstimatorResults::Exact,
+            estimator.getState(states[3].time_stamp, state));
+  EXPECT_EQ(state_2.state, state.state);
 
   // Add state that came too late
   estimator.setState(states[0]);
 
-  // Check if getState needed to do extrapolation into the past (return value: -2)
+  // Check if getState needed to do extrapolation into the past
   EXPECT_EQ(estimator.getState(states[0].time_stamp, state),
       RobotLocalization::EstimatorResults::ExtrapolationIntoPast);
 
   // Check state at t=0. This can only work correctly if the state at t=3 is
   // overwritten and the state at zero is not in the buffer.
-  EXPECT_DOUBLE_EQ(state.state(RobotLocalization::StateMemberY), 3.0);
+  EXPECT_DOUBLE_EQ(3.0, state.state(RobotLocalization::StateMemberY));
 }
 
 int main(int argc, char **argv)
