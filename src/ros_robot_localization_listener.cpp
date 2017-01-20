@@ -85,21 +85,25 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(const std::string& ns
   }
 
   // Load up the process noise covariance (from the launch file/parameter server)
-  // todo: this is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
+  // todo: this code is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
   Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
   process_noise_covariance.setZero();
   XmlRpc::XmlRpcValue process_noise_covar_config;
 
-  if (!nh_p_.hasParam("process_noise_covariance"))
+  // Get the process noise from the parameter in the namespace of the filter node we're listening to.
+  std::string process_noise_param_namespace = odom_sub_.getTopic().substr(0, odom_sub_.getTopic().find_last_of('/'));
+  std::string process_noise_param = process_noise_param_namespace + "/process_noise_covariance";
+
+  if (!nh_.hasParam(process_noise_param))
   {
-    ROS_FATAL_STREAM("Process noise covariance not found in the robot localization listener config (namespace " <<
-                     nh_p_.getNamespace() << ")!");
+    ROS_ERROR_STREAM("Process noise covariance not found in the robot localization listener config (namespace " <<
+                     process_noise_param_namespace << ")!");
   }
   else
   {
     try
     {
-      nh_p_.getParam("process_noise_covariance", process_noise_covar_config);
+      nh_p_.getParam(process_noise_param, process_noise_covar_config);
 
       ROS_ASSERT(process_noise_covar_config.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
