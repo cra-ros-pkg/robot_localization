@@ -91,22 +91,26 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   }
 
   // Load up the process noise covariance (from the launch file/parameter server)
-  // todo: this is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
+  // todo: this code is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
   Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
   process_noise_covariance.setZero();
   std::vector<double> process_noise_covar_config;
 
-  if (!node->has_parameter("process_noise_covariance"))
+  // Get the process noise from the parameter in the namespace of the filter node we're listening to.
+  std::string process_noise_param_namespace = odom_sub_.getTopic().substr(0, odom_sub_.getTopic().find_last_of('/'));
+  std::string process_noise_param = process_noise_param_namespace + "/process_noise_covariance";
+
+  if (!node->has_parameter(process_noise_param))
   {
-    RCLCPP_FATAL(node_logger_->get_logger(),
+    RCLCPP_ERROR(node_logger_->get_logger(),
       "Process noise covariance not found in the robot localization listener config (namespace %s)!",
-      node->get_namespace());
+      process_noise_param_namespace.c_str());
   }
   else
   {
     try
     {
-      node->get_parameter<std::vector<double>>("process_noise_covariance", process_noise_covar_config);
+      node->get_parameter<std::vector<double>>(process_noise_param, process_noise_covar_config);
       if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE)
       {
         RCLCPP_ERROR(node_logger_->get_logger(),
