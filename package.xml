@@ -33,8 +33,10 @@
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
+  <build_depend>nodelet</build_depend>
   
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>nodelet</exec_depend>
 
   <test_depend>rosbag</test_depend>
   <test_depend>rostest</test_depend>
@@ -42,6 +44,7 @@
 
   <export>
     <rosdoc config="rosdoc.yaml" />
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>
 
 </package>

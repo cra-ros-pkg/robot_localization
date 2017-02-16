@@ -46,7 +46,7 @@
 namespace RobotLocalization
 {
   template<typename T>
-  RosFilter<T>::RosFilter(std::vector<double> args) :
+  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
       staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       tfListener_(tfBuffer_),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
@@ -57,7 +57,8 @@ namespace RobotLocalization
       latestControl_(),
       latestControlTime_(0),
       tfTimeout_(ros::Duration(0)),
-      nhLocal_("~"),
+      nh_(nh),
+      nhLocal_(nh_priv),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
       publishTransform_(true),

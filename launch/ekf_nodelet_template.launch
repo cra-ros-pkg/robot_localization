@@ -1,0 +1,38 @@
+<!--
+     This launch file provides an example of how to use ekf as nodelet or as node in one launch file.
+     By providing arguments like "use_nodelets this launch file will start a nodelet instead of a node.
+     This is very usefull in experimental setup to allow easy switch between nodelets and node.
+     Also it allows you to specify the manager the nodelet should run in.
+-->
+
+<launch>
+  <arg name="use_nodelets"    default="${optenv USE_NODELETS false)" />
+  <arg name="nodelet_manager" default="$optenv robot_localization_NODELET_MANAGER robot_localization_nodelet_manager)" />
+
+
+   <!--  Placeholder for output topic remapping
+    <remap from="odometry/filtered" to=""/>
+    <remap from="accel/filtered" to=""/>
+    -->
+
+
+  <node unless="$(arg use_nodelets)"
+        pkg="robot_localization"
+        name="ekf_se"
+        type="ekf_localization_node"
+        clear_params="true"
+        output="screen"
+    >
+    <rosparam command="load" file="$(find robot_localization)/params/ekf_template.yaml" />
+  </node>
+
+  <node if="$(arg use_nodelets)"
+    pkg="nodelet"
+    type="nodelet"
+    name="ekf_se"
+    output="screen"
+    args="load RobotLocalization/EkfNodelet $(arg nodelet_manager)"
+   >
+    <rosparam command="load" file="$(find robot_localization)/params/ekf_template.yaml" />
+  </node>
+</launch>

@@ -58,7 +58,7 @@ class NavSatTransform
   public:
     //! @brief Constructor
     //!
-    NavSatTransform();
+    NavSatTransform(ros::NodeHandle nh, ros::NodeHandle nh_priv);
 
     //! @brief Destructor
     //!

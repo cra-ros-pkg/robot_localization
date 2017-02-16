@@ -43,7 +43,7 @@
 
 namespace RobotLocalization
 {
-  NavSatTransform::NavSatTransform() :
+  NavSatTransform::NavSatTransform(ros::NodeHandle nh, ros::NodeHandle nh_priv) :
     magnetic_declination_(0.0),
     utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
@@ -74,9 +74,6 @@ namespace RobotLocalization
     double frequency;
     double delay = 0.0;
     double transform_timeout = 0.0;
-
-    ros::NodeHandle nh;
-    ros::NodeHandle nh_priv("~");
 
     // Load the parameters we need
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
