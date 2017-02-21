@@ -67,7 +67,7 @@ IMU Data
 
 Users should make sure their IMUs conform to `REP-105 <http://www.ros.org/reps/rep-0105.html>`_. In particular, check that the signs of your orientation angles increase in the right direction. In addition, users should look up the `magnetic declination <http://www.ngdc.noaa.gov/geomag-web/#declination>`_ for their robot's operating area, convert it to radians, and then use that value for the ``magnetic_declination_radians`` parameter.
 
-This information is only relevant if the user is not manually specifying the origin via the ``datum`` parameter or the ``set_datum`` service.
+This information is only relevant if the user is not manually specifying the origin via the ``datum`` parameter or the ``set_datum`` service. Note that a ``datum`` is required in order for the ``navsat_transform_node`` to work. This datum will 'null' the GPS sensor by storing the initial pose (latitude, longitude and heading) and using this initial pose for each newly incoming GPS message, of which this initial pose is subtracted in order to create a ``nav_msgs/Odometry``. From this IMU message, only the heading is used; this heading could also be derived from a GPS sensor that outputs a UTM velocity vector, such as the nmea driver in the `nmea_navsat_driver <http://wiki.ros.org/nmea_navsat_driver>`_ package. The published ``TwistStamped`` on the ``fix_velocity`` topic could be used to derive the initial heading by taking the ``atan2`` of the two vector components, if the magnitude of the vector is large enough. This way, no additional IMU is required in order to obtain the initial heading to set the datum of our ``navsat_transform_node``.
 
 Odometry Data
 ^^^^^^^^^^^^^
