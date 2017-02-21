@@ -60,8 +60,6 @@ The excellent `nmea_navsat_driver <http://wiki.ros.org/nmea_navsat_driver>`_ pac
     <param name="baud" value="19200"/>
   </node>
 
-This information is only relevant if the user is not manually specifying the origin via the ``datum`` parameter or the ``set_datum`` service.
-
 IMU Data
 ^^^^^^^^
 
