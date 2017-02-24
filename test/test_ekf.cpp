@@ -64,12 +64,14 @@ TEST(EkfTest, Measurements)
   ekf.getFilter().setEstimateErrorCovariance(initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
+  measurement.setIdentity();
   for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurement[i] = i * 0.01 * STATE_SIZE;
   }
 
   Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
+  measurementCovariance.setIdentity();
   for (size_t i = 0; i < STATE_SIZE; ++i)
   {
     measurementCovariance(i, i) = 1e-9;

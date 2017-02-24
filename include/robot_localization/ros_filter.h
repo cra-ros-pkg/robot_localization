@@ -47,6 +47,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/AccelWithCovarianceStamped.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/message_filter.h>
@@ -169,6 +170,12 @@ template<class T> class RosFilter
     //! @return true if the filter is initialized, false otherwise
     //!
     bool getFilteredOdometryMessage(nav_msgs::Odometry &message);
+
+    //! @brief Retrieves the EKF's acceleration output for broadcasting
+    //! @param[out] message - The standard ROS acceleration message to be filled
+    //! @return true if the filter is initialized, false otherwise
+    //!
+    bool getFilteredAccelMessage(geometry_msgs::AccelWithCovarianceStamped &message);
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
@@ -575,6 +582,10 @@ template<class T> class RosFilter
     //! @brief Whether we publish the transform from the world_frame to the base_link_frame
     //!
     bool publishTransform_;
+
+    //! @brief Whether we publish the acceleration
+    //!
+    bool publishAcceleration_;
 
     //! @brief An implicitly time ordered queue of past filter states used for smoothing.
     //
