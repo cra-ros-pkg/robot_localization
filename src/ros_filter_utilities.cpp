@@ -146,6 +146,15 @@ namespace RosFilterUtilities
     return retVal;
   }
 
+  bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
+                           const std::string &targetFrame,
+                           const std::string &sourceFrame,
+                           const ros::Time &time,
+                           tf2::Transform &targetFrameTrans)
+  {
+    return lookupTransformSafe(buffer, targetFrame, sourceFrame, time, ros::Duration(0), targetFrameTrans);
+  }
+
   void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
   {
     tf2::Matrix3x3 orTmp(quat);
