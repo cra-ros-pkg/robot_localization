@@ -75,6 +75,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   node_clock_(node->get_node_clock_interface()->get_clock()),
   node_logger_(node->get_node_logging_interface()),
   base_frame_id_(""),
+  world_frame_id_(""),
   tf_buffer_(node_clock_),
   tf_listener_(tf_buffer_)
 {
@@ -179,6 +180,10 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   if ( base_frame_id_.empty() )
     base_frame_id_ = odom->child_frame_id;
 
+  // Get the world frame id from the odom message
+  if ( world_frame_id_.empty() )
+    world_frame_id_ = odom->header.frame_id;
+
   // Pose: Position
   state.state(StateMemberX) = odom->pose.pose.position.x;
   state.state(StateMemberY) = odom->pose.pose.position.y;
@@ -247,7 +252,8 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
 bool RosRobotLocalizationListener::getState(const double time,
                                             const std::string& frame_id,
                                             Eigen::VectorXd& state,
-                                            Eigen::MatrixXd& covariance)
+                                            Eigen::MatrixXd& covariance,
+                                            std::string world_frame_id)
 {
   EstimatorState estimator_state;
   state.resize(STATE_SIZE);
@@ -255,18 +261,19 @@ bool RosRobotLocalizationListener::getState(const double time,
   covariance.resize(STATE_SIZE, STATE_SIZE);
   covariance.setZero();
 
-  if ( base_frame_id_.empty() )
+  if ( base_frame_id_.empty() || world_frame_id_.empty()  )
   {
     if ( estimator_->getSize() == 0 )
     {
       RCLCPP_WARN(node_logger_->get_logger(),
-        "Ros Robot Localization Listener: The base frame id is not set. No odom/accel messages have come in.");
+        "Ros Robot Localization Listener: The base or world frame id is not set. "
+        "No odom/accel messages have come in.");
     }
     else
     {
       RCLCPP_ERROR(node_logger_->get_logger(),
-        "Ros Robot Localization Listener: The base frame id is not set. Is the child_frame_id in the odom "
-        "messages set?");
+        "Ros Robot Localization Listener: The base or world frame id is not set. "
+        "Are the child_frame_id and the header.frame_id in the odom messages set?");
     }
 
     return false;
@@ -280,12 +287,50 @@ bool RosRobotLocalizationListener::getState(const double time,
       "size?");
   }
 
-  if ( frame_id == base_frame_id_ )
+  // If no world_frame_id is specified, we will default to the world frame_id of the received odometry message
+  if (world_frame_id.empty())
   {
-    // If the state of the base frame is requested, we can simply return the state we got from the state estimator
+    world_frame_id = world_frame_id_;
+  }
+
+  if ( frame_id == base_frame_id_ && world_frame_id == world_frame_id_ )
+  {
+    // If the state of the base frame is requested and the world frame equals the world frame of the robot_localization
+    // estimator, we can simply return the state we got from the state estimator
     state = estimator_state.state;
     covariance = estimator_state.covariance;
     return true;
+  }
+
+  // - - - - - - - - - - - - - - - - - -
+  // Get the transformation between the requested world frame and the world_frame of the estimator
+  // - - - - - - - - - - - - - - - - - -
+  Eigen::Affine3d world_pose_requested_frame;
+
+  // If the requested frame is the same as the tracker, set to identity
+  if (world_frame_id == world_frame_id_)
+  {
+    world_pose_requested_frame.setIdentity();
+  }
+  else
+  {
+    geometry_msgs::msg::TransformStamped world_requested_to_world_transform;
+    try
+    {
+      world_requested_to_world_transform = tf_buffer_.lookupTransform(world_frame_id,
+                                                                      world_frame_id_,
+                                                                      tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
+                                                                      tf2::durationFromSec(0.1));  // TODO: magic number
+    }
+    catch ( tf2::LookupException e )
+    {
+      RCLCPP_WARN(node_logger_->get_logger(),
+        "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
+      return false;
+    }
+
+    // Convert to pose
+    world_pose_requested_frame = tf2::transformToEigen(world_requested_to_world_transform);
   }
 
   // - - - - - - - - - - - - - - - - - -
@@ -325,7 +370,7 @@ bool RosRobotLocalizationListener::getState(const double time,
   Eigen::Affine3d base_pose(Eigen::Translation3d(base_position) * base_orientation);
 
   // Now we can calculate the transform from odom to the requested frame (target)...
-  Eigen::Affine3d target_pose_odom = base_pose * target_pose_base;
+  Eigen::Affine3d target_pose_odom = world_pose_requested_frame * base_pose * target_pose_base;
 
   // ... and put it in the output state
   state(StateMemberX) = target_pose_odom.translation().x();
@@ -371,14 +416,23 @@ bool RosRobotLocalizationListener::getState(const double time,
   state(StateMemberVpitch) = target_velocity.angular(1);
   state(StateMemberVyaw) = target_velocity.angular(2);
 
-  // TODO: transform covariance
-  covariance = estimator_state.covariance;
+  // Rotate the covariance as well
+  Eigen::MatrixXd rot_6d(POSE_SIZE, POSE_SIZE);
+  rot_6d.setIdentity();
+
+  rot_6d.block<POSITION_SIZE, POSITION_SIZE>(POSITION_OFFSET, POSITION_OFFSET) = target_pose_base.rotation();
+  rot_6d.block<ORIENTATION_SIZE, ORIENTATION_SIZE>(ORIENTATION_OFFSET, ORIENTATION_OFFSET) = target_pose_base.rotation();
+
+  // Rotate the covariance
+  covariance.block<POSE_SIZE, POSE_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
+      rot_6d * estimator_state.covariance.eval() * rot_6d.transpose();
 
   return true;
 }
 
 bool RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, const std::string& frame_id,
-                                            Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
+                                            Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
+                                            const std::string& world_frame_id)
 {
   double time;
   if (rclcpp_time.nanoseconds() == 0)
@@ -392,7 +446,7 @@ bool RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, con
     time = rclcpp_time.nanoseconds() / 1000000000;
   }
 
-  return getState(time, frame_id, state, covariance);
+  return getState(time, frame_id, state, covariance, world_frame_id);
 }
 }  // namespace RobotLocalization
 
