@@ -136,6 +136,10 @@ class NavSatTransform
     //!
     bool broadcast_utm_transform_;
 
+    //! @brief Whether to broadcast the UTM transform as parent frame, default as child
+    //!
+    bool broadcast_utm_transform_as_parent_frame_;
+
     //! @brief The frame_id of the GPS message (specifies mounting location)
     //!
     std::string gps_frame_id_;
@@ -271,6 +275,7 @@ class NavSatTransform
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
     //!
     bool zero_altitude_;
+
 };
 
 }  // namespace RobotLocalization
