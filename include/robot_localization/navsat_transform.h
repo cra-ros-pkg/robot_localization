@@ -275,7 +275,6 @@ class NavSatTransform
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
     //!
     bool zero_altitude_;
-
 };
 
 }  // namespace RobotLocalization
