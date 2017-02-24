@@ -85,7 +85,8 @@ public:
   //! @return false if buffer is empty, true otherwise
   //!
   bool getState(const double time, const std::string& frame_id,
-                Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+                Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
+                std::string world_frame_id = "");
 
   //! @brief Get a state from the localization estimator
   //!
@@ -99,7 +100,8 @@ public:
   //! @return false if buffer is empty, true otherwise
   //!
   bool getState(const ros::Time& ros_time, const std::string& frame_id,
-                Eigen::VectorXd& state, Eigen::MatrixXd& covariance);
+                Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
+                const std::string& world_frame_id = "");
 
 private:
   //! @brief Callback for odom and accel
@@ -137,9 +139,13 @@ private:
   //!
   message_filters::TimeSynchronizer<nav_msgs::Odometry, geometry_msgs::AccelWithCovarianceStamped> sync_;
 
-  //! @brief Waits for both an Odometry and an Accel message before calling a single callback function
+  //! @brief Child frame id received from the Odometry message
   //!
   std::string base_frame_id_;
+
+  //! @brief Frame id received from the odometry message
+  //!
+  std::string world_frame_id_;
 
   //! @brief Tf buffer for looking up transforms
   //!
