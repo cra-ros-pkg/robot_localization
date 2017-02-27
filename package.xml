@@ -29,6 +29,7 @@
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>yaml-cpp</depend>
   
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
