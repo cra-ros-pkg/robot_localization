@@ -120,7 +120,7 @@ target_link_libraries(ukf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(robot_localization_estimator filter_utilities filter_base ekf ukf ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_robot_localization_listener robot_localization_estimator ros_filter_utilities
-  ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+  ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES} yaml-cpp)
 target_link_libraries(robot_localization_listener_node ros_robot_localization_listener ${catkin_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
