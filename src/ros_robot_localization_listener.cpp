@@ -46,6 +46,7 @@
 #include <tf2/time.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <yaml-cpp/yaml.h>
 
 namespace robot_localization
 {
@@ -249,6 +250,23 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   return;
 }
 
+bool findInParentsRecursive(YAML::Node tree, std::string source_frame, std::string target_frame)
+{
+  if ( source_frame == target_frame )
+  {
+    return true;
+  }
+
+  std::string parent_frame = tree[source_frame]["parent"].Scalar();
+
+  if ( parent_frame == "" )
+  {
+    return false;
+  }
+
+  return findInParentsRecursive(tree, parent_frame, target_frame);
+}
+
 bool RosRobotLocalizationListener::getState(const double time,
                                             const std::string& frame_id,
                                             Eigen::VectorXd& state,
@@ -321,6 +339,17 @@ bool RosRobotLocalizationListener::getState(const double time,
                                                                       world_frame_id_,
                                                                       tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
                                                                       tf2::durationFromSec(0.1));  // TODO: magic number
+
+      std::stringstream frames_stream(tf_buffer_.allFramesAsYAML());
+      YAML::Node frames_yaml = YAML::Load(frames_stream);
+			if ( findInParentsRecursive(frames_yaml, world_frame_id, base_frame_id_) )
+      {
+        RCLCPP_ERROR(node_logger_->get_logger(),
+          "You are trying to get the state with respect to world frame %s"
+          ", but this frame is a child of robot base frame %s"
+          ", so this doesn't make sense.", world_frame_id.c_str(), base_frame_id_.c_str());
+        return false;
+      }
     }
     catch ( tf2::LookupException e )
     {
@@ -345,6 +374,18 @@ bool RosRobotLocalizationListener::getState(const double time,
                                                           frame_id,
                                                           tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
                                                           tf2::durationFromSec(0.1)); // TODO: magic number
+
+    // Check that frame_id is a child of the base frame. If it is not, it does not make sense to request its state.
+    // Do this after tf lookup, so we know that there is a connection.
+    std::stringstream frames_stream(tf_buffer_.allFramesAsYAML());
+    YAML::Node frames_yaml = YAML::Load(frames_stream);
+    if ( !findInParentsRecursive(frames_yaml, frame_id, base_frame_id_) )
+    {
+      RCLCPP_ERROR(node_logger_->get_logger(),
+        "You are trying to get the state of , but this frame is not a child of the "
+        "base frame: .", frame_id.c_str(), base_frame_id_.c_str());
+      return false;
+    }
   }
   catch ( tf2::LookupException e )
   {

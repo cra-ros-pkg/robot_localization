@@ -78,6 +78,7 @@ add_executable(
 target_link_libraries(
   ${library_name}
   ${EIGEN3_LIBRARIES}
+  yaml-cpp
 )
 
 ament_target_dependencies(
