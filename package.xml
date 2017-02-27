@@ -31,11 +31,12 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>xmlrpcpp</depend>
+  <depend>yaml-cpp</depend>
 
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
-  
+
   <exec_depend>message_runtime</exec_depend>
 
   <test_depend>rosbag</test_depend>
