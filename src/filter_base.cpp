@@ -33,10 +33,11 @@
 #include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
 
-#include <sstream>
 #include <iomanip>
-#include <limits>
 #include <iostream>
+#include <limits>
+#include <sstream>
+#include <vector>
 
 namespace RobotLocalization
 {
@@ -368,15 +369,15 @@ namespace RobotLocalization
     {
       bool timedOut = ::fabs(referenceTime - latestControlTime_) >= controlTimeout_;
 
-      if(timedOut)
+      if (timedOut)
       {
         FB_DEBUG("Control timed out. Reference time was " << referenceTime << ", latest control time was " <<
           latestControlTime_ << ", control timeout was " << controlTimeout_ << "\n");
       }
 
-      for(size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
+      for (size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
       {
-        if(controlUpdateVector_[controlInd])
+        if (controlUpdateVector_[controlInd])
         {
           controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
             (timedOut ? 0.0 : latestControl_(controlInd)), accelerationLimits_[controlInd],

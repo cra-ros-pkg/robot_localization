@@ -37,6 +37,7 @@
 #include <ros/console.h>
 
 #include <string>
+#include <vector>
 
 std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec)
 {
@@ -68,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec)
 {
   os << "(" << std::setprecision(20);
 
-  for(size_t i = 0; i < vec.size(); ++i)
+  for (size_t i = 0; i < vec.size(); ++i)
   {
     os << vec[i] << " ";
   }

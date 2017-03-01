@@ -180,7 +180,7 @@ namespace RobotLocalization
         }
       }
     }
-    
+
     // (2) Check Mahalanobis distance between mapped measurement and state.
     if (checkMahalanobisThreshold(innovationSubset, hphrInv, measurement.mahalanobisThresh_))
     {
