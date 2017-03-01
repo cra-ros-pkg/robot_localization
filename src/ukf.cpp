@@ -261,7 +261,6 @@ namespace RobotLocalization
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
-
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
       // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
