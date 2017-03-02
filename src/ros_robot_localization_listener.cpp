@@ -245,7 +245,7 @@ void RosRobotLocalizationListener::odomAndAccelCallback(const nav_msgs::Odometry
   return;
 }
 
-bool findInParentsRecursive(YAML::Node tree, std::string source_frame, std::string target_frame)
+bool findAncestorRecursiveYAML(YAML::Node& tree, const std::string& source_frame, const std::string& target_frame)
 {
   if ( source_frame == target_frame )
   {
@@ -254,12 +254,19 @@ bool findInParentsRecursive(YAML::Node tree, std::string source_frame, std::stri
 
   std::string parent_frame = tree[source_frame]["parent"].Scalar();
 
-  if ( parent_frame == "" )
+  if ( parent_frame.empty() )
   {
     return false;
   }
 
-  return findInParentsRecursive(tree, parent_frame, target_frame);
+  return findAncestorRecursiveYAML(tree, parent_frame, target_frame);
+}
+
+bool findAncestor(const tf2_ros::Buffer& buffer, const std::string& source_frame, const std::string& target_frame)
+{
+  std::stringstream frames_stream(buffer.allFramesAsYAML());
+  YAML::Node frames_yaml = YAML::Load(frames_stream);
+  return findAncestorRecursiveYAML(frames_yaml, source_frame, target_frame);
 }
 
 bool RosRobotLocalizationListener::getState(const double time,
@@ -332,9 +339,7 @@ bool RosRobotLocalizationListener::getState(const double time,
                                                                       ros::Time(time),
                                                                       ros::Duration(0.1));  // TODO: magic number
 
-      std::stringstream frames_stream(tf_buffer_.allFramesAsYAML());
-      YAML::Node frames_yaml = YAML::Load(frames_stream);
-      if ( findInParentsRecursive(frames_yaml, world_frame_id, base_frame_id_) )
+      if ( findAncestor(tf_buffer_, world_frame_id, base_frame_id_) )
       {
         ROS_ERROR_STREAM("You are trying to get the state with respect to world frame " << world_frame_id <<
                          ", but this frame is a child of robot base frame " << base_frame_id_ <<
@@ -367,9 +372,7 @@ bool RosRobotLocalizationListener::getState(const double time,
 
     // Check that frame_id is a child of the base frame. If it is not, it does not make sense to request its state.
     // Do this after tf lookup, so we know that there is a connection.
-    std::stringstream frames_stream(tf_buffer_.allFramesAsYAML());
-    YAML::Node frames_yaml = YAML::Load(frames_stream);
-    if ( !findInParentsRecursive(frames_yaml, frame_id, base_frame_id_) )
+    if ( ! findAncestor(tf_buffer_, frame_id, base_frame_id_) )
     {
       ROS_ERROR_STREAM("You are trying to get the state of " << frame_id << ", but this frame is not a child of the "
                                                                             "base frame: " << base_frame_id_ << ".");
