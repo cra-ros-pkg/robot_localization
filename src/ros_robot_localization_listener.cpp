@@ -407,7 +407,7 @@ bool RosRobotLocalizationListener::getState(const double time,
         return false;
       }
     }
-    catch ( tf2::LookupException e )
+    catch ( tf2::TransformException e )
     {
       RCLCPP_WARN(node_logger_->get_logger(),
         "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
@@ -441,7 +441,7 @@ bool RosRobotLocalizationListener::getState(const double time,
       return false;
     }
   }
-  catch ( tf2::LookupException e )
+  catch ( tf2::TransformException e )
   {
     RCLCPP_WARN(node_logger_->get_logger(),
       "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
