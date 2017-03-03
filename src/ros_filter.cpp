@@ -59,6 +59,7 @@ namespace RobotLocalization
       latestControlTime_(0),
       nhLocal_("~"),
       printDiagnostics_(true),
+      gravitationalAcc_(9.80665),
       publishTransform_(true),
       publishAcceleration_(false),
       twoDMode_(false),
@@ -598,6 +599,9 @@ namespace RobotLocalization
 
     // Determine if we'll be printing diagnostic information
     nhLocal_.param("print_diagnostics", printDiagnostics_, true);
+
+    // Check for custom gravitational acceleration value
+    nhLocal_.param("gravitational_acceleration", gravitationalAcc_, 9.80665);
 
     // Grab the debug param. If true, the node will produce a LOT of output.
     bool debug;
@@ -2204,7 +2208,7 @@ namespace RobotLocalization
       // of normal forces, so we use a parameter
       if (removeGravitationalAcc_[topicName])
       {
-        tf2::Vector3 normAcc(0, 0, 9.80665);
+        tf2::Vector3 normAcc(0, 0, gravitationalAcc_);
         tf2::Quaternion curAttitude;
         tf2::Transform trans;
 
