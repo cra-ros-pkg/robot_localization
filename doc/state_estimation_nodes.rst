@@ -144,6 +144,10 @@ If fusing accelerometer data from IMUs, this parameter determines whether or not
 
 .. note:: This assumes that the IMU that is providing the acceleration data is also producing an absolute orientation. The orientation data is required to correctly remove gravitational acceleration.
 
+~gravitational_acceleration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If ``imuN_remove_gravitational_acceleration`` is set to ``true``, then this parameter determines the acceleration in Z due to gravity that will be removed from the IMU's linear acceleration data. Default is 9.80665 (m/s^2).
+
 ~publish_tf
 ^^^^^^^^^^^
 If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to the frame specified by the ``base_link_frame`` parameter. Defaults to *true*.
