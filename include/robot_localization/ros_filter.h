@@ -517,6 +517,10 @@ template<class T> class RosFilter
     //!
     std::map<std::string, bool> removeGravitationalAcc_;
 
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitationalAcc_;
+
     //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
     //! type is geometry_msgs/PoseWithCovarianceStamped.
     //!
