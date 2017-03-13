@@ -33,7 +33,7 @@
 #include "robot_localization/ekf.h"
 #include "robot_localization/filter_common.h"
 
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <iomanip>
 #include <limits>
