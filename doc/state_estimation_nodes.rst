@@ -65,7 +65,7 @@ Some packages require that your transforms are future-dated by a small time offs
 
 ~transform_timeout
 ^^^^^^^^^^^^^^^^^^
-The ``robot_localization`` package uses ``tf2``'s ``lookupTransform`` method to request transformation. This parameter specifies how long we would like to wait if a transformation is not available yet. Defaults to 0 if not set.
+The ``robot_localization`` package uses ``tf2``'s ``lookupTransform`` method to request transformations. This parameter specifies how long we would like to wait if a transformation is not available yet. Defaults to 0 if not set. The value 0 means we just get us the latest available (see ``tf2`` implementation) transform so we are not blocking the filter. Specifying a non-zero `transform_timeout` affects the filter's timing since it waits for a maximum of the `transform_timeout` for a transform to become available. This directly implies that mostly the specified desired output rate is not met since the filter has to wait for transforms when updating.
 
 ~[sensor]
 ^^^^^^^^^
