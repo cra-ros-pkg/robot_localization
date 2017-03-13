@@ -37,8 +37,7 @@
 #include "robot_localization/ros_filter_utilities.h"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <string>
 
