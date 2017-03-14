@@ -48,6 +48,15 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <yaml-cpp/yaml.h>
 
+#define THROTTLE(clock, duration, thing) do { \
+  static rclcpp::Time _last_output_time##__LINE__(0, 0, (clock)->get_clock_type()); \
+  auto _now = (clock)->now();                                           \
+  if (_now - _last_output_time##__LINE__ > (duration)) {                          \
+    _last_output_time##__LINE__ = _now; \
+    thing; \
+  } \
+} while(0)
+
 namespace robot_localization
 {
 FilterType filterTypeFromString(const std::string& filter_type_str)
@@ -80,10 +89,14 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   tf_buffer_(node_clock_),
   tf_listener_(tf_buffer_)
 {
-  int buffer_size = node->declare_parameter<int>("~/buffer_size", 10);
+  int buffer_size = node->declare_parameter<int>("buffer_size", 10);
+
+  std::string param_ns = node->declare_parameter<std::string>(
+    "parameter_namespace", std::string(node->get_namespace()));
 
   std::string filter_type_str = node->declare_parameter<std::string>(
-    "~/filter_type", std::string("ekf"));
+    "filter_type", std::string("ekf"));
+
   FilterType filter_type = filterTypeFromString(filter_type_str);
   if ( filter_type == FilterTypes::NotDefined )
   {
@@ -98,6 +111,10 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   process_noise_covariance.setZero();
   std::vector<double> process_noise_covar_config;
 
+  // Get the process noise from the parameter in the namespace of the filter node we're listening to.
+  std::string process_noise_param_namespace = odom_sub_.getTopic().substr(0, odom_sub_.getTopic().find_last_of('/'));
+  std::string process_noise_param = process_noise_param_namespace + "/process_noise_covariance";
+
   if (!node->has_parameter("process_noise_covariance"))
   {
     RCLCPP_FATAL(node_logger_->get_logger(),
@@ -109,7 +126,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   {
     try
     {
-      node->get_parameter<std::vector<double>>("process_noise_covariance", process_noise_covar_config);
+      node->get_parameter<std::vector<double>>(process_noise_param, process_noise_covar_config);
       if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE)
       {
         RCLCPP_ERROR(node_logger_->get_logger(),
@@ -147,7 +164,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   }
 
   std::vector<double> filter_args = node->declare_parameter<
-    std::vector<double>>("~/filter_args", std::vector<double>());
+    std::vector<double>>("filter_args", std::vector<double>());
 
   estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, process_noise_covariance, filter_args);
 
@@ -158,6 +175,17 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   RCLCPP_INFO(node_logger_->get_logger(),
     "Ros Robot Localization Listener: Listening to topics %s and %s",
     odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str());
+
+  // Wait until the base and world frames are set by the incoming messages
+  while (rclcpp::ok() && base_frame_id_.empty())
+  {
+    rclcpp::spin_some(node);
+    // TODO(ros2/rclcpp#879) RCLCPP_THROTTLE_INFO() when released
+    THROTTLE(node->get_clock(), std::chrono::seconds(1),
+      RCLCPP_INFO(node_logger_->get_logger(), "Ros Robot Localization Listener: Waiting for incoming messages on topics %s and %s",
+       odom_sub_.getTopic(), accel_sub_.getTopic()));
+    rclcpp::Rate(10).sleep();
+  }
 }
 
 RosRobotLocalizationListener::~RosRobotLocalizationListener()
@@ -305,7 +333,7 @@ bool RosRobotLocalizationListener::getState(const double time,
                                             const std::string& frame_id,
                                             Eigen::VectorXd& state,
                                             Eigen::MatrixXd& covariance,
-                                            std::string world_frame_id)
+                                            std::string world_frame_id) const
 {
   EstimatorState estimator_state;
   state.resize(STATE_SIZE);
@@ -503,7 +531,7 @@ bool RosRobotLocalizationListener::getState(const double time,
 
 bool RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, const std::string& frame_id,
                                             Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
-                                            const std::string& world_frame_id)
+                                            const std::string& world_frame_id) const
 {
   double time;
   if (rclcpp_time.nanoseconds() == 0)
@@ -519,5 +547,16 @@ bool RosRobotLocalizationListener::getState(const rclcpp::Time& rclcpp_time, con
 
   return getState(time, frame_id, state, covariance, world_frame_id);
 }
+
+const std::string& RosRobotLocalizationListener::getBaseFrameId() const
+{
+  return base_frame_id_;
+}
+
+const std::string& RosRobotLocalizationListener::getWorldFrameId() const
+{
+  return world_frame_id_;
+}
+
 }  // namespace RobotLocalization
 
