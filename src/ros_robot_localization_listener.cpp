@@ -76,8 +76,13 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   int buffer_size;
   nh_p_.param("buffer_size", buffer_size, 10);
 
+  std::string param_ns;
+  nh_p_.param("parameter_namespace", param_ns, nh_p_.getNamespace());
+
+  ros::NodeHandle nh_param(param_ns);
+
   std::string filter_type_str;
-  nh_p_.param("filter_type", filter_type_str, std::string("ekf"));
+  nh_param.param("filter_type", filter_type_str, std::string("ekf"));
   FilterType filter_type = filterTypeFromString(filter_type_str);
   if ( filter_type == FilterTypes::NotDefined )
   {
@@ -91,7 +96,11 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   process_noise_covariance.setZero();
   XmlRpc::XmlRpcValue process_noise_covar_config;
 
-  if (!nh_p_.hasParam("process_noise_covariance"))
+  // Get the process noise from the parameter in the namespace of the filter node we're listening to.
+  std::string process_noise_param_namespace = odom_sub_.getTopic().substr(0, odom_sub_.getTopic().find_last_of('/'));
+  std::string process_noise_param = process_noise_param_namespace + "/process_noise_covariance";
+
+  if (!nh_param.hasParam(process_noise_param))
   {
     ROS_FATAL_STREAM("Process noise covariance not found in the robot localization listener config (namespace " <<
                      nh_p_.getNamespace() << ")! Remap 'robot_localization' to the correct namespace.");
@@ -100,7 +109,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   {
     try
     {
-      nh_p_.getParam("process_noise_covariance", process_noise_covar_config);
+      nh_param.getParam(process_noise_param, process_noise_covar_config);
 
       ROS_ASSERT(process_noise_covar_config.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
@@ -143,7 +152,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   }
 
   std::vector<double> filter_args;
-  nh_p_.param("filter_args", filter_args, std::vector<double>());
+  nh_param.param("filter_args", filter_args, std::vector<double>());
 
   estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type, process_noise_covariance, filter_args);
 
@@ -151,6 +160,15 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
 
   ROS_INFO_STREAM("Ros Robot Localization Listener: Listening to topics " <<
                   odom_sub_.getTopic() << " and " << accel_sub_.getTopic());
+
+  // Wait until the base and world frames are set by the incoming messages
+  while (ros::ok() && base_frame_id_.empty())
+  {
+    ros::spinOnce();
+    ROS_INFO_STREAM_THROTTLE(1.0, "Ros Robot Localization Listener: Waiting for incoming messages on topics " <<
+                             odom_sub_.getTopic() << " and " << accel_sub_.getTopic());
+    ros::Duration(0.1).sleep();
+  }
 }
 
 RosRobotLocalizationListener::~RosRobotLocalizationListener()
@@ -298,7 +316,7 @@ bool RosRobotLocalizationListener::getState(const double time,
                                             const std::string& frame_id,
                                             Eigen::VectorXd& state,
                                             Eigen::MatrixXd& covariance,
-                                            std::string world_frame_id)
+                                            std::string world_frame_id) const
 {
   EstimatorState estimator_state;
   state.resize(STATE_SIZE);
@@ -490,7 +508,7 @@ bool RosRobotLocalizationListener::getState(const double time,
 
 bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, const std::string& frame_id,
                                             Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
-                                            const std::string& world_frame_id)
+                                            const std::string& world_frame_id) const
 {
   double time;
   if ( ros_time.isZero() )
@@ -505,5 +523,16 @@ bool RosRobotLocalizationListener::getState(const ros::Time& ros_time, const std
 
   return getState(time, frame_id, state, covariance, world_frame_id);
 }
+
+const std::string& RosRobotLocalizationListener::getBaseFrameId() const
+{
+  return base_frame_id_;
+}
+
+const std::string& RosRobotLocalizationListener::getWorldFrameId() const
+{
+  return world_frame_id_;
+}
+
 }  // namespace RobotLocalization
 
