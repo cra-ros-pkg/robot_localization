@@ -64,6 +64,30 @@ double getYaw(const tf2::Quaternion quat);
 //! @param[in] targetFrame - The target frame of the desired transform
 //! @param[in] sourceFrame - The source frame of the desired transform
 //! @param[in] time - The time at which we want the transform
+//! @param[in] timeout - How long to block before falling back to last transform
+//! @param[out] targetFrameTrans - The resulting transform object
+//! @return Sets the value of @p targetFrameTrans and returns true if successful,
+//! false otherwise.
+//!
+//! This method attempts to obtain a transform from the @p sourceFrame to the @p
+//! targetFrame at the specific @p time. If no transform is available at that time,
+//! it attempts to simply obtain the latest transform. If that still fails, then the
+//! method checks to see if the transform is going from a given frame_id to itself.
+//! If any of these checks succeed, the method sets the value of @p targetFrameTrans
+//! and returns true, otherwise it returns false.
+//!
+bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
+                         const std::string &targetFrame,
+                         const std::string &sourceFrame,
+                         const ros::Time &time,
+                         const ros::Duration &timeout,
+                         tf2::Transform &targetFrameTrans);
+
+//! @brief Method for safely obtaining transforms.
+//! @param[in] buffer - tf buffer object to use for looking up the transform
+//! @param[in] targetFrame - The target frame of the desired transform
+//! @param[in] sourceFrame - The source frame of the desired transform
+//! @param[in] time - The time at which we want the transform
 //! @param[out] targetFrameTrans - The resulting transform object
 //! @return Sets the value of @p targetFrameTrans and returns true if successful,
 //! false otherwise.

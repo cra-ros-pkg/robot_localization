@@ -266,6 +266,10 @@ class NavSatTransform
     //!
     double yaw_offset_;
 
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration transform_timeout_;
+
     //! @brief Whether or not to report 0 altitude
     //!
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.

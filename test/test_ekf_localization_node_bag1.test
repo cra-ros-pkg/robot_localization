@@ -26,6 +26,7 @@
       <param name="world_frame" value="odom"/>
 
       <param name="transform_time_offset" value="0.0"/>
+      <param name="transform_timeout" value="0.0"/>
 
       <param name="odom0" value="/husky_velocity_controller/odom"/>
       <param name="imu0" value="/imu/data"/>

@@ -57,6 +57,7 @@ namespace RobotLocalization
       lastSetPoseTime_(0),
       latestControl_(),
       latestControlTime_(0),
+      tfTimeout_(ros::Duration(0)),
       nhLocal_("~"),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
@@ -697,6 +698,11 @@ namespace RobotLocalization
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
     tfTimeOffset_.fromSec(offsetTmp);
 
+    // Transform timeout
+    double timeoutTmp;
+    nhLocal_.param("transform_timeout", timeoutTmp, 0.0);
+    tfTimeout_.fromSec(timeoutTmp);
+
     // Update frequency and sensor timeout
     double sensorTimeout;
     nhLocal_.param("frequency", frequency_, 30.0);
@@ -824,6 +830,7 @@ namespace RobotLocalization
              "\nbase_link_frame is " << baseLinkFrameId_ <<
              "\nworld_frame is " << worldFrameId_ <<
              "\ntransform_time_offset is " << tfTimeOffset_.toSec() <<
+             "\ntransform_timeout is " << tfTimeout_.toSec() <<
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
@@ -2200,6 +2207,7 @@ namespace RobotLocalization
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     if (canTransform)
@@ -2226,6 +2234,7 @@ namespace RobotLocalization
                                                   msgFrame,
                                                   targetFrame,
                                                   msg->header.stamp,
+                                                  tfTimeout_,
                                                   imuFrameTrans);
           stateTmp = imuFrameTrans.getBasis() * stateTmp;
           curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
@@ -2402,6 +2411,7 @@ namespace RobotLocalization
                                                                 finalTargetFrame,
                                                                 poseTmp.frame_id_,
                                                                 poseTmp.stamp_,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     // 3. Make sure we can work with this data before carrying on
@@ -2768,6 +2778,7 @@ namespace RobotLocalization
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     if (canTransform)
