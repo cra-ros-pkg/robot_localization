@@ -84,7 +84,7 @@ public:
   //!
   bool getState(const double time, const std::string& frame_id,
                 Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
-                std::string world_frame_id = "");
+                std::string world_frame_id = "") const;
 
   //! @brief Get a state from the localization estimator
   //!
@@ -99,7 +99,19 @@ public:
   //!
   bool getState(const ros::Time& ros_time, const std::string& frame_id,
                 Eigen::VectorXd& state, Eigen::MatrixXd& covariance,
-                const std::string& world_frame_id = "");
+                const std::string& world_frame_id = "") const;
+
+  //!
+  //! \brief getBaseFrameId Returns the base frame id of the localization listener
+  //! \return The base frame id
+  //!
+  const std::string& getBaseFrameId() const;
+
+  //!
+  //! \brief getWorldFrameId Returns the world frame id of the localization listener
+  //! \return The world frame id
+  //!
+  const std::string& getWorldFrameId() const;
 
 private:
   //! @brief Callback for odom and accel
