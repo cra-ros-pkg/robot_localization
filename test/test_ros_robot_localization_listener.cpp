@@ -42,84 +42,18 @@
 
 std::shared_ptr<rclcpp::Node> node;
 robot_localization::RosRobotLocalizationListener* g_listener;
-rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub;
-rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr accel_pub;
-
-TEST(LocalizationListenerTest, testGetStateBeforeReceivingMessages)
-{
-  Eigen::VectorXd state(robot_localization::STATE_SIZE);
-  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
-
-  rclcpp::Time time(0);
-  std::string base_frame("base_link");
-
-  EXPECT_FALSE(g_listener->getState(time, base_frame, state, covariance));
-}
 
 TEST(LocalizationListenerTest, testGetStateOfBaseLink)
 {
+  rclcpp::spin_some(node);
+
+  rclcpp::Time time2(1001, 0);
+
   Eigen::VectorXd state(robot_localization::STATE_SIZE);
   Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
 
-  double x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az;
-  x = y = z = roll = pitch = yaw = vy = vz = vroll = vpitch = vyaw = ax = ay = az = 0.0;
-  vx = 1.0;
-  vroll = M_PI/4.0;
-
-  tf2::Quaternion q;
-  q.setRPY(0, 0, 0);
-
-  rclcpp::Time time1(1000, 0);
-  rclcpp::Time time2(1001, 0);
-
-  nav_msgs::msg::Odometry odom_msg;
-  odom_msg.header.stamp = time1;
-  odom_msg.header.frame_id = "map";
-  odom_msg.child_frame_id = "base_link";
-  odom_msg.pose.pose.position.x = x;
-  odom_msg.pose.pose.position.y = y;
-  odom_msg.pose.pose.position.y = z;
-  odom_msg.pose.pose.orientation.x = q.x();
-  odom_msg.pose.pose.orientation.y = q.y();
-  odom_msg.pose.pose.orientation.z = q.z();
-  odom_msg.pose.pose.orientation.w = q.w();
-
-  odom_msg.twist.twist.linear.x = vx;
-  odom_msg.twist.twist.linear.y = vy;
-  odom_msg.twist.twist.linear.z = vz;
-  odom_msg.twist.twist.angular.x = vroll;
-  odom_msg.twist.twist.angular.y = vpitch;
-  odom_msg.twist.twist.angular.z = vyaw;
-
-  geometry_msgs::msg::AccelWithCovarianceStamped accel_msg;
-  accel_msg.header.stamp = time1;
-  accel_msg.header.frame_id = "base_link";
-  accel_msg.accel.accel.linear.x = ax;
-  accel_msg.accel.accel.linear.y = ay;
-  accel_msg.accel.accel.linear.z = az;
-  accel_msg.accel.accel.angular.x = 0;
-  accel_msg.accel.accel.angular.y = 0;
-  accel_msg.accel.accel.angular.z = 0;
-
-  EXPECT_EQ("/test/odometry", odom_pub->get_topic_name());
-  EXPECT_EQ("/test/accel", accel_pub->get_topic_name());
-
-  EXPECT_EQ(1u, odom_pub->get_subscription_count());
-  EXPECT_EQ(1u, accel_pub->get_subscription_count());
-
-  odom_pub->publish(odom_msg);
-  accel_pub->publish(accel_msg);
-
-  rclcpp::Rate(10).sleep();
-  rclcpp::spin_some(node);
 
   std::string base_frame("base_link");
-
-  EXPECT_TRUE(g_listener->getState(time1, base_frame, state, covariance));
-
-  state.setZero();
-  covariance.setZero();
-
   g_listener->getState(time2, base_frame, state, covariance);
 
   EXPECT_DOUBLE_EQ(1.0, state(robot_localization::StateMemberX));
@@ -137,32 +71,10 @@ TEST(LocalizationListenerTest, testGetStateOfBaseLink)
 
 TEST(LocalizationListenerTest, GetStateOfRelatedFrame)
 {
+  rclcpp::spin_some(node);
+
   Eigen::VectorXd state(robot_localization::STATE_SIZE);
   Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
-
-  tf2_ros::StaticTransformBroadcaster transform_broadcaster(node);
-
-  geometry_msgs::msg::TransformStamped transformStamped;
-
-  transformStamped.header.stamp = node->now();
-  transformStamped.header.frame_id = "base_link";
-  transformStamped.child_frame_id = "sensor";
-  transformStamped.transform.translation.x = 0.0;
-  transformStamped.transform.translation.y = 1.0;
-  transformStamped.transform.translation.z = 0.0;
-  tf2::Quaternion q;
-  q.setRPY(0, 0, M_PI/2);
-  transformStamped.transform.rotation.x = q.x();
-  transformStamped.transform.rotation.y = q.y();
-  transformStamped.transform.rotation.z = q.z();
-  transformStamped.transform.rotation.w = q.w();
-
-  transform_broadcaster.sendTransform(transformStamped);
-
-  rclcpp::Rate(10).sleep();
-
-  state.setZero();
-  covariance.setZero();
 
   rclcpp::Time time1(1000, 0);
   rclcpp::Time time2(1001, 0);
@@ -212,11 +124,6 @@ int main(int argc, char **argv)
   node = rclcpp::Node::make_shared("test_robot_localization_estimator");
 
   g_listener = new robot_localization::RosRobotLocalizationListener(node);
-
-  odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("/test/odometry",
-    1);
-  accel_pub = node->create_publisher<
-    geometry_msgs::msg::AccelWithCovarianceStamped>("/test/accel", 1);
 
   testing::InitGoogleTest(&argc, argv);
 

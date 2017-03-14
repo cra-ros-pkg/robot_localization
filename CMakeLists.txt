@@ -189,6 +189,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
+  ament_add_gtest(test_ros_robot_localization_listener_publisher test/test_ros_robot_localization_listener_publisher.cpp)
+  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
+
   #### RLE/RLL TESTS #####
   ament_add_gtest(test_robot_localization_estimator
                   test/test_robot_localization_estimator.test
