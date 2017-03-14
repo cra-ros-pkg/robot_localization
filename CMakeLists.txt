@@ -247,6 +247,10 @@ if (CATKIN_ENABLE_TESTING)
                         ${catkin_LIBRARIES}
                         ${rostest_LIBRARIES})
 
+  add_executable(test_ros_robot_localization_listener_publisher test/test_ros_robot_localization_listener_publisher.cpp)
+  target_link_libraries(test_ros_robot_localization_listener_publisher
+                        ${catkin_LIBRARIES})
+
   add_rostest_gtest(test_ros_robot_localization_listener
                     test/test_ros_robot_localization_listener.test
                     test/test_ros_robot_localization_listener.cpp)
