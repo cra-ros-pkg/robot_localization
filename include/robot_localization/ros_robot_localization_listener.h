@@ -63,9 +63,7 @@ public:
   //! The RosRobotLocalizationListener constructor initializes nodehandles, subscribers, a filter for synchronized
   //! listening to the topics it subscribes to, and an instance of the RobotLocalizationEstimator.
   //!
-  //! @param[in] ns - namespace to place the subscribers and parameters in.
-  //!
-  explicit RosRobotLocalizationListener(const std::string& ns = "");
+  explicit RosRobotLocalizationListener();
 
   //! @brief Destructor
   //!
