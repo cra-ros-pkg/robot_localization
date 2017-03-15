@@ -67,11 +67,11 @@ FilterType filterTypeFromString(const std::string& filter_type_str)
 }
 
 RosRobotLocalizationListener::RosRobotLocalizationListener(
-  rclcpp::Node::SharedPtr node, const std::string& ns):
+  rclcpp::Node::SharedPtr node):
   qos1_(1),
   qos10_(10),
-  odom_sub_(node, "~/" + ns + "/odom", qos1_.get_rmw_qos_profile()),
-  accel_sub_(node, "~/" + ns + "/acceleration", qos1_.get_rmw_qos_profile()),
+  odom_sub_(node, "robot_localization/odom/filtered", qos1_.get_rmw_qos_profile()),
+  accel_sub_(node, "robot_localization/acceleration/filtered", qos1_.get_rmw_qos_profile()),
   sync_(odom_sub_, accel_sub_, 10u),
   node_clock_(node->get_node_clock_interface()->get_clock()),
   node_logger_(node->get_node_logging_interface()),
@@ -98,21 +98,18 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   process_noise_covariance.setZero();
   std::vector<double> process_noise_covar_config;
 
-  // Get the process noise from the parameter in the namespace of the filter node we're listening to.
-  std::string process_noise_param_namespace = odom_sub_.getTopic().substr(0, odom_sub_.getTopic().find_last_of('/'));
-  std::string process_noise_param = process_noise_param_namespace + "/process_noise_covariance";
-
-  if (!node->has_parameter(process_noise_param))
+  if (!node->has_parameter("process_noise_covariance"))
   {
-    RCLCPP_ERROR(node_logger_->get_logger(),
-      "Process noise covariance not found in the robot localization listener config (namespace %s)!",
-      process_noise_param_namespace.c_str());
+    RCLCPP_FATAL(node_logger_->get_logger(),
+      "Process noise covariance not found in the robot localization listener config (namespace %s)! "
+      "Remap 'robot_localization' to the correct namespace.",
+      node->get_namespace());
   }
   else
   {
     try
     {
-      node->get_parameter<std::vector<double>>(process_noise_param, process_noise_covar_config);
+      node->get_parameter<std::vector<double>>("process_noise_covariance", process_noise_covar_config);
       if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE)
       {
         RCLCPP_ERROR(node_logger_->get_logger(),

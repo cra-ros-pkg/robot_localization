@@ -65,10 +65,8 @@ public:
   //! listening to the topics it subscribes to, and an instance of the RobotLocalizationEstimator.
   //!
   //! @param[in] node - rclcpp node shared pointer
-  //! @param[in] ns - namespace to place the subscribers and parameters in.
   //!
-  explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node,
-    const std::string& ns="");
+  explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node);
 
   //! @brief Destructor
   //!

@@ -211,8 +211,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
   node = rclcpp::Node::make_shared("test_robot_localization_estimator");
 
-  g_listener = new robot_localization::RosRobotLocalizationListener(node,
-    "test");
+  g_listener = new robot_localization::RosRobotLocalizationListener(node);
 
   odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("/test/odometry",
     1);
