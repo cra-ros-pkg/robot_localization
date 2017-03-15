@@ -262,12 +262,42 @@ bool findAncestorRecursiveYAML(YAML::Node& tree, const std::string& source_frame
   return findAncestorRecursiveYAML(tree, parent_frame, target_frame);
 }
 
+// Cache, assumption that the tree parent child order does not change over time
+static std::map<std::string, std::vector<std::string> > ancestor_map;
+static std::map<std::string, std::vector<std::string> > descendant_map;
 bool findAncestor(const tf2_ros::Buffer& buffer, const std::string& source_frame, const std::string& target_frame)
 {
+  // Check cache
+  const std::vector<std::string>& ancestors = ancestor_map[source_frame];
+  if (std::find(ancestors.begin(), ancestors.end(), target_frame) != ancestors.end())
+  {
+    return true;
+  }
+  const std::vector<std::string>& descendants = descendant_map[source_frame];
+  if (std::find(descendants.begin(), descendants.end(), target_frame) != descendants.end())
+  {
+    return false;
+  }
+
   std::stringstream frames_stream(buffer.allFramesAsYAML());
   YAML::Node frames_yaml = YAML::Load(frames_stream);
-  return findAncestorRecursiveYAML(frames_yaml, source_frame, target_frame);
+
+  bool target_frame_is_ancestor = findAncestorRecursiveYAML(frames_yaml, source_frame, target_frame);
+  bool target_frame_is_descendant = findAncestorRecursiveYAML(frames_yaml, target_frame, source_frame);
+
+  // Caching
+  if (target_frame_is_ancestor)
+  {
+    ancestor_map[source_frame].push_back(target_frame);
+  }
+  if (target_frame_is_descendant)
+  {
+    descendant_map[source_frame].push_back(target_frame);
+  }
+
+  return target_frame_is_ancestor;
 }
+
 
 bool RosRobotLocalizationListener::getState(const double time,
                                             const std::string& frame_id,
