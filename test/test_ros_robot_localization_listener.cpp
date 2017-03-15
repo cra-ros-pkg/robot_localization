@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "test_robot_localization_estimator");
 
-  g_listener = new RobotLocalization::RosRobotLocalizationListener("test");
+  g_listener = new RobotLocalization::RosRobotLocalizationListener();
 
   ros::NodeHandle nh;
   odom_pub = nh.advertise<nav_msgs::Odometry>("/test/odometry", 1);
