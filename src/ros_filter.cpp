@@ -733,10 +733,10 @@ namespace RobotLocalization
     bool stampedControl = false;
     double controlTimeout = sensorTimeout;
     std::vector<int> controlUpdateVector(TWIST_SIZE, 0);
-    std::vector<double> accelerationLimits(TWIST_SIZE, 0.0);
-    std::vector<double> accelerationGains(TWIST_SIZE, 0.0);
-    std::vector<double> decelerationLimits(TWIST_SIZE, 0.0);
-    std::vector<double> decelerationGains(TWIST_SIZE, 0.0);
+    std::vector<double> accelerationLimits(TWIST_SIZE, 1.0);
+    std::vector<double> accelerationGains(TWIST_SIZE, 1.0);
+    std::vector<double> decelerationLimits(TWIST_SIZE, 1.0);
+    std::vector<double> decelerationGains(TWIST_SIZE, 1.0);
 
     nhLocal_.param("use_control", useControl_, false);
     nhLocal_.param("stamped_control", stampedControl, false);
@@ -771,21 +771,20 @@ namespace RobotLocalization
       else
       {
         ROS_WARN_STREAM("use_control is set to true, but acceleration_limits is missing. Will use default values.");
-        accelerationLimits.resize(TWIST_SIZE, 1.0);
       }
 
-      accelerationGains.resize(TWIST_SIZE, 1.0);
       if(nhLocal_.getParam("acceleration_gains", accelerationGains))
       {
-        if(accelerationGains.size() != TWIST_SIZE)
+        const int size = accelerationGains.size();
+        if(size != TWIST_SIZE)
         {
           ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
-            ". Provided config was of size " << accelerationGains.size() << ". All gains will be assumed to be 1.");
+            ". Provided config was of size " << size << ". All gains will be assumed to be 1.");
+          std::fill_n(accelerationGains.begin(), std::min(size, TWIST_SIZE), 1.0);
           accelerationGains.resize(TWIST_SIZE, 1.0);
         }
       }
 
-      bool useAccelLimits = false;
       if(nhLocal_.getParam("deceleration_limits", decelerationLimits))
       {
         if(decelerationLimits.size() != TWIST_SIZE)
@@ -800,21 +799,23 @@ namespace RobotLocalization
         ROS_INFO_STREAM("use_control is set to true, but no deceleration_limits specified. Will use acceleration "
           "limits.");
         decelerationLimits = accelerationLimits;
-        useAccelLimits = true;
       }
 
-      decelerationGains.resize(TWIST_SIZE, 1.0);
       if(nhLocal_.getParam("deceleration_gains", decelerationGains))
       {
-        if(decelerationGains.size() != TWIST_SIZE)
+        const int size = decelerationGains.size();
+        if(size != TWIST_SIZE)
         {
-          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
-            ". Provided config was of size " << decelerationLimits.size() << ". All gains will be assumed to be 1.");
+          ROS_ERROR_STREAM("Deceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << size << ". All gains will be assumed to be 1.");
+          std::fill_n(decelerationGains.begin(), std::min(size, TWIST_SIZE), 1.0);
+          decelerationGains.resize(TWIST_SIZE, 1.0);
         }
       }
-      else if(useAccelLimits)
+      else
       {
-        ROS_INFO_STREAM("Using acceleration gains for deceleration");
+        ROS_INFO_STREAM("use_control is set to true, but no deceleration_gains specified. Will use acceleration "
+          "gains.");
         decelerationGains = accelerationGains;
       }
     }
@@ -841,9 +842,9 @@ namespace RobotLocalization
              "\ncontrol_config is " << controlUpdateVector <<
              "\ncontrol_timeout is " << controlTimeout <<
              "\nacceleration_limits are " << accelerationLimits <<
-             "\nacceleration_gains are " << accelerationLimits <<
+             "\nacceleration_gains are " << accelerationGains <<
              "\ndeceleration_limits are " << decelerationLimits <<
-             "\ndeceleration_gains are " << decelerationLimits <<
+             "\ndeceleration_gains are " << decelerationGains <<
              "\ndynamic_process_noise_covariance is " << (dynamicProcessNoiseCovariance ? "true" : "false") <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
