@@ -57,7 +57,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <Eigen/Dense>
 
