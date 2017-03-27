@@ -1769,7 +1769,8 @@ namespace RobotLocalization
             }
             catch(...)
             {
-              ROS_ERROR_STREAM("Could not obtain transform from " << odomFrameId_ << "->" << baseLinkFrameId_);
+              ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from "
+                                                << odomFrameId_ << "->" << baseLinkFrameId_);
             }
           }
           else
