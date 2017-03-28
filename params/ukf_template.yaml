@@ -19,6 +19,10 @@ two_d_mode: false
 # unspecified.
 transform_time_offset: 0.0
 
+# Use this parameter to provide specify how long the tf listener should wait for a transform to become available. 
+# Defaults to 0.0 if unspecified.
+transform_timeout: 0.0
+
 # If you're having trouble, try setting this to true, and then echo the /diagnostics_agg topic to see if the node is
 # unhappy with any settings or data.
 print_diagnostics: true

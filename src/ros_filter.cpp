@@ -57,8 +57,10 @@ namespace RobotLocalization
       lastSetPoseTime_(0),
       latestControl_(),
       latestControlTime_(0),
+      tfTimeout_(ros::Duration(0)),
       nhLocal_("~"),
       printDiagnostics_(true),
+      gravitationalAcc_(9.80665),
       publishTransform_(true),
       publishAcceleration_(false),
       twoDMode_(false),
@@ -599,6 +601,9 @@ namespace RobotLocalization
     // Determine if we'll be printing diagnostic information
     nhLocal_.param("print_diagnostics", printDiagnostics_, true);
 
+    // Check for custom gravitational acceleration value
+    nhLocal_.param("gravitational_acceleration", gravitationalAcc_, 9.80665);
+
     // Grab the debug param. If true, the node will produce a LOT of output.
     bool debug;
     nhLocal_.param("debug", debug, false);
@@ -693,6 +698,11 @@ namespace RobotLocalization
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
     tfTimeOffset_.fromSec(offsetTmp);
 
+    // Transform timeout
+    double timeoutTmp;
+    nhLocal_.param("transform_timeout", timeoutTmp, 0.0);
+    tfTimeout_.fromSec(timeoutTmp);
+
     // Update frequency and sensor timeout
     double sensorTimeout;
     nhLocal_.param("frequency", frequency_, 30.0);
@@ -723,10 +733,10 @@ namespace RobotLocalization
     bool stampedControl = false;
     double controlTimeout = sensorTimeout;
     std::vector<int> controlUpdateVector(TWIST_SIZE, 0);
-    std::vector<double> accelerationLimits(TWIST_SIZE, 0.0);
-    std::vector<double> accelerationGains(TWIST_SIZE, 0.0);
-    std::vector<double> decelerationLimits(TWIST_SIZE, 0.0);
-    std::vector<double> decelerationGains(TWIST_SIZE, 0.0);
+    std::vector<double> accelerationLimits(TWIST_SIZE, 1.0);
+    std::vector<double> accelerationGains(TWIST_SIZE, 1.0);
+    std::vector<double> decelerationLimits(TWIST_SIZE, 1.0);
+    std::vector<double> decelerationGains(TWIST_SIZE, 1.0);
 
     nhLocal_.param("use_control", useControl_, false);
     nhLocal_.param("stamped_control", stampedControl, false);
@@ -761,21 +771,20 @@ namespace RobotLocalization
       else
       {
         ROS_WARN_STREAM("use_control is set to true, but acceleration_limits is missing. Will use default values.");
-        accelerationLimits.resize(TWIST_SIZE, 1.0);
       }
 
-      accelerationGains.resize(TWIST_SIZE, 1.0);
       if(nhLocal_.getParam("acceleration_gains", accelerationGains))
       {
-        if(accelerationGains.size() != TWIST_SIZE)
+        const int size = accelerationGains.size();
+        if(size != TWIST_SIZE)
         {
           ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
-            ". Provided config was of size " << accelerationGains.size() << ". All gains will be assumed to be 1.");
+            ". Provided config was of size " << size << ". All gains will be assumed to be 1.");
+          std::fill_n(accelerationGains.begin(), std::min(size, TWIST_SIZE), 1.0);
           accelerationGains.resize(TWIST_SIZE, 1.0);
         }
       }
 
-      bool useAccelLimits = false;
       if(nhLocal_.getParam("deceleration_limits", decelerationLimits))
       {
         if(decelerationLimits.size() != TWIST_SIZE)
@@ -790,21 +799,23 @@ namespace RobotLocalization
         ROS_INFO_STREAM("use_control is set to true, but no deceleration_limits specified. Will use acceleration "
           "limits.");
         decelerationLimits = accelerationLimits;
-        useAccelLimits = true;
       }
 
-      decelerationGains.resize(TWIST_SIZE, 1.0);
       if(nhLocal_.getParam("deceleration_gains", decelerationGains))
       {
-        if(decelerationGains.size() != TWIST_SIZE)
+        const int size = decelerationGains.size();
+        if(size != TWIST_SIZE)
         {
-          ROS_ERROR_STREAM("Acceleration gain configuration must be of size " << TWIST_SIZE <<
-            ". Provided config was of size " << decelerationLimits.size() << ". All gains will be assumed to be 1.");
+          ROS_ERROR_STREAM("Deceleration gain configuration must be of size " << TWIST_SIZE <<
+            ". Provided config was of size " << size << ". All gains will be assumed to be 1.");
+          std::fill_n(decelerationGains.begin(), std::min(size, TWIST_SIZE), 1.0);
+          decelerationGains.resize(TWIST_SIZE, 1.0);
         }
       }
-      else if(useAccelLimits)
+      else
       {
-        ROS_INFO_STREAM("Using acceleration gains for deceleration");
+        ROS_INFO_STREAM("use_control is set to true, but no deceleration_gains specified. Will use acceleration "
+          "gains.");
         decelerationGains = accelerationGains;
       }
     }
@@ -835,6 +846,7 @@ namespace RobotLocalization
              "\nbase_link_frame is " << baseLinkFrameId_ <<
              "\nworld_frame is " << worldFrameId_ <<
              "\ntransform_time_offset is " << tfTimeOffset_.toSec() <<
+             "\ntransform_timeout is " << tfTimeout_.toSec() <<
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
@@ -845,9 +857,9 @@ namespace RobotLocalization
              "\ncontrol_config is " << controlUpdateVector <<
              "\ncontrol_timeout is " << controlTimeout <<
              "\nacceleration_limits are " << accelerationLimits <<
-             "\nacceleration_gains are " << accelerationLimits <<
+             "\nacceleration_gains are " << accelerationGains <<
              "\ndeceleration_limits are " << decelerationLimits <<
-             "\ndeceleration_gains are " << decelerationLimits <<
+             "\ndeceleration_gains are " << decelerationGains <<
              "\ninitial state is " << filter_.getState() <<
              "\ndynamic_process_noise_covariance is " << (dynamicProcessNoiseCovariance ? "true" : "false") <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
@@ -1774,7 +1786,8 @@ namespace RobotLocalization
             }
             catch(...)
             {
-              ROS_ERROR_STREAM("Could not obtain transform from " << odomFrameId_ << "->" << baseLinkFrameId_);
+              ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from "
+                                                << odomFrameId_ << "->" << baseLinkFrameId_);
             }
           }
           else
@@ -2212,6 +2225,7 @@ namespace RobotLocalization
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     if (canTransform)
@@ -2220,7 +2234,7 @@ namespace RobotLocalization
       // of normal forces, so we use a parameter
       if (removeGravitationalAcc_[topicName])
       {
-        tf2::Vector3 normAcc(0, 0, 9.80665);
+        tf2::Vector3 normAcc(0, 0, gravitationalAcc_);
         tf2::Quaternion curAttitude;
         tf2::Transform trans;
 
@@ -2238,6 +2252,7 @@ namespace RobotLocalization
                                                   msgFrame,
                                                   targetFrame,
                                                   msg->header.stamp,
+                                                  tfTimeout_,
                                                   imuFrameTrans);
           stateTmp = imuFrameTrans.getBasis() * stateTmp;
           curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
@@ -2414,6 +2429,7 @@ namespace RobotLocalization
                                                                 finalTargetFrame,
                                                                 poseTmp.frame_id_,
                                                                 poseTmp.stamp_,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     // 3. Make sure we can work with this data before carrying on
@@ -2780,6 +2796,7 @@ namespace RobotLocalization
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
+                                                                tfTimeout_,
                                                                 targetFrameTrans);
 
     if (canTransform)
