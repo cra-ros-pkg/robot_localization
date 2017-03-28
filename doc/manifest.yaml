@@ -22,6 +22,7 @@ depends:
 - rosunit
 - diagnostic_msgs
 - geographic_msgs
+- xmlrpcpp
 - python-catkin-pkg
 - geometry_msgs
 - rosbag
