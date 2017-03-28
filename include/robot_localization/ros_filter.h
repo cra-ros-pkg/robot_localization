@@ -438,6 +438,10 @@ template<class T> class RosFilter
     //!
     ros::Time latestControlTime_;
 
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration tfTimeout_;
+
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
     std::vector<ros::Subscriber> topicSubs_;
@@ -516,6 +520,10 @@ template<class T> class RosFilter
     //! @brief If including acceleration for each IMU input, whether or not we remove acceleration due to gravity
     //!
     std::map<std::string, bool> removeGravitationalAcc_;
+
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitationalAcc_;
 
     //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
     //! type is geometry_msgs/PoseWithCovarianceStamped.
