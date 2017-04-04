@@ -1841,7 +1841,6 @@ namespace RobotLocalization
       measurementQueue_.pop();
     }
 
-    ros::getGlobalCallbackQueue()->clear();
     filterStateHistory_.clear();
     measurementHistory_.clear();
 
@@ -1871,6 +1870,10 @@ namespace RobotLocalization
 
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
     filter_.setLastUpdateTime(ros::Time::now().toSec());
+
+    // This method can apparently cancel all callbacks, and may stop the executing of the very callback that we're
+    // currently in. Therefore, nothing of consequence should come after it.
+    ros::getGlobalCallbackQueue()->clear();
 
     RF_DEBUG("\n------ /RosFilter::setPoseCallback ------\n");
   }
