@@ -41,6 +41,7 @@
 #include <robot_localization/ToggleFilterProcessing.h>
 
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 #include <std_msgs/String.h>
 #include <std_srvs/Empty.h>
 #include <nav_msgs/Odometry.h>
@@ -259,6 +260,13 @@ template<class T> class RosFilter
     //! @return boolean true if successful, false if not
     bool enableFilterSrvCallback(std_srvs::Empty::Request&,
                                  std_srvs::Empty::Response&);
+
+    //! @brief Service callback for disabling filter until setPose is sent
+    //!
+    //! @param[in] request - Empty request
+    //! @return true if successful, false if not
+    bool disableSrvCallback(std_srvs::Empty::Request& request,
+                            std_srvs::Empty::Response&);
 
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
@@ -679,6 +687,10 @@ template<class T> class RosFilter
     //! @brief Service that allows another node to enable the filter. Uses a standard Empty service.
     //!
     ros::ServiceServer enableFilterSrv_;
+
+    //! @brief Service that disables the filter until a setPose is sent
+    //!
+    ros::ServiceServer disableSrv_;
 
     //! @brief Service that allows another node to change the current state and recieve a confirmation. Uses
     //! a custom SetPose service.

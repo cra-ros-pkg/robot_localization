@@ -1004,6 +1004,9 @@ namespace RobotLocalization
     // Create a service for manually enabling the filter
     enableFilterSrv_ = nhLocal_.advertiseService("enable", &RosFilter<T>::enableFilterSrvCallback, this);
 
+    // Create a service for disabling filter
+    disableSrv_ = nhLocal_.advertiseService("disable", &RosFilter<T>::disableSrvCallback, this);
+
     // Create a service for toggling processing new measurements while still publishing
     toggleFilterProcessingSrv_ =
       nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
@@ -1973,6 +1976,7 @@ namespace RobotLocalization
     ROS_INFO_STREAM("Received set_pose request with value\n" << *msg);
 
     std::string topicName("setPose");
+    enabled_ = true;
 
     // Get rid of any initial poses (pretend we've never had a measurement)
     initialMeasurements_.clear();
@@ -2038,6 +2042,23 @@ namespace RobotLocalization
     {
       ROS_INFO_STREAM("[" << ros::this_node::getName() << ":] Enabling filter...");
       enabled_ = true;
+    }
+    return true;
+  }
+
+  template<typename T>
+  bool RosFilter<T>::disableSrvCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response&)
+  {
+    RF_DEBUG("\n[" << ros::this_node::getName() << ":]" << " ------ /RosFilter::disableFilterSrvCallback ------\n");
+    if (enabled_)
+    {
+      ROS_INFO_STREAM("[" << ros::this_node::getName() << ":] Disabling filter...");
+      enabled_ = false;
+    }
+    else
+    {
+      ROS_WARN_STREAM("[" << ros::this_node::getName() << ":] Asking for disabling filter service, but the filter was "
+        "already disabled!");
     }
     return true;
   }
