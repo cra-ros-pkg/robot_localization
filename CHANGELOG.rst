@@ -2,9 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.3.1 (2016-10-27)
+2.4.0 (2017-04-17)
 ------------------
-* 2.3.1-3
 * Fix ac/deceleration gains default logic
 * Fixing xmlrpcpp dependency
 * Add gravity parameter
@@ -24,8 +23,10 @@ Changelog for package robot_localization
 * Processed comments, separate method for filling acceleration message
 * Underscores to camelCase to match code style
 * Optionally publish acceleration state
-* 2.3.1-2
 * Adding initial state parameter
+
+2.3.1 (2016-10-27)
+------------------
 * First set gps_odom timestamp before tf2 lookuptransform
 * Adding gitignore
 * Adding remaining wiki pages
