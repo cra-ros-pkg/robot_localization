@@ -4,6 +4,26 @@ Changelog for package robot_localization
 
 2.3.1 (2016-10-27)
 ------------------
+* 2.3.1-3
+* Fix ac/deceleration gains default logic
+* Fixing xmlrpcpp dependency
+* Add gravity parameter
+* Add 5.0 seconds delay and throttle if lookup fails
+* Fix UKF IMUTwistBasicIO test
+* Bugfix unittest for valgrind.
+* Fixing logic for setting initial state
+* Adding initial state parameter
+* Adding new parameter and fixing section headings for state estimation node parameters
+* Removing non-portable sincos calls
+* Added newline to fix doc
+* Fixing catkin_package Eigen warning
+* Simplifying logic to account for correlated error
+* Adding dynamic process noise covariance calculation
+* Added transform_timeout parameter
+* First set gps_odom timestamp before tf2 lookuptransform
+* Processed comments, separate method for filling acceleration message
+* Underscores to camelCase to match code style
+* Optionally publish acceleration state
 * 2.3.1-2
 * Adding initial state parameter
 * First set gps_odom timestamp before tf2 lookuptransform
