@@ -152,6 +152,18 @@ If fusing accelerometer data from IMUs, this parameter determines whether or not
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If ``imuN_remove_gravitational_acceleration`` is set to ``true``, then this parameter determines the acceleration in Z due to gravity that will be removed from the IMU's linear acceleration data. Default is 9.80665 (m/s^2).
 
+~initial_state
+^^^^^^^^^^^^^^
+Starts the filter with the specified state. The state is given as a 15-D vector of doubles, in the same order as the sensor configurations. For example, to start your robot at a position of :math:`(5.0, 4.0, 3.0)`, a :math:`yaw` of :math:`1.57`, and a linear velocity of :math:`(0.1, 0.2, 0.3)`, you would use:
+
+.. code-block:: xml
+
+ <rosparam param="initial_state">[5.0,  4.0,  3.0,
+                                  0.0,  0.0,  1.57,
+                                  0.1,  0.2,  0.3,
+                                  0.0,  0.0,  0.0,
+                                  0.0,  0.0,  0.0]</rosparam>
+
 ~publish_tf
 ^^^^^^^^^^^
 If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to the frame specified by the ``base_link_frame`` parameter. Defaults to *true*.
