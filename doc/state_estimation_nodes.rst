@@ -272,8 +272,7 @@ The estimate covariance, commonly denoted *P*, defines the error in the current 
 
 ~reset_on_time_jump
 ^^^^^^^^^^^^^^^^^^^
-If set to *true* and ``ros::Time::isSimTime()`` is *true*, the filter will reset to uninitial state when a jump back in time is noticed on a topic.
-This is useful while playing a bag file and jumping forwards and backwards in time.
+If set to *true* and ``ros::Time::isSimTime()`` is *true*, the filter will reset to its uninitialized state when a jump back in time is detected on a topic. This is useful when working with bag data, in that the bag can be restarted without restarting the node.
 
 Node-specific Parameters
 ------------------------
