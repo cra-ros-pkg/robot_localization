@@ -824,6 +824,21 @@ namespace RobotLocalization
     nhLocal_.param("dynamic_process_noise_covariance", dynamicProcessNoiseCovariance, false);
     filter_.setUseDynamicProcessNoiseCovariance(dynamicProcessNoiseCovariance);
 
+    std::vector<double> initialState(STATE_SIZE, 0.0);
+    if(nhLocal_.getParam("initial_state", initialState))
+    {
+      if(initialState.size() != STATE_SIZE)
+      {
+        ROS_ERROR_STREAM("Initial state must be of size " << STATE_SIZE << ". Provided config was of size " <<
+          initialState.size() << ". The initial state will be ignored.");
+      }
+      else
+      {
+        Eigen::Map<Eigen::VectorXd> eigenState(initialState.data(), initialState.size());
+        filter_.setState(eigenState);
+      }
+    }
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -845,6 +860,7 @@ namespace RobotLocalization
              "\nacceleration_gains are " << accelerationGains <<
              "\ndeceleration_limits are " << decelerationLimits <<
              "\ndeceleration_gains are " << decelerationGains <<
+             "\ninitial state is " << filter_.getState() <<
              "\ndynamic_process_noise_covariance is " << (dynamicProcessNoiseCovariance ? "true" : "false") <<
              "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
 
