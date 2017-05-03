@@ -117,6 +117,10 @@ template<class T> class RosFilter
     //!
     ~RosFilter();
 
+    //! @brief Resets the filter to its initial state
+    //!
+    void reset();
+
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
     //! @param[in] callbackData - Relevant static callback data
@@ -429,6 +433,13 @@ template<class T> class RosFilter
     //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
     //!
     double historyLength_;
+
+    //! @brief Whether to reset the filters when backwards jump in time is detected
+    //!
+    //! This is usually the case when logs are being used and a jump in the logi
+    //! is done or if a log files restarts from the beginning.
+    //!
+    bool resetOnTimeJump_;
 
     //! @brief The most recent control input
     //!

@@ -92,6 +92,41 @@ namespace RobotLocalization
     topicSubs_.clear();
   }
 
+  template<typename T>
+  void RosFilter<T>::reset()
+  {
+    // Get rid of any initial poses (pretend we've never had a measurement)
+    initialMeasurements_.clear();
+    previousMeasurements_.clear();
+    previousMeasurementCovariances_.clear();
+
+    // Clear the measurement queue.
+    // This prevents us from immediately undoing our reset.
+    while (!measurementQueue_.empty() && ros::ok())
+    {
+      measurementQueue_.pop();
+    }
+
+    filterStateHistory_.clear();
+    measurementHistory_.clear();
+
+    // Also set the last set pose time, so we ignore all messages
+    // that occur before it
+    lastSetPoseTime_ = ros::Time(0);
+
+    // clear tf buffer to avoid TF_OLD_DATA errors
+    tfBuffer_.clear();
+
+    // clear last message timestamp, so older messages will be accepted
+    lastMessageTimes_.clear();
+
+    // reset filter to uninitialized state
+    filter_.reset();
+
+    // clear all waiting callbacks
+    ros::getGlobalCallbackQueue()->clear();
+  }
+
   // @todo: Replace with AccelWithCovarianceStamped
   template<typename T>
   void RosFilter<T>::accelerationCallback(const sensor_msgs::Imu::ConstPtr &msg, const CallbackData &callbackData,
@@ -152,6 +187,10 @@ namespace RobotLocalization
 
       RF_DEBUG("Last message time for " << topicName << " is now " <<
         lastMessageTimes_[topicName] << "\n");
+    }
+    else if (resetOnTimeJump_ && ros::Time::isSimTime())
+    {
+      reset();
     }
     else
     {
@@ -715,6 +754,9 @@ namespace RobotLocalization
     // Smoothing window size
     nhLocal_.param("smooth_lagged_data", smoothLaggedData_, false);
     nhLocal_.param("history_length", historyLength_, 0.0);
+
+    // Wether we reset filter on jump back in time
+    nhLocal_.param("reset_on_time_jump", resetOnTimeJump_, false);
 
     if (!smoothLaggedData_ && ::fabs(historyLength_) > 1e-9)
     {
@@ -1634,6 +1676,10 @@ namespace RobotLocalization
       RF_DEBUG("Last message time for " << topicName << " is now " <<
         lastMessageTimes_[topicName] << "\n");
     }
+    else if (resetOnTimeJump_ && ros::Time::isSimTime())
+    {
+      reset();
+    }
     else
     {
       std::stringstream stream;
@@ -1953,6 +1999,10 @@ namespace RobotLocalization
 
       RF_DEBUG("Last message time for " << topicName << " is now " <<
         lastMessageTimes_[topicName] << "\n");
+    }
+    else if (resetOnTimeJump_ && ros::Time::isSimTime())
+    {
+      reset();
     }
     else
     {
