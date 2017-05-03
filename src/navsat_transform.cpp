@@ -49,6 +49,7 @@ namespace RobotLocalization
     yaw_offset_(0.0),
     transform_timeout_(ros::Duration(0)),
     broadcast_utm_transform_(false),
+    broadcast_utm_transform_as_parent_frame_(false),
     has_transform_odom_(false),
     has_transform_gps_(false),
     has_transform_imu_(false),
@@ -88,6 +89,7 @@ namespace RobotLocalization
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
     nh_priv.param("yaw_offset", yaw_offset_, 0.0);
     nh_priv.param("broadcast_utm_transform", broadcast_utm_transform_, false);
+    nh_priv.param("broadcast_utm_transform_as_parent_frame", broadcast_utm_transform_as_parent_frame_, false);
     nh_priv.param("zero_altitude", zero_altitude_, false);
     nh_priv.param("publish_filtered_gps", publish_gps_, false);
     nh_priv.param("use_odometry_yaw", use_odometry_yaw_, false);
@@ -294,9 +296,10 @@ namespace RobotLocalization
       {
         geometry_msgs::TransformStamped utm_transform_stamped;
         utm_transform_stamped.header.stamp = ros::Time::now();
-        utm_transform_stamped.header.frame_id = world_frame_id_;
-        utm_transform_stamped.child_frame_id = "utm";
-        utm_transform_stamped.transform = tf2::toMsg(utm_world_transform_);
+        utm_transform_stamped.header.frame_id = (broadcast_utm_transform_as_parent_frame_ ? "utm" : world_frame_id_);
+        utm_transform_stamped.child_frame_id = (broadcast_utm_transform_as_parent_frame_ ? world_frame_id_ : "utm");
+        utm_transform_stamped.transform = (broadcast_utm_transform_as_parent_frame_ ?
+                                             tf2::toMsg(utm_world_trans_inverse_) : tf2::toMsg(utm_world_transform_));
         utm_transform_stamped.transform.translation.z = (zero_altitude_ ? 0.0 : utm_transform_stamped.transform.translation.z);
         utm_broadcaster_.sendTransform(utm_transform_stamped);
       }

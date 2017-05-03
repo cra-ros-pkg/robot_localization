@@ -63,4 +63,4 @@ Published Topics
 
 Published Transforms
 ====================
-* ``world_frame->utm`` (optional) - If the ``broadcast_utm_transform`` parameter is set to  *true*, ``navsat_transform_node`` calculates a transform from the  *utm* frame to the ``frame_id`` of the input odometry data. However, to avoid re-parenting the odometry frame (and avoid making assumptions about the user's setup), we instead define the inverse transform so that the *utm* frame is a child of the odometry frame.
+* ``world_frame->utm`` (optional) - If the ``broadcast_utm_transform`` parameter is set to  *true*, ``navsat_transform_node`` calculates a transform from the  *utm* frame to the ``frame_id`` of the input odometry data. By default, the *utm* frame is published as a child of the odometry frame by using the inverse transform. With use of the ``broadcast_utm_as_parent_frame`` parameter, the *utm* frame will be published as a parent of the odometry frame. This is useful if you have multiple robots within one TF tree.
