@@ -1857,7 +1857,6 @@ namespace RobotLocalization
       measurementQueue_.pop();
     }
 
-    ros::getGlobalCallbackQueue()->clear();
     filterStateHistory_.clear();
     measurementHistory_.clear();
 
