@@ -4,6 +4,8 @@ Changelog for package robot_localization
 
 2.3.1 (2016-10-27)
 ------------------
+* 2.3.1-4
+* Removing callback queue clearing
 * 2.3.1-3
 * Fix ac/deceleration gains default logic
 * Fixing xmlrpcpp dependency
