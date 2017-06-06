@@ -57,7 +57,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <Eigen/Dense>
 
@@ -116,6 +116,10 @@ template<class T> class RosFilter
     //! Clears out the message filters and topic subscribers.
     //!
     ~RosFilter();
+
+    //! @brief Resets the filter to its initial state
+    //!
+    void reset();
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
@@ -430,6 +434,13 @@ template<class T> class RosFilter
     //!
     double historyLength_;
 
+    //! @brief Whether to reset the filters when backwards jump in time is detected
+    //!
+    //! This is usually the case when logs are being used and a jump in the logi
+    //! is done or if a log files restarts from the beginning.
+    //!
+    bool resetOnTimeJump_;
+
     //! @brief The most recent control input
     //!
     Eigen::VectorXd latestControl_;
@@ -437,6 +448,10 @@ template<class T> class RosFilter
     //! @brief The time of the most recent control input
     //!
     ros::Time latestControlTime_;
+
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration tfTimeout_;
 
     //! @brief Vector to hold our subscribers until they go out of scope
     //!
@@ -516,6 +531,10 @@ template<class T> class RosFilter
     //! @brief If including acceleration for each IMU input, whether or not we remove acceleration due to gravity
     //!
     std::map<std::string, bool> removeGravitationalAcc_;
+
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitationalAcc_;
 
     //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
     //! type is geometry_msgs/PoseWithCovarianceStamped.

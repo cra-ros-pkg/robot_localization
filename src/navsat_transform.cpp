@@ -37,8 +37,7 @@
 #include "robot_localization/ros_filter_utilities.h"
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <string>
 
@@ -48,7 +47,9 @@ namespace RobotLocalization
     magnetic_declination_(0.0),
     utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
+    transform_timeout_(ros::Duration(0)),
     broadcast_utm_transform_(false),
+    broadcast_utm_transform_as_parent_frame_(false),
     has_transform_odom_(false),
     has_transform_gps_(false),
     has_transform_imu_(false),
@@ -79,6 +80,7 @@ namespace RobotLocalization
 
     double frequency = 10.0;
     double delay = 0.0;
+    double transform_timeout = 0.0;
 
     ros::NodeHandle nh;
     ros::NodeHandle nh_priv("~");
@@ -87,12 +89,15 @@ namespace RobotLocalization
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
     nh_priv.param("yaw_offset", yaw_offset_, 0.0);
     nh_priv.param("broadcast_utm_transform", broadcast_utm_transform_, false);
+    nh_priv.param("broadcast_utm_transform_as_parent_frame", broadcast_utm_transform_as_parent_frame_, false);
     nh_priv.param("zero_altitude", zero_altitude_, false);
     nh_priv.param("publish_filtered_gps", publish_gps_, false);
     nh_priv.param("use_odometry_yaw", use_odometry_yaw_, false);
     nh_priv.param("wait_for_datum", use_manual_datum_, false);
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
+    nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    transform_timeout_.fromSec(transform_timeout);
 
     // Subscribe to the messages and services we need
     ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
@@ -264,7 +269,8 @@ namespace RobotLocalization
       imu_yaw += (magnetic_declination_ + yaw_offset_);
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magnetic_declination_ <<
-                      " and user-specified offset of " << yaw_offset_ << ". Transform heading factor is now " << imu_yaw);
+                      " and user-specified offset of " << yaw_offset_ << "." <<
+                      " Transform heading factor is now " << imu_yaw);
 
       // Convert to tf-friendly structures
       tf2::Quaternion imu_quat;
@@ -291,10 +297,12 @@ namespace RobotLocalization
       {
         geometry_msgs::TransformStamped utm_transform_stamped;
         utm_transform_stamped.header.stamp = ros::Time::now();
-        utm_transform_stamped.header.frame_id = world_frame_id_;
-        utm_transform_stamped.child_frame_id = "utm";
-        utm_transform_stamped.transform = tf2::toMsg(utm_world_transform_);
-        utm_transform_stamped.transform.translation.z = (zero_altitude_ ? 0.0 : utm_transform_stamped.transform.translation.z);
+        utm_transform_stamped.header.frame_id = (broadcast_utm_transform_as_parent_frame_ ? "utm" : world_frame_id_);
+        utm_transform_stamped.child_frame_id = (broadcast_utm_transform_as_parent_frame_ ? world_frame_id_ : "utm");
+        utm_transform_stamped.transform = (broadcast_utm_transform_as_parent_frame_ ?
+                                             tf2::toMsg(utm_world_trans_inverse_) : tf2::toMsg(utm_world_transform_));
+        utm_transform_stamped.transform.translation.z = (zero_altitude_ ?
+                                                           0.0 : utm_transform_stamped.transform.translation.z);
         utm_broadcaster_.sendTransform(utm_transform_stamped);
       }
     }
@@ -356,6 +364,7 @@ namespace RobotLocalization
                                                                  base_link_frame_id_,
                                                                  gps_frame_id_,
                                                                  transform_time,
+                                                                 ros::Duration(transform_timeout_),
                                                                  offset);
 
     if (can_transform)
@@ -405,6 +414,7 @@ namespace RobotLocalization
                                                                  base_link_frame_id_,
                                                                  gps_frame_id_,
                                                                  transform_time,
+                                                                 transform_timeout_,
                                                                  gps_offset_rotated);
 
     if (can_transform)
@@ -414,6 +424,7 @@ namespace RobotLocalization
                                                               world_frame_id_,
                                                               base_link_frame_id_,
                                                               transform_time,
+                                                              transform_timeout_,
                                                               robot_orientation);
 
       if (can_transform)
@@ -498,6 +509,7 @@ namespace RobotLocalization
                                                                    base_link_frame_id_,
                                                                    msg->header.frame_id,
                                                                    msg->header.stamp,
+                                                                   transform_timeout_,
                                                                    target_frame_trans);
 
       if (can_transform)
@@ -546,9 +558,9 @@ namespace RobotLocalization
 
     tf2::fromMsg(msg->pose.pose, latest_world_pose_);
     latest_odom_covariance_.setZero();
-    for(size_t row = 0; row < POSE_SIZE; ++row)
+    for (size_t row = 0; row < POSE_SIZE; ++row)
     {
-      for(size_t col = 0; col < POSE_SIZE; ++col)
+      for (size_t col = 0; col < POSE_SIZE; ++col)
       {
         latest_odom_covariance_(row, col) = msg->pose.covariance[row * POSE_SIZE + col];
       }
@@ -629,6 +641,10 @@ namespace RobotLocalization
       transformed_utm_gps.mult(utm_world_transform_, latest_utm_pose_);
       transformed_utm_gps.setRotation(tf2::Quaternion::getIdentity());
 
+      // Set header information stamp because we would like to know the robot's position at that timestamp
+      gps_odom.header.frame_id = world_frame_id_;
+      gps_odom.header.stamp = gps_update_time_;
+
       // Want the pose of the vehicle origin, not the GPS
       tf2::Transform transformed_utm_robot;
       getRobotOriginWorldPose(transformed_utm_gps, transformed_utm_robot, gps_odom.header.stamp);
@@ -663,9 +679,6 @@ namespace RobotLocalization
           gps_odom.pose.covariance[POSE_SIZE * i + j] = latest_utm_covariance_(i, j);
         }
       }
-
-      gps_odom.header.frame_id = world_frame_id_;
-      gps_odom.header.stamp = gps_update_time_;
 
       // Mark this GPS as used
       gps_updated_ = false;

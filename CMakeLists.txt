@@ -16,7 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf2
   tf2_geometry_msgs
-  tf2_ros)
+  tf2_ros
+  xmlrpcpp)
 
 # Attempt to find Eigen using its own CMake module.
 # If that fails, fall back to cmake_modules package.
@@ -79,6 +80,7 @@ catkin_package(
     tf2
     tf2_geometry_msgs
     tf2_ros
+    xmlrpcpp
   DEPENDS ${EIGEN_PACKAGE}
 )
 
@@ -100,8 +102,8 @@ add_library(ros_filter src/ros_filter.cpp)
 add_library(navsat_transform src/navsat_transform.cpp)
 
 # Dependencies
-add_dependencies(filter_base robot_localization_gencpp)
-add_dependencies(navsat_transform robot_localization_gencpp)
+add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
+add_dependencies(navsat_transform ${PROJECT_NAME}_gencpp)
 
 # Executables
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
@@ -134,14 +136,14 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 ## Mark executables and/or libraries for installation
 install(TARGETS
   ekf
+  ekf_localization_node
   filter_base
   filter_utilities
   navsat_transform
+  navsat_transform_node
   ros_filter
   ros_filter_utilities
   ukf
-  ekf_localization_node
-  navsat_transform_node
   ukf_localization_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

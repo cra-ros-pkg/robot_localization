@@ -136,6 +136,10 @@ class NavSatTransform
     //!
     bool broadcast_utm_transform_;
 
+    //! @brief Whether to broadcast the UTM transform as parent frame, default as child
+    //!
+    bool broadcast_utm_transform_as_parent_frame_;
+
     //! @brief The frame_id of the GPS message (specifies mounting location)
     //!
     std::string gps_frame_id_;
@@ -265,6 +269,10 @@ class NavSatTransform
     //! (NOTE: if you have a magenetic declination, use the parameter setting for that).
     //!
     double yaw_offset_;
+
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //!
+    ros::Duration transform_timeout_;
 
     //! @brief Whether or not to report 0 altitude
     //!

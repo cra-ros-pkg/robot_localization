@@ -160,6 +160,7 @@ TEST(FilterBaseTest, DerivedFilterGetSet)
     EXPECT_EQ(derived.getProcessNoiseCovariance(), pnCovar);
 
     Eigen::VectorXd state(STATE_SIZE);
+    state.setZero();
     derived.setState(state);
     EXPECT_EQ(derived.getState(), state);
 

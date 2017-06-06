@@ -33,7 +33,7 @@
 #include "robot_localization/ukf.h"
 #include "robot_localization/filter_common.h"
 
-#include <XmlRpcException.h>
+#include <xmlrpcpp/XmlRpcException.h>
 
 #include <sstream>
 #include <iomanip>
@@ -261,7 +261,6 @@ namespace RobotLocalization
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
-
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
       // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
@@ -293,17 +292,14 @@ namespace RobotLocalization
     double yaw = state_(StateMemberYaw);
 
     // We'll need these trig calculations a lot.
-    double sp = 0.0;
-    double cp = 0.0;
-    ::sincos(pitch, &sp, &cp);
+    double sp = ::sin(pitch);
+    double cp = ::cos(pitch);
 
-    double sr = 0.0;
-    double cr = 0.0;
-    ::sincos(roll, &sr, &cr);
+    double sr = ::sin(roll);
+    double cr = ::cos(roll);
 
-    double sy = 0.0;
-    double cy = 0.0;
-    ::sincos(yaw, &sy, &cy);
+    double sy = ::sin(yaw);
+    double cy = ::cos(yaw);
 
     prepareControl(referenceTime, delta);
 
@@ -374,7 +370,15 @@ namespace RobotLocalization
 
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
     // to ensure that we actually incorporate the processNoiseCovariance_
-    estimateErrorCovariance_.noalias() += delta * processNoiseCovariance_;
+    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
+
+    if (useDynamicProcessNoiseCovariance_)
+    {
+      computeDynamicProcessNoiseCovariance(state_, delta);
+      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
+    }
+
+    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
 
     // Keep the angles bounded
     wrapStateAngles();
