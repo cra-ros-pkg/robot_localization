@@ -269,7 +269,8 @@ namespace RobotLocalization
       imu_yaw += (magnetic_declination_ + yaw_offset_);
 
       ROS_INFO_STREAM("Corrected for magnetic declination of " << std::fixed << magnetic_declination_ <<
-                      " and user-specified offset of " << yaw_offset_ << ". Transform heading factor is now " << imu_yaw);
+                      " and user-specified offset of " << yaw_offset_ << "." <<
+                      " Transform heading factor is now " << imu_yaw);
 
       // Convert to tf-friendly structures
       tf2::Quaternion imu_quat;
@@ -300,7 +301,8 @@ namespace RobotLocalization
         utm_transform_stamped.child_frame_id = (broadcast_utm_transform_as_parent_frame_ ? world_frame_id_ : "utm");
         utm_transform_stamped.transform = (broadcast_utm_transform_as_parent_frame_ ?
                                              tf2::toMsg(utm_world_trans_inverse_) : tf2::toMsg(utm_world_transform_));
-        utm_transform_stamped.transform.translation.z = (zero_altitude_ ? 0.0 : utm_transform_stamped.transform.translation.z);
+        utm_transform_stamped.transform.translation.z = (zero_altitude_ ?
+                                                           0.0 : utm_transform_stamped.transform.translation.z);
         utm_broadcaster_.sendTransform(utm_transform_stamped);
       }
     }
@@ -556,9 +558,9 @@ namespace RobotLocalization
 
     tf2::fromMsg(msg->pose.pose, latest_world_pose_);
     latest_odom_covariance_.setZero();
-    for(size_t row = 0; row < POSE_SIZE; ++row)
+    for (size_t row = 0; row < POSE_SIZE; ++row)
     {
-      for(size_t col = 0; col < POSE_SIZE; ++col)
+      for (size_t col = 0; col < POSE_SIZE; ++col)
       {
         latest_odom_covariance_(row, col) = msg->pose.covariance[row * POSE_SIZE + col];
       }
