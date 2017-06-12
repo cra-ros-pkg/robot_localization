@@ -13,7 +13,7 @@
   <author email="ayrton04@gmail.com">Tom Moore</author> 
 
   <buildtool_depend>catkin</buildtool_depend>
-  
+
   <depend>cmake_modules</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
@@ -33,7 +33,7 @@
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
-  
+
   <exec_depend>message_runtime</exec_depend>
 
   <test_depend>rosbag</test_depend>
