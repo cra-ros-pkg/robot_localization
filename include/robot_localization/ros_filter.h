@@ -527,6 +527,11 @@ template<class T> class RosFilter
     //!
     std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
 
+    //! @brief By default, the filter predicts and corrects up to the time of the latest measurement. If this is set
+    //! to true, the filter does the same, but then also predicts up to the current time step.
+    //!
+    bool predictToCurrentTime_;
+
     //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
     //!
     bool printDiagnostics_;
