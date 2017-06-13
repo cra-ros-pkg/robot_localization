@@ -100,7 +100,8 @@ namespace RosFilterUtilities
                            const std::string &sourceFrame,
                            const ros::Time &time,
                            const ros::Duration &timeout,
-                           tf2::Transform &targetFrameTrans)
+                           tf2::Transform &targetFrameTrans,
+                           const bool silent)
   {
     bool retVal = true;
 
@@ -120,13 +121,19 @@ namespace RosFilterUtilities
         tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
                      targetFrameTrans);
 
-        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
-                                      " was unavailable for the time requested. Using latest instead.\n");
+        if (!silent)
+        {
+          ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
+                                        " was unavailable for the time requested. Using latest instead.\n");
+        }
       }
       catch(tf2::TransformException &ex)
       {
-        ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
-                                      " to " << targetFrame << ". Error was " << ex.what() << "\n");
+        if (!silent)
+        {
+          ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
+                                        " to " << targetFrame << ". Error was " << ex.what() << "\n");
+        }
 
         retVal = false;
       }
@@ -151,9 +158,10 @@ namespace RosFilterUtilities
                            const std::string &targetFrame,
                            const std::string &sourceFrame,
                            const ros::Time &time,
-                           tf2::Transform &targetFrameTrans)
+                           tf2::Transform &targetFrameTrans,
+                           const bool silent)
   {
-    return lookupTransformSafe(buffer, targetFrame, sourceFrame, time, ros::Duration(0), targetFrameTrans);
+    return lookupTransformSafe(buffer, targetFrame, sourceFrame, time, ros::Duration(0), targetFrameTrans, silent);
   }
 
   void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
