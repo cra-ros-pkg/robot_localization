@@ -2,9 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.4.1(2017-06-26)
+-----------------
+* RST-382 fixing timestamps in map->odom transform
+* Removing callback queue clearing
+
 2.4.0 (2017-04-17)
 ------------------
-* 2.4.0-1
 * Removing callback queue clearing
 * Fix ac/deceleration gains default logic
 * Fixing xmlrpcpp dependency
