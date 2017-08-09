@@ -31,10 +31,18 @@ target_link_libraries(
   filter_base
   filter_utilities)
 
+add_library(
+  ekf
+  src/ekf.cpp)
+target_link_libraries(
+  ekf
+  filter_base)
+
 install(
   TARGETS
-  filter_utilities
+  ekf
   filter_base
+  filter_utilities
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -61,7 +69,8 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_libraries(
-  filter_utilities
+  ekf
   filter_base
+  filter_utilities
 )
 ament_package()

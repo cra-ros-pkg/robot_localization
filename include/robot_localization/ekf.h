@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2017, Locus Robotics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +41,7 @@
 #include <set>
 #include <queue>
 
-namespace RobotLocalization
+namespace robot_localization
 {
 
 //! @brief Extended Kalman filter class
@@ -76,10 +77,10 @@ class Ekf: public FilterBase
     //! Projects the state and error matrices forward using a model of
     //! the vehicle's motion.
     //!
-    //! @param[in] referenceTime - The time at which the prediction is being made
+    //! @param[in] reference_time - The time at which the prediction is being made
     //! @param[in] delta - The time step over which to predict.
     //!
-    void predict(const double referenceTime, const double delta);
+    void predict(const double reference_time, const double delta);
 };
 
 }  // namespace RobotLocalization
