@@ -33,7 +33,7 @@
 #ifndef ROBOT_LOCALIZATION_FILTER_COMMON_H
 #define ROBOT_LOCALIZATION_FILTER_COMMON_H
 
-namespace RobotLocalization
+namespace robot_localization
 {
 
 //! @brief Enumeration that defines the state vector

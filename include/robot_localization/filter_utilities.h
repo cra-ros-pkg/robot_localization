@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-#define FB_DEBUG(msg) if (getDebug()) { *debugStream_ << msg; }
+#define FB_DEBUG(msg) if (getDebug()) { *debug_stream_ << msg; }
 
 // Handy methods for debug output
 std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat);
@@ -48,9 +48,9 @@ std::ostream& operator<<(std::ostream& os, const Eigen::VectorXd &vec);
 std::ostream& operator<<(std::ostream& os, const std::vector<size_t> &vec);
 std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec);
 
-namespace RobotLocalization
+namespace robot_localization
 {
-namespace FilterUtilities
+namespace filter_utilities
 {
 
   //! @brief Utility method keeping RPY angles in the range [-pi, pi]
@@ -60,10 +60,10 @@ namespace FilterUtilities
   double clampRotation(double rotation);
 
   //! @brief Utility method for appending tf2 prefixes cleanly
-  //! @param[in] tfPrefix - the tf2 prefix to append
-  //! @param[in, out] frameId - the resulting frame_id value
+  //! @param[in] tf_prefix - the tf2 prefix to append
+  //! @param[in, out] frame_id - the resulting frame_id value
   //!
-  void appendPrefix(std::string tfPrefix, std::string &frameId);
+  void appendPrefix(std::string tf_prefix, std::string &frame_id);
 
 }  // namespace FilterUtilities
 }  // namespace RobotLocalization

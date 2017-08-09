@@ -40,9 +40,9 @@ std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
 {
   os << "[";
 
-  int rowCount = static_cast<int>(mat.rows());
+  int row_count = static_cast<int>(mat.rows());
 
-  for (int row = 0; row < rowCount; ++row)
+  for (int row = 0; row < row_count; ++row)
   {
     if (row > 0)
     {
@@ -54,7 +54,7 @@ std::ostream& operator<<(std::ostream& os, const Eigen::MatrixXd &mat)
       os << std::setiosflags(std::ios::left) << std::setw(12) << std::setprecision(5) << mat(row, col);
     }
 
-    if (row < rowCount - 1)
+    if (row < row_count - 1)
     {
       os << "\n";
     }
@@ -101,28 +101,28 @@ std::ostream& operator<<(std::ostream& os, const std::vector<int> &vec)
   return os;
 }
 
-namespace RobotLocalization
+namespace robot_localization
 {
 
-namespace FilterUtilities
+namespace filter_utilities
 {
-  void appendPrefix(std::string tfPrefix, std::string &frameId)
+  void appendPrefix(std::string tf_prefix, std::string &frame_id)
   {
     // Strip all leading slashes for tf2 compliance
-    if (!frameId.empty() && frameId.at(0) == '/')
+    if (!frame_id.empty() && frame_id.at(0) == '/')
     {
-      frameId = frameId.substr(1);
+      frame_id = frame_id.substr(1);
     }
 
-    if (!tfPrefix.empty() && tfPrefix.at(0) == '/')
+    if (!tf_prefix.empty() && tf_prefix.at(0) == '/')
     {
-      tfPrefix = tfPrefix.substr(1);
+      tf_prefix = tf_prefix.substr(1);
     }
 
     // If we do have a tf prefix, then put a slash in between
-    if (!tfPrefix.empty())
+    if (!tf_prefix.empty())
     {
-      frameId = tfPrefix + "/" + frameId;
+      frame_id = tf_prefix + "/" + frame_id;
     }
   }
 

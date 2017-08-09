@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2017, Locus Robotics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +33,7 @@
 
 #include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
+#include "robot_localization/filter_utilities.h"
 
 #include <iomanip>
 #include <iostream>
@@ -39,30 +41,36 @@
 #include <sstream>
 #include <vector>
 
-namespace RobotLocalization
+
+namespace robot_localization
 {
   FilterBase::FilterBase() :
-    accelerationGains_(TWIST_SIZE, 0.0),
-    accelerationLimits_(TWIST_SIZE, 0.0),
-    decelerationGains_(TWIST_SIZE, 0.0),
-    decelerationLimits_(TWIST_SIZE, 0.0),
-    controlAcceleration_(TWIST_SIZE),
-    controlTimeout_(0.0),
-    controlUpdateVector_(TWIST_SIZE, 0),
-    dynamicProcessNoiseCovariance_(STATE_SIZE, STATE_SIZE),
-    latestControlTime_(0.0),
+    initialized_(false),
+    use_control_(false),
+    use_dynamic_process_noise_covariance_(false),
+    control_timeout_(0.0),
+    last_measurement_time_(0.0),
+    last_update_time_(0.0),
+    latest_control_time_(0.0),
+    sensor_timeout_(0.0),
+    debug_stream_(nullptr),
+    acceleration_gains_(TWIST_SIZE, 0.0),
+    acceleration_limits_(TWIST_SIZE, 0.0),
+    deceleration_gains_(TWIST_SIZE, 0.0),
+    deceleration_limits_(TWIST_SIZE, 0.0),
+    control_update_vector_(TWIST_SIZE, 0),
+    control_acceleration_(TWIST_SIZE),
+    latest_control_(TWIST_SIZE),
+    predicted_state_(STATE_SIZE),
     state_(STATE_SIZE),
-    predictedState_(STATE_SIZE),
-    transferFunction_(STATE_SIZE, STATE_SIZE),
-    transferFunctionJacobian_(STATE_SIZE, STATE_SIZE),
-    estimateErrorCovariance_(STATE_SIZE, STATE_SIZE),
-    covarianceEpsilon_(STATE_SIZE, STATE_SIZE),
-    processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
+    covariance_epsilon_(STATE_SIZE, STATE_SIZE),
+    dynamic_process_noise_covariance_(STATE_SIZE, STATE_SIZE),
+    estimate_error_covariance_(STATE_SIZE, STATE_SIZE),
     identity_(STATE_SIZE, STATE_SIZE),
-    debug_(false),
-    debugStream_(NULL),
-    useControl_(false),
-    useDynamicProcessNoiseCovariance_(false)
+    process_noise_covariance_(STATE_SIZE, STATE_SIZE),
+    transfer_function_(STATE_SIZE, STATE_SIZE),
+    transfer_function_jacobian_(STATE_SIZE, STATE_SIZE),
+    debug_(false)
   {
     reset();
   }
@@ -77,60 +85,60 @@ namespace RobotLocalization
 
     // Clear the state and predicted state
     state_.setZero();
-    predictedState_.setZero();
-    controlAcceleration_.setZero();
+    predicted_state_.setZero();
+    control_acceleration_.setZero();
 
     // Prepare the invariant parts of the transfer
     // function
-    transferFunction_.setIdentity();
+    transfer_function_.setIdentity();
 
     // Clear the Jacobian
-    transferFunctionJacobian_.setZero();
+    transfer_function_jacobian_.setZero();
 
     // Set the estimate error covariance. We want our measurements
     // to be accepted rapidly when the filter starts, so we should
     // initialize the state's covariance with large values.
-    estimateErrorCovariance_.setIdentity();
-    estimateErrorCovariance_ *= 1e-9;
+    estimate_error_covariance_.setIdentity();
+    estimate_error_covariance_ *= 1e-9;
 
     // We need the identity for the update equations
     identity_.setIdentity();
 
     // Set the epsilon matrix to be a matrix with small values on the diagonal
     // It is used to maintain the positive-definite property of the covariance
-    covarianceEpsilon_.setIdentity();
-    covarianceEpsilon_ *= 0.001;
+    covariance_epsilon_.setIdentity();
+    covariance_epsilon_ *= 0.001;
 
     // Assume 30Hz from sensor data (configurable)
-    sensorTimeout_ = 0.033333333;
+    sensor_timeout_ = 0.033333333;
 
     // Initialize our last update and measurement times
-    lastUpdateTime_ = 0;
-    lastMeasurementTime_ = 0;
+    last_update_time_ = 0;
+    last_measurement_time_ = 0;
 
     // These can be overridden via the launch parameters,
     // but we need default values.
-    processNoiseCovariance_.setZero();
-    processNoiseCovariance_(StateMemberX, StateMemberX) = 0.05;
-    processNoiseCovariance_(StateMemberY, StateMemberY) = 0.05;
-    processNoiseCovariance_(StateMemberZ, StateMemberZ) = 0.06;
-    processNoiseCovariance_(StateMemberRoll, StateMemberRoll) = 0.03;
-    processNoiseCovariance_(StateMemberPitch, StateMemberPitch) = 0.03;
-    processNoiseCovariance_(StateMemberYaw, StateMemberYaw) = 0.06;
-    processNoiseCovariance_(StateMemberVx, StateMemberVx) = 0.025;
-    processNoiseCovariance_(StateMemberVy, StateMemberVy) = 0.025;
-    processNoiseCovariance_(StateMemberVz, StateMemberVz) = 0.04;
-    processNoiseCovariance_(StateMemberVroll, StateMemberVroll) = 0.01;
-    processNoiseCovariance_(StateMemberVpitch, StateMemberVpitch) = 0.01;
-    processNoiseCovariance_(StateMemberVyaw, StateMemberVyaw) = 0.02;
-    processNoiseCovariance_(StateMemberAx, StateMemberAx) = 0.01;
-    processNoiseCovariance_(StateMemberAy, StateMemberAy) = 0.01;
-    processNoiseCovariance_(StateMemberAz, StateMemberAz) = 0.015;
+    process_noise_covariance_.setZero();
+    process_noise_covariance_(StateMemberX, StateMemberX) = 0.05;
+    process_noise_covariance_(StateMemberY, StateMemberY) = 0.05;
+    process_noise_covariance_(StateMemberZ, StateMemberZ) = 0.06;
+    process_noise_covariance_(StateMemberRoll, StateMemberRoll) = 0.03;
+    process_noise_covariance_(StateMemberPitch, StateMemberPitch) = 0.03;
+    process_noise_covariance_(StateMemberYaw, StateMemberYaw) = 0.06;
+    process_noise_covariance_(StateMemberVx, StateMemberVx) = 0.025;
+    process_noise_covariance_(StateMemberVy, StateMemberVy) = 0.025;
+    process_noise_covariance_(StateMemberVz, StateMemberVz) = 0.04;
+    process_noise_covariance_(StateMemberVroll, StateMemberVroll) = 0.01;
+    process_noise_covariance_(StateMemberVpitch, StateMemberVpitch) = 0.01;
+    process_noise_covariance_(StateMemberVyaw, StateMemberVyaw) = 0.02;
+    process_noise_covariance_(StateMemberAx, StateMemberAx) = 0.01;
+    process_noise_covariance_(StateMemberAy, StateMemberAy) = 0.01;
+    process_noise_covariance_(StateMemberAz, StateMemberAz) = 0.015;
 
-    dynamicProcessNoiseCovariance_ = processNoiseCovariance_;
+    dynamic_process_noise_covariance_ = process_noise_covariance_;
   }
 
-  void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta)
+  void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double)
   {
     // A more principled approach would be to get the current velocity from the state, make a diagonal matrix from it,
     // and then rotate it to be in the world frame (i.e., the same frame as the pose data). We could then use this
@@ -139,24 +147,24 @@ namespace RobotLocalization
     // However, this presents trouble for robots that may incur rotational error as a result of linear motion (and
     // vice-versa). Instead, we create a diagonal matrix whose diagonal values are the vector norm of the state's
     // velocity. We use that to scale the process noise covariance.
-    Eigen::MatrixXd velocityMatrix(TWIST_SIZE, TWIST_SIZE);
-    velocityMatrix.setIdentity();
-    velocityMatrix.diagonal() *= state.segment(POSITION_V_OFFSET, TWIST_SIZE).norm();
+    Eigen::MatrixXd velocity_matrix(TWIST_SIZE, TWIST_SIZE);
+    velocity_matrix.setIdentity();
+    velocity_matrix.diagonal() *= state.segment(POSITION_V_OFFSET, TWIST_SIZE).norm();
 
-    dynamicProcessNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
-      velocityMatrix *
-      processNoiseCovariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) *
-      velocityMatrix.transpose();
+    dynamic_process_noise_covariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
+      velocity_matrix *
+      process_noise_covariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET, POSITION_OFFSET) *
+      velocity_matrix.transpose();
   }
 
   const Eigen::VectorXd& FilterBase::getControl()
   {
-    return latestControl_;
+    return latest_control_;
   }
 
   double FilterBase::getControlTime()
   {
-    return latestControlTime_;
+    return latest_control_time_;
   }
 
   bool FilterBase::getDebug()
@@ -166,7 +174,7 @@ namespace RobotLocalization
 
   const Eigen::MatrixXd& FilterBase::getEstimateErrorCovariance()
   {
-    return estimateErrorCovariance_;
+    return estimate_error_covariance_;
   }
 
   bool FilterBase::getInitializedStatus()
@@ -176,27 +184,27 @@ namespace RobotLocalization
 
   double FilterBase::getLastMeasurementTime()
   {
-    return lastMeasurementTime_;
+    return last_measurement_time_;
   }
 
   double FilterBase::getLastUpdateTime()
   {
-    return lastUpdateTime_;
+    return last_update_time_;
   }
 
   const Eigen::VectorXd& FilterBase::getPredictedState()
   {
-    return predictedState_;
+    return predicted_state_;
   }
 
   const Eigen::MatrixXd& FilterBase::getProcessNoiseCovariance()
   {
-    return processNoiseCovariance_;
+    return process_noise_covariance_;
   }
 
   double FilterBase::getSensorTimeout()
   {
-    return sensorTimeout_;
+    return sensor_timeout_;
   }
 
   const Eigen::VectorXd& FilterBase::getState()
@@ -206,7 +214,7 @@ namespace RobotLocalization
 
   void FilterBase::processMeasurement(const Measurement &measurement)
   {
-    FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
+    FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topic_name_ << ") ------\n");
 
     double delta = 0.0;
 
@@ -216,11 +224,11 @@ namespace RobotLocalization
     if (initialized_)
     {
       // Determine how much time has passed since our last measurement
-      delta = measurement.time_ - lastMeasurementTime_;
+      delta = measurement.time_ - last_measurement_time_;
 
       FB_DEBUG("Filter is already initialized. Carrying out predict/correct loop...\n"
                "Measurement time is " << std::setprecision(20) << measurement.time_ <<
-               ", last measurement time is " << lastMeasurementTime_ << ", delta is " << delta << "\n");
+               ", last measurement time is " << last_measurement_time_ << ", delta is " << delta << "\n");
 
       // Only want to carry out a prediction if it's
       // forward in time. Otherwise, just correct.
@@ -230,7 +238,7 @@ namespace RobotLocalization
         predict(measurement.time_, delta);
 
         // Return this to the user
-        predictedState_ = state_;
+        predicted_state_ = state_;
       }
 
       correct(measurement);
@@ -240,20 +248,19 @@ namespace RobotLocalization
       FB_DEBUG("First measurement. Initializing filter.\n");
 
       // Initialize the filter, but only with the values we're using
-      size_t measurementLength = measurement.updateVector_.size();
-      for (size_t i = 0; i < measurementLength; ++i)
+      size_t measurement_length = measurement.update_vector_.size();
+      for (size_t i = 0; i < measurement_length; ++i)
       {
-        state_[i] = (measurement.updateVector_[i] ? measurement.measurement_[i] : state_[i]);
+        state_[i] = (measurement.update_vector_[i] ? measurement.measurement_[i] : state_[i]);
       }
 
       // Same for covariance
-      for (size_t i = 0; i < measurementLength; ++i)
+      for (size_t i = 0; i < measurement_length; ++i)
       {
-        for (size_t j = 0; j < measurementLength; ++j)
+        for (size_t j = 0; j < measurement_length; ++j)
         {
-          estimateErrorCovariance_(i, j) = (measurement.updateVector_[i] && measurement.updateVector_[j] ?
-                                            measurement.covariance_(i, j) :
-                                            estimateErrorCovariance_(i, j));
+          estimate_error_covariance_(i, j) = (measurement.update_vector_[i] && measurement.update_vector_[j] ?
+            measurement.covariance_(i, j) : estimate_error_covariance_(i, j));
         }
       }
 
@@ -269,38 +276,38 @@ namespace RobotLocalization
       // determine if we have a sensor timeout, whereas the
       // measurement time is used to calculate time deltas for
       // prediction and correction.
-      lastMeasurementTime_ = measurement.time_;
+      last_measurement_time_ = measurement.time_;
     }
 
-    FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topicName_ << ") ------\n");
+    FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topic_name_ << ") ------\n");
   }
 
-  void FilterBase::setControl(const Eigen::VectorXd &control, const double controlTime)
+  void FilterBase::setControl(const Eigen::VectorXd &control, const double control_time)
   {
-    latestControl_ = control;
-    latestControlTime_ = controlTime;
+    latest_control_ = control;
+    latest_control_time_ = control_time;
   }
 
-  void FilterBase::setControlParams(const std::vector<int> &updateVector, const double controlTimeout,
-    const std::vector<double> &accelerationLimits, const std::vector<double> &accelerationGains,
-    const std::vector<double> &decelerationLimits, const std::vector<double> &decelerationGains)
+  void FilterBase::setControlParams(const std::vector<int> &update_vector, const double control_timeout,
+    const std::vector<double> &acceleration_limits, const std::vector<double> &acceleration_gains,
+    const std::vector<double> &deceleration_limits, const std::vector<double> &deceleration_gains)
   {
-    useControl_ = true;
-    controlUpdateVector_ = updateVector;
-    controlTimeout_ = controlTimeout;
-    accelerationLimits_ = accelerationLimits;
-    accelerationGains_ = accelerationGains;
-    decelerationLimits_ = decelerationLimits;
-    decelerationGains_ = decelerationGains;
+    use_control_ = true;
+    control_update_vector_ = update_vector;
+    control_timeout_ = control_timeout;
+    acceleration_limits_ = acceleration_limits;
+    acceleration_gains_ = acceleration_gains;
+    deceleration_limits_ = deceleration_limits;
+    deceleration_gains_ = deceleration_gains;
   }
 
-  void FilterBase::setDebug(const bool debug, std::ostream *outStream)
+  void FilterBase::setDebug(const bool debug, std::ostream *out_stream)
   {
     if (debug)
     {
-      if (outStream != NULL)
+      if (out_stream != NULL)
       {
-        debugStream_ = outStream;
+        debug_stream_ = out_stream;
         debug_ = true;
       }
       else
@@ -314,34 +321,34 @@ namespace RobotLocalization
     }
   }
 
-  void FilterBase::setUseDynamicProcessNoiseCovariance(const bool useDynamicProcessNoiseCovariance)
+  void FilterBase::setUseDynamicProcessNoiseCovariance(const bool use_dynamic_process_noise_covariance)
   {
-    useDynamicProcessNoiseCovariance_ = useDynamicProcessNoiseCovariance;
+    use_dynamic_process_noise_covariance_ = use_dynamic_process_noise_covariance;
   }
 
-  void FilterBase::setEstimateErrorCovariance(const Eigen::MatrixXd &estimateErrorCovariance)
+  void FilterBase::setEstimateErrorCovariance(const Eigen::MatrixXd &estimate_error_covariance)
   {
-    estimateErrorCovariance_ = estimateErrorCovariance;
+    estimate_error_covariance_ = estimate_error_covariance;
   }
 
-  void FilterBase::setLastMeasurementTime(const double lastMeasurementTime)
+  void FilterBase::setLastMeasurementTime(const double last_measurement_time)
   {
-    lastMeasurementTime_ = lastMeasurementTime;
+    last_measurement_time_ = last_measurement_time;
   }
 
-  void FilterBase::setLastUpdateTime(const double lastUpdateTime)
+  void FilterBase::setLastUpdateTime(const double last_update_time)
   {
-    lastUpdateTime_ = lastUpdateTime;
+    last_update_time_ = last_update_time;
   }
 
-  void FilterBase::setProcessNoiseCovariance(const Eigen::MatrixXd &processNoiseCovariance)
+  void FilterBase::setProcessNoiseCovariance(const Eigen::MatrixXd &process_noise_covariance)
   {
-    processNoiseCovariance_ = processNoiseCovariance;
+    process_noise_covariance_ = process_noise_covariance;
   }
 
-  void FilterBase::setSensorTimeout(const double sensorTimeout)
+  void FilterBase::setSensorTimeout(const double sensor_timeout)
   {
-    sensorTimeout_ = sensorTimeout;
+    sensor_timeout_ = sensor_timeout;
   }
 
   void FilterBase::setState(const Eigen::VectorXd &state)
@@ -361,27 +368,27 @@ namespace RobotLocalization
   }
 
 
-  void FilterBase::prepareControl(const double referenceTime, const double predictionDelta)
+  void FilterBase::prepareControl(const double reference_time, const double)
   {
-    controlAcceleration_.setZero();
+    control_acceleration_.setZero();
 
-    if (useControl_)
+    if (use_control_)
     {
-      bool timedOut = ::fabs(referenceTime - latestControlTime_) >= controlTimeout_;
+      bool timed_out = ::fabs(reference_time - latest_control_time_) >= control_timeout_;
 
-      if (timedOut)
+      if (timed_out)
       {
-        FB_DEBUG("Control timed out. Reference time was " << referenceTime << ", latest control time was " <<
-          latestControlTime_ << ", control timeout was " << controlTimeout_ << "\n");
+        FB_DEBUG("Control timed out. Reference time was " << reference_time << ", latest control time was " <<
+          latest_control_time_ << ", control timeout was " << control_timeout_ << "\n");
       }
 
       for (size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
       {
-        if (controlUpdateVector_[controlInd])
+        if (control_update_vector_[controlInd])
         {
-          controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
-            (timedOut ? 0.0 : latestControl_(controlInd)), accelerationLimits_[controlInd],
-            accelerationGains_[controlInd], decelerationLimits_[controlInd], decelerationGains_[controlInd]);
+          control_acceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
+            (timed_out ? 0.0 : latest_control_(controlInd)), acceleration_limits_[controlInd],
+            acceleration_gains_[controlInd], deceleration_limits_[controlInd], deceleration_gains_[controlInd]);
         }
       }
     }
@@ -389,24 +396,23 @@ namespace RobotLocalization
 
   void FilterBase::wrapStateAngles()
   {
-    state_(StateMemberRoll)  = FilterUtilities::clampRotation(state_(StateMemberRoll));
-    state_(StateMemberPitch) = FilterUtilities::clampRotation(state_(StateMemberPitch));
-    state_(StateMemberYaw)   = FilterUtilities::clampRotation(state_(StateMemberYaw));
+    state_(StateMemberRoll)  = filter_utilities::clampRotation(state_(StateMemberRoll));
+    state_(StateMemberPitch) = filter_utilities::clampRotation(state_(StateMemberPitch));
+    state_(StateMemberYaw)   = filter_utilities::clampRotation(state_(StateMemberYaw));
   }
 
   bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
-                                             const Eigen::MatrixXd &invCovariance,
-                                             const double nsigmas)
+    const Eigen::MatrixXd &innovation_covariance, const double n_sigmas)
   {
-    double sqMahalanobis = innovation.dot(invCovariance * innovation);
-    double threshold = nsigmas * nsigmas;
+    double squared_mahalanobis = innovation.dot(innovation_covariance * innovation);
+    double threshold = n_sigmas * n_sigmas;
 
-    if (sqMahalanobis >= threshold)
+    if (squared_mahalanobis >= threshold)
     {
-      FB_DEBUG("Innovation mahalanobis distance test failed. Squared Mahalanobis is: " << sqMahalanobis << "\n" <<
-               "Threshold is: " << threshold << "\n" <<
+      FB_DEBUG("Innovation mahalanobis distance test failed. Squared Mahalanobis is: " << squared_mahalanobis <<
+               "\nThreshold is: " << threshold << "\n" <<
                "Innovation is: " << innovation << "\n" <<
-               "Innovation covariance is:\n" << invCovariance << "\n");
+               "Innovation covariance is:\n" << innovation_covariance << "\n");
 
       return false;
     }
