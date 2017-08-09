@@ -48,8 +48,8 @@ int main(int argc, char **argv)
   nhLocal.param("beta", args[2], 2.0);
 
   RobotLocalization::RosUkf ukf(args);
-
-  ukf.run();
+  ukf.initialize();
+  ros::spin();
 
   return 0;
 }
