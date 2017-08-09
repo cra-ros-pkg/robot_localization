@@ -38,11 +38,19 @@ target_link_libraries(
   ekf
   filter_base)
 
+add_library(
+  ukf
+  src/ukf.cpp)
+target_link_libraries(
+  ukf
+  filter_base)
+
 install(
   TARGETS
   ekf
   filter_base
   filter_utilities
+  ukf
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -72,5 +80,6 @@ ament_export_libraries(
   ekf
   filter_base
   filter_utilities
+  ukf
 )
 ament_package()

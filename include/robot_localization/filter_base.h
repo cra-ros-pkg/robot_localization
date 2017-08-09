@@ -53,11 +53,12 @@
 namespace robot_localization
 {
 
-//! @brief Structure used for storing and comparing measurements
-//! (for priority queues)
-//!
-//! Measurement units are assumed to be in meters and radians. Times are real-valued and measured in seconds.
-//!
+/**
+ * @brief Structure used for storing and comparing measurements
+ * (for priority queues)
+ *
+ * Measurement units are assumed to be in meters and radians. Times are real-valued and measured in seconds.
+ */
 struct Measurement
 {
   // The real-valued time, in seconds, since some epoch (presumably the start of execution, but any will do)
@@ -105,11 +106,12 @@ struct Measurement
 };
 typedef std::shared_ptr<Measurement> MeasurementPtr;
 
-//! @brief Structure used for storing and comparing filter states
-//!
-//! This structure is useful when higher-level classes need to remember filter history. Measurement units are assumed
-//! to be in meters and radians. Times are real-valued and measured in seconds.
-//!
+/**
+  * @brief Structure used for storing and comparing filter states
+  *
+  * This structure is useful when higher-level classes need to remember filter history. Measurement units are assumed
+  * to be in meters and radians. Times are real-valued and measured in seconds.
+  */
 struct FilterState
 {
   // The filter state vector

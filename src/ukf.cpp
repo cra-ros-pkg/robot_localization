@@ -33,20 +33,11 @@
 #include "robot_localization/ukf.h"
 #include "robot_localization/filter_common.h"
 
-#include <xmlrpcpp/XmlRpcException.h>
-
-#include <sstream>
-#include <iomanip>
-#include <limits>
+#include <vector>
 
 #include <Eigen/Cholesky>
 
-#include <iostream>
-#include <vector>
-
-#include <assert.h>
-
-namespace RobotLocalization
+namespace robot_localization
 {
   Ukf::Ukf(std::vector<double> args) :
     FilterBase(),  // Must initialize filter base!
@@ -58,23 +49,23 @@ namespace RobotLocalization
     double kappa = args[1];
     double beta = args[2];
 
-    size_t sigmaCount = (STATE_SIZE << 1) + 1;
-    sigmaPoints_.resize(sigmaCount, Eigen::VectorXd(STATE_SIZE));
+    size_t sigma_count = (STATE_SIZE << 1) + 1;
+    sigma_points_.resize(sigma_count, Eigen::VectorXd(STATE_SIZE));
 
     // Prepare constants
     lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
 
-    stateWeights_.resize(sigmaCount);
-    covarWeights_.resize(sigmaCount);
+    state_weights_.resize(sigma_count);
+    covar_weights_.resize(sigma_count);
 
-    stateWeights_[0] = lambda_ / (STATE_SIZE + lambda_);
-    covarWeights_[0] = stateWeights_[0] + (1 - (alpha * alpha) + beta);
-    sigmaPoints_[0].setZero();
-    for (size_t i = 1; i < sigmaCount; ++i)
+    state_weights_[0] = lambda_ / (STATE_SIZE + lambda_);
+    covar_weights_[0] = state_weights_[0] + (1 - (alpha * alpha) + beta);
+    sigma_points_[0].setZero();
+    for (size_t i = 1; i < sigma_count; ++i)
     {
-      sigmaPoints_[i].setZero();
-      stateWeights_[i] =  1 / (2 * (STATE_SIZE + lambda_));
-      covarWeights_[i] = stateWeights_[i];
+      sigma_points_[i].setZero();
+      state_weights_[i] =  1 / (2 * (STATE_SIZE + lambda_));
+      covar_weights_[i] = state_weights_[i];
     }
   }
 
@@ -95,20 +86,20 @@ namespace RobotLocalization
     // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
     if (!uncorrected_)
     {
-      // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-      weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
+      // Take the square root of a small fraction of the estimate_error_covariance_ using LL' decomposition
+      weighted_covar_sqrt_ = ((STATE_SIZE + lambda_) * estimate_error_covariance_).llt().matrixL();
 
       // Compute sigma points
 
       // First sigma point is the current state
-      sigmaPoints_[0] = state_;
+      sigma_points_[0] = state_;
 
-      // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-      // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-      for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+      // Next STATE_SIZE sigma points are state + weighted_covar_sqrt_[ith column]
+      // STATE_SIZE sigma points after that are state - weighted_covar_sqrt_[ith column]
+      for (size_t sigma_ind = 0; sigma_ind < STATE_SIZE; ++sigma_ind)
       {
-        sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
-        sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
+        sigma_points_[sigma_ind + 1] = state_ + weighted_covar_sqrt_.col(sigma_ind);
+        sigma_points_[sigma_ind + 1 + STATE_SIZE] = state_ - weighted_covar_sqrt_.col(sigma_ind);
       }
     }
 
@@ -116,10 +107,10 @@ namespace RobotLocalization
     // the measured parts of our state vector
 
     // First, determine how many state vector values we're updating
-    std::vector<size_t> updateIndices;
-    for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
+    std::vector<size_t> update_indices;
+    for (size_t i = 0; i < measurement.update_vector_.size(); ++i)
     {
-      if (measurement.updateVector_[i])
+      if (measurement.update_vector_[i])
       {
         // Handle nan and inf values in measurements
         if (std::isnan(measurement.measurement_(i)))
@@ -132,60 +123,60 @@ namespace RobotLocalization
         }
         else
         {
-          updateIndices.push_back(i);
+          update_indices.push_back(i);
         }
       }
     }
 
-    FB_DEBUG("Update indices are:\n" << updateIndices << "\n");
+    FB_DEBUG("Update indices are:\n" << update_indices << "\n");
 
-    size_t updateSize = updateIndices.size();
+    size_t updateSize = update_indices.size();
 
     // Now set up the relevant matrices
-    Eigen::VectorXd stateSubset(updateSize);                              // x (in most literature)
-    Eigen::VectorXd measurementSubset(updateSize);                        // z
-    Eigen::MatrixXd measurementCovarianceSubset(updateSize, updateSize);  // R
-    Eigen::MatrixXd stateToMeasurementSubset(updateSize, STATE_SIZE);     // H
-    Eigen::MatrixXd kalmanGainSubset(STATE_SIZE, updateSize);             // K
-    Eigen::VectorXd innovationSubset(updateSize);                         // z - Hx
-    Eigen::VectorXd predictedMeasurement(updateSize);
-    Eigen::VectorXd sigmaDiff(updateSize);
-    Eigen::MatrixXd predictedMeasCovar(updateSize, updateSize);
-    Eigen::MatrixXd crossCovar(STATE_SIZE, updateSize);
+    Eigen::VectorXd state_subset(updateSize);                                // x (in most literature)
+    Eigen::VectorXd measurement_subset(updateSize);                          // z
+    Eigen::MatrixXd measurement_covariance_subset(updateSize, updateSize);   // R
+    Eigen::MatrixXd state_to_measurement_subset(updateSize, STATE_SIZE);     // H
+    Eigen::MatrixXd kalman_gain_subset(STATE_SIZE, updateSize);              // K
+    Eigen::VectorXd innovation_subset(updateSize);                           // z - Hx
+    Eigen::VectorXd predicted_measurement(updateSize);
+    Eigen::VectorXd sigma_diff(updateSize);
+    Eigen::MatrixXd predicted_meas_covar(updateSize, updateSize);
+    Eigen::MatrixXd cross_covar(STATE_SIZE, updateSize);
 
-    std::vector<Eigen::VectorXd> sigmaPointMeasurements(sigmaPoints_.size(), Eigen::VectorXd(updateSize));
+    std::vector<Eigen::VectorXd> sigma_point_measurements(sigma_points_.size(), Eigen::VectorXd(updateSize));
 
-    stateSubset.setZero();
-    measurementSubset.setZero();
-    measurementCovarianceSubset.setZero();
-    stateToMeasurementSubset.setZero();
-    kalmanGainSubset.setZero();
-    innovationSubset.setZero();
-    predictedMeasurement.setZero();
-    predictedMeasCovar.setZero();
-    crossCovar.setZero();
+    state_subset.setZero();
+    measurement_subset.setZero();
+    measurement_covariance_subset.setZero();
+    state_to_measurement_subset.setZero();
+    kalman_gain_subset.setZero();
+    innovation_subset.setZero();
+    predicted_measurement.setZero();
+    predicted_meas_covar.setZero();
+    cross_covar.setZero();
 
     // Now build the sub-matrices from the full-sized matrices
     for (size_t i = 0; i < updateSize; ++i)
     {
-      measurementSubset(i) = measurement.measurement_(updateIndices[i]);
-      stateSubset(i) = state_(updateIndices[i]);
+      measurement_subset(i) = measurement.measurement_(update_indices[i]);
+      state_subset(i) = state_(update_indices[i]);
 
       for (size_t j = 0; j < updateSize; ++j)
       {
-        measurementCovarianceSubset(i, j) = measurement.covariance_(updateIndices[i], updateIndices[j]);
+        measurement_covariance_subset(i, j) = measurement.covariance_(update_indices[i], update_indices[j]);
       }
 
       // Handle negative (read: bad) covariances in the measurement. Rather
       // than exclude the measurement or make up a covariance, just take
       // the absolute value.
-      if (measurementCovarianceSubset(i, i) < 0)
+      if (measurement_covariance_subset(i, i) < 0)
       {
         FB_DEBUG("WARNING: Negative covariance for index " << i <<
-                 " of measurement (value is" << measurementCovarianceSubset(i, i) <<
+                 " of measurement (value is" << measurement_covariance_subset(i, i) <<
                  "). Using absolute value...\n");
 
-        measurementCovarianceSubset(i, i) = ::fabs(measurementCovarianceSubset(i, i));
+        measurement_covariance_subset(i, i) = ::fabs(measurement_covariance_subset(i, i));
       }
 
       // If the measurement variance for a given variable is very
@@ -194,12 +185,12 @@ namespace RobotLocalization
       // the Kalman gain computation will blow up. Really, no
       // measurement can be completely without error, so add a small
       // amount in that case.
-      if (measurementCovarianceSubset(i, i) < 1e-9)
+      if (measurement_covariance_subset(i, i) < 1e-9)
       {
-        measurementCovarianceSubset(i, i) = 1e-9;
+        measurement_covariance_subset(i, i) = 1e-9;
 
         FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
-                 updateIndices[i] <<
+                 update_indices[i] <<
                  ". Adding some noise to maintain filter stability.\n");
       }
     }
@@ -208,80 +199,80 @@ namespace RobotLocalization
     // matrix, with ones in the (i, i) locations of the values to be updated
     for (size_t i = 0; i < updateSize; ++i)
     {
-      stateToMeasurementSubset(i, updateIndices[i]) = 1;
+      state_to_measurement_subset(i, update_indices[i]) = 1;
     }
 
-    FB_DEBUG("Current state subset is:\n" << stateSubset <<
-             "\nMeasurement subset is:\n" << measurementSubset <<
-             "\nMeasurement covariance subset is:\n" << measurementCovarianceSubset <<
-             "\nState-to-measurement subset is:\n" << stateToMeasurementSubset << "\n");
+    FB_DEBUG("Current state subset is:\n" << state_subset <<
+             "\nMeasurement subset is:\n" << measurement_subset <<
+             "\nMeasurement covariance subset is:\n" << measurement_covariance_subset <<
+             "\nState-to-measurement subset is:\n" << state_to_measurement_subset << "\n");
 
     // (1) Generate sigma points, use them to generate a predicted measurement
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind)
     {
-      sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
-      predictedMeasurement.noalias() += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
+      sigma_point_measurements[sigma_ind] = state_to_measurement_subset * sigma_points_[sigma_ind];
+      predicted_measurement.noalias() += state_weights_[sigma_ind] * sigma_point_measurements[sigma_ind];
     }
 
     // (2) Use the sigma point measurements and predicted measurement to compute a predicted
     // measurement covariance matrix P_zz and a state/measurement cross-covariance matrix P_xz.
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind)
     {
-      sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
-      predictedMeasCovar.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-      crossCovar.noalias() += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
+      sigma_diff = sigma_point_measurements[sigma_ind] - predicted_measurement;
+      predicted_meas_covar.noalias() += covar_weights_[sigma_ind] * (sigma_diff * sigma_diff.transpose());
+      cross_covar.noalias() += covar_weights_[sigma_ind] * ((sigma_points_[sigma_ind] - state_) * sigma_diff.transpose());
     }
 
     // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
-    Eigen::MatrixXd invInnovCov = (predictedMeasCovar + measurementCovarianceSubset).inverse();
-    kalmanGainSubset = crossCovar * invInnovCov;
+    Eigen::MatrixXd inv_innov_cov = (predicted_meas_covar + measurement_covariance_subset).inverse();
+    kalman_gain_subset = cross_covar * inv_innov_cov;
 
     // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
-    innovationSubset = (measurementSubset - predictedMeasurement);
+    innovation_subset = (measurement_subset - predicted_measurement);
 
     // Wrap angles in the innovation
     for (size_t i = 0; i < updateSize; ++i)
     {
-      if (updateIndices[i] == StateMemberRoll  ||
-          updateIndices[i] == StateMemberPitch ||
-          updateIndices[i] == StateMemberYaw)
+      if (update_indices[i] == StateMemberRoll  ||
+          update_indices[i] == StateMemberPitch ||
+          update_indices[i] == StateMemberYaw)
       {
-        while (innovationSubset(i) < -PI)
+        while (innovation_subset(i) < -PI)
         {
-          innovationSubset(i) += TAU;
+          innovation_subset(i) += TAU;
         }
 
-        while (innovationSubset(i) > PI)
+        while (innovation_subset(i) > PI)
         {
-          innovationSubset(i) -= TAU;
+          innovation_subset(i) -= TAU;
         }
       }
     }
 
     // (5) Check Mahalanobis distance of innovation
-    if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
+    if (checkMahalanobisThreshold(innovation_subset, inv_innov_cov, measurement.mahalanobis_thresh_))
     {
-      state_.noalias() += kalmanGainSubset * innovationSubset;
+      state_.noalias() += kalman_gain_subset * innovation_subset;
 
       // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      estimate_error_covariance_.noalias() -= (kalman_gain_subset * predicted_meas_covar * kalman_gain_subset.transpose());
 
       wrapStateAngles();
 
       // Mark that we need to re-compute sigma points for successive corrections
       uncorrected_ = false;
 
-      FB_DEBUG("Predicated measurement covariance is:\n" << predictedMeasCovar <<
-               "\nCross covariance is:\n" << crossCovar <<
-               "\nKalman gain subset is:\n" << kalmanGainSubset <<
-               "\nInnovation:\n" << innovationSubset <<
+      FB_DEBUG("Predicated measurement covariance is:\n" << predicted_meas_covar <<
+               "\nCross covariance is:\n" << cross_covar <<
+               "\nKalman gain subset is:\n" << kalman_gain_subset <<
+               "\nInnovation:\n" << innovation_subset <<
                "\nCorrected full state is:\n" << state_ <<
-               "\nCorrected full estimate error covariance is:\n" << estimateErrorCovariance_ <<
+               "\nCorrected full estimate error covariance is:\n" << estimate_error_covariance_ <<
                "\n\n---------------------- /Ukf::correct ----------------------\n");
     }
   }
 
-  void Ukf::predict(const double referenceTime, const double delta)
+  void Ukf::predict(const double reference_time, const double delta)
   {
     FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
              "delta is " << delta <<
@@ -301,84 +292,84 @@ namespace RobotLocalization
     double sy = ::sin(yaw);
     double cy = ::cos(yaw);
 
-    prepareControl(referenceTime, delta);
+    prepareControl(reference_time, delta);
 
     // Prepare the transfer function
-    transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
-    transferFunction_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
-    transferFunction_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
-    transferFunction_(StateMemberX, StateMemberAx) = 0.5 * transferFunction_(StateMemberX, StateMemberVx) * delta;
-    transferFunction_(StateMemberX, StateMemberAy) = 0.5 * transferFunction_(StateMemberX, StateMemberVy) * delta;
-    transferFunction_(StateMemberX, StateMemberAz) = 0.5 * transferFunction_(StateMemberX, StateMemberVz) * delta;
-    transferFunction_(StateMemberY, StateMemberVx) = sy * cp * delta;
-    transferFunction_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
-    transferFunction_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
-    transferFunction_(StateMemberY, StateMemberAx) = 0.5 * transferFunction_(StateMemberY, StateMemberVx) * delta;
-    transferFunction_(StateMemberY, StateMemberAy) = 0.5 * transferFunction_(StateMemberY, StateMemberVy) * delta;
-    transferFunction_(StateMemberY, StateMemberAz) = 0.5 * transferFunction_(StateMemberY, StateMemberVz) * delta;
-    transferFunction_(StateMemberZ, StateMemberVx) = -sp * delta;
-    transferFunction_(StateMemberZ, StateMemberVy) = cp * sr * delta;
-    transferFunction_(StateMemberZ, StateMemberVz) = cp * cr * delta;
-    transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
-    transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
-    transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
-    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
-    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
-    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
-    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
-    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
-    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
-    transferFunction_(StateMemberVx, StateMemberAx) = delta;
-    transferFunction_(StateMemberVy, StateMemberAy) = delta;
-    transferFunction_(StateMemberVz, StateMemberAz) = delta;
+    transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta;
+    transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
+    transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
+    transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta;
+    transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta;
+    transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta;
+    transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta;
+    transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
+    transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
+    transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta;
+    transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta;
+    transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta;
+    transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta;
+    transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta;
+    transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta;
+    transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta;
+    transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta;
+    transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta;
+    transfer_function_(StateMemberRoll, StateMemberVroll) = transfer_function_(StateMemberX, StateMemberVx);
+    transfer_function_(StateMemberRoll, StateMemberVpitch) = transfer_function_(StateMemberX, StateMemberVy);
+    transfer_function_(StateMemberRoll, StateMemberVyaw) = transfer_function_(StateMemberX, StateMemberVz);
+    transfer_function_(StateMemberPitch, StateMemberVroll) = transfer_function_(StateMemberY, StateMemberVx);
+    transfer_function_(StateMemberPitch, StateMemberVpitch) = transfer_function_(StateMemberY, StateMemberVy);
+    transfer_function_(StateMemberPitch, StateMemberVyaw) = transfer_function_(StateMemberY, StateMemberVz);
+    transfer_function_(StateMemberYaw, StateMemberVroll) = transfer_function_(StateMemberZ, StateMemberVx);
+    transfer_function_(StateMemberYaw, StateMemberVpitch) = transfer_function_(StateMemberZ, StateMemberVy);
+    transfer_function_(StateMemberYaw, StateMemberVyaw) = transfer_function_(StateMemberZ, StateMemberVz);
+    transfer_function_(StateMemberVx, StateMemberAx) = delta;
+    transfer_function_(StateMemberVy, StateMemberAy) = delta;
+    transfer_function_(StateMemberVz, StateMemberAz) = delta;
 
-    // (1) Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-    weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
+    // (1) Take the square root of a small fraction of the estimate_error_covariance_ using LL' decomposition
+    weighted_covar_sqrt_ = ((STATE_SIZE + lambda_) * estimate_error_covariance_).llt().matrixL();
 
     // (2) Compute sigma points *and* pass them through the transfer function to save
     // the extra loop
 
     // First sigma point is the current state
-    sigmaPoints_[0] = transferFunction_ * state_;
+    sigma_points_[0] = transfer_function_ * state_;
 
-    // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-    // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-    for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+    // Next STATE_SIZE sigma points are state + weighted_covar_sqrt_[ith column]
+    // STATE_SIZE sigma points after that are state - weighted_covar_sqrt_[ith column]
+    for (size_t sigma_ind = 0; sigma_ind < STATE_SIZE; ++sigma_ind)
     {
-      sigmaPoints_[sigmaInd + 1] = transferFunction_ * (state_ + weightedCovarSqrt_.col(sigmaInd));
-      sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = transferFunction_ * (state_ - weightedCovarSqrt_.col(sigmaInd));
+      sigma_points_[sigma_ind + 1] = transfer_function_ * (state_ + weighted_covar_sqrt_.col(sigma_ind));
+      sigma_points_[sigma_ind + 1 + STATE_SIZE] = transfer_function_ * (state_ - weighted_covar_sqrt_.col(sigma_ind));
     }
 
     // (3) Sum the weighted sigma points to generate a new state prediction
     state_.setZero();
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind)
     {
-      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
+      state_.noalias() += state_weights_[sigma_ind] * sigma_points_[sigma_ind];
     }
 
     // (4) Now us the sigma points and the predicted state to compute a predicted covariance
-    estimateErrorCovariance_.setZero();
-    Eigen::VectorXd sigmaDiff(STATE_SIZE);
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    estimate_error_covariance_.setZero();
+    Eigen::VectorXd sigma_diff(STATE_SIZE);
+    for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind)
     {
-      sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
-      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+      sigma_diff = (sigma_points_[sigma_ind] - state_);
+      estimate_error_covariance_.noalias() += covar_weights_[sigma_ind] * (sigma_diff * sigma_diff.transpose());
     }
 
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
-    // to ensure that we actually incorporate the processNoiseCovariance_
-    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
+    // to ensure that we actually incorporate the process_noise_covariance_
+    Eigen::MatrixXd *process_noise_covariance = &process_noise_covariance_;
 
-    if (useDynamicProcessNoiseCovariance_)
+    if (use_dynamic_process_noise_covariance_)
     {
       computeDynamicProcessNoiseCovariance(state_, delta);
-      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
+      process_noise_covariance = &dynamic_process_noise_covariance_;
     }
 
-    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
+    estimate_error_covariance_.noalias() += delta * (*process_noise_covariance);
 
     // Keep the angles bounded
     wrapStateAngles();
@@ -387,7 +378,7 @@ namespace RobotLocalization
     uncorrected_ = true;
 
     FB_DEBUG("Predicted state is:\n" << state_ <<
-             "\nPredicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
+             "\nPredicted estimate error covariance is:\n" << estimate_error_covariance_ <<
              "\n\n--------------------- /Ukf::predict ----------------------\n");
   }
 

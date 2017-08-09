@@ -34,10 +34,9 @@
 #include "robot_localization/ekf.h"
 #include "robot_localization/filter_common.h"
 
-#include <iomanip>
-#include <limits>
-#include <sstream>
 #include <vector>
+
+#include <Eigen/Dense>
 
 
 namespace robot_localization
