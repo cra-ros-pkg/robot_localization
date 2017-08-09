@@ -32,6 +32,8 @@
 
 #include "robot_localization/ros_filter_types.h"
 
+#include <cstdlib>
+
 #include <ros/ros.h>
 
 int main(int argc, char **argv)
