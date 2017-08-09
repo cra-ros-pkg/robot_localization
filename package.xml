@@ -22,6 +22,7 @@
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>
+  <depend>nodelet</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
@@ -33,7 +34,7 @@
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
-
+  
   <exec_depend>message_runtime</exec_depend>
 
   <test_depend>rosbag</test_depend>
@@ -42,6 +43,7 @@
 
   <export>
     <rosdoc config="rosdoc.yaml" />
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>
 
 </package>

@@ -44,7 +44,7 @@ using RobotLocalization::STATE_SIZE;
 class RosUkfPassThrough : public RosUkf
 {
   public:
-    explicit RosUkfPassThrough(std::vector<double> &args) : RosUkf(args)
+    explicit RosUkfPassThrough(std::vector<double> &args) : RosUkf(ros::NodeHandle(), ros::NodeHandle("~"), args)
     {
     }
 

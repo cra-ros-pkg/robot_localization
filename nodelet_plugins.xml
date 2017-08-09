@@ -1,0 +1,27 @@
+<library path="lib/libekf_localization_nodelet">
+  <class name="RobotLocalization/EkfNodelet"
+         type="RobotLocalization::EkfNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      ekf_localization_node as nodelet
+    </description>
+  </class>
+</library>
+<library path="lib/libukf_localization_nodelet">
+  <class name="RobotLocalization/UkfNodelet"
+         type="RobotLocalization::UkfNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      ukf_localization_node as nodelet
+    </description>
+  </class>
+</library>
+<library path="lib/libnavsat_transform_nodelet">
+  <class name="RobotLocalization/NavSatTransformNodelet"
+         type="RobotLocalization::NavSatTransformNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      navsat_transform_node as nodelet
+    </description>
+  </class>
+</library>

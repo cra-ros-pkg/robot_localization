@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
   message_generation
   nav_msgs
+  nodelet
   roscpp
   roslint
   sensor_msgs
@@ -94,6 +95,10 @@ add_library(ukf src/ukf.cpp)
 add_library(ros_filter_utilities src/ros_filter_utilities.cpp)
 add_library(ros_filter src/ros_filter.cpp)
 add_library(navsat_transform src/navsat_transform.cpp)
+add_library(ekf_localization_nodelet src/ekf_localization_nodelet.cpp)
+add_library(ukf_localization_nodelet src/ukf_localization_nodelet.cpp)
+add_library(navsat_transform_nodelet src/navsat_transform_nodelet.cpp)
+
 
 # Dependencies
 add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
@@ -112,9 +117,12 @@ target_link_libraries(ekf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ukf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
+target_link_libraries(ekf_localization_nodelet ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
+target_link_libraries(ukf_localization_nodelet ros_filter ${catkin_LIBRARIES})
 target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
+target_link_libraries(navsat_transform_nodelet navsat_transform ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -124,14 +132,17 @@ target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES}
 install(TARGETS
   ekf
   ekf_localization_node
+  ekf_localization_nodelet
   filter_base
   filter_utilities
   navsat_transform
   navsat_transform_node
+  navsat_transform_nodelet
   ros_filter
   ros_filter_utilities
   ukf
   ukf_localization_node
+  ukf_localization_nodelet
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -149,6 +160,9 @@ install(DIRECTORY launch/
 
 install(FILES
   LICENSE
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+install(FILES nodelet_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
@@ -201,6 +215,12 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
+  add_rostest_gtest(test_ekf_localization_nodelet_bag1
+                    test/test_ekf_localization_nodelet_bag1.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_nodelet_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+
+
   #### UKF TESTS #####
   add_rostest_gtest(test_ukf
                     test/test_ukf.test
@@ -226,5 +246,11 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ukf_localization_node_bag3.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+
+  add_rostest_gtest(test_ukf_localization_nodelet_bag1
+                    test/test_ukf_localization_nodelet_bag1.test
+                    test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_nodelet_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+
 
 endif()

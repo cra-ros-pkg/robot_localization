@@ -58,17 +58,17 @@ class NavSatTransform
   public:
     //! @brief Constructor
     //!
-    NavSatTransform();
+    NavSatTransform(ros::NodeHandle nh, ros::NodeHandle nh_priv);
 
     //! @brief Destructor
     //!
     ~NavSatTransform();
 
-    //! @brief Main run loop
-    //!
-    void run();
-
   private:
+    //! @brief callback function which is called for periodic updates
+    //!
+    void periodicUpdate(const ros::TimerEvent& event);
+
     //! @brief Computes the transform from the UTM frame to the odom frame
     //!
     void computeTransform();
@@ -279,6 +279,30 @@ class NavSatTransform
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
     //!
     bool zero_altitude_;
+
+    //! @brief Subscribes to imu topic
+    //!
+    ros::Subscriber imu_sub_;
+
+    //! @brief Publisher for gps data
+    //!
+    ros::Publisher gps_odom_pub_;
+
+    //! @brief Publiser for filtered gps data
+    //!
+    ros::Publisher filtered_gps_pub_;
+
+    //! @brief Odometry subscriber
+    //!
+    ros::Subscriber odom_sub_;
+
+    //! @brief GPS subscriber
+    //!
+    ros::Subscriber gps_sub_;
+
+    //! @brief timer calling periodicUpdate
+    //!
+    ros::Timer periodicUpdateTimer_;
 };
 
 }  // namespace RobotLocalization
