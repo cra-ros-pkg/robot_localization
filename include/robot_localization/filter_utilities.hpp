@@ -35,8 +35,8 @@
 
 #include <Eigen/Dense>
 
-#include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -53,19 +53,21 @@ namespace robot_localization
 namespace filter_utilities
 {
 
-  //! @brief Utility method keeping RPY angles in the range [-pi, pi]
-  //! @param[in] rotation - The rotation to bind
-  //! @return the bounded value
-  //!
+  /**
+   * @brief Utility method keeping RPY angles in the range [-pi, pi]
+   * @param[in] rotation - The rotation to bind
+   * @return the bounded value
+   */
   double clampRotation(double rotation);
 
-  //! @brief Utility method for appending tf2 prefixes cleanly
-  //! @param[in] tf_prefix - the tf2 prefix to append
-  //! @param[in, out] frame_id - the resulting frame_id value
-  //!
+  /**
+   * @brief Utility method for appending tf2 prefixes cleanly
+   * @param[in] tf_prefix - the tf2 prefix to append
+   * @param[in, out] frame_id - the resulting frame_id value
+   */
   void appendPrefix(std::string tf_prefix, std::string &frame_id);
 
-}  // namespace FilterUtilities
-}  // namespace RobotLocalization
+}  // namespace filter_utilities
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION_FILTER_UTILITIES_H

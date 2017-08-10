@@ -52,9 +52,9 @@ std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat);
 std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans);
 std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec);
 
-namespace RobotLocalization
+namespace robot_localization
 {
-namespace RosFilterUtilities
+namespace ros_filter_utilities
 {
 
 double getYaw(const tf2::Quaternion quat);
@@ -79,8 +79,8 @@ double getYaw(const tf2::Quaternion quat);
 bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                          const std::string &targetFrame,
                          const std::string &sourceFrame,
-                         const ros::Time &time,
-                         const ros::Duration &timeout,
+                         const rclcpp::Time &time,
+                         const tf2::Duration &timeout,
                          tf2::Transform &targetFrameTrans);
 
 //! @brief Method for safely obtaining transforms.
@@ -102,7 +102,7 @@ bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
 bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
                          const std::string &targetFrame,
                          const std::string &sourceFrame,
-                         const ros::Time &time,
+                         const rclcpp::Time &time,
                          tf2::Transform &targetFrameTrans);
 
 //! @brief Utility method for converting quaternion to RPY
@@ -125,7 +125,7 @@ void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF);
 //!
 void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state);
 
-}  // namespace RosFilterUtilities
-}  // namespace RobotLocalization
+}  // namespace ros_filter_utilities
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H

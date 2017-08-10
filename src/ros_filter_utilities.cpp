@@ -30,9 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ros_filter_utilities.h"
-#include "robot_localization/filter_common.h"
-
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/ros_filter_utilities.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <ros/console.h>
 

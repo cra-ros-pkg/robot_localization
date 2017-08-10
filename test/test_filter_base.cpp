@@ -30,12 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_base.h"
-#include "robot_localization/filter_common.h"
-
 #include <Eigen/Dense>
 
 #include <gtest/gtest.h>
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
 
 #include <iostream>
 #include <queue>

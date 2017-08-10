@@ -36,14 +36,14 @@
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <sensor_msgs/Imu.h>
 
-#include "robot_localization/filter_base.h"
-#include "robot_localization/filter_common.h"
 #include "robot_localization/SetPose.h"
 
 
 #include <diagnostic_msgs/DiagnosticArray.h>
 
 #include <gtest/gtest.h>
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
 
 #include <vector>
 

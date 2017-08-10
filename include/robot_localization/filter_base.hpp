@@ -34,18 +34,13 @@
 #ifndef ROBOT_LOCALIZATION_FILTER_BASE_H
 #define ROBOT_LOCALIZATION_FILTER_BASE_H
 
-#include "robot_localization/filter_utilities.h"
-#include "robot_localization/filter_common.h"
-
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
 #include <Eigen/Dense>
 
 #include <algorithm>
-#include <limits>
-#include <map>
 #include <memory>
 #include <ostream>
-#include <queue>
-#include <set>
 #include <string>
 #include <vector>
 

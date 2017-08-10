@@ -30,11 +30,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ros_filter.h"
-#include "robot_localization/filter_utilities.h"
-#include "robot_localization/ekf.h"
-#include "robot_localization/ukf.h"
-
+#include <robot_localization/ekf.hpp>
+#include <robot_localization/filter_utilities.hpp>
+#include <robot_localization/ros_filter.hpp>
+#include <robot_localization/ukf.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <algorithm>

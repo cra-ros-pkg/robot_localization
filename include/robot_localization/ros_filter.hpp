@@ -33,10 +33,6 @@
 #ifndef ROBOT_LOCALIZATION_ROS_FILTER_H
 #define ROBOT_LOCALIZATION_ROS_FILTER_H
 
-#include "robot_localization/ros_filter_utilities.h"
-#include "robot_localization/filter_common.h"
-#include "robot_localization/filter_base.h"
-
 #include <robot_localization/SetPose.h>
 
 #include <ros/ros.h>
@@ -56,6 +52,9 @@
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/ros_filter_utilities.hpp>
 
 #include <xmlrpcpp/XmlRpcException.h>
 

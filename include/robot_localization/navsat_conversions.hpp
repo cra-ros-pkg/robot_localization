@@ -54,9 +54,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace RobotLocalization
+namespace robot_localization
 {
-namespace NavsatConversions
+namespace navsat_conversions
 {
 
 const double RADIANS_PER_DEGREE = M_PI/180.0;
@@ -323,7 +323,7 @@ static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
   Long = LongOrigin + Long * DEGREES_PER_RADIAN;
 }
 
-}  // namespace NavsatConversions
-}  // namespace RobotLocalization
+}  // namespace navsat_conversions
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION_NAVSAT_CONVERSIONS_H

@@ -30,9 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ros_filter_types.h"
-
 #include <gtest/gtest.h>
+#include <robot_localization/ros_filter_types.hpp>
 
 #include <limits>
 #include <vector>

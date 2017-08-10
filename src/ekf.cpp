@@ -31,9 +31,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ekf.h"
-#include "robot_localization/filter_common.h"
-
+#include <robot_localization/ekf.hpp>
+#include <robot_localization/filter_common.hpp>
 #include <vector>
 
 #include <Eigen/Dense>

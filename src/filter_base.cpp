@@ -31,9 +31,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_base.h"
-#include "robot_localization/filter_common.h"
-#include "robot_localization/filter_utilities.h"
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
 
 #include <iomanip>
 #include <iostream>

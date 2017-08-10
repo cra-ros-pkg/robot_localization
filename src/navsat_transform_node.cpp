@@ -30,15 +30,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/navsat_transform.h"
-
+#include <robot_localization/navsat_transform.hpp>
 #include <ros/ros.h>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "navsat_transform_node");
+  rclcpp::init(argc, argv);
 
-  RobotLocalization::NavSatTransform trans;
+  robot_localization::NavSatTransform trans;
 
   trans.run();
 
