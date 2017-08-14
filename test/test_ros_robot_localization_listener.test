@@ -1,0 +1,68 @@
+<!-- Launch file for ros_robot_localization_listener_test -->
+
+<launch>
+
+    <node name="test_estimator" pkg="robot_localization" type="test_ros_robot_localization_listener_publisher" clear_params="true">
+      <param name="frequency" value="30"/>
+
+      <param name="sensor_timeout" value="0.1"/>
+
+      <param name="odom0" value="/odom_input0"/>
+      <param name="odom1" value="/odom_input1"/>
+      <param name="odom2" value="/odom_input2"/>
+
+      <param name="pose0" value="/pose_input0"/>
+      <param name="pose1" value="/pose_input1"/>
+
+      <param name="twist0" value="/twist_input0"/>
+
+      <param name="imu0" value="/imu_input0"/>
+      <param name="imu1" value="/imu_input1"/>
+      <param name="imu2" value="/imu_input2"/>
+      <param name="imu3" value="/imu_input3"/>
+
+      <rosparam param="odom0_config">[true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="odom1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="odom2_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
+
+      <rosparam param="pose0_config">[true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="pose1_config">[true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+
+      <rosparam param="twist0_config">[false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]</rosparam>
+
+      <rosparam param="imu0_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+      <rosparam param="imu1_config">[false, false, false, false, false, false, false, false, false, true, true, true, false, false, false]</rosparam>
+      <rosparam param="imu2_config">[false, false, false, false, false, false, false, false, false, false, false, false, true, true, true]</rosparam>
+      <rosparam param="imu3_config">[false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]</rosparam>
+
+      <param name="odom1_differential" value="true"/>
+      <param name="pose1_differential" value="true"/>
+      <param name="imu3_differential" value="true"/>
+
+      <param name="print_diagnostics" value="false"/>
+
+      <param name="odom_frame" value="odom"/>
+      <param name="base_link_frame" value="base_link"/>
+
+      <rosparam param="process_noise_covariance">[0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.004, 0.0, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,
+                                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01]</rosparam>
+    </node>
+
+    <test test-name="test_ros_robot_localization_listener" pkg="robot_localization" type="test_ros_robot_localization_listener" clear_params="true" time-limit="100.0">
+      <remap from="robot_localization" to="test_estimator" />
+    </test>
+
+</launch>
