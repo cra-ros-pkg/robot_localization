@@ -1551,8 +1551,7 @@ namespace RobotLocalization
                     stream.str(),
                     false);
       RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
-  ROS_ERROR_STREAM_THROTTLE(5.0, "ODOM DATA WAS OLD! last set_pose was " << std::setprecision(20) <<
- lastSetPoseTime_.toSec() << ", odom message was " << msg->header.stamp.toSec());
+
       return;
     }
 
