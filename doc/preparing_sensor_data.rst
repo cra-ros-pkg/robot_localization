@@ -23,7 +23,7 @@ Also, it will likely benefit users to look over the specifications for each of t
 
 * `geometry_msgs/TwistWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html>`_
 
-* `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_
+* `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_
 
 Coordinate Frames and Transforming Sensor Data
 **********************************************
@@ -35,7 +35,7 @@ The state estimation nodes of ``robot_localization`` produce a state estimate wh
 * `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ - All pose data (position and orientation) is transformed from the message header's ``frame_id`` into the coordinate frame specified by the ``world_frame`` parameter (typically *map* or *odom*). In the message itself, this specifically refers to everything contained within the ``pose`` property. All twist data (linear and angular velocity) is transformed from the ``child_frame_id`` of the message into the coordinate frame specified by the ``base_link_frame`` parameter (typically *base_link*). 
 * `geometry_msgs/PoseWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html>`_ - Handled in the same fashion as the pose data in the Odometry message.
 * `geometry_msgs/TwistWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html>`_ - Handled in the same fashion as the twist data in the Odometry message.
-* `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ - The IMU message is currently subject to some ambiguity, though this is being addressed by the ROS community. Most IMUs natively report orientation data in a world-fixed frame whose :math:`X` and :math:`Z` axes are defined by the vectors pointing to magnetic north and the center of the earth, respectively, with the Y axis facing east (90 degrees offset from the magnetic north vector). This frame is often referred to as NED (North, East, Down). However, `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ specifies an ENU (East, North, Up) coordinate frame for outdoor navigation. As of this writing, ``robot_localization`` assumes an ENU frame for all IMU data, and does not work with NED frame data. This may change in the future, but for now, users should ensure that data is transformed to the ENU frame before using it with any node in ``robot_localization``. 
+* `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ - The IMU message is currently subject to some ambiguity, though this is being addressed by the ROS community. Most IMUs natively report orientation data in a world-fixed frame whose :math:`X` and :math:`Z` axes are defined by the vectors pointing to magnetic north and the center of the earth, respectively, with the Y axis facing east (90 degrees offset from the magnetic north vector). This frame is often referred to as NED (North, East, Down). However, `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ specifies an ENU (East, North, Up) coordinate frame for outdoor navigation. As of this writing, ``robot_localization`` assumes an ENU frame for all IMU data, and does not work with NED frame data. This may change in the future, but for now, users should ensure that data is transformed to the ENU frame before using it with any node in ``robot_localization``.
  
 The IMU may also be oriented on the robot in a position other than its "neutral" position. For example, the user may mount the IMU on its side, or rotate it so that it faces a direction other than the front of the robot. This offset is typically specified by a static transform from the ``base_link_frame`` parameter to the IMU message's ``frame_id``. The state estimation nodes in ``robot_localization`` will automatically correct for the orientation of the sensor so that its data aligns with the frame specified by the ``base_link_frame`` parameter. 
 
@@ -74,7 +74,7 @@ IMU
 
 In addition to the following, be sure to read the above section regarding coordinate frames and transforms for IMU data.
 
-1. **Adherence to specifications:** As with odometry, be sure your data adheres to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ and the `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ specification. Double-check the signs of your data, and make sure the ``frame_id`` values are correct.
+1. **Adherence to specifications:** As with odometry, be sure your data adheres to `REP-103 <http://www.ros.org/reps/rep-0103.html>`_ and the `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ specification. Double-check the signs of your data, and make sure the ``frame_id`` values are correct.
 
 2. **Covariance:** Echoing the advice for odometry, make sure your covariances make sense. Do not use large values to get the filter to ignore a given variable. Set the configuration for the variable you'd like to ignore to *false*. 
 
