@@ -2318,6 +2318,7 @@ namespace RobotLocalization
         else
         {
           tf2::fromMsg(msg->orientation, curAttitude);
+          curAttitude.normalize();
         }
         trans.setRotation(curAttitude);
         tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
@@ -2476,6 +2477,7 @@ namespace RobotLocalization
     else
     {
       tf2::fromMsg(msg->pose.pose.orientation, orientation);
+      orientation.normalize();
     }
 
     // Fill out the orientation data
