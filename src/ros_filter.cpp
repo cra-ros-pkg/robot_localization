@@ -2285,6 +2285,7 @@ bool RosFilter::prepareAcceleration(
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
       } else {
         tf2::fromMsg(msg->orientation, curAttitude);
+        curAttitude.normalize();
       }
       trans.setRotation(curAttitude);
       tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
@@ -2364,9 +2365,6 @@ bool RosFilter::prepareAcceleration(
       ". Ignoring...\n");
   }
 
-  RF_DEBUG("\n----- /RosFilter::prepareAcceleration(" << topic_name <<
-    ") ------\n");
-
   return can_transform;
 }
 
@@ -2442,9 +2440,9 @@ bool RosFilter::preparePose(
       addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
         topic_name + "_orientation", stream.str(), false);
     }
-
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
+    orientation.normalize();
   }
 
   // Fill out the orientation data
