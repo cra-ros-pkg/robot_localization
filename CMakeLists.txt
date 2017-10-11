@@ -94,6 +94,7 @@ ament_target_dependencies(
   rcl
   rclcpp
   sensor_msgs
+  std_msgs
   std_srvs
   tf2
   tf2_eigen
