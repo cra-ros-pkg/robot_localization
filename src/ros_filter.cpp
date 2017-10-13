@@ -887,7 +887,10 @@ namespace RobotLocalization
 
     // Check if the filter should start or not
     nhLocal_.param("disabled_at_startup", disabledAtStartup_, false);
-    if (!disabledAtStartup_) enabled_ = true;
+    if (!disabledAtStartup_)
+    {
+      enabled_ = true;
+    }
 
 
     // Debugging writes to file
@@ -1777,10 +1780,14 @@ namespace RobotLocalization
     ros::Rate loop_rate(frequency_);
 
     // Wait for the filter to be enabled
-    while (!enabled_ && ros::ok()) {
+    while (!enabled_ && ros::ok())
+    {
       ROS_WARN_STREAM_ONCE("[" << ros::this_node::getName() << ":] This filter is disabled. To enable it call the service " << ros::this_node::getName() << "/enable");
       ros::spinOnce();
-      if (enabled_) break;
+      if (enabled_)
+      {
+        break;
+      }
     }
 
     while (ros::ok())
@@ -1974,7 +1981,7 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  bool RosFilter<T>::enableFilterSrvCallback(std_srvs::Empty::Request& request,
+  bool RosFilter<T>::enableFilterSrvCallback(std_srvs::Empty::Request&,
                                              std_srvs::Empty::Response&)
   {
     RF_DEBUG("\n[" << ros::this_node::getName() << ":]" << " ------ /RosFilter::enableFilterSrvCallback ------\n");
@@ -1985,28 +1992,6 @@ namespace RobotLocalization
       enabled_ = true;
     }
     return true;
-  }
-
-  template<typename T>
-  std::string RosFilter<T>::tfFailureReasonString(const tf2_ros::FilterFailureReason reason)
-  {
-    std::string retVal;
-
-    switch (reason)
-    {
-      case tf2_ros::filter_failure_reasons::OutTheBack:
-        retVal = std::string("The timestamp on the message is earlier than the newest data in the transform cache");
-        break;
-      case tf2_ros::filter_failure_reasons::EmptyFrameID:
-        retVal = std::string("The message frame_id is empty");
-        break;
-      case tf2_ros::filter_failure_reasons::Unknown:
-      default:
-        retVal = std::string("No transform exists from source to target frame");
-        break;
-    }
-
-    return retVal;
   }
 
   template<typename T>

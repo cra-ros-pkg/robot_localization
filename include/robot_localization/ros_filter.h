@@ -249,13 +249,8 @@ template<class T> class RosFilter
     //! @param[in] request - N/A
     //! @param[out] response - N/A
     //! @return boolean true if successful, false if not
-    bool enableFilterSrvCallback(std_srvs::Empty::Request& request,
+    bool enableFilterSrvCallback(std_srvs::Empty::Request&,
                                  std_srvs::Empty::Response&);
-
-    //! @brief Converts tf message filter failures to strings
-    //! @param[in] reason - The failure reason object
-    //! @return a string explanation of the failure
-    std::string tfFailureReasonString(const tf2_ros::FilterFailureReason reason);
 
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
