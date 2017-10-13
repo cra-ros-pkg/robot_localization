@@ -890,9 +890,7 @@ void RosFilter::loadParams()
 
   // Check if the filter should start or not
   disabled_at_startup_ = node_->declare_parameter<bool>("disabled_at_startup", false);
-  if (!disabled_at_startup_) {
-    enabled_ = true;
-  }
+  enabled_ = !disabled_at_startup_;
 
   // Debugging writes to file
   RF_DEBUG("tf_prefix is " <<
