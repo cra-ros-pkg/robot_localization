@@ -2322,7 +2322,12 @@ bool RosFilter::prepareAcceleration(
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
       } else {
         tf2::fromMsg(msg->orientation, curAttitude);
-        curAttitude.normalize();
+        if (fabs(curAttitude.length() - 1.0) > 0.01)
+        {
+          RCLCPP_WARN_ONCE(node_->get_logger(),
+            "An input was not normalized, this should NOT happen, but will normalize.");
+          curAttitude.normalize();
+        }
       }
       trans.setRotation(curAttitude);
       tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
@@ -2479,7 +2484,12 @@ bool RosFilter::preparePose(
     }
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
-    orientation.normalize();
+    if (fabs(orientation.length() - 1.0) > 0.01)
+    {
+      RCLCPP_WARN_ONCE(node_->get_logger(),
+        "An input was not normalized, this should NOT happen, but will normalize.");
+      orientation.normalize();
+    }
   }
 
   // Fill out the orientation data
