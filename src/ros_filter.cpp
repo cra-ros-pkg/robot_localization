@@ -2318,7 +2318,11 @@ namespace RobotLocalization
         else
         {
           tf2::fromMsg(msg->orientation, curAttitude);
-          curAttitude.normalize();
+          if (fabs(curAttitude.length() - 1.0) > 0.01)
+          {
+            ROS_WARN_ONCE("An input was not normalized, this should NOT happen, but will normalize.");
+            curAttitude.normalize();
+          }
         }
         trans.setRotation(curAttitude);
         tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
@@ -2477,7 +2481,11 @@ namespace RobotLocalization
     else
     {
       tf2::fromMsg(msg->pose.pose.orientation, orientation);
-      orientation.normalize();
+      if (fabs(orientation.length() - 1.0) > 0.01)
+      {
+        ROS_WARN_ONCE("An input was not normalized, this should NOT happen, but will normalize.");
+        orientation.normalize();
+      }
     }
 
     // Fill out the orientation data
