@@ -887,10 +887,7 @@ namespace RobotLocalization
 
     // Check if the filter should start or not
     nhLocal_.param("disabled_at_startup", disabledAtStartup_, false);
-    if (!disabledAtStartup_)
-    {
-      enabled_ = true;
-    }
+    enabled_ = !disabledAtStartup_;
 
 
     // Debugging writes to file
