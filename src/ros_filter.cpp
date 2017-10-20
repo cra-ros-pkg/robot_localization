@@ -59,6 +59,7 @@ namespace RobotLocalization
       latestControlTime_(0),
       tfTimeout_(ros::Duration(0)),
       nhLocal_("~"),
+      predictToCurrentTime_(false),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
       publishTransform_(true),
@@ -585,8 +586,6 @@ namespace RobotLocalization
           }
         }
       }
-
-      filter_.setLastUpdateTime(currentTimeSec);
     }
     else if (filter_.getInitializedStatus())
     {
@@ -619,7 +618,6 @@ namespace RobotLocalization
 
       // Update the last measurement time and last update time
       filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
-      filter_.setLastUpdateTime(filter_.getLastUpdateTime() + lastUpdateDelta);
     }
 
     RF_DEBUG("\n----- /RosFilter::integrateMeasurements ------\n");
@@ -940,7 +938,6 @@ namespace RobotLocalization
 
     // Init the last last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     // Now pull in each topic to which we want to subscribe.
     // Start with odom.
@@ -1608,8 +1605,6 @@ namespace RobotLocalization
                     stream.str(),
                     false);
       RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
-  ROS_ERROR_STREAM_THROTTLE(5.0, "ODOM DATA WAS OLD! last set_pose was " << std::setprecision(20) <<
- lastSetPoseTime_.toSec() << ", odom message was " << msg->header.stamp.toSec());
       return;
     }
 
@@ -1978,7 +1973,6 @@ namespace RobotLocalization
     filter_.setEstimateErrorCovariance(measurementCovariance);
 
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     // This method can apparently cancel all callbacks, and may stop the executing of the very callback that we're
     // currently in. Therefore, nothing of consequence should come after it.
