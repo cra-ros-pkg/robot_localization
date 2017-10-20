@@ -140,10 +140,6 @@ TEST(FilterBaseTest, DerivedFilterGetSet)
     derived.setSensorTimeout(timeout);
     EXPECT_EQ(derived.getSensorTimeout(), timeout);
 
-    double lastUpdateTime = 5.1;
-    derived.setLastUpdateTime(lastUpdateTime);
-    EXPECT_EQ(derived.getLastUpdateTime(), lastUpdateTime);
-
     double lastMeasTime = 3.83;
     derived.setLastMeasurementTime(lastMeasTime);
     EXPECT_EQ(derived.getLastMeasurementTime(), lastMeasTime);
