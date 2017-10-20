@@ -59,6 +59,7 @@ namespace RobotLocalization
       latestControlTime_(0),
       tfTimeout_(ros::Duration(0)),
       nhLocal_("~"),
+      predictToCurrentTime_(false),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
       publishTransform_(true),
@@ -543,8 +544,6 @@ namespace RobotLocalization
           }
         }
       }
-
-      filter_.setLastUpdateTime(currentTimeSec);
     }
     else if (filter_.getInitializedStatus())
     {
@@ -577,7 +576,6 @@ namespace RobotLocalization
 
       // Update the last measurement time and last update time
       filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
-      filter_.setLastUpdateTime(filter_.getLastUpdateTime() + lastUpdateDelta);
     }
 
     RF_DEBUG("\n----- /RosFilter::integrateMeasurements ------\n");
@@ -886,7 +884,6 @@ namespace RobotLocalization
 
     // Init the last last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     // Now pull in each topic to which we want to subscribe.
     // Start with odom.
@@ -1905,7 +1902,6 @@ namespace RobotLocalization
     filter_.setEstimateErrorCovariance(measurementCovariance);
 
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     RF_DEBUG("\n------ /RosFilter::setPoseCallback ------\n");
   }
