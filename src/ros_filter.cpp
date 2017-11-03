@@ -2151,7 +2151,7 @@ namespace RobotLocalization
       prevStateRot.setRPY(prevState(StateMemberRoll), prevState(StateMemberPitch), prevState(StateMemberYaw));
       prevStateTf.setRotation(prevStateRot);
 
-      RF_DEBUG("Previous tf filter state is:\n" << prevStateTf);
+      RF_DEBUG("Previous filter state is:\n" << prevStateTf);
 
       tf2::Transform curMeasTf;
       tf2::Quaternion curMeasRot;
@@ -2731,12 +2731,10 @@ namespace RobotLocalization
       // 7. Three cases:
       //   * If we're in differential mode, we need to compute the delta from the last measurement.
       //   * If we're in relative mode, then we compute the delta between this measurement and the *first* measurement
-      //     for that sensor
+      //     for that sensor, then transform to the targe frame.
       //   * Otherwise, we just transform into the target frame.
-      bool success = false;
 
-      // We're going to be playing with poseTmp, so store it,
-      // as we'll need to save its current value for the next
+      // We're going to be playing with poseTmp, so store it, as we'll need to save its current value for the next
       // measurement.
       curMeasurement = poseTmp;
 
@@ -2762,20 +2760,21 @@ namespace RobotLocalization
 
         previousMeasurements_[callbackData.topicName_] = curMeasurement;
       }
-      else if (callbackData.relative_)
-      {
-        // 7b. If we are using the sensor in relative mode, we just get the delta from the initial measurement.
-        if (initialMeasurements_.count(callbackData.topicName_) == 0)
-        {
-          initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(callbackData.topicName_, poseTmp));
-        }
-
-        tf2::Transform initialMeasurement = initialMeasurements_[callbackData.topicName_];
-        poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
-      }
       else
       {
-        // 7c. Otherwise, we just apply the target frame transformation
+        if (callbackData.relative_)
+        {
+          // 7b. If we are using the sensor in relative mode, we just get the delta from the initial measurement.
+          if (initialMeasurements_.count(callbackData.topicName_) == 0)
+          {
+            initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(callbackData.topicName_, poseTmp));
+          }
+
+          tf2::Transform initialMeasurement = initialMeasurements_[callbackData.topicName_];
+          poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
+        }
+
+        // 7c. Finally, we just apply the target frame transformation
         poseTmp.mult(targetFrameTrans, poseTmp);
         poseTmp.frame_id_ = finalTargetFrame;
       }
