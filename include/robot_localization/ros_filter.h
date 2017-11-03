@@ -89,6 +89,14 @@ struct CallbackData
   {
   }
 
+  CallbackData() :
+    updateSum_(0),
+    differential_(false),
+    relative_(0.0),
+    rejectionThreshold_(std::numeric_limits<double>::max())
+  {
+  }
+
   std::string topicName_;
   std::vector<int> updateVector_;
   int updateSum_;
@@ -141,6 +149,7 @@ template<class T> class RosFilter
     //! @param[in] topicName - The name of the measurement source (only used for debugging)
     //! @param[in] measurement - The measurement to enqueue
     //! @param[in] measurementCovariance - The covariance of the measurement
+    //! @param[in] differential - Whether this measurement was generated differentially
     //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
     //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outlier rejection
     //! @param[in] time - The time of arrival (in seconds)
@@ -148,6 +157,7 @@ template<class T> class RosFilter
     void enqueueMeasurement(const std::string &topicName,
                             const Eigen::VectorXd &measurement,
                             const Eigen::MatrixXd &measurementCovariance,
+                            const bool differential,
                             const std::vector<int> &updateVector,
                             const double mahalanobisThresh,
                             const ros::Time &time);
@@ -255,23 +265,6 @@ template<class T> class RosFilter
                        const std::string &targetFrame);
 
   protected:
-    //! @brief Finds the latest filter state before the given timestamp and makes it the current state again.
-    //!
-    //! This method also inserts all measurements between the older filter timestamp and now into the measurements
-    //! queue.
-    //!
-    //! @param[in] time - The time to which the filter state should revert
-    //! @return True if restoring the filter succeeded. False if not.
-    //!
-    bool revertTo(const double time);
-
-    //! @brief Saves the current filter state in the queue of previous filter states
-    //!
-    //! These measurements will be used in backwards smoothing in the event that older measurements come in.
-    //! @param[in] filter - The filter base object whose state we want to save
-    //!
-    void saveFilterState(FilterBase &filter);
-
     //! @brief Removes measurements and filter states older than the given cutoff time.
     //! @param[in] cutoffTime - Measurements and states older than this time will be dropped.
     //!
@@ -292,6 +285,8 @@ template<class T> class RosFilter
     //! @param[in] wrapper - The diagnostic status wrapper to update
     //!
     void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper);
+
+    void applyPreviousState(MeasurementPtr measurement);
 
     //! @brief Utility method for copying covariances from ROS covariance arrays
     //! to Eigen matrices
@@ -322,6 +317,11 @@ template<class T> class RosFilter
     void copyCovariance(const Eigen::MatrixXd &covariance,
                         double *arr,
                         const size_t dimension);
+
+    //! @brief Returns a FilterStatePtr containing the current state of the underlying filter
+    //! @param[in] associatedTopicName - The topic name for the measurement that was processed to generate this state
+    //!
+    FilterStatePtr generateFilterState(const std::string &associatedTopicName = "");
 
     //! @brief Loads fusion settings from the config file
     //! @param[in] topicName - The name of the topic for which to load settings
@@ -357,10 +357,8 @@ template<class T> class RosFilter
     //! @return true indicates that the measurement was successfully prepared, false otherwise
     //!
     bool preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                     const std::string &topicName,
+                     const CallbackData &callbackData,
                      const std::string &targetFrame,
-                     const bool differential,
-                     const bool relative,
                      const bool imuData,
                      std::vector<int> &updateVector,
                      Eigen::VectorXd &measurement,
@@ -381,6 +379,23 @@ template<class T> class RosFilter
                       std::vector<int> &updateVector,
                       Eigen::VectorXd &measurement,
                       Eigen::MatrixXd &measurementCovariance);
+
+    //! @brief Finds the latest filter state before the given timestamp and makes it the current state again.
+    //!
+    //! This method also inserts all measurements between the older filter timestamp and now into the measurements
+    //! queue.
+    //!
+    //! @param[in] time - The time to which the filter state should revert
+    //! @return True if restoring the filter succeeded. False if not.
+    //!
+    bool revertTo(const double time);
+
+    //! @brief Saves the current filter state in the queue of previous filter states
+    //!
+    //! These measurements will be used in backwards smoothing in the event that older measurements come in.
+    //! @param[in] associatedTopicName - The topic name for the measurement that was processed to generate this state
+    //!
+    void saveFilterState(const std::string &associatedTopicName);
 
     //! @brief tf frame name for the robot's body frame
     //!
@@ -509,9 +524,7 @@ template<class T> class RosFilter
     //!
     std::map<std::string, tf2::Transform> previousMeasurements_;
 
-    //! @brief We also need the previous covariance matrix for differential data
-    //!
-    std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
+    std::map<std::string, FilterStatePtr> previousMeasurementStates_;
 
     //! @brief By default, the filter predicts and corrects up to the time of the latest measurement. If this is set
     //! to true, the filter does the same, but then also predicts up to the current time step.
