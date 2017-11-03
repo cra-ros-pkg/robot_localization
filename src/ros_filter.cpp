@@ -3037,8 +3037,7 @@ namespace RobotLocalization
     int restored_measurements = 0;
     while (!measurementHistory_.empty() && measurementHistory_.back()->time_ > time)
     {
-      const MeasurementPtr measurement = measurementHistory_.back();
-      measurementQueue_.push(measurement);
+      measurementQueue_.push(measurementHistory_.back());
       measurementHistory_.pop_back();
       restored_measurements++;
     }
