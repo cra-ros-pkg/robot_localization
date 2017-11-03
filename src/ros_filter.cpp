@@ -562,9 +562,8 @@ namespace RobotLocalization
         }
 
         // We should only save the filter state once per unique timstamp/topic combo
-        const bool stampWillChange = ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9;
-
-        if (measurementQueue_.empty() || stampWillChange)
+        if (measurementQueue_.empty() ||
+          ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9)
         {
           bool curMeasIsDifferential = false;
 
@@ -2980,15 +2979,14 @@ namespace RobotLocalization
 
     // If we jump back in the state history, then we unfortunately need, for each differential input source, to find
     // the *previous* filter state for that measurement (i.e., the filter state at the *previous* measurement for that
-    // sensor.
+    // sensor).
 
     // Iterate over all the previousMeasurementStates_, since we will only have entries for the differential sensors
     std::map<std::string, FilterStatePtr>::iterator pmsIt;
     std::map<std::string, FilterStatePtr>::iterator pmsErased;
     for (pmsIt = previousMeasurementStates_.begin(); pmsIt != previousMeasurementStates_.end();)
     {
-      // Walk backwards through the history until we find the first state that resulted from a message with this topic
-      // name
+      // Walk backwards through the history until we find a state that resulted from a message with this topic name
       FilterStateHistoryDeque::reverse_iterator fshIt = filterStateHistory_.rbegin();
       while (fshIt != filterStateHistory_.rend() && (*fshIt)->associatedTopicName_ != pmsIt->first)
       {
@@ -3052,7 +3050,7 @@ namespace RobotLocalization
   template<typename T>
   void RosFilter<T>::saveFilterState(const std::string &associatedTopicName)
   {
-    filterStateHistory_.push_back(generateFilterState());
+    filterStateHistory_.push_back(generateFilterState(associatedTopicName));
     RF_DEBUG("Saved state with timestamp " << std::setprecision(20) << filterStateHistory_.back()->lastMeasurementTime_
       << " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
   }
