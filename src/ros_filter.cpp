@@ -537,16 +537,15 @@ namespace RobotLocalization
 
         if (measurement->differential_)
         {
-          MeasurementPtr differentialMeas = boost::make_shared<Measurement>();
-          *differentialMeas = *measurement;
+          MeasurementPtr differentialMeas = boost::make_shared<Measurement>(*measurement);
 
           applyPreviousState(differentialMeas);
 
-          measToProcess = differentialMeas;
+          measToProcess = boost::move(differentialMeas);
         }
 
         // This will call predict and, if necessary, correct
-        filter_.processMeasurement(*(measToProcess.get()));
+        filter_.processMeasurement(*measToProcess);
 
         // Accumulate all differential topics that have this timestamp
         if (measurement->differential_)
@@ -561,7 +560,8 @@ namespace RobotLocalization
           measurementHistory_.push_back(measurement);
         }
 
-        // We should only save the filter state once per unique timstamp/topic combo
+        // We should only concern ourselves with saving the filter state or updating the previous measurement if
+        // this is the last measurement in the queue, or the next measurement has a different time stamp.
         if (measurementQueue_.empty() ||
           ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9)
         {
@@ -2983,7 +2983,6 @@ namespace RobotLocalization
 
     // Iterate over all the previousMeasurementStates_, since we will only have entries for the differential sensors
     std::map<std::string, FilterStatePtr>::iterator pmsIt;
-    std::map<std::string, FilterStatePtr>::iterator pmsErased;
     for (pmsIt = previousMeasurementStates_.begin(); pmsIt != previousMeasurementStates_.end();)
     {
       // Walk backwards through the history until we find a state that resulted from a message with this topic name
@@ -3008,9 +3007,7 @@ namespace RobotLocalization
         RF_DEBUG("Erasing previous measurement for " << pmsIt->first);
 
         // If we failed to find it, erase this sensor from the previous states
-        pmsErased = pmsIt;
-        ++pmsIt;
-        previousMeasurementStates_.erase(pmsErased);
+        previousMeasurementStates_.erase(pmsIt++);
       }
     }
 

@@ -286,6 +286,9 @@ template<class T> class RosFilter
     //!
     void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper);
 
+    //! @brief Transforms the measurement by multiplying it by a transform representing the previous state
+    //! @param[in] measurement - The measurement to update
+    //!
     void applyPreviousState(MeasurementPtr measurement);
 
     //! @brief Utility method for copying covariances from ROS covariance arrays
