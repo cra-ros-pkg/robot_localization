@@ -590,7 +590,7 @@ namespace RobotLocalization
             differentialTopicsToSave.pop();
           }
 
-          // Only save the state if we didn't already do so above
+          // Only save the state if we're smoothing and didn't already do so above
           if (smoothLaggedData_ && !measurement->differential_)
           {
             saveFilterState(measurement->topicName_);
