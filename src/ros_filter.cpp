@@ -138,6 +138,7 @@ namespace RobotLocalization
         enqueueMeasurement(topicName,
                            measurement,
                            measurementCovariance,
+                           false,
                            updateVectorCorrected,
                            callbackData.rejectionThreshold_,
                            msg->header.stamp);
@@ -210,6 +211,7 @@ namespace RobotLocalization
   void RosFilter<T>::enqueueMeasurement(const std::string &topicName,
                                         const Eigen::VectorXd &measurement,
                                         const Eigen::MatrixXd &measurementCovariance,
+                                        const bool differential,
                                         const std::vector<int> &updateVector,
                                         const double mahalanobisThresh,
                                         const ros::Time &time)
@@ -222,6 +224,7 @@ namespace RobotLocalization
     meas->updateVector_ = updateVector;
     meas->time_ = time.toSec();
     meas->mahalanobisThresh_ = mahalanobisThresh;
+    meas->differential_ = differential;
     meas->latestControl_ = latestControl_;
     meas->latestControlTime_ = latestControlTime_.toSec();
     measurementQueue_.push(meas);
@@ -487,8 +490,9 @@ namespace RobotLocalization
       int restoredMeasurementCount = 0;
       if (smoothLaggedData_ && firstMeasurement->time_ < filter_.getLastMeasurementTime())
       {
-        RF_DEBUG("Received a measurement that was " << filter_.getLastMeasurementTime() - firstMeasurement->time_ <<
-                 " seconds in the past. Reverting filter state and measurement queue...");
+        RF_DEBUG("Received a measurement for topic " << firstMeasurement->topicName_ << " with time stamp " <<
+          firstMeasurement->time_ << ", which is " << filter_.getLastMeasurementTime() - firstMeasurement->time_ <<
+          " seconds in the past. Reverting filter state and measurement queue...");
 
         int originalCount = static_cast<int>(measurementQueue_.size());
         if (!revertTo(firstMeasurement->time_ - 1e-9))
@@ -501,6 +505,8 @@ namespace RobotLocalization
 
         restoredMeasurementCount = static_cast<int>(measurementQueue_.size()) - originalCount;
       }
+
+      std::queue<std::string> differentialTopicsToSave;
 
       while (!measurementQueue_.empty() && ros::ok())
       {
@@ -527,20 +533,67 @@ namespace RobotLocalization
           restoredMeasurementCount--;
         }
 
+        MeasurementPtr measToProcess = measurement;
+
+        if (measurement->differential_)
+        {
+          MeasurementPtr differentialMeas = boost::make_shared<Measurement>(*measurement);
+
+          applyPreviousState(differentialMeas);
+
+          measToProcess = boost::move(differentialMeas);
+        }
+
         // This will call predict and, if necessary, correct
-        filter_.processMeasurement(*(measurement.get()));
+        filter_.processMeasurement(*measToProcess);
+
+        // Accumulate all differential topics that have this timestamp
+        if (measurement->differential_)
+        {
+          differentialTopicsToSave.push(measurement->topicName_);
+        }
 
         // Store old states and measurements if we're smoothing
         if (smoothLaggedData_)
         {
           // Invariant still holds: measurementHistoryDeque_.back().time_ < measurementQueue_.top().time_
           measurementHistory_.push_back(measurement);
+        }
 
-          // We should only save the filter state once per unique timstamp
-          if (measurementQueue_.empty() ||
-              ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9)
+        // We should only concern ourselves with saving the filter state or updating the previous measurement if
+        // this is the last measurement in the queue, or the next measurement has a different time stamp.
+        if (measurementQueue_.empty() ||
+          ::fabs(measurementQueue_.top()->time_ - filter_.getLastMeasurementTime()) > 1e-9)
+        {
+          bool curMeasIsDifferential = false;
+
+          // The time stamp of the next measurement is going to change (or we have no more). That means that, at this
+          // point, differentialTopicsToSave contains the name of all differential topics with measurements we received
+          // with this exact timestamp. We want them all to get associated with the most recent corrected state, so now
+          // we need to walk through each of them and do so.
+          while (!differentialTopicsToSave.empty())
           {
-            saveFilterState(filter_);
+            if (smoothLaggedData_)
+            {
+              // If we're smoothing, we *always* save the filter state and associate it with the most recent
+              // measurement (after this while loop), so we can skip that one here.
+              saveFilterState(differentialTopicsToSave.front());
+              previousMeasurementStates_[differentialTopicsToSave.front()] = filterStateHistory_.back();
+            }
+            else
+            {
+              // If we're not smoothing, we still need to keep track of the previous state for this sensor
+              previousMeasurementStates_[differentialTopicsToSave.front()] =
+                generateFilterState(differentialTopicsToSave.front());
+            }
+
+            differentialTopicsToSave.pop();
+          }
+
+          // Only save the state if we're smoothing and didn't already do so above
+          if (smoothLaggedData_ && !measurement->differential_)
+          {
+            saveFilterState(measurement->topicName_);
           }
         }
       }
@@ -946,7 +999,7 @@ namespace RobotLocalization
         int odomQueueSize = 1;
         nhLocal_.param(odomTopicName + "_queue_size", odomQueueSize, 1);
 
-        const CallbackData poseCallbackData(odomTopicName + "_pose",poseUpdateVec, poseUpdateSum, differential,
+        const CallbackData poseCallbackData(odomTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
           relative, poseMahalanobisThresh);
         const CallbackData twistCallbackData(odomTopicName + "_twist", twistUpdateVec, twistUpdateSum, false, false,
           twistMahalanobisThresh);
@@ -1146,7 +1199,7 @@ namespace RobotLocalization
 
         if (twistUpdateSum > 0)
         {
-          const CallbackData callbackData(twistTopicName, twistUpdateVec, twistUpdateSum,false, false,
+          const CallbackData callbackData(twistTopicName, twistUpdateVec, twistUpdateSum, false, false,
             twistMahalanobisThresh);
 
           topicSubs_.push_back(
@@ -1628,10 +1681,8 @@ namespace RobotLocalization
 
       // Prepare the pose data for inclusion in the filter
       if (preparePose(msg,
-                      topicName,
+                      callbackData,
                       targetFrame,
-                      callbackData.differential_,
-                      callbackData.relative_,
                       imuData,
                       updateVectorCorrected,
                       measurement,
@@ -1642,6 +1693,7 @@ namespace RobotLocalization
         enqueueMeasurement(topicName,
                            measurement,
                            measurementCovariance,
+                           callbackData.differential_,
                            updateVectorCorrected,
                            callbackData.rejectionThreshold_,
                            msg->header.stamp);
@@ -1865,7 +1917,7 @@ namespace RobotLocalization
     // Get rid of any initial poses (pretend we've never had a measurement)
     initialMeasurements_.clear();
     previousMeasurements_.clear();
-    previousMeasurementCovariances_.clear();
+    previousMeasurementStates_.clear();
 
     // Clear out the measurement queue so that we don't immediately undo our
     // reset.
@@ -1895,7 +1947,9 @@ namespace RobotLocalization
 
     // Prepare the pose data (really just using this to transform it into the target frame).
     // Twist data is going to get zeroed out.
-    preparePose(msg, topicName, worldFrameId_, false, false, false, updateVector, measurement, measurementCovariance);
+    CallbackData callbackData;
+    callbackData.topicName_ = topicName;
+    preparePose(msg, callbackData, worldFrameId_, false, updateVector, measurement, measurementCovariance);
 
     // For the state
     filter_.setState(measurement);
@@ -1969,6 +2023,7 @@ namespace RobotLocalization
         enqueueMeasurement(topicName,
                            measurement,
                            measurementCovariance,
+                           false,
                            updateVectorCorrected,
                            callbackData.rejectionThreshold_,
                            msg->header.stamp);
@@ -2075,6 +2130,75 @@ namespace RobotLocalization
   }
 
   template<typename T>
+  void RosFilter<T>::applyPreviousState(MeasurementPtr measurement)
+  {
+    if (previousMeasurementStates_.count(measurement->topicName_) == 0)
+    {
+      RF_DEBUG("First differential integration for " << measurement->topicName_ << "\n");
+      measurement->measurement_ = filter_.getState();
+      measurement->covariance_ = filter_.getEstimateErrorCovariance();
+    }
+    else
+    {
+      const Eigen::VectorXd &prevState = previousMeasurementStates_[measurement->topicName_]->state_;
+      Eigen::VectorXd &curMeas = measurement->measurement_;
+
+      tf2::Transform prevStateTf;
+      tf2::Quaternion prevStateRot;
+      prevStateTf.setOrigin(
+        tf2::Vector3(prevState(StateMemberX), prevState(StateMemberY), prevState(StateMemberZ)));
+      prevStateRot.setRPY(prevState(StateMemberRoll), prevState(StateMemberPitch), prevState(StateMemberYaw));
+      prevStateTf.setRotation(prevStateRot);
+
+      RF_DEBUG("Previous filter state is:\n" << prevStateTf);
+
+      tf2::Transform curMeasTf;
+      tf2::Quaternion curMeasRot;
+      curMeasTf.setOrigin(
+        tf2::Vector3(curMeas(StateMemberX), curMeas(StateMemberY), curMeas(StateMemberZ)));
+      curMeasRot.setRPY(curMeas(StateMemberRoll), curMeas(StateMemberPitch), curMeas(StateMemberYaw));
+      curMeasTf.setRotation(curMeasRot);
+      curMeasTf = prevStateTf * curMeasTf;
+
+      curMeas(StateMemberX) = curMeasTf.getOrigin().getX();
+      curMeas(StateMemberY) = curMeasTf.getOrigin().getY();
+      curMeas(StateMemberZ) = curMeasTf.getOrigin().getZ();
+
+      RosFilterUtilities::quatToRPY(
+        curMeasTf.getRotation(), curMeas(StateMemberRoll), curMeas(StateMemberPitch), curMeas(StateMemberYaw));
+
+      RF_DEBUG("Final measurement is:\n" << measurement->measurement_ << "\n");
+    }
+
+  }
+
+  template<typename T>
+  void RosFilter<T>::clearExpiredHistory(const double cutOffTime)
+  {
+    RF_DEBUG("\n----- RosFilter::clearExpiredHistory -----" <<
+             "\nCutoff time is " << cutOffTime << "\n");
+
+    int poppedMeasurements = 0;
+    int poppedStates = 0;
+
+    while (!measurementHistory_.empty() && measurementHistory_.front()->time_ < cutOffTime)
+    {
+      measurementHistory_.pop_front();
+      poppedMeasurements++;
+    }
+
+    while (!filterStateHistory_.empty() && filterStateHistory_.front()->lastMeasurementTime_ < cutOffTime)
+    {
+      filterStateHistory_.pop_front();
+      poppedStates++;
+    }
+
+    RF_DEBUG("\nPopped " << poppedMeasurements << " measurements and " <<
+             poppedStates << " states from their respective queues." <<
+             "\n---- /RosFilter::clearExpiredHistory ----\n" );
+  }
+
+  template<typename T>
   void RosFilter<T>::copyCovariance(const double *arr,
                                     Eigen::MatrixXd &covariance,
                                     const std::string &topicName,
@@ -2149,6 +2273,19 @@ namespace RobotLocalization
         arr[dimension * i + j] = covariance(i, j);
       }
     }
+  }
+
+  template<typename T>
+  FilterStatePtr RosFilter<T>::generateFilterState(const std::string &associatedTopicName)
+  {
+    FilterStatePtr state = boost::make_shared<FilterState>();
+    state->state_ = Eigen::VectorXd(filter_.getState());
+    state->estimateErrorCovariance_ = Eigen::MatrixXd(filter_.getEstimateErrorCovariance());
+    state->lastMeasurementTime_ = filter_.getLastMeasurementTime();
+    state->latestControl_ = Eigen::VectorXd(filter_.getControl());
+    state->latestControlTime_ = filter_.getControlTime();
+    state->associatedTopicName_ = associatedTopicName;
+    return state;
   }
 
   template<typename T>
@@ -2356,19 +2493,18 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  bool RosFilter<T>::preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                                 const std::string &topicName,
-                                 const std::string &targetFrame,
-                                 const bool differential,
-                                 const bool relative,
-                                 const bool imuData,
-                                 std::vector<int> &updateVector,
-                                 Eigen::VectorXd &measurement,
-                                 Eigen::MatrixXd &measurementCovariance)
+  bool RosFilter<T>::preparePose(
+    const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
+    const CallbackData &callbackData,
+    const std::string &targetFrame,
+    const bool imuData,
+    std::vector<int> &updateVector,
+    Eigen::VectorXd &measurement,
+    Eigen::MatrixXd &measurementCovariance)
   {
     bool retVal = false;
 
-    RF_DEBUG("------ RosFilter::preparePose (" << topicName << ") ------\n");
+    RF_DEBUG("------ RosFilter::preparePose (" << callbackData.topicName_ << ") ------\n");
 
     // 1. Get the measurement into a tf-friendly transform (pose) object
     tf2::Stamped<tf2::Transform> poseTmp;
@@ -2398,10 +2534,10 @@ namespace RobotLocalization
     {
       // Otherwise, we should use our target frame
       finalTargetFrame = targetFrame;
-      poseTmp.frame_id_ = (differential ? finalTargetFrame : msg->header.frame_id);
+      poseTmp.frame_id_ = (callbackData.differential_ ? finalTargetFrame : msg->header.frame_id);
     }
 
-    RF_DEBUG("Final target frame for " << topicName << " is " << finalTargetFrame << "\n");
+    RF_DEBUG("Final target frame for " << callbackData.topicName_ << " is " << finalTargetFrame << "\n");
 
     poseTmp.stamp_ = msg->header.stamp;
 
@@ -2421,11 +2557,11 @@ namespace RobotLocalization
       if (updateVector[StateMemberRoll] || updateVector[StateMemberPitch] || updateVector[StateMemberYaw])
       {
         std::stringstream stream;
-        stream << "The " << topicName << " message contains an invalid orientation quaternion, " <<
+        stream << "The " << callbackData.topicName_ << " message contains an invalid orientation quaternion, " <<
                   "but its configuration is such that orientation data is being used. Correcting...";
 
         addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
-                      topicName + "_orientation",
+                      callbackData.topicName_ + "_orientation",
                       stream.str(),
                       false);
       }
@@ -2511,7 +2647,8 @@ namespace RobotLocalization
       // covariance data
       Eigen::MatrixXd covariance(POSE_SIZE, POSE_SIZE);
       covariance.setZero();
-      copyCovariance(&(msg->pose.covariance[0]), covariance, topicName, updateVector, POSITION_OFFSET, POSE_SIZE);
+      copyCovariance(
+        &(msg->pose.covariance[0]), covariance, callbackData.topicName_, updateVector, POSITION_OFFSET, POSE_SIZE);
 
       // 5b. Now rotate the covariance: create an augmented matrix that
       // contains a 3D rotation matrix in the upper-left and lower-right
@@ -2590,146 +2727,79 @@ namespace RobotLocalization
         targetFrameTrans.setIdentity();
       }
 
-      // 7. Two cases: if we're in differential mode, we need to generate a twist
-      // message. Otherwise, we just transform it to the target frame.
-      if (differential)
+      // 7. Three cases:
+      //   * If we're in differential mode, we need to compute the delta from the last measurement.
+      //   * If we're in relative mode, then we compute the delta between this measurement and the *first* measurement
+      //     for that sensor, then transform to the targe frame.
+      //   * Otherwise, we just transform into the target frame.
+
+      // We're going to be playing with poseTmp, so store it, as we'll need to save its current value for the next
+      // measurement.
+      curMeasurement = poseTmp;
+
+      if (callbackData.differential_)
       {
-        bool success = false;
-
-        // We're going to be playing with poseTmp, so store it,
-        // as we'll need to save its current value for the next
-        // measurement.
-        curMeasurement = poseTmp;
-
-        // Make sure we have previous measurements to work with
-        if (previousMeasurements_.count(topicName) > 0 && previousMeasurementCovariances_.count(topicName) > 0)
+        if (previousMeasurements_.count(callbackData.topicName_) == 0)
         {
-          // 7a. If we are carrying out differential integration and
-          // we have a previous measurement for this sensor,then we
-          // need to apply the inverse of that measurement to this new
-          // measurement to produce a "delta" measurement between the two.
-          // Even if we're not using all of the variables from this sensor,
-          // we need to use the whole measurement to determine the delta
-          // to the new measurement
-          tf2::Transform prevMeasurement = previousMeasurements_[topicName];
-          poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
-
-          RF_DEBUG("Previous measurement:\n" << previousMeasurements_[topicName] <<
-                   "\nAfter removing previous measurement, measurement delta is:\n" << poseTmp << "\n");
-
-          // 7b. Now we we have a measurement delta in the frame_id of the
-          // message, but we want that delta to be in the target frame, so
-          // we need to apply the rotation of the target frame transform.
-          targetFrameTrans.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
-          poseTmp.mult(targetFrameTrans, poseTmp);
-
-          RF_DEBUG("After rotating to the target frame, measurement delta is:\n" << poseTmp << "\n");
-
-          // 7c. Now use the time difference from the last message to compute
-          // translational and rotational velocities
-          double dt = msg->header.stamp.toSec() - lastMessageTimes_[topicName].toSec();
-          double xVel = poseTmp.getOrigin().getX() / dt;
-          double yVel = poseTmp.getOrigin().getY() / dt;
-          double zVel = poseTmp.getOrigin().getZ() / dt;
-
-          double rollVel = 0;
-          double pitchVel = 0;
-          double yawVel = 0;
-
-          RosFilterUtilities::quatToRPY(poseTmp.getRotation(), rollVel, pitchVel, yawVel);
-          rollVel /= dt;
-          pitchVel /= dt;
-          yawVel /= dt;
-
-          RF_DEBUG("Previous message time was " << lastMessageTimes_[topicName].toSec() <<
-                   ", current message time is " << msg->header.stamp.toSec() << ", delta is " <<
-                   dt << ", velocity is (vX, vY, vZ): (" << xVel << ", " << yVel << ", " << zVel <<
-                   ")\n" << "(vRoll, vPitch, vYaw): (" << rollVel << ", " << pitchVel << ", " <<
-                   yawVel << ")\n");
-
-          // 7d. Fill out the velocity data in the message
-          geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
-          twistPtr->header = msg->header;
-          twistPtr->header.frame_id = baseLinkFrameId_;
-          twistPtr->twist.twist.linear.x = xVel;
-          twistPtr->twist.twist.linear.y = yVel;
-          twistPtr->twist.twist.linear.z = zVel;
-          twistPtr->twist.twist.angular.x = rollVel;
-          twistPtr->twist.twist.angular.y = pitchVel;
-          twistPtr->twist.twist.angular.z = yawVel;
-          std::vector<int> twistUpdateVec(STATE_SIZE, false);
-          std::copy(updateVector.begin() + POSITION_OFFSET,
-                    updateVector.begin() + POSE_SIZE,
-                    twistUpdateVec.begin() + POSITION_V_OFFSET);
-          std::copy(twistUpdateVec.begin(), twistUpdateVec.end(), updateVector.begin());
-          geometry_msgs::TwistWithCovarianceStampedConstPtr ptr(twistPtr);
-
-          // 7e. Now rotate the previous covariance for this measurement to get it
-          // into the target frame, and add the current measurement's rotated covariance
-          // to the previous measurement's rotated covariance, and multiply by the time delta.
-          Eigen::MatrixXd prevCovarRotated = rot6d * previousMeasurementCovariances_[topicName] * rot6d.transpose();
-          covarianceRotated = (covarianceRotated.eval() + prevCovarRotated) * dt;
-          copyCovariance(covarianceRotated, &(twistPtr->twist.covariance[0]), POSE_SIZE);
-
-          RF_DEBUG("Previous measurement covariance:\n" << previousMeasurementCovariances_[topicName] <<
-                   "\nPrevious measurement covariance rotated:\n" << prevCovarRotated <<
-                   "\nFinal twist covariance:\n" << covarianceRotated << "\n");
-
-          // Now pass this on to prepareTwist, which will convert it to the required frame
-          success = prepareTwist(ptr,
-                                 topicName + "_twist",
-                                 twistPtr->header.frame_id,
-                                 updateVector,
-                                 measurement,
-                                 measurementCovariance);
+          previousMeasurements_.insert(std::pair<std::string, tf2::Transform>(callbackData.topicName_, curMeasurement));
         }
 
-        // 7f. Update the previous measurement and measurement covariance
-        previousMeasurements_[topicName] = curMeasurement;
-        previousMeasurementCovariances_[topicName] = covariance;
+        // 7a. If we are carrying out differential integration and we have a previous measurement for this sensor, then
+        // we need to apply the inverse of that measurement to this new measurement to produce a "delta" measurement
+        // between the two. Even if we're not using all of the variables from this sensor, we need to use the whole
+        // measurement to determine the delta to the new measurement.
+        const tf2::Transform &prevMeasurement = previousMeasurements_[callbackData.topicName_];
 
-        retVal = success;
+        RF_DEBUG("Current measurement for " << callbackData.topicName_ << " is:\n" << poseTmp << "\n");
+
+        poseTmp.setData(prevMeasurement.inverseTimes(poseTmp));
+
+        RF_DEBUG("Previous measurement for " << callbackData.topicName_ << ":\n" << previousMeasurements_[callbackData.topicName_] <<
+                 "\nAfter removing previous measurement, measurement delta is:\n" << poseTmp << "\n");
+
+        previousMeasurements_[callbackData.topicName_] = curMeasurement;
       }
       else
       {
-        // 7g. If we're in relative mode, remove the initial measurement
-        if (relative)
+        if (callbackData.relative_)
         {
-          if (initialMeasurements_.count(topicName) == 0)
+          // 7b. If we are using the sensor in relative mode, we just get the delta from the initial measurement.
+          if (initialMeasurements_.count(callbackData.topicName_) == 0)
           {
-            initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(topicName, poseTmp));
+            initialMeasurements_.insert(std::pair<std::string, tf2::Transform>(callbackData.topicName_, poseTmp));
           }
 
-          tf2::Transform initialMeasurement = initialMeasurements_[topicName];
+          tf2::Transform initialMeasurement = initialMeasurements_[callbackData.topicName_];
           poseTmp.setData(initialMeasurement.inverseTimes(poseTmp));
         }
 
-        // 7h. Apply the target frame transformation to the pose object.
+        // 7c. Finally, we just apply the target frame transformation
         poseTmp.mult(targetFrameTrans, poseTmp);
         poseTmp.frame_id_ = finalTargetFrame;
-
-        // 7i. Finally, copy everything into our measurement and covariance objects
-        measurement(StateMemberX) = poseTmp.getOrigin().x();
-        measurement(StateMemberY) = poseTmp.getOrigin().y();
-        measurement(StateMemberZ) = poseTmp.getOrigin().z();
-
-        // The filter needs roll, pitch, and yaw values instead of quaternions
-        double roll, pitch, yaw;
-        RosFilterUtilities::quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
-        measurement(StateMemberRoll) = roll;
-        measurement(StateMemberPitch) = pitch;
-        measurement(StateMemberYaw) = yaw;
-
-        measurementCovariance.block(0, 0, POSE_SIZE, POSE_SIZE) = covarianceRotated.block(0, 0, POSE_SIZE, POSE_SIZE);
-
-        // 8. Handle 2D mode
-        if (twoDMode_)
-        {
-          forceTwoD(measurement, measurementCovariance, updateVector);
-        }
-
-        retVal = true;
       }
+
+      // 8. Finally, copy everything into our measurement and covariance objects
+      measurement(StateMemberX) = poseTmp.getOrigin().x();
+      measurement(StateMemberY) = poseTmp.getOrigin().y();
+      measurement(StateMemberZ) = poseTmp.getOrigin().z();
+
+      // The filter needs roll, pitch, and yaw values instead of quaternions
+      double roll, pitch, yaw;
+      RosFilterUtilities::quatToRPY(poseTmp.getRotation(), roll, pitch, yaw);
+      measurement(StateMemberRoll) = roll;
+      measurement(StateMemberPitch) = pitch;
+      measurement(StateMemberYaw) = yaw;
+
+      measurementCovariance.block(0, 0, POSE_SIZE, POSE_SIZE) = covarianceRotated.block(0, 0, POSE_SIZE, POSE_SIZE);
+
+      // 9. Handle 2D mode
+      if (twoDMode_)
+      {
+        forceTwoD(measurement, measurementCovariance, updateVector);
+      }
+
+      retVal = true;
+
     }
     else
     {
@@ -2738,7 +2808,7 @@ namespace RobotLocalization
       RF_DEBUG("Could not transform measurement into " << finalTargetFrame << ". Ignoring...");
     }
 
-    RF_DEBUG("\n----- /RosFilter::preparePose (" << topicName << ") ------\n");
+    RF_DEBUG("\n----- /RosFilter::preparePose (" << callbackData.topicName_ << ") ------\n");
 
     return retVal;
   }
@@ -2894,30 +2964,51 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::saveFilterState(FilterBase& filter)
-  {
-    FilterStatePtr state = FilterStatePtr(new FilterState());
-    state->state_ = Eigen::VectorXd(filter.getState());
-    state->estimateErrorCovariance_ = Eigen::MatrixXd(filter.getEstimateErrorCovariance());
-    state->lastMeasurementTime_ = filter.getLastMeasurementTime();
-    state->latestControl_ = Eigen::VectorXd(filter.getControl());
-    state->latestControlTime_ = filter.getControlTime();
-    filterStateHistory_.push_back(state);
-    RF_DEBUG("Saved state with timestamp " << std::setprecision(20) << state->lastMeasurementTime_ <<
-             " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
-  }
-
-  template<typename T>
   bool RosFilter<T>::revertTo(const double time)
   {
     RF_DEBUG("\n----- RosFilter::revertTo -----\n");
-    RF_DEBUG("\nRequested time was " << std::setprecision(20) << time << "\n")
+    RF_DEBUG("\nRequested time was " << std::setprecision(20) << time << "\n");
 
-    // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the requested time.
-    // Since every saved state after that time will be overwritten/corrected, we can pop from the queue.
+    // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the
+    // requested time. Since every saved state after that time will be overwritten/corrected, we can pop from
+    // the queue.
     while (!filterStateHistory_.empty() && filterStateHistory_.back()->lastMeasurementTime_ > time)
     {
       filterStateHistory_.pop_back();
+    }
+
+    // If we jump back in the state history, then we unfortunately need, for each differential input source, to find
+    // the *previous* filter state for that measurement (i.e., the filter state at the *previous* measurement for that
+    // sensor).
+
+    // Iterate over all the previousMeasurementStates_, since we will only have entries for the differential sensors
+    std::map<std::string, FilterStatePtr>::iterator pmsIt;
+    for (pmsIt = previousMeasurementStates_.begin(); pmsIt != previousMeasurementStates_.end();)
+    {
+      // Walk backwards through the history until we find a state that resulted from a message with this topic name
+      FilterStateHistoryDeque::reverse_iterator fshIt = filterStateHistory_.rbegin();
+      while (fshIt != filterStateHistory_.rend() && (*fshIt)->associatedTopicName_ != pmsIt->first)
+      {
+        fshIt++;
+      }
+
+      // If we found it, revert the previous state for that topic name
+      if (fshIt != filterStateHistory_.rend())
+      {
+        pmsIt->second = (*fshIt);
+
+        RF_DEBUG("Reverting previous state for " << pmsIt->first << " to:\n" << pmsIt->second->state_ <<
+                 "Reverting previous covariance for " << pmsIt->first << " to:\n" << pmsIt->second->estimateErrorCovariance_);
+
+        ++pmsIt;
+      }
+      else
+      {
+        RF_DEBUG("Erasing previous measurement for " << pmsIt->first);
+
+        // If we failed to find it, erase this sensor from the previous states
+        previousMeasurementStates_.erase(pmsIt++);
+      }
     }
 
     // The state and measurement histories are stored at the same time, so if we have insufficient state history, we
@@ -2954,29 +3045,11 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::clearExpiredHistory(const double cutOffTime)
+  void RosFilter<T>::saveFilterState(const std::string &associatedTopicName)
   {
-    RF_DEBUG("\n----- RosFilter::clearExpiredHistory -----" <<
-             "\nCutoff time is " << cutOffTime << "\n");
-
-    int poppedMeasurements = 0;
-    int poppedStates = 0;
-
-    while (!measurementHistory_.empty() && measurementHistory_.front()->time_ < cutOffTime)
-    {
-      measurementHistory_.pop_front();
-      poppedMeasurements++;
-    }
-
-    while (!filterStateHistory_.empty() && filterStateHistory_.front()->lastMeasurementTime_ < cutOffTime)
-    {
-      filterStateHistory_.pop_front();
-      poppedStates++;
-    }
-
-    RF_DEBUG("\nPopped " << poppedMeasurements << " measurements and " <<
-             poppedStates << " states from their respective queues." <<
-             "\n---- /RosFilter::clearExpiredHistory ----\n" );
+    filterStateHistory_.push_back(generateFilterState(associatedTopicName));
+    RF_DEBUG("Saved state with timestamp " << std::setprecision(20) << filterStateHistory_.back()->lastMeasurementTime_
+      << " to history. " << filterStateHistory_.size() << " measurements are in the queue.\n");
   }
 }  // namespace RobotLocalization
 

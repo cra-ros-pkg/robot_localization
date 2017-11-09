@@ -86,6 +86,8 @@ struct Measurement
   // The time stamp of the most recent control term (needed for lagged data)
   double latestControlTime_;
 
+  bool differential_;
+
   // We want earlier times to have greater priority
   bool operator()(const boost::shared_ptr<Measurement> &a, const boost::shared_ptr<Measurement> &b)
   {
@@ -99,10 +101,11 @@ struct Measurement
 
   Measurement() :
     topicName_(""),
+    time_(0.0),
+    mahalanobisThresh_(std::numeric_limits<double>::max()),
     latestControl_(),
     latestControlTime_(0.0),
-    time_(0.0),
-    mahalanobisThresh_(std::numeric_limits<double>::max())
+    differential_(false)
   {
   }
 };
@@ -130,6 +133,9 @@ struct FilterState
 
   // The time stamp of the most recent control term
   double latestControlTime_;
+
+  // The topic of the measurement that was processed to generate this state
+  std::string associatedTopicName_;
 
   // We want the queue to be sorted from latest to earliest timestamps.
   bool operator()(const FilterState &a, const FilterState &b)
