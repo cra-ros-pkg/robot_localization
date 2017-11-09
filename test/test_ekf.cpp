@@ -85,6 +85,7 @@ TEST(EkfTest, Measurements)
   ekf.enqueueMeasurement("odom0",
                          measurement,
                          measurementCovariance,
+                         false,
                          updateVector,
                          std::numeric_limits<double>::max(),
                          time);
@@ -113,6 +114,7 @@ TEST(EkfTest, Measurements)
   ekf.enqueueMeasurement("odom0",
                          measurement2,
                          measurementCovariance,
+                         false,
                          updateVector,
                          std::numeric_limits<double>::max(),
                          time);

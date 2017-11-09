@@ -91,6 +91,7 @@ TEST(UkfTest, Measurements)
   ukf.enqueueMeasurement("odom0",
                          measurement,
                          measurementCovariance,
+                         false,
                          updateVector,
                          std::numeric_limits<double>::max(),
                          time);
@@ -119,6 +120,7 @@ TEST(UkfTest, Measurements)
   ukf.enqueueMeasurement("odom0",
                          measurement2,
                          measurementCovariance,
+                         false,
                          updateVector,
                          std::numeric_limits<double>::max(),
                          time);
