@@ -313,6 +313,7 @@ namespace RobotLocalization
   void FilterBase::setProcessNoiseCovariance(const Eigen::MatrixXd &processNoiseCovariance)
   {
     processNoiseCovariance_ = processNoiseCovariance;
+    dynamicProcessNoiseCovariance_ = processNoiseCovariance_;
   }
 
   void FilterBase::setSensorTimeout(const double sensorTimeout)
