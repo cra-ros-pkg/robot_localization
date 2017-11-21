@@ -2973,7 +2973,7 @@ namespace RobotLocalization
 
     // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the
     // requested time. Since every saved state after that time will be overwritten/corrected, we can pop from
-    // the queue. If the history is insufficiently short, we just take the oldest state we have.
+    // the queue. If the history is insufficient in length, we just take the oldest state we have.
     FilterStatePtr lastHistoryState;
     while (!filterStateHistory_.empty() && filterStateHistory_.back()->lastMeasurementTime_ > time)
     {
