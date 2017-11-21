@@ -1922,12 +1922,17 @@ namespace RobotLocalization
       }
 
       ros::Duration loop_elapsed_time = ros::Time::now() - loop_end_time;
-      ros::Duration sleep_time = loop_cycle_time - loop_elapsed_time;
 
-      if (!sleep_time.sleep())
+      if (loop_elapsed_time > loop_cycle_time)
       {
-        ROS_WARN_STREAM("Failed to meet update rate! Took " << std::setprecision(20) << loop_elapsed_time.toSec() <<
-          " seconds. Try decreasing the rate, limiting sensor output frequency, or limiting the number of sensors.");
+        ROS_WARN_STREAM_DELAYED_THROTTLE(1.0, "Failed to meet update rate! Took " << std::setprecision(20) <<
+          loop_elapsed_time.toSec() << " seconds. Try decreasing the rate, limiting sensor output frequency, or "
+          "limiting the number of sensors.");
+      }
+      else
+      {
+        ros::Duration sleep_time = loop_cycle_time - loop_elapsed_time;
+        sleep_time.sleep();
       }
 
       loop_end_time = ros::Time::now();
