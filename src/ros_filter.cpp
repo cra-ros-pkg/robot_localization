@@ -535,9 +535,9 @@ namespace RobotLocalization
         if (!revertTo(firstMeasurement->time_ - 1e-9))
         {
           RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurement->time_ << "\n");
-          ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic " << firstMeasurement->topicName_ <<
-                                   ", but history interval is insufficiently sized to "
-                                   "revert state and measurement queue.");
+          ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Received old measurement for topic " <<
+            firstMeasurement->topicName_ << ", but history interval is insufficiently sized to revert state and "
+            "measurement queue.");
           restoredMeasurementCount = 0;
         }
 
@@ -1781,7 +1781,8 @@ namespace RobotLocalization
       accelPub = nh_.advertise<geometry_msgs::AccelWithCovarianceStamped>("accel/filtered", 20);
     }
 
-    ros::Rate loop_rate(frequency_);
+    const ros::Duration loop_cycle_time(1.0 / frequency_);
+    ros::Time loop_end_time = ros::Time::now();
 
     // Wait for the filter to be enabled
     while (!enabled_ && ros::ok())
@@ -1796,9 +1797,10 @@ namespace RobotLocalization
 
     while (ros::ok())
     {
+      ros::spinOnce();
+
       // The spin will call all the available callbacks and enqueue
       // their received measurements
-      ros::spinOnce();
       curTime = ros::Time::now();
 
       // Now we'll integrate any measurements we've received
@@ -1841,7 +1843,8 @@ namespace RobotLocalization
                      odomBaseLinkTrans,
                      true))
               {
-                ROS_ERROR_STREAM("Unable to retrieve " << odomFrameId_ << "->" << baseLinkFrameId_ << " transform. Skipping iteration...");
+                ROS_ERROR_STREAM_DELAYED_THROTTLE(1.0, "Unable to retrieve " << odomFrameId_ << "->" <<
+                  baseLinkFrameId_ << " transform. Skipping iteration...");
                 continue;
               }
 
@@ -1918,11 +1921,16 @@ namespace RobotLocalization
         clearExpiredHistory(filter_.getLastMeasurementTime() - historyLength_);
       }
 
-      if (!loop_rate.sleep())
+      ros::Duration loop_elapsed_time = ros::Time::now() - loop_end_time;
+      ros::Duration sleep_time = loop_cycle_time - loop_elapsed_time;
+
+      if (!sleep_time.sleep())
       {
-        ROS_WARN_STREAM("Failed to meet update rate! Try decreasing the rate, limiting "
-                        "sensor output frequency, or limiting the number of sensors.");
+        ROS_WARN_STREAM("Failed to meet update rate! Took " << std::setprecision(20) << loop_elapsed_time.toSec() <<
+          " seconds. Try decreasing the rate, limiting sensor output frequency, or limiting the number of sensors.");
       }
+
+      loop_end_time = ros::Time::now();
     }
   }
 
