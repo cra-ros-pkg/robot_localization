@@ -1732,7 +1732,9 @@ namespace RobotLocalization
   template<typename T>
   void RosFilter<T>::run()
   {
-    ros::Time::init();
+    ROS_INFO("Waiting for valid clock time...");
+    ros::Time::waitForValid();
+    ROS_INFO("Valid clock time received. Starting node.");
 
     loadParams();
 
@@ -2971,10 +2973,30 @@ namespace RobotLocalization
 
     // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the
     // requested time. Since every saved state after that time will be overwritten/corrected, we can pop from
-    // the queue.
+    // the queue. If the history is insufficient in length, we just take the oldest state we have.
+    FilterStatePtr lastHistoryState;
     while (!filterStateHistory_.empty() && filterStateHistory_.back()->lastMeasurementTime_ > time)
     {
+      lastHistoryState = filterStateHistory_.back();
       filterStateHistory_.pop_back();
+    }
+
+    // If the state history is not empty at this point, it means that our history was large enough, and we
+    // should revert to the state at the back of the history deque.
+    bool retVal = false;
+    if (!filterStateHistory_.empty())
+    {
+      retVal = true;
+      lastHistoryState = filterStateHistory_.back();
+    }
+    else
+    {
+      RF_DEBUG("Insufficient history to revert to time " << time << "\n");
+
+      if (lastHistoryState.get() != NULL)
+      {
+        RF_DEBUG("Will revert to oldest state at " << lastHistoryState->latestControlTime_ << ".\n");
+      }
     }
 
     // If we jump back in the state history, then we unfortunately need, for each differential input source, to find
@@ -2998,35 +3020,31 @@ namespace RobotLocalization
         pmsIt->second = (*fshIt);
 
         RF_DEBUG("Reverting previous state for " << pmsIt->first << " to:\n" << pmsIt->second->state_ <<
-                 "Reverting previous covariance for " << pmsIt->first << " to:\n" << pmsIt->second->estimateErrorCovariance_);
+                 "Reverting previous covariance for " << pmsIt->first << " to:\n" <<
+                 pmsIt->second->estimateErrorCovariance_ << "\n");
 
         ++pmsIt;
       }
       else
       {
-        RF_DEBUG("Erasing previous measurement for " << pmsIt->first);
+        RF_DEBUG("Erasing previous measurement for " << pmsIt->first << "\n");
 
         // If we failed to find it, erase this sensor from the previous states
         previousMeasurementStates_.erase(pmsIt++);
       }
     }
 
-    // The state and measurement histories are stored at the same time, so if we have insufficient state history, we
-    // will also have insufficient measurement history.
-    if (filterStateHistory_.empty())
+    // If we have a valid reversion state, revert
+    if (lastHistoryState.get() != NULL)
     {
-      RF_DEBUG("Insufficient history to revert to time " << time << "\n");
+      // Reset filter to the latest state from the queue.
+      const FilterStatePtr &state = lastHistoryState;
+      filter_.setState(state->state_);
+      filter_.setEstimateErrorCovariance(state->estimateErrorCovariance_);
+      filter_.setLastMeasurementTime(state->lastMeasurementTime_);
 
-      return false;
+      RF_DEBUG("Reverted to state with time " << std::setprecision(20) << state->lastMeasurementTime_ << "\n");
     }
-
-    // Reset filter to the latest state from the queue.
-    const FilterStatePtr &state = filterStateHistory_.back();
-    filter_.setState(state->state_);
-    filter_.setEstimateErrorCovariance(state->estimateErrorCovariance_);
-    filter_.setLastMeasurementTime(state->lastMeasurementTime_);
-
-    RF_DEBUG("Reverted to state with time " << state->lastMeasurementTime_ << "\n");
 
     // Repeat for measurements, but push every measurement onto the measurement queue as we go
     int restored_measurements = 0;
@@ -3041,7 +3059,7 @@ namespace RobotLocalization
 
     RF_DEBUG("\n----- /RosFilter::revertTo\n");
 
-    return true;
+    return retVal;
   }
 
   template<typename T>
