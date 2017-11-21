@@ -2,8 +2,15 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.4.1 (2017-06-26)
+2.4.1 (2017-11-27)
 ------------------
+* 2.4.1-1 (2017-11-27)
+* Silencing unnecessary errors and warnings
+* Correctly handling state restoration.
+* Fixing critical bug with dynamic process noise covariance
+* Changing differential pose calculation
+* Removing lastUpdateTime
+* 2.4.1-0 (2017-06-26)
 * RST-382 fixing timestamps in map->odom transform
 * Removing callback queue clearing
 
