@@ -1413,7 +1413,7 @@ void RosFilter<T>::loadParams()
           differential, relative, pose_mahalanobis_thresh);
         const CallbackData twist_callback_data(
           imu_topic_name + "_twist", twist_update_vec, twist_update_sum,
-          differential, relative, pose_mahalanobis_thresh);
+          differential, relative, twist_mahalanobis_thresh);
         const CallbackData accel_callback_data(
           imu_topic_name + "_acceleration", accel_update_vec, accelUpdateSum,
           differential, relative, accel_mahalanobis_thresh);
