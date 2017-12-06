@@ -1335,7 +1335,7 @@ namespace RobotLocalization
           const CallbackData poseCallbackData(imuTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
             relative, poseMahalanobisThresh);
           const CallbackData twistCallbackData(imuTopicName + "_twist", twistUpdateVec, twistUpdateSum, differential,
-            relative, poseMahalanobisThresh);
+            relative, twistMahalanobisThresh);
           const CallbackData accelCallbackData(imuTopicName + "_acceleration", accelUpdateVec, accelUpdateSum,
             differential, relative, accelMahalanobisThresh);
 
