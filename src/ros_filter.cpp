@@ -570,9 +570,9 @@ namespace RobotLocalization
         if (!revertTo(firstMeasurement->time_ - 1e-9))
         {
           RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurement->time_ << "\n");
-          ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic " << firstMeasurement->topicName_ <<
-                                   ", but history interval is insufficiently sized to "
-                                   "revert state and measurement queue.");
+          ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Received old measurement for topic " <<
+            firstMeasurement->topicName_ << ", but history interval is insufficiently sized to revert state and "
+            "measurement queue.");
           restoredMeasurementCount = 0;
         }
 
@@ -1776,11 +1776,11 @@ namespace RobotLocalization
   template<typename T>
   void RosFilter<T>::periodicUpdate(const ros::TimerEvent& event)
   {
-    // check that periodicUpdate is being called with less than a loop shifted
-    // otherwise warn
-    if ((event.current_real - event.last_expected).toSec() > 2./frequency_)
+    // Warn the user if the update took too long (> 2 cycles)
+    const double loop_elapsed = (event.current_real - event.last_expected).toSec();
+    if (loop_elapsed > 2./frequency_)
     {
-        ROS_ERROR_STREAM("Failed to meet update rate! Try decreasing the rate, limiting ");
+      ROS_WARN_STREAM("Failed to meet update rate! Took " << std::setprecision(20) << loop_elapsed_time.toSec());
     }
 
     // Wait for the filter to be enabled
