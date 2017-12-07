@@ -126,7 +126,7 @@ namespace RobotLocalization
         }
 
         std::ostringstream ostr;
-        ostr << datum_config[0] << " " << datum_config[1] << " " << datum_config[2];
+        ostr << std::setprecision(20) << datum_config[0] << " " << datum_config[1] << " " << datum_config[2];
         std::istringstream istr(ostr.str());
         istr >> datum_lat >> datum_lon >> datum_yaw;
 
