@@ -42,5 +42,5 @@ int main(int argc, char **argv)
 
   ekf.run();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
