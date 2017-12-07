@@ -51,5 +51,5 @@ int main(int argc, char **argv)
 
   ukf.run();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
