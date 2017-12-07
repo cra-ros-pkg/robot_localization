@@ -560,8 +560,9 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       if (!revertTo(first_measurement->time_ - rclcpp::Duration(1))) {
         RF_DEBUG("ERROR: history interval is too small to revert to time " <<
           filter_utilities::toSec(first_measurement->time_) << "\n");
-        // ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic "
-        // << first_measurement->topic_name_ <<
+        // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_,
+        // "Received old measurement for topic "
+        //                         << first_measurement->topic_name_ <<
         //                         ", but history interval is insufficiently
         //                         sized to " "revert state and measurement
         //                         queue.");
@@ -1928,9 +1929,12 @@ void RosFilter<T>::periodicUpdate()
     clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
   }
 
-  if ((this->now() - cur_time).seconds() > 1. / frequency_) {
+  // Warn the user if the update took too long
+  const double loop_elapsed = (this->now() - cur_time).seconds();
+  if (loop_elapsed > 1. / frequency_) {
     std::cerr <<
-      "Failed to meet update rate! Try decreasing the rate, limiting "
+      "Failed to meet update rate! Took " << std::setprecision(20) <<
+      loop_elapsed << "seconds. Try decreasing the rate, limiting "
       "sensor output frequency, or limiting the number of sensors.\n";
   }
 }
