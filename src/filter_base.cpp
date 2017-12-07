@@ -104,8 +104,7 @@ namespace RobotLocalization
     // Assume 30Hz from sensor data (configurable)
     sensorTimeout_ = 0.033333333;
 
-    // Initialize our last update and measurement times
-    lastUpdateTime_ = 0;
+    // Initialize our measurement time
     lastMeasurementTime_ = 0;
 
     // These can be overridden via the launch parameters,
@@ -177,11 +176,6 @@ namespace RobotLocalization
   double FilterBase::getLastMeasurementTime()
   {
     return lastMeasurementTime_;
-  }
-
-  double FilterBase::getLastUpdateTime()
-  {
-    return lastUpdateTime_;
   }
 
   const Eigen::VectorXd& FilterBase::getPredictedState()
@@ -262,13 +256,6 @@ namespace RobotLocalization
 
     if (delta >= 0.0)
     {
-      // Update the last measurement and update time.
-      // The measurement time is based on the time stamp of the
-      // measurement, whereas the update time is based on this
-      // node's current ROS time. The update time is used to
-      // determine if we have a sensor timeout, whereas the
-      // measurement time is used to calculate time deltas for
-      // prediction and correction.
       lastMeasurementTime_ = measurement.time_;
     }
 
@@ -327,11 +314,6 @@ namespace RobotLocalization
   void FilterBase::setLastMeasurementTime(const double lastMeasurementTime)
   {
     lastMeasurementTime_ = lastMeasurementTime;
-  }
-
-  void FilterBase::setLastUpdateTime(const double lastUpdateTime)
-  {
-    lastUpdateTime_ = lastUpdateTime;
   }
 
   void FilterBase::setProcessNoiseCovariance(const Eigen::MatrixXd &processNoiseCovariance)

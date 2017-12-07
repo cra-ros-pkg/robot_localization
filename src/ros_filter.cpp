@@ -59,6 +59,7 @@ namespace RobotLocalization
       latestControlTime_(0),
       tfTimeout_(ros::Duration(0)),
       nhLocal_("~"),
+      predictToCurrentTime_(false),
       printDiagnostics_(true),
       gravitationalAcc_(9.80665),
       publishTransform_(true),
@@ -514,6 +515,8 @@ namespace RobotLocalization
              "Integration time is " << std::setprecision(20) << currentTimeSec << "\n"
              << measurementQueue_.size() << " measurements in queue.\n");
 
+    bool predictToCurrentTime = predictToCurrentTime_;
+
     // If we have any measurements in the queue, process them
     if (!measurementQueue_.empty())
     {
@@ -583,34 +586,38 @@ namespace RobotLocalization
           }
         }
       }
-
-      filter_.setLastUpdateTime(currentTimeSec);
     }
     else if (filter_.getInitializedStatus())
     {
       // In the event that we don't get any measurements for a long time,
       // we still need to continue to estimate our state. Therefore, we
       // should project the state forward here.
-      double lastUpdateDelta = currentTimeSec - filter_.getLastUpdateTime();
+      double lastUpdateDelta = currentTimeSec - filter_.getLastMeasurementTime();
 
       // If we get a large delta, then continuously predict until
       if (lastUpdateDelta >= filter_.getSensorTimeout())
       {
-        RF_DEBUG("Sensor timeout! Last update time was " << filter_.getLastUpdateTime() <<
+        predictToCurrentTime = true;
+
+        RF_DEBUG("Sensor timeout! Last measurement time was " << filter_.getLastMeasurementTime() <<
                  ", current time is " << currentTimeSec <<
                  ", delta is " << lastUpdateDelta << "\n");
-
-        filter_.validateDelta(lastUpdateDelta);
-        filter_.predict(currentTimeSec, lastUpdateDelta);
-
-        // Update the last measurement time and last update time
-        filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
-        filter_.setLastUpdateTime(filter_.getLastUpdateTime() + lastUpdateDelta);
       }
     }
     else
     {
       RF_DEBUG("Filter not yet initialized.\n");
+    }
+
+    if (filter_.getInitializedStatus() && predictToCurrentTime)
+    {
+      double lastUpdateDelta = currentTimeSec - filter_.getLastMeasurementTime();
+
+      filter_.validateDelta(lastUpdateDelta);
+      filter_.predict(currentTimeSec, lastUpdateDelta);
+
+      // Update the last measurement time and last update time
+      filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() + lastUpdateDelta);
     }
 
     RF_DEBUG("\n----- /RosFilter::integrateMeasurements ------\n");
@@ -775,6 +782,8 @@ namespace RobotLocalization
 
     historyLength_ = ::fabs(historyLength_);
 
+    nhLocal_.param("predict_to_current_time", predictToCurrentTime_, false);
+
     // Determine if we're using a control term
     bool stampedControl = false;
     double controlTimeout = sensorTimeout;
@@ -929,7 +938,6 @@ namespace RobotLocalization
 
     // Init the last last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     // Now pull in each topic to which we want to subscribe.
     // Start with odom.
@@ -1597,7 +1605,6 @@ namespace RobotLocalization
                     stream.str(),
                     false);
       RF_DEBUG("Received message that preceded the most recent pose reset. Ignoring...");
-
       return;
     }
 
@@ -1826,8 +1833,17 @@ namespace RobotLocalization
               tf2::Transform worldBaseLinkTrans;
               tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
 
-              tf2::fromMsg(tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0)).transform,
-                           odomBaseLinkTrans);
+              if (!RosFilterUtilities::lookupTransformSafe(
+                     tfBuffer_,
+                     baseLinkFrameId_,
+                     odomFrameId_,
+                     ros::Time(filter_.getLastMeasurementTime()),
+                     odomBaseLinkTrans,
+                     true))
+              {
+                ROS_ERROR_STREAM("Unable to retrieve " << odomFrameId_ << "->" << baseLinkFrameId_ << " transform. Skipping iteration...");
+                continue;
+              }
 
               /*
                * First, see these two references:
@@ -1957,7 +1973,6 @@ namespace RobotLocalization
     filter_.setEstimateErrorCovariance(measurementCovariance);
 
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-    filter_.setLastUpdateTime(ros::Time::now().toSec());
 
     // This method can apparently cancel all callbacks, and may stop the executing of the very callback that we're
     // currently in. Therefore, nothing of consequence should come after it.

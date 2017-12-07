@@ -214,13 +214,6 @@ class FilterBase
     //!
     double getLastMeasurementTime();
 
-    //! @brief Gets the filter's last update time
-    //!
-    //! @return The time at which we last updated the filter,
-    //! which can occur even when we don't receive measurements
-    //!
-    double getLastUpdateTime();
-
     //! @brief Gets the filter's predicted state, i.e., the
     //! state estimate before correct() is called.
     //!
@@ -310,15 +303,6 @@ class FilterBase
     //! @param[in] lastMeasurementTime - The last measurement time of the filter
     //!
     void setLastMeasurementTime(const double lastMeasurementTime);
-
-    //! @brief Sets the filter's last update time.
-    //!
-    //! This is used mostly for initialization purposes, as the integrateMeasurements()
-    //! function will update the filter's last update time as well.
-    //!
-    //! @param[in] lastUpdateTime - The last update time of the filter
-    //!
-    void setLastUpdateTime(const double lastUpdateTime);
 
     //! @brief Sets the process noise covariance for the filter.
     //!
@@ -476,17 +460,6 @@ class FilterBase
     //! We also use it to compute the time delta values for our prediction step.
     //!
     double lastMeasurementTime_;
-
-    //! @brief Used for tracking the latest update time as determined
-    //! by this class.
-    //!
-    //! We assume that this class may receive measurements that occurred in the past,
-    //! as may happen with sensors distributed on different machines on a network. This
-    //! variable tracks when the filter was updated with respect to the executable in
-    //! which this class was instantiated. We use this to determine if we have experienced
-    //! a sensor timeout, i.e., if we haven't received any sensor data in a long time.
-    //!
-    double lastUpdateTime_;
 
     //! @brief The time of reception of the most recent control term
     //!
