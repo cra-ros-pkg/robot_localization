@@ -2986,31 +2986,47 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 
   // Walk back through the queue until we reach a filter state whose time stamp
   // is less than or equal to the requested time. Since every saved state after
-  // that time will be overwritten/corrected, we can pop from the queue.
+  // that time will be overwritten/corrected, we can pop from the queue. If the
+  // history is insufficiently short, we just take the oldest state we have.
+  FilterStatePtr last_history_state;
   while (!filter_state_history_.empty() &&
     filter_state_history_.back()->last_measurement_time_ > time)
   {
+    last_history_state = filter_state_history_.back();
     filter_state_history_.pop_back();
   }
 
-  // The state and measurement histories are stored at the same time, so if we
-  // have insufficient state history, we will also have insufficient measurement
-  // history.
-  if (filter_state_history_.empty()) {
+  // If the state history is not empty at this point, it means that our history
+  // was large enough, and we should revert to the state at the back of the
+  // history deque.
+  bool ret_val = false;
+  if (!filter_state_history_.empty()) {
+    ret_val = true;
+    last_history_state = filter_state_history_.back();
+  } else {
     RF_DEBUG("Insufficient history to revert to time " <<
       filter_utilities::toSec(time) << "\n");
 
-    return false;
+    if (last_history_state.get() != NULL)
+    {
+      RF_DEBUG("Will revert to oldest state at " <<
+        filter_utilities::toSec(last_history_state->latest_control_time_) <<
+        ".\n");
+    }
   }
 
-  // Reset filter to the latest state from the queue.
-  const FilterStatePtr & state = filter_state_history_.back();
-  filter_.setState(state->state_);
-  filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
-  filter_.setLastMeasurementTime(state->last_measurement_time_);
+  // If we have a valid reversion state, revert
+  if (last_history_state.get() != NULL)
+  {
+    // Reset filter to the latest state from the queue.
+    const FilterStatePtr & state = filter_state_history_.back();
+    filter_.setState(state->state_);
+    filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
+    filter_.setLastMeasurementTime(state->last_measurement_time_);
 
-  RF_DEBUG("Reverted to state with time " <<
-    filter_utilities::toSec(state->last_measurement_time_) << "\n");
+    RF_DEBUG("Reverted to state with time " <<
+      filter_utilities::toSec(state->last_measurement_time_) << "\n");
+  }
 
   // Repeat for measurements, but push every measurement onto the measurement
   // queue as we go
@@ -3027,7 +3043,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 
   RF_DEBUG("\n----- /RosFilter<T>::revertTo\n");
 
-  return true;
+  return ret_val;
 }
 
 template<typename T>
