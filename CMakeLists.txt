@@ -20,6 +20,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   xmlrpcpp)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML_CPP yaml-cpp)
+
 # Attempt to find Eigen using its own CMake module.
 # If that fails, fall back to cmake_modules package.
 find_package(Eigen3)
@@ -83,14 +86,22 @@ catkin_package(
     tf2_geometry_msgs
     tf2_ros
     xmlrpcpp
-  DEPENDS ${EIGEN_PACKAGE}
+  DEPENDS
+    ${EIGEN_PACKAGE}
+    yaml-cpp
 )
 
 ###########
 ## Build ##
 ###########
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIRS})
+
+link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 # Library definitions
 add_library(filter_utilities src/filter_utilities.cpp)
@@ -124,7 +135,7 @@ target_link_libraries(ukf filter_base ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_filter ekf ukf ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 target_link_libraries(robot_localization_estimator filter_utilities filter_base ekf ukf ${EIGEN3_LIBRARIES})
 target_link_libraries(ros_robot_localization_listener robot_localization_estimator ros_filter_utilities
-  ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES} yaml-cpp)
+  ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES} ${YAML_CPP_LIBRARIES})
 target_link_libraries(robot_localization_listener_node ros_robot_localization_listener ${catkin_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
