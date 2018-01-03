@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.4.2 (2018-01-03)
+------------------
+* Fixing CMakeLists
+* Contributors: Tom Moore
+
 2.4.1 (2017-12-15)
 ------------------
 * Fixing datum precision
