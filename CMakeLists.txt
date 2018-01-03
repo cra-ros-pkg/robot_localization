@@ -66,6 +66,7 @@ catkin_package(
     navsat_transform
     ros_filter
     ros_filter_utilities
+    robot_localization_estimator
     ros_robot_localization_listener
     ukf
   CATKIN_DEPENDS
