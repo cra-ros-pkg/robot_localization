@@ -88,7 +88,7 @@ catkin_package(
     xmlrpcpp
   DEPENDS
     ${EIGEN_PACKAGE}
-    yaml-cpp
+    YAML_CPP
 )
 
 ###########
@@ -114,17 +114,16 @@ add_library(ros_filter_utilities src/ros_filter_utilities.cpp)
 add_library(ros_filter src/ros_filter.cpp)
 add_library(navsat_transform src/navsat_transform.cpp)
 
-# Dependencies
-add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
-add_dependencies(navsat_transform ${PROJECT_NAME}_gencpp)
-
 # Executables
 add_executable(ekf_localization_node src/ekf_localization_node.cpp)
 add_executable(ukf_localization_node src/ukf_localization_node.cpp)
 add_executable(navsat_transform_node src/navsat_transform_node.cpp)
 add_executable(robot_localization_listener_node src/robot_localization_listener_node.cpp)
 
-add_dependencies(robot_localization_listener_node robot_localization_gencpp)
+# Dependencies
+add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
+add_dependencies(navsat_transform ${PROJECT_NAME}_gencpp)
+add_dependencies(robot_localization_listener_node ${PROJECT_NAME}_gencpp)
 
 # Linking
 target_link_libraries(ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
@@ -156,6 +155,9 @@ install(TARGETS
   navsat_transform_node
   ros_filter
   ros_filter_utilities
+  robot_localization_estimator
+  ros_robot_localization_listener
+  robot_localization_listener_node
   ukf
   ukf_localization_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
