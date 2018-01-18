@@ -554,12 +554,15 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         " seconds in the past. Reverting filter state and "
         "measurement queue...");
 
-      int originalCount = static_cast<int>(measurement_queue_.size());
+      int original_count = static_cast<int>(measurement_queue_.size());
+      const rclcpp::Time first_measurement_time =  first_measurement->time_;
+      const std::string first_measurement_topic = first_measurement->topicName_;
+      // revertTo may invalidate first_measurement
       if (!revertTo(first_measurement->time_ - rclcpp::Duration(1))) {
         RF_DEBUG("ERROR: history interval is too small to revert to time " <<
-          filter_utilities::toSec(first_measurement->time_) << "\n");
-        // ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic "
-        // << first_measurement->topic_name_ <<
+          filter_utilities::toSec(first_measurement_time) << "\n");
+        // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_,
+        // "Received old measurement for topic " << first_measurement_topic <<
         //                         ", but history interval is insufficiently
         //                         sized to " "revert state and measurement
         //                         queue.");
@@ -567,7 +570,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       }
 
       restored_measurement_count =
-        static_cast<int>(measurement_queue_.size()) - originalCount;
+        static_cast<int>(measurement_queue_.size()) - original_count;
     }
 
     while (!measurement_queue_.empty() && rclcpp::ok()) {
