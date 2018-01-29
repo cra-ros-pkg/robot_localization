@@ -525,6 +525,10 @@ template<class T> class RosFilter
     //!
     std::string worldFrameId_;
 
+    //! @brief Whether we're publishing the the inverse transfrom, ie. base_link_frame->world_frame transform
+    //!
+    bool invertTransform_;
+
     //! @brief Used for outputting debug messages
     //!
     std::ofstream debugStream_;
