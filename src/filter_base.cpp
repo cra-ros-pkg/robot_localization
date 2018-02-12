@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ros/ros.h>
 #include "robot_localization/filter_base.h"
 #include "robot_localization/filter_common.h"
 
@@ -394,7 +395,7 @@ namespace RobotLocalization
                "Threshold is: " << threshold << "\n" <<
                "Innovation is: " << innovation << "\n" <<
                "Innovation covariance is:\n" << invCovariance << "\n");
-
+      ROS_WARN("Rejecting measurement due to Mahalanobis Threshold");
       return false;
     }
 
