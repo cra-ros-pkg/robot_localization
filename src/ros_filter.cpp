@@ -555,8 +555,9 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         "measurement queue...");
 
       int original_count = static_cast<int>(measurement_queue_.size());
-      const rclcpp::Time first_measurement_time =  first_measurement->time_;
-      const std::string first_measurement_topic = first_measurement->topicName_;
+      const rclcpp::Time first_measurement_time = first_measurement->time_;
+      const std::string first_measurement_topic =
+        first_measurement->topic_name_;
       // revertTo may invalidate first_measurement
       if (!revertTo(first_measurement->time_ - rclcpp::Duration(1))) {
         RF_DEBUG("ERROR: history interval is too small to revert to time " <<

@@ -248,6 +248,14 @@ void Ukf::correct(const Measurement & measurement)
     }
   }
 
+  // Give user warning if NaNs have been entered in from poorly conditioned
+  // covariances.
+  if (std::isnan(inv_innov_cov(0, 0)) || std::isinf(inv_innov_cov(0, 0))) {
+    FB_DEBUG(
+      "Critical Error: NaNs have been detected likely due to poorly "
+      "conditioned sensor or process covariances.");
+  }
+
   // (5) Check Mahalanobis distance of innovation
   if (checkMahalanobisThreshold(innovation_subset, inv_innov_cov,
     measurement.mahalanobis_thresh_))
