@@ -258,13 +258,6 @@ namespace RobotLocalization
       }
     }
 
-    // give user warning if NaNs have been entered in from poorly conditioned covariances.
-    if (std::isnan(invInnovCov(0,0)) || std::isinf(invInnovCov(0,0)))
-    {
-      FB_DEBUG( \
-       "Critical Error: NaNs have been detected likely due to poorly conditioned sensor or process covariances.");
-    }
-
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
