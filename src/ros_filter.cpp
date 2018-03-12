@@ -1822,6 +1822,15 @@ void RosFilter<T>::periodicUpdate()
     world_base_link_trans_msg_.transform.rotation =
       filtered_position.pose.pose.orientation;
 
+    // The filteredPosition is the message containing the state and covariances:
+    // nav_msgs Odometry
+    if (validateFilterOutput(filtered_position)) {
+      RCLCPP_ERROR(this->get_logger(),
+        "Critical Error, NaNs were detected in the output state of the filter. "
+        "This was likely due to poorly coniditioned process, noise, or sensor "
+        "covariances.");
+    }
+
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
     // we'll have some work to do.
@@ -3018,6 +3027,77 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 
   RF_DEBUG("\n----- /RosFilter<T>::revertTo\n");
 
+  return true;
+}
+
+template<typename T>
+bool RosFilter<T>::validateFilterOutput(const nav_msgs::msg::Odometry & message)
+{
+  if (std::isnan(message.pose.pose.position.x) ||
+    std::isinf(message.pose.pose.position.x))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.position.y) ||
+    std::isinf(message.pose.pose.position.y))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.position.z) ||
+    std::isinf(message.pose.pose.position.z))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.orientation.x) ||
+    std::isinf(message.pose.pose.orientation.x))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.orientation.y) ||
+    std::isinf(message.pose.pose.orientation.y))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.orientation.z) ||
+    std::isinf(message.pose.pose.orientation.z))
+  {
+    return false;
+  }
+  if (std::isnan(message.pose.pose.orientation.w) ||
+    std::isinf(message.pose.pose.orientation.w))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.linear.x) ||
+    std::isinf(message.twist.twist.linear.x))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.linear.y) ||
+    std::isinf(message.twist.twist.linear.y))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.linear.z) ||
+    std::isinf(message.twist.twist.linear.z))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.angular.x) ||
+    std::isinf(message.twist.twist.angular.x))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.angular.y) ||
+    std::isinf(message.twist.twist.angular.y))
+  {
+    return false;
+  }
+  if (std::isnan(message.twist.twist.angular.z) ||
+    std::isinf(message.twist.twist.angular.z))
+  {
+    return false;
+  }
   return true;
 }
 

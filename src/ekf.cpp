@@ -181,14 +181,6 @@ void Ekf::correct(const Measurement & measurement)
     }
   }
 
-  // Give user warning if NaNs have been entered in from poorly conditioned
-  // covariances.
-  if (std::isnan(hphr_inverse(0, 0)) || std::isinf(hphr_inverse(0, 0))) {
-    FB_DEBUG(
-      "Critical Error: NaNs have been detected likely due to poorly "
-      "conditioned sensor or process covariances.");
-  }
-
   // (2) Check Mahalanobis distance between mapped measurement and state.
   if (checkMahalanobisThreshold(innovation_subset, hphr_inverse,
     measurement.mahalanobis_thresh_))
