@@ -1825,7 +1825,7 @@ namespace RobotLocalization
 
         // the filteredPosition is the message containing the state and covariances: nav_msgs Odometry
 
-        if (validateFilterOutput(filteredPosition))
+        if (!validateFilterOutput(filteredPosition))
         {
           ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
                 " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
@@ -3099,33 +3099,19 @@ namespace RobotLocalization
   template<typename T>
   bool RosFilter<T>::validateFilterOutput(const nav_msgs::Odometry &message)
   {
-    if (std::isnan(message.pose.pose.position.x) || std::isinf(message.pose.pose.position.x))
-      return false;
-    if (std::isnan(message.pose.pose.position.y) || std::isinf(message.pose.pose.position.y))
-      return false;
-    if (std::isnan(message.pose.pose.position.z) || std::isinf(message.pose.pose.position.z))
-      return false;
-    if (std::isnan(message.pose.pose.orientation.x) || std::isinf(message.pose.pose.orientation.x))
-      return false;
-    if (std::isnan(message.pose.pose.orientation.y) || std::isinf(message.pose.pose.orientation.y))
-      return false;
-    if (std::isnan(message.pose.pose.orientation.z) || std::isinf(message.pose.pose.orientation.z))
-      return false;
-    if (std::isnan(message.pose.pose.orientation.w) || std::isinf(message.pose.pose.orientation.w))
-      return false;
-    if (std::isnan(message.twist.twist.linear.x) || std::isinf(message.twist.twist.linear.x))
-      return false;
-    if (std::isnan(message.twist.twist.linear.y) || std::isinf(message.twist.twist.linear.y))
-      return false;
-    if (std::isnan(message.twist.twist.linear.z) || std::isinf(message.twist.twist.linear.z))
-      return false;
-    if (std::isnan(message.twist.twist.angular.x) || std::isinf(message.twist.twist.angular.x))
-      return false;
-    if (std::isnan(message.twist.twist.angular.y) || std::isinf(message.twist.twist.angular.y))
-      return false;
-    if (std::isnan(message.twist.twist.angular.z) || std::isinf(message.twist.twist.angular.z))
-      return false;
-    return true;
+    return !std::isnan(message.pose.pose.position.x) && !std::isinf(message.pose.pose.position.x) &&
+           !std::isnan(message.pose.pose.position.y) && !std::isinf(message.pose.pose.position.y) &&
+           !std::isnan(message.pose.pose.position.z) && !std::isinf(message.pose.pose.position.z) &&
+           !std::isnan(message.pose.pose.orientation.x) && !std::isinf(message.pose.pose.orientation.x) &&
+           !std::isnan(message.pose.pose.orientation.y) && !std::isinf(message.pose.pose.orientation.y) &&
+           !std::isnan(message.pose.pose.orientation.z) && !std::isinf(message.pose.pose.orientation.z) &&
+           !std::isnan(message.pose.pose.orientation.w) && !std::isinf(message.pose.pose.orientation.w) &&
+           !std::isnan(message.twist.twist.linear.x) && !std::isinf(message.twist.twist.linear.x) &&
+           !std::isnan(message.twist.twist.linear.y) && !std::isinf(message.twist.twist.linear.y) &&
+           !std::isnan(message.twist.twist.linear.z) && !std::isinf(message.twist.twist.linear.z) &&
+           !std::isnan(message.twist.twist.angular.x) && !std::isinf(message.twist.twist.angular.x) &&
+           !std::isnan(message.twist.twist.angular.y) && !std::isinf(message.twist.twist.angular.y) &&
+           !std::isnan(message.twist.twist.angular.z) && !std::isinf(message.twist.twist.angular.z);
   }
 
   template<typename T>
