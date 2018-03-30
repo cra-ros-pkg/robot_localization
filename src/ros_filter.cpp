@@ -1823,6 +1823,14 @@ namespace RobotLocalization
         worldBaseLinkTransMsg_.transform.translation.z = filteredPosition.pose.pose.position.z;
         worldBaseLinkTransMsg_.transform.rotation = filteredPosition.pose.pose.orientation;
 
+        // the filteredPosition is the message containing the state and covariances: nav_msgs Odometry
+
+        if (!validateFilterOutput(filteredPosition))
+        {
+          ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
+                " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+        }
+
         // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
         // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
         if (publishTransform_)
@@ -3086,6 +3094,24 @@ namespace RobotLocalization
     RF_DEBUG("\n----- /RosFilter::revertTo\n");
 
     return retVal;
+  }
+
+  template<typename T>
+  bool RosFilter<T>::validateFilterOutput(const nav_msgs::Odometry &message)
+  {
+    return !std::isnan(message.pose.pose.position.x) && !std::isinf(message.pose.pose.position.x) &&
+           !std::isnan(message.pose.pose.position.y) && !std::isinf(message.pose.pose.position.y) &&
+           !std::isnan(message.pose.pose.position.z) && !std::isinf(message.pose.pose.position.z) &&
+           !std::isnan(message.pose.pose.orientation.x) && !std::isinf(message.pose.pose.orientation.x) &&
+           !std::isnan(message.pose.pose.orientation.y) && !std::isinf(message.pose.pose.orientation.y) &&
+           !std::isnan(message.pose.pose.orientation.z) && !std::isinf(message.pose.pose.orientation.z) &&
+           !std::isnan(message.pose.pose.orientation.w) && !std::isinf(message.pose.pose.orientation.w) &&
+           !std::isnan(message.twist.twist.linear.x) && !std::isinf(message.twist.twist.linear.x) &&
+           !std::isnan(message.twist.twist.linear.y) && !std::isinf(message.twist.twist.linear.y) &&
+           !std::isnan(message.twist.twist.linear.z) && !std::isinf(message.twist.twist.linear.z) &&
+           !std::isnan(message.twist.twist.angular.x) && !std::isinf(message.twist.twist.angular.x) &&
+           !std::isnan(message.twist.twist.angular.y) && !std::isinf(message.twist.twist.angular.y) &&
+           !std::isnan(message.twist.twist.angular.z) && !std::isinf(message.twist.twist.angular.z);
   }
 
   template<typename T>
