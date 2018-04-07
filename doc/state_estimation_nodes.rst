@@ -305,6 +305,7 @@ Published Topics
 ================
 
 * ``odometry/filtered`` (`nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_)
+* ``accel/filtered`` (`geometry_msgs/AccelWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/AccelWithCovarianceStamped.html>`_) (if enabled)
 
 Published Transforms
 ====================
