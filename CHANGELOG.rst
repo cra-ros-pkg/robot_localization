@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.3.4 (2018-04-11)
+------------------
+* Fixing issue with potential seg fault
+* Contributors: Tom Moore
+
 2.3.3 (2017-12-15)
 ------------------
 * Zero out rotation in GPS to base_link transform
