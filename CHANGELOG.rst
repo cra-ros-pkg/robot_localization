@@ -2,6 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.5.2 (2018-04-11)
+------------------
+* Add published accel topic to documentation
+* adding log statements for nans in the invertable matrix
+* Fixing issue with potential seg fault
+* Contributors: Oleg Kalachev, Tom Moore, stevemacenski
+
 2.5.1 (2018-01-03)
 ------------------
 * Fixing CMakeLists
