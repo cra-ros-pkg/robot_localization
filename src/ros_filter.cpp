@@ -1087,13 +1087,24 @@ namespace RobotLocalization
         bool nodelayOdom = false;
         nhLocal_.param(odomTopicName + "_nodelay", nodelayOdom, false);
 
+        bool udpOdom = false;
+        nhLocal_.param(odomTopicName + "_udp", udpOdom, false);
+
         // Store the odometry topic subscribers so they don't go out of scope.
         if (poseUpdateSum + twistUpdateSum > 0)
         {
+          ros::TransportHints hints;
+          hints.tcpNoDelay(nodelayOdom);
+
+          if (udpOdom)
+          {
+            hints.udp();
+          }
+
           topicSubs_.push_back(
             nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
               boost::bind(&RosFilter::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData),
-              ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayOdom)));
+              ros::VoidPtr(), hints));
         }
         else
         {
@@ -1191,6 +1202,9 @@ namespace RobotLocalization
         bool nodelayPose = false;
         nhLocal_.param(poseTopicName + "_nodelay", nodelayPose, false);
 
+        bool udpPose = false;
+        nhLocal_.param(poseTopicName + "_udp", udpPose, false);
+
         // Pull in the sensor's config, zero out values that are invalid for the pose type
         std::vector<int> poseUpdateVec = loadUpdateConfig(poseTopicName);
         std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET,
@@ -1204,13 +1218,21 @@ namespace RobotLocalization
 
         if (poseUpdateSum > 0)
         {
+          ros::TransportHints hints;
+          hints.tcpNoDelay(nodelayPose);
+
+          if (udpPose)
+          {
+            hints.udp();
+          }
+
           const CallbackData callbackData(poseTopicName, poseUpdateVec, poseUpdateSum, differential, relative,
             poseMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
               boost::bind(&RosFilter::poseCallback, this, _1, callbackData, worldFrameId_, false),
-              ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayPose)));
+              ros::VoidPtr(), hints));
 
           if (differential)
           {
@@ -1273,6 +1295,9 @@ namespace RobotLocalization
         bool nodelayTwist = false;
         nhLocal_.param(twistTopicName + "_nodelay", nodelayTwist, false);
 
+        bool udpTwist = false;
+        nhLocal_.param(twistTopicName + "_udp", udpTwist, false);
+
         // Pull in the sensor's config, zero out values that are invalid for the twist type
         std::vector<int> twistUpdateVec = loadUpdateConfig(twistTopicName);
         std::fill(twistUpdateVec.begin() + POSITION_OFFSET, twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
@@ -1281,13 +1306,21 @@ namespace RobotLocalization
 
         if (twistUpdateSum > 0)
         {
+          ros::TransportHints hints;
+          hints.tcpNoDelay(nodelayTwist);
+
+          if (udpTwist)
+          {
+            hints.udp();
+          }
+
           const CallbackData callbackData(twistTopicName, twistUpdateVec, twistUpdateSum, false, false,
             twistMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
               boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_),
-              ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayTwist)));
+              ros::VoidPtr(), hints));
 
           twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
           twistVarCounts[StateMemberVy] += twistUpdateVec[StateMemberVy];
@@ -1417,6 +1450,9 @@ namespace RobotLocalization
         bool nodelayImu = false;
         nhLocal_.param(imuTopicName + "_nodelay", nodelayImu, false);
 
+        bool udpImu = false;
+        nhLocal_.param(imuTopicName + "_udp", udpImu, false);
+
         if (poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
         {
           const CallbackData poseCallbackData(imuTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
@@ -1426,10 +1462,18 @@ namespace RobotLocalization
           const CallbackData accelCallbackData(imuTopicName + "_acceleration", accelUpdateVec, accelUpdateSum,
             differential, relative, accelMahalanobisThresh);
 
+          ros::TransportHints hints;
+          hints.tcpNoDelay(nodelayImu);
+
+          if (udpImu)
+          {
+            hints.udp();
+          }
+
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
               boost::bind(&RosFilter<T>::imuCallback, this, _1, imuTopicName, poseCallbackData, twistCallbackData,
-                accelCallbackData), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayImu)));
+                accelCallbackData), ros::VoidPtr(), hints));
         }
         else
         {
