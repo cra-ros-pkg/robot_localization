@@ -70,6 +70,7 @@ namespace RobotLocalization
       odomFrameId_("odom"),
       worldFrameId_(odomFrameId_),
       invertTransform_(false),
+      silence_multiple_absolute_pose_inputs_warning_(false),
       lastDiagTime_(0),
       lastSetPoseTime_(0),
       latestControlTime_(0),
@@ -970,6 +971,9 @@ namespace RobotLocalization
     enabled_ = !disabledAtStartup_;
 
 
+    // Check if the multiple absolute pose inputs warning should be silenced:
+    nhLocal_.param("silence_multiple_absolute_pose_inputs_warning", silence_multiple_absolute_pose_inputs_warning_, false);
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -1556,16 +1560,19 @@ namespace RobotLocalization
       {
         if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] > 1)
         {
-          std::stringstream stream;
-          stream <<  absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
-              " absolute pose inputs detected for " << stateVariableNames_[stateVar] <<
-              ". This may result in oscillations. Please ensure that your variances for each "
-              "measured variable are set appropriately.";
+          if (!silence_multiple_absolute_pose_inputs_warning_)
+          {
+            std::stringstream stream;
+            stream <<  absPoseVarCounts[static_cast<StateMembers>(stateVar - POSITION_OFFSET)] <<
+                " absolute pose inputs detected for " << stateVariableNames_[stateVar] <<
+                ". This may result in oscillations. Please ensure that your variances for each "
+                "measured variable are set appropriately.";
 
-          addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
-                        stateVariableNames_[stateVar] + "_configuration",
-                        stream.str(),
-                        true);
+            addDiagnostic(diagnostic_msgs::DiagnosticStatus::WARN,
+                          stateVariableNames_[stateVar] + "_configuration",
+                          stream.str(),
+                          true);
+          }
         }
         else if (absPoseVarCounts[static_cast<StateMembers>(stateVar)] == 0)
         {

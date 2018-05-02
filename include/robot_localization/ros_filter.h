@@ -529,6 +529,13 @@ template<class T> class RosFilter
     //!
     bool invertTransform_;
 
+    //! @brief Silence the multiple absolut pose inputs warning
+    //!
+    //! If this is true, the warning about multiple absolute pose inputs being used is silenced.
+    //! It defaults to false, so the user has to explicitly silence it.
+    //!
+    bool silence_multiple_absolute_pose_inputs_warning_;
+
     //! @brief Used for outputting debug messages
     //!
     std::ofstream debugStream_;
