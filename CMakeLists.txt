@@ -114,7 +114,7 @@ include_directories(
 link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 # Options
-option(${PROJECT_NAME}_USE_FAST_CLAMP_ROTATION "Use fast clamp rotation" ON)
+option(${PROJECT_NAME}_USE_FAST_CLAMP_ROTATION "Use fast clamp rotation" OFF)
 if(${PROJECT_NAME}_USE_FAST_CLAMP_ROTATION)
   add_definitions(-DFAST_CLAMP_ROTATION)
 endif(${PROJECT_NAME}_USE_FAST_CLAMP_ROTATION)
