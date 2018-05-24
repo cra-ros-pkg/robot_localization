@@ -33,6 +33,10 @@
 #include "robot_localization/filter_utilities.h"
 #include "robot_localization/filter_common.h"
 
+#ifndef FAST_CLAMP_ROTATION
+#include <angles/angles.h>
+#endif
+
 #include <string>
 #include <vector>
 
@@ -128,6 +132,7 @@ namespace FilterUtilities
 
   double clampRotation(double rotation)
   {
+#ifdef FAST_CLAMP_ROTATION
     while (rotation > PI)
     {
       rotation -= TAU;
@@ -139,6 +144,9 @@ namespace FilterUtilities
     }
 
     return rotation;
+#else
+    return angles::normalize_angle(rotation);
+#endif
   }
 
 }  // namespace FilterUtilities
