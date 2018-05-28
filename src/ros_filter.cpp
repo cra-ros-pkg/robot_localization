@@ -169,9 +169,6 @@ namespace RobotLocalization
 
     // reset filter to uninitialized state
     filter_.reset();
-
-    // clear all waiting callbacks
-    ros::getGlobalCallbackQueue()->clear();
   }
 
   template<typename T>
