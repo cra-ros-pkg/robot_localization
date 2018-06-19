@@ -66,10 +66,12 @@ namespace RobotLocalization
     utm_zone_(""),
     tf_listener_(tf_buffer_)
   {
+    ROS_INFO("Waiting for valid clock time...");
+    ros::Time::waitForValid();
+    ROS_INFO("Valid clock time received. Starting node.");
+
     latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
     latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
-
-    ros::Time::init();
 
     double frequency;
     double delay = 0.0;
