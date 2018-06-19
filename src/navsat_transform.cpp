@@ -76,7 +76,9 @@ namespace RobotLocalization
 
   void NavSatTransform::run()
   {
-    ros::Time::init();
+    ROS_INFO("Waiting for valid clock time...");
+    ros::Time::waitForValid();
+    ROS_INFO("Valid clock time received. Starting node.");
 
     double frequency = 10.0;
     double delay = 0.0;
