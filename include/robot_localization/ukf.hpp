@@ -61,7 +61,7 @@ class Ukf: public FilterBase
      * @param[in] args - Generic argument container. It is assumed that args[0] constains the alpha parameter, args[1]
      * contains the kappa parameter, and args[2] contains the beta parameter.
      */
-    explicit Ukf(std::vector<double> args);
+    explicit Ukf(const bool alpha = 0.001, const bool kappa = 0.0, const bool beta = 2.0);
 
     /**
      * @brief  Destructor for the Ukf class

@@ -39,16 +39,10 @@
 
 namespace robot_localization
 {
-  Ukf::Ukf(std::vector<double> args) :
+  Ukf::Ukf(const bool alpha, const bool kappa, const bool beta) :
     FilterBase(),  // Must initialize filter base!
     uncorrected_(true)
   {
-    assert(args.size() == 3);
-
-    double alpha = args[0];
-    double kappa = args[1];
-    double beta = args[2];
-
     size_t sigma_count = (STATE_SIZE << 1) + 1;
     sigma_points_.resize(sigma_count, Eigen::VectorXd(STATE_SIZE));
 
@@ -292,7 +286,7 @@ namespace robot_localization
     double sy = ::sin(yaw);
     double cy = ::cos(yaw);
 
-    prepareControl(reference_time, delta);
+    prepareControl(rclcpp::Time(reference_time), rclcpp::Duration(delta));
 
     // Prepare the transfer function
     transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -365,7 +359,7 @@ namespace robot_localization
 
     if (use_dynamic_process_noise_covariance_)
     {
-      computeDynamicProcessNoiseCovariance(state_, delta);
+      computeDynamicProcessNoiseCovariance(state_);
       process_noise_covariance = &dynamic_process_noise_covariance_;
     }
 

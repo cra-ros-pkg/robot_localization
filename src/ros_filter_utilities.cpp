@@ -33,7 +33,6 @@
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <ros/console.h>
 
 #include <string>
 #include <vector>
@@ -48,8 +47,8 @@ std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec)
 std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat)
 {
   double roll, pitch, yaw;
-  tf2::Matrix3x3 orTmp(quat);
-  orTmp.getRPY(roll, pitch, yaw);
+  tf2::Matrix3x3 or_tmp(quat);
+  or_tmp.getRPY(roll, pitch, yaw);
 
   os << "(" << std::setprecision(20) << roll << ", " << pitch << ", " << yaw << ")\n";
 
@@ -78,9 +77,23 @@ std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec)
   return os;
 }
 
-namespace RobotLocalization
+std::ostream& operator<<(std::ostream& os, const std::vector<bool> &vec)
 {
-namespace RosFilterUtilities
+  os << "(" << std::boolalpha;
+
+  for (size_t i = 0; i < vec.size(); ++i)
+  {
+    os << vec[i] << " ";
+  }
+
+  os << ")\n";
+
+  return os;
+}
+
+namespace robot_localization
+{
+namespace ros_filter_utilities
 {
 
   double getYaw(const tf2::Quaternion quat)
@@ -94,20 +107,23 @@ namespace RosFilterUtilities
     return yaw;
   }
 
-  bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
-                           const std::string &targetFrame,
-                           const std::string &sourceFrame,
-                           const ros::Time &time,
-                           const ros::Duration &timeout,
-                           tf2::Transform &targetFrameTrans)
+  bool lookupTransformSafe(
+    const tf2_ros::Buffer &buffer,
+    const std::string &target_frame,
+    const std::string &source_frame,
+    const rclcpp::Time &time,
+    const rclcpp::Duration &timeout,
+    tf2::Transform &target_frame_trans)
   {
     bool retVal = true;
+    tf2::TimePoint time_tf = tf2::timeFromSec(1e-9 * static_cast<double>(time.nanoseconds()));
+    tf2::Duration timeout_tf = std::chrono::nanoseconds(timeout.nanoseconds());
 
     // First try to transform the data at the requested time
     try
     {
-      tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time, timeout).transform,
-                   targetFrameTrans);
+      tf2::fromMsg(buffer.lookupTransform(target_frame, source_frame, time_tf, timeout_tf).transform,
+                   target_frame_trans);
     }
     catch (tf2::TransformException &ex)
     {
@@ -116,16 +132,16 @@ namespace RosFilterUtilities
       // transform and warn the user.
       try
       {
-        tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
-                     targetFrameTrans);
+        tf2::fromMsg(buffer.lookupTransform(target_frame, source_frame, tf2::TimePointZero).transform,
+                     target_frame_trans);
 
-        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
-                                      " was unavailable for the time requested. Using latest instead.\n");
+        //ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << source_frame << " to " << target_frame <<
+        //                              " was unavailable for the time requested. Using latest instead.\n");
       }
       catch(tf2::TransformException &ex)
       {
-        ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << sourceFrame <<
-                                      " to " << targetFrame << ". Error was " << ex.what() << "\n");
+        //ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " << source_frame <<
+        //                              " to " << target_frame << ". Error was " << ex.what() << "\n");
 
         retVal = false;
       }
@@ -136,9 +152,9 @@ namespace RosFilterUtilities
     // would throw an exception, so check for this situation before giving up.
     if (!retVal)
     {
-      if (targetFrame == sourceFrame)
+      if (target_frame == source_frame)
       {
-        targetFrameTrans.setIdentity();
+        target_frame_trans.setIdentity();
         retVal = true;
       }
     }
@@ -146,24 +162,31 @@ namespace RosFilterUtilities
     return retVal;
   }
 
-  bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
-                           const std::string &targetFrame,
-                           const std::string &sourceFrame,
-                           const ros::Time &time,
-                           tf2::Transform &targetFrameTrans)
+  bool lookupTransformSafe(
+    const tf2_ros::Buffer &buffer,
+    const std::string &target_frame,
+    const std::string &source_frame,
+    const rclcpp::Time &time,
+    tf2::Transform &target_frame_trans)
   {
-    return lookupTransformSafe(buffer, targetFrame, sourceFrame, time, ros::Duration(0), targetFrameTrans);
+    return lookupTransformSafe(
+             buffer,
+             target_frame,
+             source_frame,
+             time,
+             rclcpp::Duration(0),
+             target_frame_trans);
   }
 
   void quatToRPY(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
   {
-    tf2::Matrix3x3 orTmp(quat);
-    orTmp.getRPY(roll, pitch, yaw);
+    tf2::Matrix3x3 or_tmp(quat);
+    or_tmp.getRPY(roll, pitch, yaw);
   }
 
-  void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF)
+  void stateToTF(const Eigen::VectorXd &state, tf2::Transform &state_tf)
   {
-    stateTF.setOrigin(tf2::Vector3(state(StateMemberX),
+    state_tf.setOrigin(tf2::Vector3(state(StateMemberX),
                                    state(StateMemberY),
                                    state(StateMemberZ)));
     tf2::Quaternion quat;
@@ -171,15 +194,19 @@ namespace RosFilterUtilities
                 state(StateMemberPitch),
                 state(StateMemberYaw));
 
-    stateTF.setRotation(quat);
+    state_tf.setRotation(quat);
   }
 
-  void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state)
+  void TFtoState(const tf2::Transform &state_tf, Eigen::VectorXd &state)
   {
-    state(StateMemberX) = stateTF.getOrigin().getX();
-    state(StateMemberY) = stateTF.getOrigin().getY();
-    state(StateMemberZ) = stateTF.getOrigin().getZ();
-    quatToRPY(stateTF.getRotation(), state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
+    state(StateMemberX) = state_tf.getOrigin().getX();
+    state(StateMemberY) = state_tf.getOrigin().getY();
+    state(StateMemberZ) = state_tf.getOrigin().getZ();
+    quatToRPY(
+      state_tf.getRotation(),
+      state(StateMemberRoll),
+      state(StateMemberPitch),
+      state(StateMemberYaw));
   }
 
 }  // namespace RosFilterUtilities

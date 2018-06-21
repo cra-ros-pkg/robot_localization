@@ -52,11 +52,8 @@ class Ekf: public FilterBase
   public:
     /**
      * @brief Constructor for the Ekf class
-     *
-     * @param[in] args - Generic argument container (not used here, but needed so that the ROS filters can pass
-     * arbitrary arguments to templated filter types).
      */
-    explicit Ekf(std::vector<double> args = std::vector<double>());
+    explicit Ekf();
 
     /**
      * @brief Destructor for the Ekf class

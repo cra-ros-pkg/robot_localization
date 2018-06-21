@@ -33,6 +33,7 @@
 #ifndef ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H
 #define ROBOT_LOCALIZATION_ROS_FILTER_UTILITIES_H
 
+#include <rclcpp/time.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_ros/buffer.h>
@@ -44,13 +45,14 @@
 #include <string>
 #include <vector>
 
-#define RF_DEBUG(msg) if (filter_.getDebug()) { debugStream_ << msg; }
+#define RF_DEBUG(msg) if (filter_->getDebug()) { debug_stream_ << msg; }
 
 // Handy methods for debug output
 std::ostream& operator<<(std::ostream& os, const tf2::Vector3 &vec);
 std::ostream& operator<<(std::ostream& os, const tf2::Quaternion &quat);
 std::ostream& operator<<(std::ostream& os, const tf2::Transform &trans);
 std::ostream& operator<<(std::ostream& os, const std::vector<double> &vec);
+std::ostream& operator<<(std::ostream& os, const std::vector<bool> &vec);
 
 namespace robot_localization
 {
@@ -76,12 +78,13 @@ double getYaw(const tf2::Quaternion quat);
 //! If any of these checks succeed, the method sets the value of @p targetFrameTrans
 //! and returns true, otherwise it returns false.
 //!
-bool lookupTransformSafe(const tf2_ros::Buffer &buffer,
-                         const std::string &targetFrame,
-                         const std::string &sourceFrame,
-                         const rclcpp::Time &time,
-                         const tf2::Duration &timeout,
-                         tf2::Transform &targetFrameTrans);
+bool lookupTransformSafe(
+  const tf2_ros::Buffer &buffer,
+  const std::string &target_frame,
+  const std::string &source_frame,
+  const rclcpp::Time &time,
+  const rclcpp::Duration &timeout,
+  tf2::Transform &target_frame_trans);
 
 //! @brief Method for safely obtaining transforms.
 //! @param[in] buffer - tf buffer object to use for looking up the transform

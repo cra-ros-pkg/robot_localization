@@ -35,12 +35,14 @@
 #include <robot_localization/filter_common.hpp>
 #include <vector>
 
+#include <rclcpp/duration.hpp>
+
 #include <Eigen/Dense>
 
 
 namespace robot_localization
 {
-  Ekf::Ekf(std::vector<double>) :
+  Ekf::Ekf() :
     FilterBase()  // Must initialize filter base!
   {
   }
@@ -89,12 +91,12 @@ namespace robot_localization
     size_t update_size = update_indices.size();
 
     // Now set up the relevant matrices
-    Eigen::VectorXd state_subset(update_size);                              // x (in most literature)
-    Eigen::VectorXd measurement_subset(update_size);                        // z
+    Eigen::VectorXd state_subset(update_size);                                // x (in most literature)
+    Eigen::VectorXd measurement_subset(update_size);                          // z
     Eigen::MatrixXd measurement_covariance_subset(update_size, update_size);  // R
     Eigen::MatrixXd state_to_measurement_subset(update_size, state_.rows());  // H
-    Eigen::MatrixXd kalman_gain_subset(state_.rows(), update_size);          // K
-    Eigen::VectorXd innovation_subset(update_size);                         // z - Hx
+    Eigen::MatrixXd kalman_gain_subset(state_.rows(), update_size);           // K
+    Eigen::VectorXd innovation_subset(update_size);                           // z - Hx
 
     state_subset.setZero();
     measurement_subset.setZero();
@@ -233,7 +235,7 @@ namespace robot_localization
     double sy = ::sin(yaw);
     double cy = ::cos(yaw);
 
-    prepareControl(reference_time, delta);
+    prepareControl(rclcpp::Time(reference_time), rclcpp::Duration(delta));
 
     // Prepare the transfer function
     transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta;
@@ -355,7 +357,7 @@ namespace robot_localization
 
     if (use_dynamic_process_noise_covariance_)
     {
-      computeDynamicProcessNoiseCovariance(state_, delta);
+      computeDynamicProcessNoiseCovariance(state_);
       process_noise_covariance = &dynamic_process_noise_covariance_;
     }
 

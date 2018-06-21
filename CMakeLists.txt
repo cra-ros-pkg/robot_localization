@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(robot_localization)
 
 if(NOT WIN32)
-  add_definitions(-std=c++11)
+  add_definitions(-std=c++14)
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -12,6 +12,9 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -28,7 +31,13 @@ include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS})
+  ${rclcpp_INCLUDE_DIRS}
+  ${geometry_msgs_INCLUDE_DIRS}
+  ${nav_msgs_INCLUDE_DIRS}
+  ${sensor_msgs_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_geometry_msgs_INCLUDE_DIRS})
 
 add_library(
   filter_utilities
@@ -55,12 +64,30 @@ target_link_libraries(
   ukf
   filter_base)
 
+add_library(
+  ros_filter_utilities
+  src/ros_filter_utilities.cpp)
+  
+add_library(
+  ros_filter
+  src/ros_filter.cpp)
+target_link_libraries(
+  ros_filter
+  ekf
+  ukf
+  filter_base
+  filter_utilities
+  ros_filter_utilities)
+rosidl_target_interfaces(ros_filter
+  ${PROJECT_NAME} "rosidl_typesupport_cpp")
+
 install(
   TARGETS
   ekf
   filter_base
   filter_utilities
   ukf
+  ros_filter_utilities
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -93,6 +120,7 @@ ament_export_libraries(
   filter_base
   filter_utilities
   ukf
+  ros_filter_utilities
 )
 
 ament_package()

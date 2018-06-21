@@ -33,74 +33,74 @@
 #ifndef ROBOT_LOCALIZATION_ROS_FILTER_H
 #define ROBOT_LOCALIZATION_ROS_FILTER_H
 
-#include <robot_localization/SetPose.h>
+#include <robot_localization/srv/set_pose.hpp>
 
-#include <ros/ros.h>
-#include <std_msgs/String.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
-#include <geometry_msgs/Twist.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <geometry_msgs/TwistWithCovarianceStamped.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <geometry_msgs/AccelWithCovarianceStamped.h>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/message_filter.h>
 #include <tf2/LinearMath/Transform.h>
-#include <message_filters/subscriber.h>
+/*
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+*/
 #include <robot_localization/filter_base.hpp>
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
 
-#include <xmlrpcpp/XmlRpcException.h>
-
 #include <Eigen/Dense>
 
+#include <deque>
 #include <fstream>
 #include <map>
 #include <numeric>
 #include <queue>
 #include <string>
 #include <vector>
-#include <deque>
 
-namespace RobotLocalization
+namespace robot_localization
 {
 
 struct CallbackData
 {
-  CallbackData(const std::string &topicName,
-               const std::vector<int> &updateVector,
-               const int updateSum,
-               const bool differential,
-               const bool relative,
-               const double rejectionThreshold) :
-    topicName_(topicName),
-    updateVector_(updateVector),
-    updateSum_(updateSum),
-    differential_(differential),
-    relative_(relative),
-    rejectionThreshold_(rejectionThreshold)
+  CallbackData(
+    const std::string &topic_name,
+    const std::vector<bool> &update_vector,
+    const int update_sum,
+    const bool differential,
+    const bool relative,
+    const double rejection_threshold) :
+      topic_name_(topic_name),
+      update_vector_(update_vector),
+      update_sum_(update_sum),
+      differential_(differential),
+      relative_(relative),
+      rejection_threshold_(rejection_threshold)
   {
   }
 
-  std::string topicName_;
-  std::vector<int> updateVector_;
-  int updateSum_;
+  std::string topic_name_;
+  std::vector<bool> update_vector_;
+  int update_sum_;
   bool differential_;
   bool relative_;
-  double rejectionThreshold_;
+  double rejection_threshold_;
 };
 
-typedef std::priority_queue<MeasurementPtr, std::vector<MeasurementPtr>, Measurement> MeasurementQueue;
-typedef std::deque<MeasurementPtr> MeasurementHistoryDeque;
-typedef std::deque<FilterStatePtr> FilterStateHistoryDeque;
 
-template<class T> class RosFilter
+using MeasurementQueue = std::priority_queue<MeasurementPtr, std::vector<MeasurementPtr>, Measurement>;
+using MeasurementHistoryDeque = std::deque<MeasurementPtr>;
+using FilterStateHistoryDeque = std::deque<FilterStatePtr>;
+
+class RosFilter
 {
   public:
     //! @brief Constructor
@@ -108,7 +108,7 @@ template<class T> class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    explicit RosFilter(std::vector<double> args = std::vector<double>());
+    RosFilter(rclcpp::Node::SharedPtr node);
 
     //! @brief Destructor
     //!
@@ -122,83 +122,89 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] callbackData - Relevant static callback data
-    //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] callback_data - Relevant static callback data
+    //! @param[in] target_frame - The target frame_id into which to transform the data
     //!
-    void accelerationCallback(const sensor_msgs::Imu::ConstPtr &msg,
-                              const CallbackData &callbackData,
-                              const std::string &targetFrame);
+    void accelerationCallback(
+      const sensor_msgs::msg::Imu::SharedPtr msg,
+      const CallbackData &callback_data,
+      const std::string &target_frame);
 
     //! @brief Callback method for receiving non-stamped control input
     //! @param[in] msg - The ROS twist message to take in
     //!
-    void controlCallback(const geometry_msgs::Twist::ConstPtr &msg);
+    void controlCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
 
     //! @brief Callback method for receiving stamped control input
     //! @param[in] msg - The ROS stamped twist message to take in
     //!
-    void controlCallback(const geometry_msgs::TwistStamped::ConstPtr &msg);
+    void controlStampedCallback(const geometry_msgs::msg::TwistStamped::SharedPtr msg);
 
     //! @brief Adds a measurement to the queue of measurements to be processed
     //!
-    //! @param[in] topicName - The name of the measurement source (only used for debugging)
+    //! @param[in] topic_name - The name of the measurement source (only used for debugging)
     //! @param[in] measurement - The measurement to enqueue
-    //! @param[in] measurementCovariance - The covariance of the measurement
-    //! @param[in] updateVector - The boolean vector that specifies which variables to update from this measurement
-    //! @param[in] mahalanobisThresh - Threshold, expressed as a Mahalanobis distance, for outlier rejection
+    //! @param[in] measurement_covariance - The covariance of the measurement
+    //! @param[in] update_vector - The boolean vector that specifies which variables to update from this measurement
+    //! @param[in] mahalanobis_thresh - Threshold, expressed as a Mahalanobis distance, for outlier rejection
     //! @param[in] time - The time of arrival (in seconds)
     //!
-    void enqueueMeasurement(const std::string &topicName,
-                            const Eigen::VectorXd &measurement,
-                            const Eigen::MatrixXd &measurementCovariance,
-                            const std::vector<int> &updateVector,
-                            const double mahalanobisThresh,
-                            const ros::Time &time);
+    void enqueueMeasurement(
+      const std::string &topic_name,
+      const Eigen::VectorXd &measurement,
+      const Eigen::MatrixXd &measurement_covariance,
+      const std::vector<bool> &update_vector,
+      const double mahalanobis_thresh,
+      const rclcpp::Time &time);
 
     //! @brief Method for zeroing out 3D variables within measurements
     //! @param[out] measurement - The measurement whose 3D variables will be zeroed out
-    //! @param[out] measurementCovariance - The covariance of the measurement
+    //! @param[out] measurement_covariance - The covariance of the measurement
     //! @param[out] updateVector - The boolean update vector of the measurement
     //!
     //! If we're in 2D mode, then for every measurement from every sensor, we call this.
     //! It sets the 3D variables to 0, gives those variables tiny variances, and sets
     //! their updateVector values to 1.
     //!
-    void forceTwoD(Eigen::VectorXd &measurement,
-                   Eigen::MatrixXd &measurementCovariance,
-                   std::vector<int> &updateVector);
+    void forceTwoD(
+      Eigen::VectorXd &measurement,
+      Eigen::MatrixXd &measurement_covariance,
+      std::vector<bool> &update_vector);
 
     //! @brief Retrieves the EKF's output for broadcasting
     //! @param[out] message - The standard ROS odometry message to be filled
     //! @return true if the filter is initialized, false otherwise
     //!
-    bool getFilteredOdometryMessage(nav_msgs::Odometry &message);
+    bool getFilteredOdometryMessage(nav_msgs::msg::Odometry &message);
 
     //! @brief Retrieves the EKF's acceleration output for broadcasting
     //! @param[out] message - The standard ROS acceleration message to be filled
     //! @return true if the filter is initialized, false otherwise
     //!
-    bool getFilteredAccelMessage(geometry_msgs::AccelWithCovarianceStamped &message);
+    bool getFilteredAccelMessage(geometry_msgs::msg::AccelWithCovarianceStamped &message);
 
     //! @brief Callback method for receiving all IMU messages
     //! @param[in] msg - The ROS IMU message to take in.
-    //! @param[in] topicName - The topic name for the IMU message (only used for debug output)
-    //! @param[in] poseCallbackData - Relevant static callback data for orientation variables
-    //! @param[in] twistCallbackData - Relevant static callback data for angular velocity variables
-    //! @param[in] accelCallbackData - Relevant static callback data for linear acceleration variables
+    //! @param[in] topic_name - The topic name for the IMU message (only used for debug output)
+    //! @param[in] pose_callback_data - Relevant static callback data for orientation variables
+    //! @param[in] twist_callback_data - Relevant static callback data for angular velocity variables
+    //! @param[in] accel_callback_data - Relevant static callback data for linear acceleration variables
     //!
     //! This method separates out the orientation, angular velocity, and linear acceleration data and
     //! passed each on to its respective callback.
     //!
-    void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, const std::string &topicName,
-      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData,
-      const CallbackData &accelCallbackData);
+    void imuCallback(
+      const sensor_msgs::msg::Imu::SharedPtr msg,
+      const std::string &topic_name,
+      const CallbackData &pose_callback_data,
+      const CallbackData &twist_callback_data,
+      const CallbackData &accel_callback_data);
 
     //! @brief Processes all measurements in the measurement queue, in temporal order
     //!
-    //! @param[in] currentTime - The time at which to carry out integration (the current time)
+    //! @param[in] current_time - The time at which to carry out integration (the current time)
     //!
-    void integrateMeasurements(const ros::Time &currentTime);
+    void integrateMeasurements(const rclcpp::Time &current_time);
 
     //! @brief Loads all parameters from file
     //!
@@ -206,26 +212,30 @@ template<class T> class RosFilter
 
     //! @brief Callback method for receiving all odometry messages
     //! @param[in] msg - The ROS odometry message to take in.
-    //! @param[in] topicName - The topic name for the odometry message (only used for debug output)
-    //! @param[in] poseCallbackData - Relevant static callback data for pose variables
-    //! @param[in] twistCallbackData - Relevant static callback data for twist variables
+    //! @param[in] topic_name - The topic name for the odometry message (only used for debug output)
+    //! @param[in] pose_callback_data - Relevant static callback data for pose variables
+    //! @param[in] twist_callback_data - Relevant static callback data for twist variables
     //!
     //! This method simply separates out the pose and twist data into two new messages, and passes them into their
     //! respective callbacks
     //!
-    void odometryCallback(const nav_msgs::Odometry::ConstPtr &msg, const std::string &topicName,
-      const CallbackData &poseCallbackData, const CallbackData &twistCallbackData);
+    void odometryCallback(
+      const nav_msgs::msg::Odometry::SharedPtr msg,
+      const std::string &topic_name,
+      const CallbackData &pose_callback_data,
+      const CallbackData &twist_callback_data);
 
     //! @brief Callback method for receiving all pose messages
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
-    //! @param[in] callbackData - Relevant static callback data
-    //! @param[in] targetFrame - The target frame_id into which to transform the data
-    //! @param[in] imuData - Whether this data comes from an IMU
+    //! @param[in] callback_data - Relevant static callback data
+    //! @param[in] target_frame - The target frame_id into which to transform the data
+    //! @param[in] imu_data - Whether this data comes from an IMU
     //!
-    void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                      const CallbackData &callbackData,
-                      const std::string &targetFrame,
-                      const bool imuData);
+    void poseCallback(
+      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
+      const CallbackData &callback_data,
+      const std::string &target_frame,
+      const bool imu_data);
 
     //! @brief Main run method
     //!
@@ -234,28 +244,25 @@ template<class T> class RosFilter
     //! @brief Callback method for manually setting/resetting the internal pose estimate
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
     //!
-    void setPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+    void setPoseCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
     //! @brief Service callback for manually setting/resetting the internal pose estimate
     //!
     //! @param[in] request - Custom service request with pose information
     //! @return true if successful, false if not
-    bool setPoseSrvCallback(robot_localization::SetPose::Request& request,
-                            robot_localization::SetPose::Response&);
-
-    //! @brief Converts tf message filter failures to strings
-    //! @param[in] reason - The failure reason object
-    //! @return a string explanation of the failure
-    std::string tfFailureReasonString(const tf2_ros::FilterFailureReason reason);
+    bool setPoseSrvCallback(
+      robot_localization::srv::SetPose::Request& request,
+      robot_localization::srv::SetPose::Response&);
 
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
-    //! @param[in] callbackData - Relevant static callback data
-    //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] callback_data - Relevant static callback data
+    //! @param[in] target_frame - The target frame_id into which to transform the data
     //!
-    void twistCallback(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                       const CallbackData &callbackData,
-                       const std::string &targetFrame);
+    void twistCallback(
+      const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,
+      const CallbackData &callback_data,
+      const std::string &target_frame);
 
   protected:
     //! @brief Finds the latest filter state before the given timestamp and makes it the current state again.
@@ -266,91 +273,94 @@ template<class T> class RosFilter
     //! @param[in] time - The time to which the filter state should revert
     //! @return True if restoring the filter succeeded. False if not.
     //!
-    bool revertTo(const double time);
+    bool revertTo(const rclcpp::Time &time);
 
     //! @brief Saves the current filter state in the queue of previous filter states
     //!
     //! These measurements will be used in backwards smoothing in the event that older measurements come in.
     //! @param[in] filter - The filter base object whose state we want to save
     //!
-    void saveFilterState(FilterBase &filter);
+    void saveFilterState(FilterBase::UniquePtr &filter);
 
     //! @brief Removes measurements and filter states older than the given cutoff time.
-    //! @param[in] cutoffTime - Measurements and states older than this time will be dropped.
+    //! @param[in] cutoff_time - Measurements and states older than this time will be dropped.
     //!
-    void clearExpiredHistory(const double cutoffTime);
+    void clearExpiredHistory(const rclcpp::Time cutoff_time);
 
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
-    //! @param[in] errLevel - The error level of the diagnostic
-    //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
+    //! @param[in] error_level - The error level of the diagnostic
+    //! @param[in] topic_and_class - The sensor topic (if relevant) and class of diagnostic
     //! @param[in] message - Details of the diagnostic
-    //! @param[in] staticDiag - Whether or not this diagnostic information is static
+    //! @param[in] is_static - Whether or not this diagnostic information is static
     //!
-    void addDiagnostic(const int errLevel,
-                       const std::string &topicAndClass,
-                       const std::string &message,
-                       const bool staticDiag);
+    void addDiagnostic(
+      const int error_level,
+      const std::string &topic_and_class,
+      const std::string &message,
+      const bool is_static);
 
     //! @brief Aggregates all diagnostics so they can be published
     //! @param[in] wrapper - The diagnostic status wrapper to update
     //!
-    void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper);
+    //void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &wrapper);
 
-    //! @brief Utility method for copying covariances from ROS covariance arrays
-    //! to Eigen matrices
+    //! @brief Utility method for copying covariances from ROS covariance arrays to Eigen matrices
     //!
     //! This method copies the covariances and also does some data validation, which is
     //! why it requires more parameters than just the covariance containers.
-    //! @param[in] arr - The source array for the covariance data
-    //! @param[in] covariance - The destination matrix for the covariance data
-    //! @param[in] topicName - The name of the source data topic (for debug purposes)
-    //! @param[in] updateVector - The update vector for the source topic
+    //! @param[in] covariance_in - The source array for the covariance data
+    //! @param[in] covariance_out - The destination matrix for the covariance data
+    //! @param[in] topic_name - The name of the source data topic (for debug purposes)
+    //! @param[in] update_vector - The update vector for the source topic
     //! @param[in] offset - The "starting" location within the array/update vector
     //! @param[in] dimension - The number of values to copy, starting at the offset
     //!
-    void copyCovariance(const double *arr,
-                        Eigen::MatrixXd &covariance,
-                        const std::string &topicName,
-                        const std::vector<int> &updateVector,
-                        const size_t offset,
-                        const size_t dimension);
+    void copyCovariance(
+      const double *covariance_in,
+      Eigen::MatrixXd &covariance_out,
+      const std::string &topic_name,
+      const std::vector<bool> &update_vector,
+      const size_t offset,
+      const size_t dimension);
 
     //! @brief Utility method for copying covariances from Eigen matrices to ROS
     //! covariance arrays
     //!
-    //! @param[in] covariance - The source matrix for the covariance data
-    //! @param[in] arr - The destination array
+    //! @param[in] covariance_in - The source matrix for the covariance data
+    //! @param[in] covariance_out - The destination array
     //! @param[in] dimension - The number of values to copy
     //!
-    void copyCovariance(const Eigen::MatrixXd &covariance,
-                        double *arr,
-                        const size_t dimension);
+    void copyCovariance(
+      const Eigen::MatrixXd &covariance_in,
+      double *covariance_out,
+      const size_t dimension);
 
     //! @brief Loads fusion settings from the config file
-    //! @param[in] topicName - The name of the topic for which to load settings
+    //! @param[in] topic_name - The name of the topic for which to load settings
     //! @return The boolean vector of update settings for each variable for this topic
     //!
-    std::vector<int> loadUpdateConfig(const std::string &topicName);
+    std::vector<bool> loadUpdateConfig(const std::string &topic_name);
 
     //! @brief Prepares an IMU message's linear acceleration for integration into the filter
     //! @param[in] msg - The IMU message to prepare
-    //! @param[in] topicName - The name of the topic over which this message was received
-    //! @param[in] targetFrame - The target tf frame
-    //! @param[in] updateVector - The update vector for the data source
+    //! @param[in] topic_name - The name of the topic over which this message was received
+    //! @param[in] target_frame - The target tf frame
+    //! @param[in] update_vector - The update vector for the data source
     //! @param[in] measurement - The twist data converted to a measurement
-    //! @param[in] measurementCovariance - The covariance of the converted measurement
+    //! @param[in] measurement_covariance - The covariance of the converted measurement
     //!
-    bool prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
-                             const std::string &topicName,
-                             const std::string &targetFrame,
-                             std::vector<int> &updateVector,
-                             Eigen::VectorXd &measurement,
-                             Eigen::MatrixXd &measurementCovariance);
+    bool prepareAcceleration(
+      const sensor_msgs::msg::Imu::SharedPtr msg,
+      const std::string &topic_name,
+      const std::string &target_frame,
+      std::vector<bool> &update_vector,
+      Eigen::VectorXd &measurement,
+      Eigen::MatrixXd &measurement_covariance);
 
     //! @brief Prepares a pose message for integration into the filter
     //! @param[in] msg - The pose message to prepare
-    //! @param[in] topicName - The name of the topic over which this message was received
-    //! @param[in] targetFrame - The target tf frame
+    //! @param[in] topic_name - The name of the topic over which this message was received
+    //! @param[in] target_frame - The target tf frame
     //! @param[in] differential - Whether we're carrying out differential integration
     //! @param[in] relative - Whether this measurement is processed relative to the first
     //! @param[in] imuData - Whether this measurement is from an IMU
@@ -359,15 +369,16 @@ template<class T> class RosFilter
     //! @param[out] measurementCovariance - The covariance of the converted measurement
     //! @return true indicates that the measurement was successfully prepared, false otherwise
     //!
-    bool preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
-                     const std::string &topicName,
-                     const std::string &targetFrame,
-                     const bool differential,
-                     const bool relative,
-                     const bool imuData,
-                     std::vector<int> &updateVector,
-                     Eigen::VectorXd &measurement,
-                     Eigen::MatrixXd &measurementCovariance);
+    bool preparePose(
+      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
+      const std::string &topic_name,
+      const std::string &target_frame,
+      const bool differential,
+      const bool relative,
+      const bool imu_data,
+      std::vector<bool> &update_vector,
+      Eigen::VectorXd &measurement,
+      Eigen::MatrixXd &measurement_covariance);
 
     //! @brief Prepares a twist message for integration into the filter
     //! @param[in] msg - The twist message to prepare
@@ -378,83 +389,136 @@ template<class T> class RosFilter
     //! @param[out] measurementCovariance - The covariance of the converted measurement
     //! @return true indicates that the measurement was successfully prepared, false otherwise
     //!
-    bool prepareTwist(const geometry_msgs::TwistWithCovarianceStamped::ConstPtr &msg,
-                      const std::string &topicName,
-                      const std::string &targetFrame,
-                      std::vector<int> &updateVector,
-                      Eigen::VectorXd &measurement,
-                      Eigen::MatrixXd &measurementCovariance);
+    bool prepareTwist(
+      const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,
+      const std::string &topicName,
+      const std::string &targetFrame,
+      std::vector<bool> &updateVector,
+      Eigen::VectorXd &measurement,
+      Eigen::MatrixXd &measurementCovariance);
 
-    //! @brief tf frame name for the robot's body frame
+    //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
     //!
-    std::string baseLinkFrameId_;
+    bool print_diagnostics_;
 
-    //! @brief Subscribes to the control input topic
+    //! @brief Whether we publish the acceleration
     //!
-    ros::Subscriber controlSub_;
+    bool publish_acceleration_;
 
-    //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
-    //! to the configuration parameters.
+    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
     //!
-    //! The values are treated as static and always reported (i.e., this object is never cleared)
-    //!
-    std::map<std::string, std::string> staticDiagnostics_;
-
-    //! @brief This object accumulates dynamic diagnostics, e.g., diagnostics relating
-    //! to sensor data.
-    //!
-    //! The values are considered transient and are cleared at every iteration.
-    //!
-    std::map<std::string, std::string> dynamicDiagnostics_;
-
-    //! @brief Used for outputting debug messages
-    //!
-    std::ofstream debugStream_;
-
-    //! @brief The max (worst) dynamic diagnostic level.
-    //!
-    int dynamicDiagErrorLevel_;
-
-    //! @brief Used for updating the diagnostics
-    //!
-    diagnostic_updater::Updater diagnosticUpdater_;
-
-    //! @brief Our filter (EKF, UKF, etc.)
-    //!
-    T filter_;
-
-    //! @brief The frequency of the run loop
-    //!
-    double frequency_;
-
-    //! @brief The depth of the history we track for smoothing/delayed measurement processing
-    //!
-    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
-    //!
-    double historyLength_;
+    bool publish_transform_;
 
     //! @brief Whether to reset the filters when backwards jump in time is detected
     //!
     //! This is usually the case when logs are being used and a jump in the logi
     //! is done or if a log files restarts from the beginning.
     //!
-    bool resetOnTimeJump_;
+    bool reset_on_time_jump_;
+
+    //! @brief Whether or not we use smoothing
+    //!
+    bool smooth_lagged_data_;
+
+    //! @brief Whether or not we're in 2D mode
+    //!
+    //! If this is true, the filter binds all 3D variables (Z,
+    //! roll, pitch, and their respective velocities) to 0 for
+    //! every measurement.
+    //!
+    bool two_d_mode_;
+
+    //! @brief Whether or not we use a control term
+    //!
+    bool use_control_;
+
+    //! @brief The max (worst) dynamic diagnostic level.
+    //!
+    int dynamic_diag_error_level_;
+
+    //! @brief The max (worst) static diagnostic level.
+    //!
+    int static_diag_error_level_;
+
+    //! @brief The frequency of the run loop
+    //!
+    double frequency_;
+
+    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //!
+    double gravitational_acceleration_;
+
+    //! @brief The depth of the history we track for smoothing/delayed measurement processing
+    //!
+    //! This is the guaranteed minimum buffer size for which previous states and measurements are kept.
+    //!
+    rclcpp::Duration history_length_;
+
+    //! @brief tf frame name for the robot's body frame
+    //!
+    std::string base_link_frame_id_;
+
+    //! @brief tf frame name for the robot's map (world-fixed) frame
+    //!
+    std::string map_frame_id_;
+
+    //! @brief tf frame name for the robot's odometry (world-fixed) frame
+    //!
+    std::string odom_frame_id_;
+
+    //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
+    //!
+    std::string world_frame_id_;
+
+    //! @brief Used for outputting debug messages
+    //!
+    std::ofstream debug_stream_;
 
     //! @brief The most recent control input
     //!
-    Eigen::VectorXd latestControl_;
+    Eigen::VectorXd latest_control_;
 
-    //! @brief The time of the most recent control input
+    //! @brief Message that contains our latest transform (i.e., state)
     //!
-    ros::Time latestControlTime_;
+    //! We use the vehicle's latest state in a number of places, and often
+    //! use it as a transform, so this is the most convenient variable to
+    //! use as our global "current state" object
+    //!
+    geometry_msgs::msg::TransformStamped world_base_link_trans_msg_;
 
-    //! @brief Parameter that specifies the how long we wait for a transform to become available.
+    //! @brief We process measurements by queueing them up in
+    //! callbacks and processing them all at once within each
+    //! iteration
     //!
-    ros::Duration tfTimeout_;
+    MeasurementQueue measurement_queue_;
 
-    //! @brief Vector to hold our subscribers until they go out of scope
+    //! @brief Contains the state vector variable names in string format
     //!
-    std::vector<ros::Subscriber> topicSubs_;
+    std::vector<std::string> state_variable_names_;
+
+    //! @brief This object accumulates dynamic diagnostics, e.g., diagnostics relating
+    //! to sensor data.
+    //!
+    //! The values are considered transient and are cleared at every iteration.
+    //!
+    std::map<std::string, std::string> dynamic_diagnostics_;
+
+    //! @brief This object accumulates static diagnostics, e.g., diagnostics relating
+    //! to the configuration parameters.
+    //!
+    //! The values are treated as static and always reported (i.e., this object is never cleared)
+    //!
+    std::map<std::string, std::string> static_diagnostics_;
+
+    //! @brief Store the last time a message from each topic was received
+    //!
+    //! If we're getting messages rapidly, we may accidentally get
+    //! an older message arriving after a newer one. This variable keeps
+    //! track of the most recent message time for each subscribed message
+    //! topic. We also use it when listening to odometry messages to
+    //! determine if we should be using messages from that topic.
+    //!
+    std::map<std::string, rclcpp::Time> last_message_times_;
 
     //! @brief Stores the first measurement from each topic for relative measurements
     //!
@@ -466,48 +530,27 @@ template<class T> class RosFilter
     //! error growth for the variables being fused. With relative measurements, the
     //! vehicle will start with a 0 heading and position, but the measurements are still
     //! fused absolutely.
-    std::map<std::string, tf2::Transform> initialMeasurements_;
+    std::map<std::string, tf2::Transform> initial_measurements_;
 
-    //! @brief Store the last time a message from each topic was received
+    //! @brief If including acceleration for each IMU input, whether or not we remove acceleration due to gravity
     //!
-    //! If we're getting messages rapidly, we may accidentally get
-    //! an older message arriving after a newer one. This variable keeps
-    //! track of the most recent message time for each subscribed message
-    //! topic. We also use it when listening to odometry messages to
-    //! determine if we should be using messages from that topic.
-    //!
-    std::map<std::string, ros::Time> lastMessageTimes_;
+    std::map<std::string, bool> remove_gravitational_acceleration_;
 
-    //! @brief Store the last time set pose message was received
-    //!
-    //! If we receive a setPose message to reset the filter, we can get in
-    //! strange situations wherein we process the pose reset, but then even
-    //! after another spin cycle or two, we can get a new message with a time
-    //! stamp that is *older* than the setPose message's time stamp. This means
-    //! we have to check the message's time stamp against the lastSetPoseTime_.
-    ros::Time lastSetPoseTime_;
+    //! @brief An implicitly time ordered queue of past filter states used for smoothing.
+    //
+    // front() refers to the filter state with the earliest timestamp.
+    // back() refers to the filter state with the latest timestamp.
+    FilterStateHistoryDeque filter_state_history_;
 
-    //! @brief tf frame name for the robot's map (world-fixed) frame
-    //!
-    std::string mapFrameId_;
+    //! @brief A deque of previous measurements which is implicitly ordered from earliest to latest measurement.
+    // when popped from the measurement priority queue.
+    // front() refers to the measurement with the earliest timestamp.
+    // back() refers to the measurement with the latest timestamp.
+    MeasurementHistoryDeque measurement_history_;
 
-    //! @brief We process measurements by queueing them up in
-    //! callbacks and processing them all at once within each
-    //! iteration
+    //! @brief Vector to hold our subscribers until they go out of scope
     //!
-    MeasurementQueue measurementQueue_;
-
-    //! @brief Node handle
-    //!
-    ros::NodeHandle nh_;
-
-    //! @brief Local node handle (for params)
-    //!
-    ros::NodeHandle nhLocal_;
-
-    //! @brief tf frame name for the robot's odometry (world-fixed) frame
-    //!
-    std::string odomFrameId_;
+    std::vector<rclcpp::SubscriptionBase::SharedPtr> topic_subs_;
 
     //! @brief Stores the last measurement from a given topic for differential integration
     //!
@@ -517,103 +560,68 @@ template<class T> class RosFilter
     //! the current measurement, and then (3) transform it again by the previous
     //! state estimate. This holds the measurements used for step (2).
     //!
-    std::map<std::string, tf2::Transform> previousMeasurements_;
+    std::map<std::string, tf2::Transform> previous_measurements_;
 
     //! @brief We also need the previous covariance matrix for differential data
     //!
-    std::map<std::string, Eigen::MatrixXd> previousMeasurementCovariances_;
+    std::map<std::string, Eigen::MatrixXd> previous_measurement_covariances_;
 
-    //! @brief Whether or not we print diagnostic messages to the /diagnostics topic
+    //! @brief Store the last time set pose message was received
     //!
-    bool printDiagnostics_;
+    //! If we receive a setPose message to reset the filter, we can get in
+    //! strange situations wherein we process the pose reset, but then even
+    //! after another spin cycle or two, we can get a new message with a time
+    //! stamp that is *older* than the setPose message's time stamp. This means
+    //! we have to check the message's time stamp against the lastSetPoseTime_.
+    rclcpp::Time last_set_pose_time_;
 
-    //! @brief If including acceleration for each IMU input, whether or not we remove acceleration due to gravity
+    //! @brief The time of the most recent control input
     //!
-    std::map<std::string, bool> removeGravitationalAcc_;
+    rclcpp::Time latest_control_time_;
 
-    //! @brief What is the acceleration in Z due to gravity (m/s^2)? Default is +9.80665.
+    //! @brief Parameter that specifies the how long we wait for a transform to become available.
     //!
-    double gravitationalAcc_;
+    rclcpp::Duration tf_timeout_;
+
+    //! @brief For future (or past) dating the world_frame->base_link_frame transform
+    //!
+    rclcpp::Duration tf_time_offset_;
+
+    //! @brief Subscribes to the control input topic
+    //!
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr control_sub_;
 
     //! @brief Subscribes to the set_pose topic (usually published from rviz). Message
     //! type is geometry_msgs/PoseWithCovarianceStamped.
     //!
-    ros::Subscriber setPoseSub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr set_pose_sub_;
 
     //! @brief Service that allows another node to change the current state and recieve a confirmation. Uses
     //! a custom SetPose service.
     //!
-    ros::ServiceServer setPoseSrv_;
+    rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr set_pose_service_;
 
-    //! @brief Whether or not we use smoothing
+    //! @brief Node handle
     //!
-    bool smoothLaggedData_;
-
-    //! @brief Contains the state vector variable names in string format
-    //!
-    std::vector<std::string> stateVariableNames_;
-
-    //! @brief The max (worst) static diagnostic level.
-    //!
-    int staticDiagErrorLevel_;
+    rclcpp::Node::SharedPtr node_;
 
     //! @brief Transform buffer for managing coordinate transforms
     //!
-    tf2_ros::Buffer tfBuffer_;
+    tf2_ros::Buffer tf_buffer_;
 
     //! @brief Transform listener for receiving transforms
     //!
-    tf2_ros::TransformListener tfListener_;
+    tf2_ros::TransformListener tf_listener_;
 
-    //! @brief For future (or past) dating the world_frame->base_link_frame transform
+    //! @brief Used for updating the diagnostics
     //!
-    ros::Duration tfTimeOffset_;
+    //diagnostic_updater::Updater diagnosticUpdater_;
 
-    //! @brief Whether or not we're in 2D mode
+    //! @brief Our filter (EKF, UKF, etc.)
     //!
-    //! If this is true, the filter binds all 3D variables (Z,
-    //! roll, pitch, and their respective velocities) to 0 for
-    //! every measurement.
-    //!
-    bool twoDMode_;
-
-    //! @brief Whether or not we use a control term
-    //!
-    bool useControl_;
-
-    //! @brief Message that contains our latest transform (i.e., state)
-    //!
-    //! We use the vehicle's latest state in a number of places, and often
-    //! use it as a transform, so this is the most convenient variable to
-    //! use as our global "current state" object
-    //!
-    geometry_msgs::TransformStamped worldBaseLinkTransMsg_;
-
-    //! @brief tf frame name that is the parent frame of the transform that this node will calculate and broadcast.
-    //!
-    std::string worldFrameId_;
-
-    //! @brief Whether we publish the transform from the world_frame to the base_link_frame
-    //!
-    bool publishTransform_;
-
-    //! @brief Whether we publish the acceleration
-    //!
-    bool publishAcceleration_;
-
-    //! @brief An implicitly time ordered queue of past filter states used for smoothing.
-    //
-    // front() refers to the filter state with the earliest timestamp.
-    // back() refers to the filter state with the latest timestamp.
-    FilterStateHistoryDeque filterStateHistory_;
-
-    //! @brief A deque of previous measurements which is implicitly ordered from earliest to latest measurement.
-    // when popped from the measurement priority queue.
-    // front() refers to the measurement with the earliest timestamp.
-    // back() refers to the measurement with the latest timestamp.
-    MeasurementHistoryDeque measurementHistory_;
+    FilterBase::UniquePtr filter_;
 };
 
-}  // namespace RobotLocalization
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION_ROS_FILTER_H

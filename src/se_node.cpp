@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2018, Locus Robotics
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,15 +31,41 @@
  */
 
 #include <robot_localization/ros_filter_types.hpp>
-#include <ros/ros.h>
+#include <algorithm>
+#include <string>
+#include <vector>
+
+#include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "ekf_navigation_node");
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("se_node");
 
-  RobotLocalization::RosEkf ekf;
+  std::string filter_type = "ekf";
+  node->get_parameter("filter_type", filter_type);
+  std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(), ::tolower);
 
-  ekf.run();
+  robot_localization::FilterBase::UniquePtr filter;
+
+  if (std::string tofilter_type == "ukf")
+  {
+    double alpha = 0.001;
+    double kappa = 0.0;
+    double beta = 2.0;
+
+    node->get_parameter("alpha", alpha);
+    node->get_parameter("kappa", kappa);
+    node->get_parameter("beta", beta);
+
+    filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta));  
+  }
+  else if (filter_type == "ekf")
+  {
+    filter = std::make_unique<robot_localization::Ekf>()); 
+  }
+
+  filter->run();
 
   return 0;
 }

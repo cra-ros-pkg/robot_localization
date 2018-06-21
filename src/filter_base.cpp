@@ -48,11 +48,11 @@ namespace robot_localization
     initialized_(false),
     use_control_(false),
     use_dynamic_process_noise_covariance_(false),
-    control_timeout_(0.0),
-    last_measurement_time_(0.0),
-    last_update_time_(0.0),
-    latest_control_time_(0.0),
-    sensor_timeout_(0.0),
+    control_timeout_(0),
+    last_measurement_time_(0),
+    last_update_time_(0),
+    latest_control_time_(0),
+    sensor_timeout_(0),
     debug_stream_(nullptr),
     acceleration_gains_(TWIST_SIZE, 0.0),
     acceleration_limits_(TWIST_SIZE, 0.0),
@@ -110,11 +110,11 @@ namespace robot_localization
     covariance_epsilon_ *= 0.001;
 
     // Assume 30Hz from sensor data (configurable)
-    sensor_timeout_ = 0.033333333;
+    sensor_timeout_ = rclcpp::Duration(0.033333333);
 
     // Initialize our last update and measurement times
-    last_update_time_ = 0;
-    last_measurement_time_ = 0;
+    last_update_time_ = rclcpp::Time(0);
+    last_measurement_time_ = rclcpp::Time(0);
 
     // These can be overridden via the launch parameters,
     // but we need default values.
@@ -138,7 +138,7 @@ namespace robot_localization
     dynamic_process_noise_covariance_ = process_noise_covariance_;
   }
 
-  void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double)
+  void FilterBase::computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state)
   {
     // A more principled approach would be to get the current velocity from the state, make a diagonal matrix from it,
     // and then rotate it to be in the world frame (i.e., the same frame as the pose data). We could then use this
@@ -162,7 +162,7 @@ namespace robot_localization
     return latest_control_;
   }
 
-  double FilterBase::getControlTime()
+  const rclcpp::Time &FilterBase::getControlTime()
   {
     return latest_control_time_;
   }
@@ -182,12 +182,12 @@ namespace robot_localization
     return initialized_;
   }
 
-  double FilterBase::getLastMeasurementTime()
+  const rclcpp::Time &FilterBase::getLastMeasurementTime()
   {
     return last_measurement_time_;
   }
 
-  double FilterBase::getLastUpdateTime()
+  const rclcpp::Time &FilterBase::getLastUpdateTime()
   {
     return last_update_time_;
   }
@@ -202,7 +202,7 @@ namespace robot_localization
     return process_noise_covariance_;
   }
 
-  double FilterBase::getSensorTimeout()
+  const rclcpp::Duration &FilterBase::getSensorTimeout()
   {
     return sensor_timeout_;
   }
@@ -216,7 +216,7 @@ namespace robot_localization
   {
     FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topic_name_ << ") ------\n");
 
-    double delta = 0.0;
+    rclcpp::Duration delta(0);
 
     // If we've had a previous reading, then go through the predict/update
     // cycle. Otherwise, set our state and covariance to whatever we get
@@ -227,12 +227,12 @@ namespace robot_localization
       delta = measurement.time_ - last_measurement_time_;
 
       FB_DEBUG("Filter is already initialized. Carrying out predict/correct loop...\n"
-               "Measurement time is " << std::setprecision(20) << measurement.time_ <<
-               ", last measurement time is " << last_measurement_time_ << ", delta is " << delta << "\n");
+               "Measurement time is " << std::setprecision(20) << measurement.time_.nanoseconds() <<
+               ", last measurement time is " << last_measurement_time_.nanoseconds() << ", delta is " << delta.nanoseconds() << "\n");
 
       // Only want to carry out a prediction if it's
       // forward in time. Otherwise, just correct.
-      if (delta > 0)
+      if (delta > rclcpp::Duration(0))
       {
         validateDelta(delta);
         predict(measurement.time_, delta);
@@ -267,7 +267,7 @@ namespace robot_localization
       initialized_ = true;
     }
 
-    if (delta >= 0.0)
+    if (delta >= rclcpp::Duration(0))
     {
       // Update the last measurement and update time.
       // The measurement time is based on the time stamp of the
@@ -282,15 +282,19 @@ namespace robot_localization
     FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topic_name_ << ") ------\n");
   }
 
-  void FilterBase::setControl(const Eigen::VectorXd &control, const double control_time)
+  void FilterBase::setControl(const Eigen::VectorXd &control, const rclcpp::Time &control_time)
   {
     latest_control_ = control;
     latest_control_time_ = control_time;
   }
 
-  void FilterBase::setControlParams(const std::vector<int> &update_vector, const double control_timeout,
-    const std::vector<double> &acceleration_limits, const std::vector<double> &acceleration_gains,
-    const std::vector<double> &deceleration_limits, const std::vector<double> &deceleration_gains)
+  void FilterBase::setControlParams(
+    const std::vector<bool> &update_vector,
+    const rclcpp::Duration &control_timeout,
+    const std::vector<double> &acceleration_limits,
+    const std::vector<double> &acceleration_gains,
+    const std::vector<double> &deceleration_limits,
+    const std::vector<double> &deceleration_gains)
   {
     use_control_ = true;
     control_update_vector_ = update_vector;
@@ -331,12 +335,12 @@ namespace robot_localization
     estimate_error_covariance_ = estimate_error_covariance;
   }
 
-  void FilterBase::setLastMeasurementTime(const double last_measurement_time)
+  void FilterBase::setLastMeasurementTime(const rclcpp::Time &last_measurement_time)
   {
     last_measurement_time_ = last_measurement_time;
   }
 
-  void FilterBase::setLastUpdateTime(const double last_update_time)
+  void FilterBase::setLastUpdateTime(const rclcpp::Time &last_update_time)
   {
     last_update_time_ = last_update_time;
   }
@@ -346,7 +350,7 @@ namespace robot_localization
     process_noise_covariance_ = process_noise_covariance;
   }
 
-  void FilterBase::setSensorTimeout(const double sensor_timeout)
+  void FilterBase::setSensorTimeout(const rclcpp::Duration &sensor_timeout)
   {
     sensor_timeout_ = sensor_timeout;
   }
@@ -356,30 +360,30 @@ namespace robot_localization
     state_ = state;
   }
 
-  void FilterBase::validateDelta(double &delta)
+  void FilterBase::validateDelta(rclcpp::Duration &delta)
   {
     // This handles issues with ROS time when use_sim_time is on and we're playing from bags.
-    if (delta > 100000.0)
+    if (delta > rclcpp::Duration(100000.0))
     {
       FB_DEBUG("Delta was very large. Suspect playing from bag file. Setting to 0.01\n");
 
-      delta = 0.01;
+      delta = rclcpp::Duration(0.01);
     }
   }
 
 
-  void FilterBase::prepareControl(const double reference_time, const double)
+  void FilterBase::prepareControl(const rclcpp::Time &reference_time, const rclcpp::Duration &)
   {
     control_acceleration_.setZero();
 
     if (use_control_)
     {
-      bool timed_out = ::fabs(reference_time - latest_control_time_) >= control_timeout_;
+      bool timed_out = (reference_time - latest_control_time_ >= control_timeout_);
 
       if (timed_out)
       {
-        FB_DEBUG("Control timed out. Reference time was " << reference_time << ", latest control time was " <<
-          latest_control_time_ << ", control timeout was " << control_timeout_ << "\n");
+        FB_DEBUG("Control timed out. Reference time was " << reference_time.nanoseconds() << ", latest control time was " <<
+          latest_control_time_.nanoseconds() << ", control timeout was " << control_timeout_.nanoseconds() << "\n");
       }
 
       for (size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd)
@@ -401,8 +405,10 @@ namespace robot_localization
     state_(StateMemberYaw)   = filter_utilities::clampRotation(state_(StateMemberYaw));
   }
 
-  bool FilterBase::checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
-    const Eigen::MatrixXd &innovation_covariance, const double n_sigmas)
+  bool FilterBase::checkMahalanobisThreshold(
+    const Eigen::VectorXd &innovation,
+    const Eigen::MatrixXd &innovation_covariance,
+    const double n_sigmas)
   {
     double squared_mahalanobis = innovation.dot(innovation_covariance * innovation);
     double threshold = n_sigmas * n_sigmas;

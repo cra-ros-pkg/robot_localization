@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
-<package format="2">
+<package format="3">
   <name>robot_localization</name>
   <version>2.4.0</version>
   <description>Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
@@ -22,11 +22,16 @@
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
-
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  
   <exec_depend>rosidl_default_runtime</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

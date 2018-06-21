@@ -36,7 +36,11 @@
 
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/filter_utilities.hpp>
+
 #include <Eigen/Dense>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/macros.hpp>
+#include <rclcpp/time.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -57,20 +61,20 @@ namespace robot_localization
 struct Measurement
 {
   // The real-valued time, in seconds, since some epoch (presumably the start of execution, but any will do)
-  double time_;
+  rclcpp::Time time_;
 
   // The Mahalanobis distance threshold in number of sigmas
   double mahalanobis_thresh_;
 
   // The time stamp of the most recent control term (needed for lagged data)
-  double latest_control_time_;
+  rclcpp::Time latest_control_time_;
 
   // The topic name for this measurement. Needed for capturing previous state values for new measurements.
   std::string topic_name_;
 
   // This defines which variables within this measurement actually get passed into the filter. std::vector<bool> is
   // generally frowned upon, so we use ints.
-  std::vector<int> update_vector_;
+  std::vector<bool> update_vector_;
 
   // The most recent control vector (needed for lagged data)
   Eigen::VectorXd latest_control_;
@@ -91,15 +95,15 @@ struct Measurement
   }
 
   Measurement() :
-    time_(0.0),
+    time_(0),
     mahalanobis_thresh_(std::numeric_limits<double>::max()),
-    latest_control_time_(0.0),
+    latest_control_time_(0),
     topic_name_(""),
     latest_control_()
   {
   }
 };
-typedef std::shared_ptr<Measurement> MeasurementPtr;
+using MeasurementPtr = std::shared_ptr<Measurement>;
 
 /**
   * @brief Structure used for storing and comparing filter states
@@ -119,10 +123,10 @@ struct FilterState
   Eigen::VectorXd latest_control_;
 
   // The time stamp of the most recent measurement for the filter
-  double last_measurement_time_;
+  rclcpp::Time last_measurement_time_;
 
   // The time stamp of the most recent control term
-  double latest_control_time_;
+  rclcpp::Time latest_control_time_;
 
   // We want the queue to be sorted from latest to earliest timestamps.
   bool operator()(const FilterState &a, const FilterState &b)
@@ -135,14 +139,16 @@ struct FilterState
     estimate_error_covariance_(),
     latest_control_(),
     last_measurement_time_(0.0),
-    latest_control_time_(0.0)
+    latest_control_time_(0)
   {}
 };
-typedef std::shared_ptr<FilterState> FilterStatePtr;
+using FilterStatePtr = std::shared_ptr<FilterState>;
 
 class FilterBase
 {
   public:
+    RCLCPP_SMART_PTR_DEFINITIONS_NOT_COPYABLE(FilterBase)
+
     /**
      * @brief Constructor for the FilterBase class
       */
@@ -163,7 +169,7 @@ class FilterBase
      * This allows us to, e.g., not increase the pose covariance values when the vehicle is not moving
      * @param[in] state - The STATE_SIZE state vector that is used to generate the dynamic process noise covariance
      */
-    void computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state, const double delta);
+    void computeDynamicProcessNoiseCovariance(const Eigen::VectorXd &state);
 
     /**
      * @brief Carries out the correct step in the predict/update cycle. This method must be implemented by subclasses.
@@ -183,7 +189,7 @@ class FilterBase
      *
      * @return The time the control vector was issued
      */
-    double getControlTime();
+    const rclcpp::Time &getControlTime();
 
     /**
      * @brief Gets the value of the debug_ variable.
@@ -211,14 +217,14 @@ class FilterBase
      *
      * @return The time at which we last received a measurement
      */
-    double getLastMeasurementTime();
+    const rclcpp::Time &getLastMeasurementTime();
 
     /**
      * @brief Gets the filter's last update time
      *
      * @return The time at which we last updated the filter, which can occur even when we don't receive measurements
      */
-    double getLastUpdateTime();
+    const rclcpp::Time &getLastUpdateTime();
 
     /**
      * @brief Gets the filter's predicted state, i.e., the state estimate before correct() is called.
@@ -239,7 +245,7 @@ class FilterBase
      *
      * @return The sensor timeout value
      */
-    double getSensorTimeout();
+    const rclcpp::Duration &getSensorTimeout();
 
     /**
      * @brief Gets the filter state
@@ -254,10 +260,10 @@ class FilterBase
      * Projects the state and error matrices forward using a model of the vehicle's motion. This method must be
      * implemented by subclasses.
      *
-     * @param[in] referenceTime - The time at which the prediction is being made
+     * @param[in] reference_time - The time at which the prediction is being made
      * @param[in] delta - The time step over which to predict.
      */
-    virtual void predict(const double referenceTime, const double delta) = 0;
+    virtual void predict(const rclcpp::Time &reference_time, const rclcpp::Duration &delta) = 0;
 
     /**
      * @brief Does some final preprocessing, carries out the predict/update cycle
@@ -270,7 +276,7 @@ class FilterBase
      * @param[in] control - The control term to be applied
      * @param[in] control_time - The time at which the control in question was received
      */
-    void setControl(const Eigen::VectorXd &control, const double control_time);
+    void setControl(const Eigen::VectorXd &control, const rclcpp::Time &control_time);
 
     /**
      * @brief Sets the control update vector and acceleration limits
@@ -281,9 +287,13 @@ class FilterBase
      * @param[in] deceleration_limits - The deceleration limits for the control variables
      * @param[in] deceleration_gains - Gains applied to the control term-derived deceleration
      */
-    void setControlParams(const std::vector<int> &update_vector, const double control_timeout,
-      const std::vector<double> &acceleration_limits, const std::vector<double> &acceleration_gains,
-      const std::vector<double> &deceleration_limits, const std::vector<double> &deceleration_gains);
+    void setControlParams(
+      const std::vector<bool> &update_vector,
+      const rclcpp::Duration &control_timeout,
+      const std::vector<double> &acceleration_limits,
+      const std::vector<double> &acceleration_gains,
+      const std::vector<double> &deceleration_limits,
+      const std::vector<double> &deceleration_gains);
 
     /**
      * @brief Sets the filter into debug mode
@@ -314,7 +324,7 @@ class FilterBase
      * @brief Sets the filter's last measurement time.
      * @param[in] last_measurement_time - The last measurement time of the filter
      */
-    void setLastMeasurementTime(const double last_measurement_time);
+    void setLastMeasurementTime(const rclcpp::Time &last_measurement_time);
 
     /**
      * @brief Sets the filter's last update time.
@@ -324,7 +334,7 @@ class FilterBase
      *
      * @param[in] last_update_time - The last update time of the filter
      */
-    void setLastUpdateTime(const double last_update_time);
+    void setLastUpdateTime(const rclcpp::Time &last_update_time);
 
     /**
      * @brief Sets the process noise covariance for the filter.
@@ -341,7 +351,7 @@ class FilterBase
      * @brief Sets the sensor timeout
      * @param[in] sensor_timeout - The time, in seconds, for a sensor to be considered having timed out
      */
-    void setSensorTimeout(const double sensor_timeout);
+    void setSensorTimeout(const rclcpp::Duration &sensor_timeout);
 
     /**
      * @brief Manually sets the filter's state
@@ -353,9 +363,9 @@ class FilterBase
     /**
      * @brief Ensures a given time delta is valid (helps with bag file playback issues)
      *
-     * @param[in] delta - The time delta, in seconds, to validate
+     * @param[in, out] delta - The time delta to validate
      */
-    void validateDelta(double &delta);
+    void validateDelta(rclcpp::Duration &delta);
 
   protected:
     /**
@@ -368,8 +378,13 @@ class FilterBase
      * @param[in] deceleration_gain - Gain applied to deceleration control error
      * @return a usable acceleration estimate for the control vector
      */
-    inline double computeControlAcceleration(const double state, const double control, const double acceleration_limit,
-      const double acceleration_gain, const double deceleration_limit, const double deceleration_gain)
+    inline double computeControlAcceleration(
+      const double state,
+      const double control,
+      const double acceleration_limit,
+      const double acceleration_gain,
+      const double deceleration_limit,
+      const double deceleration_gain)
     {
       FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
 
@@ -412,15 +427,16 @@ class FilterBase
      * @param[in] innovation_covariance - The innovation error
      * @param[in] n_sigmas - Number of standard deviations that are considered acceptable
      */
-    virtual bool checkMahalanobisThreshold(const Eigen::VectorXd &innovation,
-      const Eigen::MatrixXd &innovation_covariance, const double n_sigmas);
+    virtual bool checkMahalanobisThreshold(
+      const Eigen::VectorXd &innovation,
+      const Eigen::MatrixXd &innovation_covariance,
+      const double n_sigmas);
 
     /**
      * @brief Converts the control term to an acceleration to be applied in the prediction step
      * @param[in] reference_time - The time of the update (measurement used in the prediction step)
-     * @param[in] prediction_delta - The amount of time over which we are carrying out our prediction
      */
-    void prepareControl(const double reference_time, const double prediction_delta);
+    void prepareControl(const rclcpp::Time &reference_time, const rclcpp::Duration &);
 
     /**
      * @brief Whether or not we've received any measurements
@@ -441,7 +457,7 @@ class FilterBase
     /**
      * @brief Timeout value, in seconds, after which a control is considered stale
      */
-    double control_timeout_;
+    rclcpp::Duration control_timeout_;
 
     /**
      * @brief Tracks the time the filter was last updated using a measurement.
@@ -449,7 +465,7 @@ class FilterBase
      * This value is used to monitor sensor readings with respect to the sensorTimeout_. We also use it to compute the
      * time delta values for our prediction step.
      */
-    double last_measurement_time_;
+    rclcpp::Time last_measurement_time_;
 
     /**
      * @brief Used for tracking the latest update time as determined
@@ -460,19 +476,19 @@ class FilterBase
      * to the executable in which this class was instantiated. We use this to determine if we have experienced a sensor
      * timeout, i.e., if we haven't received any sensor data in a long time.
      */
-    double last_update_time_;
+    rclcpp::Time last_update_time_;
 
     /**
      * @brief The time of reception of the most recent control term
      */
-    double latest_control_time_;
+    rclcpp::Time latest_control_time_;
 
     /**
      * @brief The updates to the filter - both predict and correct - are driven by measurements. If we get a gap in
      * measurements for some reason, we want the filter to continue estimating. When this gap occurs, as specified by
      * this timeout, we will continue to call predict() at the filter's frequency.
      */
-    double sensor_timeout_;
+    rclcpp::Duration sensor_timeout_;
 
     /**
      * @brief Used for outputting debug messages
@@ -502,7 +518,7 @@ class FilterBase
     /**
      * @brief Which control variables are being used (e.g., not every vehicle is controllable in Y or Z)
      */
-    std::vector<int> control_update_vector_;
+    std::vector<bool> control_update_vector_;
 
     /**
      * @brief Variable that gets updated every time we process a measurement and we have a valid control
