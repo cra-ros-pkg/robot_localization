@@ -30,12 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ros_filter_types.hpp>
+#include <robot_localization/ekf.hpp>
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/ros_filter.hpp>
+#include <robot_localization/ukf.hpp>
+
+#include <rclcpp/rclcpp.hpp>
+
 #include <algorithm>
 #include <string>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char **argv)
 {
@@ -48,7 +53,7 @@ int main(int argc, char **argv)
 
   robot_localization::FilterBase::UniquePtr filter;
 
-  if (std::string tofilter_type == "ukf")
+  if (filter_type == "ukf")
   {
     double alpha = 0.001;
     double kappa = 0.0;
@@ -58,14 +63,20 @@ int main(int argc, char **argv)
     node->get_parameter("kappa", kappa);
     node->get_parameter("beta", beta);
 
-    filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta));  
+    filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta);
   }
-  else if (filter_type == "ekf")
+  else
   {
-    filter = std::make_unique<robot_localization::Ekf>()); 
+    if (filter_type != "ekf")
+    {
+      std::cerr << "Unsupported filter type of " << filter_type << " specified. Defaulting to ekf.\n";
+    }
+
+    filter = std::make_unique<robot_localization::Ekf>();
   }
 
-  filter->run();
+  robot_localization::RosFilter ros_filter(node, filter);
+  ros_filter.run();
 
   return 0;
 }

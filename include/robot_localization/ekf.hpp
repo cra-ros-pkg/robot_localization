@@ -65,7 +65,7 @@ class Ekf: public FilterBase
      *
      * @param[in] measurement - The measurement to fuse with our estimate
      */
-    void correct(const Measurement &measurement);
+    void correct(const Measurement &measurement) override;
 
     /**
      * @brief Carries out the predict step in the predict/update cycle.
@@ -75,7 +75,7 @@ class Ekf: public FilterBase
      * @param[in] reference_time - The time at which the prediction is being made
      * @param[in] delta - The time step over which to predict.
      */
-    void predict(const double reference_time, const double delta);
+    void predict(const rclcpp::Time &reference_time, const rclcpp::Duration &delta) override;
 };
 
 }  // namespace RobotLocalization

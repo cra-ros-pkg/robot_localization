@@ -40,54 +40,44 @@ include_directories(
   ${tf2_geometry_msgs_INCLUDE_DIRS})
 
 add_library(
-  filter_utilities
-  src/filter_utilities.cpp)
-
-add_library(
-  filter_base
-  src/filter_base.cpp)
-target_link_libraries(
-  filter_base
-  filter_utilities)
-
-add_library(
-  ekf
-  src/ekf.cpp)
-target_link_libraries(
-  ekf
-  filter_base)
-
-add_library(
-  ukf
-  src/ukf.cpp)
-target_link_libraries(
-  ukf
-  filter_base)
-
-add_library(
-  ros_filter_utilities
+  rl_lib
+  src/ekf.cpp
+  src/ukf.cpp
+  src/filter_base.cpp
+  src/filter_utilities.cpp
+  src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
-  
-add_library(
-  ros_filter
-  src/ros_filter.cpp)
-target_link_libraries(
-  ros_filter
-  ekf
-  ukf
-  filter_base
-  filter_utilities
-  ros_filter_utilities)
-rosidl_target_interfaces(ros_filter
+
+rosidl_target_interfaces(rl_lib
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
+
+add_executable(
+  se_node
+  src/se_node.cpp
+)
+
+target_link_libraries(
+  rl_lib
+  ${angles_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
+  ${rclcpp_LIBRARIES}
+  ${geometry_msgs_LIBRARIES}
+  ${nav_msgs_LIBRARIES}
+  ${sensor_msgs_LIBRARIES}
+  ${tf2_ros_LIBRARIES}
+  ${tf2_LIBRARIES}
+  ${tf2_geometry_msgs_LIBRARIES}
+)
+
+target_link_libraries(
+  se_node
+  rl_lib
+)
 
 install(
   TARGETS
-  ekf
-  filter_base
-  filter_utilities
-  ukf
-  ros_filter_utilities
+  rl_lib
+  se_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -116,11 +106,7 @@ endif()
 ament_export_dependencies(rosidl_default_runtime)
 ament_export_include_directories(include)
 ament_export_libraries(
-  ekf
-  filter_base
-  filter_utilities
-  ukf
-  ros_filter_utilities
+  rl_lib
 )
 
 ament_package()

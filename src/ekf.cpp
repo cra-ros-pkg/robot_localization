@@ -206,10 +206,12 @@ namespace robot_localization
     }
   }
 
-  void Ekf::predict(const double reference_time, const double delta)
+  void Ekf::predict(const rclcpp::Time &reference_time, const rclcpp::Duration &delta)
   {
+    const double delta_sec = filter_utilities::toSec(delta);
+
     FB_DEBUG("---------------------- Ekf::predict ----------------------\n" <<
-             "delta is " << delta << "\n" <<
+             "delta is " << filter_utilities::toSec(delta) << "\n" <<
              "state is " << state_ << "\n");
 
     double roll = state_(StateMemberRoll);
@@ -235,27 +237,27 @@ namespace robot_localization
     double sy = ::sin(yaw);
     double cy = ::cos(yaw);
 
-    prepareControl(rclcpp::Time(reference_time), rclcpp::Duration(delta));
+    prepareControl(reference_time, delta);
 
     // Prepare the transfer function
-    transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta;
-    transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
-    transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
-    transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta;
-    transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta;
-    transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta;
-    transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta;
-    transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
-    transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
-    transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta;
-    transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta;
-    transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta;
-    transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta;
-    transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta;
-    transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta;
-    transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta;
-    transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta;
-    transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta;
+    transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta_sec;
+    transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta_sec;
     transfer_function_(StateMemberRoll, StateMemberVroll) = transfer_function_(StateMemberX, StateMemberVx);
     transfer_function_(StateMemberRoll, StateMemberVpitch) = transfer_function_(StateMemberX, StateMemberVy);
     transfer_function_(StateMemberRoll, StateMemberVyaw) = transfer_function_(StateMemberX, StateMemberVz);
@@ -265,69 +267,69 @@ namespace robot_localization
     transfer_function_(StateMemberYaw, StateMemberVroll) = transfer_function_(StateMemberZ, StateMemberVx);
     transfer_function_(StateMemberYaw, StateMemberVpitch) = transfer_function_(StateMemberZ, StateMemberVy);
     transfer_function_(StateMemberYaw, StateMemberVyaw) = transfer_function_(StateMemberZ, StateMemberVz);
-    transfer_function_(StateMemberVx, StateMemberAx) = delta;
-    transfer_function_(StateMemberVy, StateMemberAy) = delta;
-    transfer_function_(StateMemberVz, StateMemberAz) = delta;
+    transfer_function_(StateMemberVx, StateMemberAx) = delta_sec;
+    transfer_function_(StateMemberVy, StateMemberAy) = delta_sec;
+    transfer_function_(StateMemberVz, StateMemberAz) = delta_sec;
 
     // Prepare the transfer function Jacobian. This function is analytically derived from the
     // transfer function.
     double x_coeff = 0.0;
     double yCoeff = 0.0;
     double z_coeff = 0.0;
-    double one_half_at_squared = 0.5 * delta * delta;
+    double one_half_at_squared = 0.5 * delta_sec * delta_sec;
 
     yCoeff = cy * sp * cr + sy * sr;
     z_coeff = -cy * sp * sr + sy * cr;
-    double dFx_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFx_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFR_dR = 1 + (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFR_dR = 1 + (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     x_coeff = -cy * sp;
     yCoeff = cy * cp * sr;
     z_coeff = cy * cp * cr;
-    double dFx_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFx_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFR_dP = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFR_dP = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     x_coeff = -sy * cp;
     yCoeff = -sy * sp * sr - cy * cr;
     z_coeff = -sy * sp * cr + cy * sr;
-    double dFx_dY = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFx_dY = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFR_dY = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFR_dY = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     yCoeff = sy * sp * cr - cy * sr;
     z_coeff = -sy * sp * sr - cy * cr;
-    double dFy_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFy_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFP_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFP_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     x_coeff = -sy * sp;
     yCoeff = sy * cp * sr;
     z_coeff = sy * cp * cr;
-    double dFy_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFy_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFP_dP = 1 + (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFP_dP = 1 + (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     x_coeff = cy * cp;
     yCoeff = cy * sp * sr - sy * cr;
     z_coeff = cy * sp * cr + sy * sr;
-    double dFy_dY = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFy_dY = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFP_dY = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFP_dY = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     yCoeff = cp * cr;
     z_coeff = -cp * sr;
-    double dFz_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFz_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFY_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFY_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     x_coeff = -cp;
     yCoeff = -sp * sr;
     z_coeff = -sp * cr;
-    double dFz_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta +
+    double dFz_dP = (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
                     (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-    double dFY_dP = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta;
+    double dFY_dP = (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transfer_function_jacobian_ = transfer_function_;
@@ -362,9 +364,9 @@ namespace robot_localization
     }
 
     // (1) Apply control terms, which are actually accelerations
-    state_(StateMemberVroll) += control_acceleration_(ControlMemberVroll) * delta;
-    state_(StateMemberVpitch) += control_acceleration_(ControlMemberVpitch) * delta;
-    state_(StateMemberVyaw) += control_acceleration_(ControlMemberVyaw) * delta;
+    state_(StateMemberVroll) += control_acceleration_(ControlMemberVroll) * delta_sec;
+    state_(StateMemberVpitch) += control_acceleration_(ControlMemberVpitch) * delta_sec;
+    state_(StateMemberVyaw) += control_acceleration_(ControlMemberVyaw) * delta_sec;
 
     state_(StateMemberAx) = (control_update_vector_[ControlMemberVx] ?
       control_acceleration_(ControlMemberVx) : state_(StateMemberAx));
@@ -385,7 +387,7 @@ namespace robot_localization
     // (3) Project the error forward: P = J * P * J' + Q
     estimate_error_covariance_ =
       (transfer_function_jacobian_ * estimate_error_covariance_ * transfer_function_jacobian_.transpose());
-    estimate_error_covariance_.noalias() += delta * (*process_noise_covariance);
+    estimate_error_covariance_.noalias() += delta_sec * (*process_noise_covariance);
 
     FB_DEBUG("Predicted estimate error covariance is:\n" << estimate_error_covariance_ <<
              "\n\n--------------------- /Ekf::predict ----------------------\n");

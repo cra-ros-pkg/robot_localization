@@ -30,9 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/buffer.h>
+#include <tf2/time.h>
 
 #include <string>
 #include <vector>
@@ -112,18 +116,18 @@ namespace ros_filter_utilities
     const std::string &target_frame,
     const std::string &source_frame,
     const rclcpp::Time &time,
-    const rclcpp::Duration &timeout,
+    const rclcpp::Duration &duration,
     tf2::Transform &target_frame_trans)
   {
     bool retVal = true;
-    tf2::TimePoint time_tf = tf2::timeFromSec(1e-9 * static_cast<double>(time.nanoseconds()));
-    tf2::Duration timeout_tf = std::chrono::nanoseconds(timeout.nanoseconds());
+    tf2::TimePoint time_tf = tf2::timeFromSec(filter_utilities::toSec(time));
+    tf2::Duration duration_tf = tf2::durationFromSec(filter_utilities::toSec(duration));
 
     // First try to transform the data at the requested time
     try
     {
-      tf2::fromMsg(buffer.lookupTransform(target_frame, source_frame, time_tf, timeout_tf).transform,
-                   target_frame_trans);
+      geometry_msgs::msg::TransformStamped stamped = buffer.lookupTransform(target_frame, source_frame, time_tf, duration_tf);
+      tf2::fromMsg(stamped.transform, target_frame_trans);
     }
     catch (tf2::TransformException &ex)
     {
@@ -132,7 +136,7 @@ namespace ros_filter_utilities
       // transform and warn the user.
       try
       {
-        tf2::fromMsg(buffer.lookupTransform(target_frame, source_frame, tf2::TimePointZero).transform,
+        tf2::fromMsg(buffer.lookupTransform(target_frame, source_frame, tf2::TimePointZero, duration_tf).transform,
                      target_frame_trans);
 
         //ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << source_frame << " to " << target_frame <<

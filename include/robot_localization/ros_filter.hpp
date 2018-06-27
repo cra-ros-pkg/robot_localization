@@ -39,6 +39,7 @@
 #include <std_msgs/msg/string.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
@@ -108,7 +109,7 @@ class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
-    RosFilter(rclcpp::Node::SharedPtr node);
+    RosFilter(rclcpp::Node::SharedPtr node, robot_localization::FilterBase::UniquePtr &filter);
 
     //! @brief Destructor
     //!

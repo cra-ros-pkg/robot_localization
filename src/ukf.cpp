@@ -266,10 +266,12 @@ namespace robot_localization
     }
   }
 
-  void Ukf::predict(const double reference_time, const double delta)
+  void Ukf::predict(const rclcpp::Time &reference_time, const rclcpp::Duration &delta)
   {
+    const double delta_sec = filter_utilities::toSec(delta);
+
     FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
-             "delta is " << delta <<
+             "delta is " << delta_sec <<
              "\nstate is " << state_ << "\n");
 
     double roll = state_(StateMemberRoll);
@@ -286,27 +288,27 @@ namespace robot_localization
     double sy = ::sin(yaw);
     double cy = ::cos(yaw);
 
-    prepareControl(rclcpp::Time(reference_time), rclcpp::Duration(delta));
+    prepareControl(reference_time, delta);
 
     // Prepare the transfer function
-    transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta;
-    transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta;
-    transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta;
-    transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta;
-    transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta;
-    transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta;
-    transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta;
-    transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
-    transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta;
-    transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta;
-    transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta;
-    transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta;
-    transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta;
-    transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta;
-    transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta;
-    transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta;
-    transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta;
-    transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta;
+    transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta_sec;
+    transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta_sec;
+    transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta_sec;
     transfer_function_(StateMemberRoll, StateMemberVroll) = transfer_function_(StateMemberX, StateMemberVx);
     transfer_function_(StateMemberRoll, StateMemberVpitch) = transfer_function_(StateMemberX, StateMemberVy);
     transfer_function_(StateMemberRoll, StateMemberVyaw) = transfer_function_(StateMemberX, StateMemberVz);
@@ -316,9 +318,9 @@ namespace robot_localization
     transfer_function_(StateMemberYaw, StateMemberVroll) = transfer_function_(StateMemberZ, StateMemberVx);
     transfer_function_(StateMemberYaw, StateMemberVpitch) = transfer_function_(StateMemberZ, StateMemberVy);
     transfer_function_(StateMemberYaw, StateMemberVyaw) = transfer_function_(StateMemberZ, StateMemberVz);
-    transfer_function_(StateMemberVx, StateMemberAx) = delta;
-    transfer_function_(StateMemberVy, StateMemberAy) = delta;
-    transfer_function_(StateMemberVz, StateMemberAz) = delta;
+    transfer_function_(StateMemberVx, StateMemberAx) = delta_sec;
+    transfer_function_(StateMemberVy, StateMemberAy) = delta_sec;
+    transfer_function_(StateMemberVz, StateMemberAz) = delta_sec;
 
     // (1) Take the square root of a small fraction of the estimate_error_covariance_ using LL' decomposition
     weighted_covar_sqrt_ = ((STATE_SIZE + lambda_) * estimate_error_covariance_).llt().matrixL();
@@ -363,7 +365,7 @@ namespace robot_localization
       process_noise_covariance = &dynamic_process_noise_covariance_;
     }
 
-    estimate_error_covariance_.noalias() += delta * (*process_noise_covariance);
+    estimate_error_covariance_.noalias() += delta_sec * (*process_noise_covariance);
 
     // Keep the angles bounded
     wrapStateAngles();

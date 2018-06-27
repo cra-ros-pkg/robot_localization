@@ -34,6 +34,9 @@
 #define ROBOT_LOCALIZATION_FILTER_UTILITIES_H
 
 #include <Eigen/Dense>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/time.hpp>
+#include <std_msgs/msg/header.hpp>
 
 #include <iostream>
 #include <ostream>
@@ -58,14 +61,70 @@ namespace filter_utilities
    * @param[in] rotation - The rotation to bind
    * @return the bounded value
    */
-  double clampRotation(double rotation);
+  inline double clampRotation(double rotation)
+  {
+    while (rotation > PI)
+    {
+      rotation -= TAU;
+    }
+
+    while (rotation < -PI)
+    {
+      rotation += TAU;
+    }
+
+    return rotation;
+  }
 
   /**
    * @brief Utility method for appending tf2 prefixes cleanly
    * @param[in] tf_prefix - the tf2 prefix to append
    * @param[in, out] frame_id - the resulting frame_id value
    */
-  void appendPrefix(std::string tf_prefix, std::string &frame_id);
+  inline void appendPrefix(std::string tf_prefix, std::string &frame_id)
+  {
+    // Strip all leading slashes for tf2 compliance
+    if (!frame_id.empty() && frame_id.at(0) == '/')
+    {
+      frame_id = frame_id.substr(1);
+    }
+
+    if (!tf_prefix.empty() && tf_prefix.at(0) == '/')
+    {
+      tf_prefix = tf_prefix.substr(1);
+    }
+
+    // If we do have a tf prefix, then put a slash in between
+    if (!tf_prefix.empty())
+    {
+      frame_id = tf_prefix + "/" + frame_id;
+    }
+  }
+
+  inline double nanosecToSec(const rcl_time_point_value_t nanoseconds)
+  {
+    return static_cast<double>(nanoseconds) * 1e-9;
+  }
+
+  inline int secToNanosec(const double seconds)
+  {
+    return static_cast<int>(seconds * 1e9);
+  }
+
+  inline double toSec(const rclcpp::Duration &duration)
+  {
+    return nanosecToSec(duration.nanoseconds());
+  }
+
+  inline double toSec(const rclcpp::Time &time)
+  {
+    return nanosecToSec(time.nanoseconds());
+  }
+
+  inline double toSec(const std_msgs::msg::Header::_stamp_type &stamp)
+  {
+    return static_cast<double>(stamp.sec) + nanosecToSec(stamp.nanosec);
+  }
 
 }  // namespace filter_utilities
 }  // namespace robot_localization

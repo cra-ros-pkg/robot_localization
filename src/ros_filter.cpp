@@ -36,6 +36,7 @@
 #include <robot_localization/ros_filter.hpp>
 #include <robot_localization/ukf.hpp>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <sensor_msgs/msg/imu.hpp>
@@ -50,7 +51,7 @@
 
 namespace robot_localization
 {
-  RosFilter::RosFilter(rclcpp::Node::SharedPtr node) :
+  RosFilter::RosFilter(rclcpp::Node::SharedPtr node, robot_localization::FilterBase::UniquePtr &filter) :
     //staticDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
     tf_listener_(tf_buffer_),
     //dynamicDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
@@ -68,7 +69,8 @@ namespace robot_localization
     publish_acceleration_(false),
     two_d_mode_(false),
     use_control_(false),
-    smooth_lagged_data_(false)
+    smooth_lagged_data_(false),
+    filter_(std::move(filter))
   {
     state_variable_names_.push_back("X");
     state_variable_names_.push_back("Y");
@@ -194,7 +196,7 @@ namespace robot_localization
       last_message_times_[topic_name] = msg->header.stamp;
 
       RF_DEBUG("Last message time for " << topic_name << " is now " <<
-        last_message_times_[topic_name].nanoseconds() << "\n");
+        filter_utilities::toSec(last_message_times_[topic_name]) << "\n");
     }
     //else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
     //{
@@ -214,7 +216,8 @@ namespace robot_localization
       */
 
       RF_DEBUG("Message is too old. Last message time for " << topic_name <<
-        " is " << last_message_times_[topic_name].nanoseconds() << ", current message time is " << msg->header.stamp.nanosec << ".\n");
+        " is " << filter_utilities::toSec(last_message_times_[topic_name]) << ", current message time is " <<
+        filter_utilities::toSec(msg->header.stamp) << ".\n");
     }
 
     RF_DEBUG("\n----- /RosFilter::accelerationCallback (" << topic_name << ") ------\n");
@@ -514,7 +517,7 @@ namespace robot_localization
   {
     RF_DEBUG(
       "------ RosFilter::integrateMeasurements ------\n\n"
-      "Integration time is " << std::setprecision(20) << current_time.nanoseconds() << "\n"
+      "Integration time is " << std::setprecision(20) << filter_utilities::toSec(current_time) << "\n"
       << measurement_queue_.size() << " measurements in queue.\n");
 
     // If we have any measurements in the queue, process them
@@ -528,13 +531,13 @@ namespace robot_localization
       int restored_measurement_count = 0;
       if (smooth_lagged_data_ && first_measurement->time_ < filter_->getLastMeasurementTime())
       {
-        RF_DEBUG("Received a measurement that was " << (filter_->getLastMeasurementTime() - first_measurement->time_).nanoseconds() / 1000000000.0 <<
+        RF_DEBUG("Received a measurement that was " << filter_utilities::toSec(filter_->getLastMeasurementTime() - first_measurement->time_) <<
                  " seconds in the past. Reverting filter state and measurement queue...");
 
         int originalCount = static_cast<int>(measurement_queue_.size());
-        if (!revertTo(first_measurement->time_ - rclcpp::Duration(1e-9)))
+        if (!revertTo(first_measurement->time_ - rclcpp::Duration(1)))
         {
-          RF_DEBUG("ERROR: history interval is too small to revert to time " << first_measurement->time_.nanoseconds() << "\n");
+          RF_DEBUG("ERROR: history interval is too small to revert to time " << filter_utilities::toSec(first_measurement->time_) << "\n");
           //ROS_WARN_STREAM_THROTTLE(10.0, "Received old measurement for topic " << first_measurement->topic_name_ <<
           //                         ", but history interval is insufficiently sized to "
           //                         "revert state and measurement queue.");
@@ -598,9 +601,9 @@ namespace robot_localization
       // If we get a large delta, then continuously predict until
       if (last_update_delta >= filter_->getSensorTimeout())
       {
-        RF_DEBUG("Sensor timeout! Last update time was " << filter_->getLastUpdateTime().nanoseconds() <<
-                 ", current time is " << current_time.nanoseconds() <<
-                 ", delta is " << last_update_delta.nanoseconds() << "\n");
+        RF_DEBUG("Sensor timeout! Last update time was " << filter_utilities::toSec(filter_->getLastUpdateTime()) <<
+                 ", current time is " << filter_utilities::toSec(current_time) <<
+                 ", delta is " << filter_utilities::toSec(last_update_delta) << "\n");
 
         filter_->validateDelta(last_update_delta);
         filter_->predict(current_time, last_update_delta);
@@ -741,12 +744,12 @@ namespace robot_localization
     // Transform future dating
     double offset_tmp;
     node_->get_parameter("transform_time_offset", offset_tmp);
-    tf_time_offset_ = rclcpp::Duration(offset_tmp);
+    tf_time_offset_ = rclcpp::Duration(filter_utilities::secToNanosec(offset_tmp));
 
     // Transform timeout
     double timeout_tmp;
     node_->get_parameter("transform_timeout", timeout_tmp);
-    tf_timeout_ = rclcpp::Duration(timeout_tmp);
+    tf_timeout_ = rclcpp::Duration(filter_utilities::secToNanosec(timeout_tmp));
 
     // Update frequency and sensor timeout
     frequency_ = 30.0;
@@ -754,7 +757,7 @@ namespace robot_localization
 
     double sensor_timeout = 1.0 / frequency_;
     node_->get_parameter("sensor_timeout", sensor_timeout);
-    filter_->setSensorTimeout(rclcpp::Duration(sensor_timeout));
+    filter_->setSensorTimeout(rclcpp::Duration(filter_utilities::secToNanosec(sensor_timeout)));
 
     // Determine if we're in 2D mode
     two_d_mode_ = false;
@@ -765,25 +768,24 @@ namespace robot_localization
     node_->get_parameter("smooth_lagged_data", smooth_lagged_data_);
     double history_length_double = 0.0;
     node_->get_parameter("history_length", history_length_double);
-    history_length_ = rclcpp::Duration(history_length_double);
+
+    if (!smooth_lagged_data_ && std::abs(history_length_double) > 0)
+    {
+      std::cerr << "Filter history interval of " << history_length_double <<
+                      " specified, but smooth_lagged_data is set to false. Lagged data will not be smoothed.";
+    }
+
+    if (smooth_lagged_data_ && history_length_double < 0)
+    {
+      std::cerr << "Negative history interval of " << history_length_double <<
+                      " specified. Absolute value will be assumed.";
+    }
+
+    history_length_ = rclcpp::Duration(filter_utilities::secToNanosec(std::abs(history_length_double)));
 
     // Wether we reset filter on jump back in time
     reset_on_time_jump_ = false;
     node_->get_parameter("reset_on_time_jump", reset_on_time_jump_);
-
-    if (!smooth_lagged_data_ && std::abs(history_length_.nanoseconds()) > 0)
-    {
-      std::cerr << "Filter history interval of " << history_length_.nanoseconds() <<
-                      " specified, but smooth_lagged_data is set to false. Lagged data will not be smoothed.";
-    }
-
-    if (smooth_lagged_data_ && history_length_.nanoseconds() < 0)
-    {
-      std::cerr << "Negative history interval of " << history_length_.nanoseconds() <<
-                      " specified. Absolute value will be assumed.";
-    }
-
-    history_length_ = rclcpp::Duration(history_length_.nanoseconds());
 
     // Determine if we're using a control term
     double control_timeout = sensor_timeout;
@@ -900,13 +902,13 @@ namespace robot_localization
       "\nodom_frame is " << odom_frame_id_ <<
       "\nbase_link_frame is " << base_link_frame_id_ <<
       "\nworld_frame is " << world_frame_id_ <<
-      "\ntransform_time_offset is " << tf_time_offset_.nanoseconds() <<
-      "\ntransform_timeout is " << tf_timeout_.nanoseconds() <<
+      "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
+      "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
       "\nfrequency is " << frequency_ <<
-      "\nsensor_timeout is " << filter_->getSensorTimeout().nanoseconds() <<
+      "\nsensor_timeout is " << filter_utilities::toSec(filter_->getSensorTimeout()) <<
       "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
       "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
-      "\nhistory_length is " << history_length_.nanoseconds() <<
+      "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
       "\nuse_control is " << (use_control_ ? "true" : "false") <<
       "\ncontrol_config is " << control_update_vector <<
       "\ncontrol_timeout is " << control_timeout <<
@@ -1439,7 +1441,7 @@ namespace robot_localization
 
       filter_->setControlParams(
         control_update_vector,
-        rclcpp::Duration(control_timeout),
+        rclcpp::Duration(filter_utilities::secToNanosec(control_timeout)),
         acceleration_limits,
         acceleration_gains,
         deceleration_limits,
@@ -1561,7 +1563,7 @@ namespace robot_localization
       std::stringstream stream;
       stream << "The " << topic_name << " message has a timestamp equal to or before the last filter reset, " <<
                 "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
-                msg->header.stamp.nanosec << ")";
+                filter_utilities::toSec(msg->header.stamp) << ")";
       // addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
       //              topic_name + "_timestamp",
       //              stream.str(),
@@ -1611,7 +1613,7 @@ namespace robot_localization
       std::stringstream stream;
       stream << "The " << topic_name << " message has a timestamp equal to or before the last filter reset, " <<
                 "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
-                msg->header.stamp.nanosec << ")";
+                filter_utilities::toSec(msg->header.stamp) << ")";
       //addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
       //              topic_name + "_timestamp",
       //              stream.str(),
@@ -1674,7 +1676,7 @@ namespace robot_localization
       last_message_times_[topic_name] = msg->header.stamp;
 
       RF_DEBUG("Last message time for " << topic_name << " is now " <<
-        last_message_times_[topic_name].nanoseconds() << "\n");
+        filter_utilities::toSec(last_message_times_[topic_name]) << "\n");
     }
     //else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
     //{
@@ -1960,7 +1962,7 @@ namespace robot_localization
       std::stringstream stream;
       stream << "The " << topic_name << " message has a timestamp equal to or before the last filter reset, " <<
                 "this message will be ignored. This may indicate an empty or bad timestamp. (message time: " <<
-                msg->header.stamp.nanosec << ")";
+                filter_utilities::toSec(msg->header.stamp) << ")";
       //addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
       //              topic_name + "_timestamp",
       //              stream.str(),
@@ -2012,7 +2014,7 @@ namespace robot_localization
       last_message_times_[topic_name] = msg->header.stamp;
 
       RF_DEBUG("Last message time for " << topic_name << " is now " <<
-        last_message_times_[topic_name].nanoseconds() << "\n");
+        filter_utilities::toSec(last_message_times_[topic_name]) << "\n");
     }
     //else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
     //{
@@ -2667,7 +2669,7 @@ namespace robot_localization
 
           // 7c. Now use the time difference from the last message to compute
           // translational and rotational velocities
-          double dt = msg->header.stamp.nanosec - last_message_times_[topic_name].nanoseconds();
+          double dt = filter_utilities::toSec(msg->header.stamp) - filter_utilities::toSec(last_message_times_[topic_name]);
           double xVel = pose_tmp.getOrigin().getX() / dt;
           double yVel = pose_tmp.getOrigin().getY() / dt;
           double zVel = pose_tmp.getOrigin().getZ() / dt;
@@ -2681,8 +2683,8 @@ namespace robot_localization
           pitchVel /= dt;
           yawVel /= dt;
 
-          RF_DEBUG("Previous message time was " << last_message_times_[topic_name].nanoseconds() <<
-                   ", current message time is " << msg->header.stamp.nanosec << ", delta is " <<
+          RF_DEBUG("Previous message time was " << filter_utilities::toSec(last_message_times_[topic_name]) <<
+                   ", current message time is " << filter_utilities::toSec(msg->header.stamp) << ", delta is " <<
                    dt << ", velocity is (vX, vY, vZ): (" << xVel << ", " << yVel << ", " << zVel <<
                    ")\n" << "(vRoll, vPitch, vYaw): (" << rollVel << ", " << pitchVel << ", " <<
                    yawVel << ")\n");
@@ -2948,7 +2950,7 @@ namespace robot_localization
     state->latest_control_time_ = filter->getControlTime();
     filter_state_history_.push_back(state);
     RF_DEBUG(
-     "Saved state with timestamp " << std::setprecision(20) << state->last_measurement_time_.nanoseconds() <<
+     "Saved state with timestamp " << std::setprecision(20) << filter_utilities::toSec(state->last_measurement_time_) <<
      " to history. " << filter_state_history_.size() << " measurements are in the queue.\n");
   }
 
@@ -2956,7 +2958,7 @@ namespace robot_localization
   bool RosFilter::revertTo(const rclcpp::Time &time)
   {
     RF_DEBUG("\n----- RosFilter::revertTo -----\n");
-    RF_DEBUG("\nRequested time was " << std::setprecision(20) << time.nanoseconds() << "\n")
+    RF_DEBUG("\nRequested time was " << std::setprecision(20) << filter_utilities::toSec(time) << "\n")
 
     // Walk back through the queue until we reach a filter state whose time stamp is less than or
     // equal to the requested time. Since every saved state after that time will be
@@ -2971,7 +2973,7 @@ namespace robot_localization
     // state history, we will also have insufficient measurement history.
     if (filter_state_history_.empty())
     {
-      RF_DEBUG("Insufficient history to revert to time " << time.nanoseconds() << "\n");
+      RF_DEBUG("Insufficient history to revert to time " << filter_utilities::toSec(time) << "\n");
 
       return false;
     }
@@ -2982,7 +2984,7 @@ namespace robot_localization
     filter_->setEstimateErrorCovariance(state->estimate_error_covariance_);
     filter_->setLastMeasurementTime(state->last_measurement_time_);
 
-    RF_DEBUG("Reverted to state with time " << state->last_measurement_time_.nanoseconds() << "\n");
+    RF_DEBUG("Reverted to state with time " << filter_utilities::toSec(state->last_measurement_time_) << "\n");
 
     // Repeat for measurements, but push every measurement onto the measurement queue as we go
     int restored_measurements = 0;
@@ -3003,7 +3005,7 @@ namespace robot_localization
   void RosFilter::clearExpiredHistory(const rclcpp::Time cutoff_time)
   {
     RF_DEBUG("\n----- RosFilter::clearExpiredHistory -----" <<
-             "\nCutoff time is " << cutoff_time.nanoseconds() << "\n");
+             "\nCutoff time is " << filter_utilities::toSec(cutoff_time) << "\n");
 
     int popped_measurements = 0;
     int popped_states = 0;
