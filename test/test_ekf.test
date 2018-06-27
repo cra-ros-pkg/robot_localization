@@ -1,7 +1,0 @@
-<!-- Launch file for ekf_test -->
-
-<launch>
-
-    <test test-name="test_ekf" pkg="robot_localization" type="test_ekf" clear_params="true" time-limit="100.0" />
-
-</launch>
