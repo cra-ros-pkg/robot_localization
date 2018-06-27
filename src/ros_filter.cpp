@@ -37,6 +37,7 @@
 #include <robot_localization/ukf.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <rcl/time.h>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <sensor_msgs/msg/imu.hpp>
@@ -57,9 +58,9 @@ namespace robot_localization
     //dynamicDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
     frequency_(30.0),
     history_length_(0),
-    last_set_pose_time_(0),
+    last_set_pose_time_(0, 0, RCL_ROS_TIME),
     latest_control_(),
-    latest_control_time_(0),
+    latest_control_time_(0, 0, RCL_ROS_TIME),
     tf_timeout_(0),
     tf_time_offset_(0),
     print_diagnostics_(true),
@@ -588,20 +589,18 @@ namespace robot_localization
           }
         }
       }
-
-      filter_->setLastUpdateTime(current_time);
     }
     else if (filter_->getInitializedStatus())
     {
       // In the event that we don't get any measurements for a long time,
       // we still need to continue to estimate our state. Therefore, we
       // should project the state forward here.
-      rclcpp::Duration last_update_delta = current_time - filter_->getLastUpdateTime();
+      rclcpp::Duration last_update_delta = current_time - filter_->getLastMeasurementTime();
 
       // If we get a large delta, then continuously predict until
       if (last_update_delta >= filter_->getSensorTimeout())
       {
-        RF_DEBUG("Sensor timeout! Last update time was " << filter_utilities::toSec(filter_->getLastUpdateTime()) <<
+        RF_DEBUG("Sensor timeout! Last measurement time was " << filter_utilities::toSec(filter_->getLastMeasurementTime()) <<
                  ", current time is " << filter_utilities::toSec(current_time) <<
                  ", delta is " << filter_utilities::toSec(last_update_delta) << "\n");
 
@@ -610,7 +609,6 @@ namespace robot_localization
 
         // Update the last measurement time and last update time
         filter_->setLastMeasurementTime(filter_->getLastMeasurementTime() + last_update_delta);
-        filter_->setLastUpdateTime(filter_->getLastUpdateTime() + last_update_delta);
       }
     }
     else
@@ -645,14 +643,14 @@ namespace robot_localization
     twist_var_counts[StateMemberVyaw] = 0;
 
     // Determine if we'll be printing diagnostic information
-    node_->get_parameter("print_diagnostics", print_diagnostics_);
+    node_->get_parameter_or("print_diagnostics", print_diagnostics_, false);
 
     // Check for custom gravitational acceleration value
     node_->get_parameter("gravitational_acceleration", gravitational_acceleration_);
 
     // Grab the debug param. If true, the node will produce a LOT of output.
-    bool debug;
-    node_->get_parameter("debug", debug);
+    bool debug = false;
+    node_->get_parameter_or("debug", debug, false);
 
     if (debug)
     {
@@ -683,9 +681,9 @@ namespace robot_localization
 
     // These params specify the name of the robot's body frame (typically
     // base_link) and odometry frame (typically odom)
-    node_->get_parameter("map_frame", map_frame_id_);
-    node_->get_parameter("odom_frame", odom_frame_id_);
-    node_->get_parameter("base_link_frame", base_link_frame_id_);
+    node_->get_parameter_or("map_frame", map_frame_id_, std::string("map"));
+    node_->get_parameter_or("odom_frame", odom_frame_id_, std::string("odom"));
+    node_->get_parameter_or("base_link_frame", base_link_frame_id_, std::string("base_link"));
 
     /*
      * These parameters are designed to enforce compliance with REP-105:
@@ -712,8 +710,7 @@ namespace robot_localization
      *
      * The default is the latter behavior (broadcast of odom->base_link).
      */
-    world_frame_id_ = odom_frame_id_;
-    node_->get_parameter("world_frame", world_frame_id_);
+    node_->get_parameter_or("world_frame", world_frame_id_, odom_frame_id_);
 
     if(map_frame_id_ == odom_frame_id_ ||
       odom_frame_id_ == base_link_frame_id_ ||
@@ -736,24 +733,23 @@ namespace robot_localization
     }
 
     // Whether we're publshing the world_frame->base_link_frame transform
-    node_->get_parameter("publish_tf", publish_transform_);
+    node_->get_parameter_or("publish_tf", publish_transform_, true);
 
     // Whether we're publishing the acceleration state transform
-    node_->get_parameter("publish_acceleration", publish_acceleration_);
+    node_->get_parameter_or("publish_acceleration", publish_acceleration_, false);
 
     // Transform future dating
-    double offset_tmp;
-    node_->get_parameter("transform_time_offset", offset_tmp);
+    double offset_tmp = 0.0;
+    node_->get_parameter_or("transform_time_offset", offset_tmp, 0.0);
     tf_time_offset_ = rclcpp::Duration(filter_utilities::secToNanosec(offset_tmp));
 
     // Transform timeout
-    double timeout_tmp;
-    node_->get_parameter("transform_timeout", timeout_tmp);
+    double timeout_tmp = 0.0;
+    node_->get_parameter_or("transform_timeout", timeout_tmp, 0.0);
     tf_timeout_ = rclcpp::Duration(filter_utilities::secToNanosec(timeout_tmp));
 
     // Update frequency and sensor timeout
-    frequency_ = 30.0;
-    node_->get_parameter("frequency", frequency_);
+    node_->get_parameter_or("frequency", frequency_, 30.0);
 
     double sensor_timeout = 1.0 / frequency_;
     node_->get_parameter("sensor_timeout", sensor_timeout);
@@ -761,13 +757,13 @@ namespace robot_localization
 
     // Determine if we're in 2D mode
     two_d_mode_ = false;
-    node_->get_parameter("two_d_mode", two_d_mode_);
+    node_->get_parameter_or("two_d_mode", two_d_mode_, false);
 
     // Smoothing window size
     smooth_lagged_data_ = false;
-    node_->get_parameter("smooth_lagged_data", smooth_lagged_data_);
+    node_->get_parameter_or("smooth_lagged_data", smooth_lagged_data_, false);
     double history_length_double = 0.0;
-    node_->get_parameter("history_length", history_length_double);
+    node_->get_parameter_or("history_length", history_length_double, 0.0);
 
     if (!smooth_lagged_data_ && std::abs(history_length_double) > 0)
     {
@@ -785,7 +781,7 @@ namespace robot_localization
 
     // Wether we reset filter on jump back in time
     reset_on_time_jump_ = false;
-    node_->get_parameter("reset_on_time_jump", reset_on_time_jump_);
+    node_->get_parameter_or("reset_on_time_jump", reset_on_time_jump_, false);
 
     // Determine if we're using a control term
     double control_timeout = sensor_timeout;
@@ -795,8 +791,8 @@ namespace robot_localization
     std::vector<double> deceleration_limits(TWIST_SIZE, 1.0);
     std::vector<double> deceleration_gains(TWIST_SIZE, 1.0);
 
-    node_->get_parameter("use_control", use_control_);
-    node_->get_parameter("control_timeout", control_timeout);
+    node_->get_parameter_or("use_control", use_control_, false);
+    node_->get_parameter_or("control_timeout", control_timeout, 0.0);
 
     if (use_control_)
     {
@@ -931,7 +927,6 @@ namespace robot_localization
 
     // Init the last last measurement time so we don't get a huge initial delta
     filter_->setLastMeasurementTime(node_->now());
-    filter_->setLastUpdateTime(node_->now());
 
     // Now pull in each topic to which we want to subscribe.
     // Start with odom.
@@ -1928,7 +1923,6 @@ namespace robot_localization
     filter_->setEstimateErrorCovariance(measurement_covariance);
 
     filter_->setLastMeasurementTime(node_->now());
-    filter_->setLastUpdateTime(node_->now());
 
     // This method can apparently cancel all callbacks, and may stop the executing of the very callback that we're
     // currently in. Therefore, nothing of consequence should come after it.

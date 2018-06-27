@@ -49,8 +49,7 @@ namespace robot_localization
     use_control_(false),
     use_dynamic_process_noise_covariance_(false),
     control_timeout_(0),
-    last_measurement_time_(0),
-    last_update_time_(0),
+    last_measurement_time_(0, 0, RCL_ROS_TIME),
     latest_control_time_(0),
     sensor_timeout_(0),
     debug_stream_(nullptr),
@@ -113,8 +112,7 @@ namespace robot_localization
     sensor_timeout_ = rclcpp::Duration(0.033333333);
 
     // Initialize our last update and measurement times
-    last_update_time_ = rclcpp::Time(0);
-    last_measurement_time_ = rclcpp::Time(0);
+    last_measurement_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
     // These can be overridden via the launch parameters,
     // but we need default values.
@@ -185,11 +183,6 @@ namespace robot_localization
   const rclcpp::Time &FilterBase::getLastMeasurementTime()
   {
     return last_measurement_time_;
-  }
-
-  const rclcpp::Time &FilterBase::getLastUpdateTime()
-  {
-    return last_update_time_;
   }
 
   const Eigen::VectorXd& FilterBase::getPredictedState()
@@ -338,11 +331,6 @@ namespace robot_localization
   void FilterBase::setLastMeasurementTime(const rclcpp::Time &last_measurement_time)
   {
     last_measurement_time_ = last_measurement_time;
-  }
-
-  void FilterBase::setLastUpdateTime(const rclcpp::Time &last_update_time)
-  {
-    last_update_time_ = last_update_time;
   }
 
   void FilterBase::setProcessNoiseCovariance(const Eigen::MatrixXd &process_noise_covariance)

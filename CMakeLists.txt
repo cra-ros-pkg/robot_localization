@@ -78,9 +78,7 @@ install(
   TARGETS
   rl_lib
   se_node
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 #install(
