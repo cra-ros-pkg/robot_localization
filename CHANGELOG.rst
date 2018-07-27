@@ -9,8 +9,8 @@ Changelog for package robot_localization
 * Fixing issue with potential seg fault
 * Contributors: Oleg Kalachev, Tom Moore, stevemacenski
 
-Forthcoming
------------
+2.6.0 (2018-07-27)
+------------------
 * Moving to C++14, adding error flags, and fixing all warnings
 * 2.5.2
 * Changelogs
