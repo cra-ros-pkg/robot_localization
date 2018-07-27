@@ -42,27 +42,31 @@
 namespace RobotLocalization
 {
   FilterBase::FilterBase() :
+    initialized_(false),
+    useControl_(false),
+    useDynamicProcessNoiseCovariance_(false),
+    lastMeasurementTime_(0.0),
+    latestControlTime_(0.0),
+    controlTimeout_(0.0),
+    sensorTimeout_(0.0),
+    controlUpdateVector_(TWIST_SIZE, 0),
     accelerationGains_(TWIST_SIZE, 0.0),
     accelerationLimits_(TWIST_SIZE, 0.0),
     decelerationGains_(TWIST_SIZE, 0.0),
     decelerationLimits_(TWIST_SIZE, 0.0),
     controlAcceleration_(TWIST_SIZE),
-    controlTimeout_(0.0),
-    controlUpdateVector_(TWIST_SIZE, 0),
-    dynamicProcessNoiseCovariance_(STATE_SIZE, STATE_SIZE),
-    latestControlTime_(0.0),
-    state_(STATE_SIZE),
+    latestControl_(TWIST_SIZE),
     predictedState_(STATE_SIZE),
+    state_(STATE_SIZE),
+    covarianceEpsilon_(STATE_SIZE, STATE_SIZE),
+    dynamicProcessNoiseCovariance_(STATE_SIZE, STATE_SIZE),
+    estimateErrorCovariance_(STATE_SIZE, STATE_SIZE),
+    identity_(STATE_SIZE, STATE_SIZE),
+    processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
     transferFunction_(STATE_SIZE, STATE_SIZE),
     transferFunctionJacobian_(STATE_SIZE, STATE_SIZE),
-    estimateErrorCovariance_(STATE_SIZE, STATE_SIZE),
-    covarianceEpsilon_(STATE_SIZE, STATE_SIZE),
-    processNoiseCovariance_(STATE_SIZE, STATE_SIZE),
-    identity_(STATE_SIZE, STATE_SIZE),
-    debug_(false),
     debugStream_(NULL),
-    useControl_(false),
-    useDynamicProcessNoiseCovariance_(false)
+    debug_(false)
   {
     reset();
   }

@@ -47,28 +47,36 @@ namespace RobotLocalization
 {
   template<typename T>
   RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
-      staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
-      tfListener_(tfBuffer_),
-      dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
-      filter_(args),
-      frequency_(30.0),
-      historyLength_(0),
-      lastSetPoseTime_(0),
-      latestControl_(),
-      latestControlTime_(0),
-      tfTimeout_(ros::Duration(0)),
-      nh_(nh),
-      nhLocal_(nh_priv),
+      disabledAtStartup_(false),
+      enabled_(false),
       predictToCurrentTime_(false),
       printDiagnostics_(true),
-      gravitationalAcc_(9.80665),
-      publishTransform_(true),
       publishAcceleration_(false),
+      publishTransform_(true),
+      resetOnTimeJump_(false),
+      smoothLaggedData_(false),
       twoDMode_(false),
       useControl_(false),
-      smoothLaggedData_(false),
-      disabledAtStartup_(false),
-      enabled_(false)
+      dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
+      staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
+      frequency_(30.0),
+      gravitationalAcc_(9.80665),
+      historyLength_(0),
+      minFrequency_(frequency_ - 2.0),
+      maxFrequency_(frequency_ + 2.0),
+      baseLinkFrameId_("base_link"),
+      mapFrameId_("map"),
+      odomFrameId_("odom"),
+      worldFrameId_(odomFrameId_),
+      lastDiagTime_(0),
+      lastSetPoseTime_(0),
+      latestControlTime_(0),
+      tfTimeOffset_(ros::Duration(0)),
+      tfTimeout_(ros::Duration(0)),
+      filter_(args),
+      nh_(nh),
+      nhLocal_(nh_priv),
+      tfListener_(tfBuffer_)
   {
     stateVariableNames_.push_back("X");
     stateVariableNames_.push_back("Y");
@@ -110,11 +118,14 @@ namespace RobotLocalization
     // Set up the frequency diagnostic
     minFrequency_ = frequency_ - 2;
     maxFrequency_ = frequency_ + 2;
-    freqDiag_.reset(new diagnostic_updater::HeaderlessTopicDiagnostic("odometry/filtered",
-                                                              diagnosticUpdater_,
-                                                              diagnostic_updater::FrequencyStatusParam(&minFrequency_,
-                                                                                                    &maxFrequency_,
-                                                                                                    0.1, 10)));
+    freqDiag_ = std::make_unique<diagnostic_updater::HeaderlessTopicDiagnostic>(
+      "odometry/filtered",
+      diagnosticUpdater_,
+      diagnostic_updater::FrequencyStatusParam(
+        &minFrequency_,
+        &maxFrequency_,
+        0.1,
+        10));
 
     // Publisher
     positionPub_ = nh_.advertise<nav_msgs::Odometry>("odometry/filtered", 20);
@@ -1987,9 +1998,13 @@ namespace RobotLocalization
                                              std_srvs::Empty::Response&)
   {
     RF_DEBUG("\n[" << ros::this_node::getName() << ":]" << " ------ /RosFilter::enableFilterSrvCallback ------\n");
-    if (enabled_) {
-      ROS_WARN_STREAM("[" << ros::this_node::getName() << ":] Asking for enabling filter service, but the filter was already enabled! Use param disabled_at_startup.");
-    } else {
+    if (enabled_)
+    {
+      ROS_WARN_STREAM("[" << ros::this_node::getName() << ":] Asking for enabling filter service, but the filter was "
+        "already enabled! Use param disabled_at_startup.");
+    }
+    else
+    {
       ROS_INFO_STREAM("[" << ros::this_node::getName() << ":] Enabling filter...");
       enabled_ = true;
     }

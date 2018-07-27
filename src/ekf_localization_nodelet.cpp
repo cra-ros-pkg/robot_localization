@@ -36,13 +36,15 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
+#include <memory>
+
 namespace RobotLocalization
 {
 
 class EkfNodelet : public nodelet::Nodelet
 {
 private:
-  std::auto_ptr<RosEkf> ekf;
+  std::unique_ptr<RosEkf> ekf;
 
 public:
   virtual void onInit()
@@ -52,7 +54,7 @@ public:
     ros::NodeHandle nh      = getNodeHandle();
     ros::NodeHandle nh_priv = getPrivateNodeHandle();
 
-    ekf.reset(new RosEkf(nh, nh_priv));
+    ekf = std::make_unique<RosEkf>(nh, nh_priv);
     ekf->initialize();
   }
 };

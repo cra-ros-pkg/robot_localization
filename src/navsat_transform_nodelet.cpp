@@ -36,13 +36,15 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
+#include <memory>
+
 namespace RobotLocalization
 {
 
 class NavSatTransformNodelet : public nodelet::Nodelet
 {
 private:
-  std::auto_ptr<RobotLocalization::NavSatTransform> trans;
+  std::unique_ptr<RobotLocalization::NavSatTransform> trans;
 
 public:
   virtual void onInit()
@@ -52,7 +54,7 @@ public:
     ros::NodeHandle nh      = getNodeHandle();
     ros::NodeHandle nh_priv = getPrivateNodeHandle();
 
-    trans.reset(new RobotLocalization::NavSatTransform(nh, nh_priv));
+    trans = std::make_unique<RobotLocalization::NavSatTransform>(nh, nh_priv);
   }
 };
 

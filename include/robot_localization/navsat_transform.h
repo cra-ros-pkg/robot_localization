@@ -126,12 +126,6 @@ class NavSatTransform
     //!
     void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
 
-    //! @brief Frame ID of the robot's body frame
-    //!
-    //! This is needed for obtaining transforms from the robot's body frame to the frames of sensors (IMU and GPS)
-    //!
-    std::string base_link_frame_id_;
-
     //! @brief Whether or not we broadcast the UTM transform
     //!
     bool broadcast_utm_transform_;
@@ -139,16 +133,6 @@ class NavSatTransform
     //! @brief Whether to broadcast the UTM transform as parent frame, default as child
     //!
     bool broadcast_utm_transform_as_parent_frame_;
-
-    //! @brief The frame_id of the GPS message (specifies mounting location)
-    //!
-    std::string gps_frame_id_;
-
-    //! @brief Timestamp of the latest good GPS message
-    //!
-    //! We assign this value to the timestamp of the odometry message that we output
-    //!
-    ros::Time gps_update_time_;
 
     //! @brief Whether or not we have new GPS data
     //!
@@ -168,32 +152,6 @@ class NavSatTransform
     //!
     bool has_transform_odom_;
 
-    //! @brief Covariance for most recent odometry data
-    //!
-    Eigen::MatrixXd latest_odom_covariance_;
-
-    //! @brief Covariance for most recent GPS/UTM data
-    //!
-    Eigen::MatrixXd latest_utm_covariance_;
-
-    //! @brief Latest GPS data, stored as UTM coords
-    //!
-    tf2::Transform latest_utm_pose_;
-
-    //! @brief Latest odometry pose data
-    //!
-    tf2::Transform latest_world_pose_;
-
-    //! @brief Parameter that specifies the magnetic declination for the robot's environment.
-    //!
-    double magnetic_declination_;
-
-    //! @brief Timestamp of the latest good odometry message
-    //!
-    //! We assign this value to the timestamp of the odometry message that we output
-    //!
-    ros::Time odom_update_time_;
-
     //! @brief Whether or not we have new odometry data
     //!
     //! If we're creating filtered GPS messages, then we only want to broadcast them when new odometry data arrives.
@@ -204,29 +162,9 @@ class NavSatTransform
     //!
     bool publish_gps_;
 
-    //! @brief Transform buffer for managing coordinate transforms
-    //!
-    tf2_ros::Buffer tf_buffer_;
-
-    //! @brief Transform listener for receiving transforms
-    //!
-    tf2_ros::TransformListener tf_listener_;
-
     //! @brief Whether or not we've computed a good heading
     //!
     bool transform_good_;
-
-    //! @brief Latest IMU orientation
-    //!
-    tf2::Quaternion transform_orientation_;
-
-    //! @brief Holds the UTM pose that is used to compute the transform
-    //!
-    tf2::Transform transform_utm_pose_;
-
-    //! @brief Latest IMU orientation
-    //!
-    tf2::Transform transform_world_pose_;
 
     //! @brief Whether we get our datum from the first GPS message or from the set_datum
     //! service/parameter
@@ -237,21 +175,36 @@ class NavSatTransform
     //!
     bool use_odometry_yaw_;
 
-    //! @brief Used for publishing the static world_frame->utm transform
+    //! @brief Whether or not to report 0 altitude
     //!
-    tf2_ros::StaticTransformBroadcaster utm_broadcaster_;
+    //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
+    //!
+    bool zero_altitude_;
+
+    //! @brief Parameter that specifies the magnetic declination for the robot's environment.
+    //!
+    double magnetic_declination_;
 
     //! @brief Stores the yaw we need to compute the transform
     //!
     double utm_odom_tf_yaw_;
 
-    //! @brief Holds the UTM->odom transform
+    //! @brief IMU's yaw offset
     //!
-    tf2::Transform utm_world_transform_;
+    //! Your IMU should read 0 when facing *magnetic* north. If it doesn't, this (parameterized) value gives the offset
+    //! (NOTE: if you have a magenetic declination, use the parameter setting for that).
+    //!
+    double yaw_offset_;
 
-    //! @brief Holds the odom->UTM transform for filtered GPS broadcast
+    //! @brief Frame ID of the robot's body frame
     //!
-    tf2::Transform utm_world_trans_inverse_;
+    //! This is needed for obtaining transforms from the robot's body frame to the frames of sensors (IMU and GPS)
+    //!
+    std::string base_link_frame_id_;
+
+    //! @brief The frame_id of the GPS message (specifies mounting location)
+    //!
+    std::string gps_frame_id_;
 
     //! @brief UTM zone as determined after transforming GPS message
     //!
@@ -263,46 +216,93 @@ class NavSatTransform
     //!
     std::string world_frame_id_;
 
-    //! @brief IMU's yaw offset
+    //! @brief Covariance for most recent odometry data
     //!
-    //! Your IMU should read 0 when facing *magnetic* north. If it doesn't, this (parameterized) value gives the offset
-    //! (NOTE: if you have a magenetic declination, use the parameter setting for that).
+    Eigen::MatrixXd latest_odom_covariance_;
+
+    //! @brief Covariance for most recent GPS/UTM data
     //!
-    double yaw_offset_;
+    Eigen::MatrixXd latest_utm_covariance_;
+
+    //! @brief Timestamp of the latest good GPS message
+    //!
+    //! We assign this value to the timestamp of the odometry message that we output
+    //!
+    ros::Time gps_update_time_;
+
+    //! @brief Timestamp of the latest good odometry message
+    //!
+    //! We assign this value to the timestamp of the odometry message that we output
+    //!
+    ros::Time odom_update_time_;
 
     //! @brief Parameter that specifies the how long we wait for a transform to become available.
     //!
     ros::Duration transform_timeout_;
 
-    //! @brief Whether or not to report 0 altitude
+    //! @brief timer calling periodicUpdate
     //!
-    //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
-    //!
-    bool zero_altitude_;
+    ros::Timer periodicUpdateTimer_;
 
-    //! @brief Subscribes to imu topic
+    //! @brief Latest IMU orientation
     //!
-    ros::Subscriber imu_sub_;
+    tf2::Quaternion transform_orientation_;
 
-    //! @brief Publisher for gps data
+    //! @brief Latest GPS data, stored as UTM coords
     //!
-    ros::Publisher gps_odom_pub_;
+    tf2::Transform latest_utm_pose_;
+
+    //! @brief Latest odometry pose data
+    //!
+    tf2::Transform latest_world_pose_;
+
+    //! @brief Holds the UTM pose that is used to compute the transform
+    //!
+    tf2::Transform transform_utm_pose_;
+
+    //! @brief Latest IMU orientation
+    //!
+    tf2::Transform transform_world_pose_;
+
+    //! @brief Holds the UTM->odom transform
+    //!
+    tf2::Transform utm_world_transform_;
+
+    //! @brief Holds the odom->UTM transform for filtered GPS broadcast
+    //!
+    tf2::Transform utm_world_trans_inverse_;
 
     //! @brief Publiser for filtered gps data
     //!
     ros::Publisher filtered_gps_pub_;
 
-    //! @brief Odometry subscriber
-    //!
-    ros::Subscriber odom_sub_;
-
     //! @brief GPS subscriber
     //!
     ros::Subscriber gps_sub_;
 
-    //! @brief timer calling periodicUpdate
+    //! @brief Subscribes to imu topic
     //!
-    ros::Timer periodicUpdateTimer_;
+    ros::Subscriber imu_sub_;
+
+    //! @brief Odometry subscriber
+    //!
+    ros::Subscriber odom_sub_;
+
+    //! @brief Publisher for gps data
+    //!
+    ros::Publisher gps_odom_pub_;
+
+    //! @brief Transform buffer for managing coordinate transforms
+    //!
+    tf2_ros::Buffer tf_buffer_;
+
+    //! @brief Transform listener for receiving transforms
+    //!
+    tf2_ros::TransformListener tf_listener_;
+
+    //! @brief Used for publishing the static world_frame->utm transform
+    //!
+    tf2_ros::StaticTransformBroadcaster utm_broadcaster_;
 };
 
 }  // namespace RobotLocalization

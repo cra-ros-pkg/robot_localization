@@ -63,7 +63,7 @@ public:
   //! The RosRobotLocalizationListener constructor initializes nodehandles, subscribers, a filter for synchronized
   //! listening to the topics it subscribes to, and an instance of the RobotLocalizationEstimator.
   //!
-  explicit RosRobotLocalizationListener();
+  RosRobotLocalizationListener();
 
   //! @brief Destructor
   //!

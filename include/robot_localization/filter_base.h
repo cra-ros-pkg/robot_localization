@@ -60,32 +60,32 @@ namespace RobotLocalization
 //!
 struct Measurement
 {
+  // The time stamp of the most recent control term (needed for lagged data)
+  double latestControlTime_;
+
+  // The Mahalanobis distance threshold in number of sigmas
+  double mahalanobisThresh_;
+
+  // The real-valued time, in seconds, since some epoch
+  // (presumably the start of execution, but any will do)
+  double time_;
+
   // The topic name for this measurement. Needed
   // for capturing previous state values for new
   // measurements.
   std::string topicName_;
-
-  // The measurement and its associated covariance
-  Eigen::VectorXd measurement_;
-  Eigen::MatrixXd covariance_;
 
   // This defines which variables within this measurement
   // actually get passed into the filter. std::vector<bool>
   // is generally frowned upon, so we use ints.
   std::vector<int> updateVector_;
 
-  // The real-valued time, in seconds, since some epoch
-  // (presumably the start of execution, but any will do)
-  double time_;
-
-  // The Mahalanobis distance threshold in number of sigmas
-  double mahalanobisThresh_;
-
   // The most recent control vector (needed for lagged data)
   Eigen::VectorXd latestControl_;
 
-  // The time stamp of the most recent control term (needed for lagged data)
-  double latestControlTime_;
+  // The measurement and its associated covariance
+  Eigen::VectorXd measurement_;
+  Eigen::MatrixXd covariance_;
 
   // We want earlier times to have greater priority
   bool operator()(const boost::shared_ptr<Measurement> &a, const boost::shared_ptr<Measurement> &b)
@@ -99,11 +99,10 @@ struct Measurement
   }
 
   Measurement() :
-    topicName_(""),
-    latestControl_(),
     latestControlTime_(0.0),
+    mahalanobisThresh_(std::numeric_limits<double>::max()),
     time_(0.0),
-    mahalanobisThresh_(std::numeric_limits<double>::max())
+    topicName_("")
   {
   }
 };
@@ -117,20 +116,20 @@ typedef boost::shared_ptr<Measurement> MeasurementPtr;
 //!
 struct FilterState
 {
-  // The filter state vector
-  Eigen::VectorXd state_;
-
-  // The filter error covariance matrix
-  Eigen::MatrixXd estimateErrorCovariance_;
-
-  // The most recent control vector
-  Eigen::VectorXd latestControl_;
-
   // The time stamp of the most recent measurement for the filter
   double lastMeasurementTime_;
 
   // The time stamp of the most recent control term
   double latestControlTime_;
+
+  // The most recent control vector
+  Eigen::VectorXd latestControl_;
+
+  // The filter state vector
+  Eigen::VectorXd state_;
+
+  // The filter error covariance matrix
+  Eigen::MatrixXd estimateErrorCovariance_;
 
   // We want the queue to be sorted from latest to earliest timestamps.
   bool operator()(const FilterState &a, const FilterState &b)
@@ -139,9 +138,6 @@ struct FilterState
   }
 
   FilterState() :
-    state_(),
-    estimateErrorCovariance_(),
-    latestControl_(),
     lastMeasurementTime_(0.0),
     latestControlTime_(0.0)
   {}
@@ -395,6 +391,45 @@ class FilterBase
     //!
     void prepareControl(const double referenceTime, const double predictionDelta);
 
+    //! @brief Whether or not we've received any measurements
+    //!
+    bool initialized_;
+
+    //! @brief Whether or not we apply the control term
+    //!
+    bool useControl_;
+
+    //! @brief If true, uses the robot's vehicle state and the static process noise covariance matrix to generate a
+    //! dynamic process noise covariance matrix
+    //!
+    bool useDynamicProcessNoiseCovariance_;
+
+    //! @brief Tracks the time the filter was last updated using a measurement.
+    //!
+    //! This value is used to monitor sensor readings with respect to the sensorTimeout_.
+    //! We also use it to compute the time delta values for our prediction step.
+    //!
+    double lastMeasurementTime_;
+
+    //! @brief The time of reception of the most recent control term
+    //!
+    double latestControlTime_;
+
+    //! @brief Timeout value, in seconds, after which a control is considered stale
+    //!
+    double controlTimeout_;
+
+    //! @brief The updates to the filter - both predict and correct - are driven
+    //! by measurements. If we get a gap in measurements for some reason, we want
+    //! the filter to continue estimating. When this gap occurs, as specified by
+    //! this timeout, we will continue to call predict() at the filter's frequency.
+    //!
+    double sensorTimeout_;
+
+    //! @brief Which control variables are being used (e.g., not every vehicle is controllable in Y or Z)
+    //!
+    std::vector<int> controlUpdateVector_;
+
     //! @brief Gains applied to acceleration derived from control term
     //!
     std::vector<double> accelerationGains_;
@@ -402,10 +437,6 @@ class FilterBase
     //! @brief Caps the acceleration we apply from control input
     //!
     std::vector<double> accelerationLimits_;
-
-    //! @brief Variable that gets updated every time we process a measurement and we have a valid control
-    //!
-    Eigen::VectorXd controlAcceleration_;
 
     //! @brief Gains applied to deceleration derived from control term
     //!
@@ -415,27 +446,28 @@ class FilterBase
     //!
     std::vector<double> decelerationLimits_;
 
+    //! @brief Variable that gets updated every time we process a measurement and we have a valid control
+    //!
+    Eigen::VectorXd controlAcceleration_;
+
     //! @brief Latest control term
     //!
     Eigen::VectorXd latestControl_;
 
-    //! @brief Which control variables are being used (e.g., not every vehicle is controllable in Y or Z)
+    //! @brief Holds the last predicted state of the filter
     //!
-    std::vector<int> controlUpdateVector_;
+    Eigen::VectorXd predictedState_;
 
-    //! @brief Timeout value, in seconds, after which a control is considered stale
+    //! @brief This is the robot's state vector, which is what we are trying to
+    //! filter. The values in this vector are what get reported by the node.
     //!
-    double controlTimeout_;
+    Eigen::VectorXd state_;
 
     //! @brief Covariance matrices can be incredibly unstable. We can
     //! add a small value to it at each iteration to help maintain its
     //! positive-definite property.
     //!
     Eigen::MatrixXd covarianceEpsilon_;
-
-    //! @brief Used for outputting debug messages
-    //!
-    std::ostream *debugStream_;
 
     //! @brief Gets updated when useDynamicProcessNoise_ is true
     //!
@@ -450,25 +482,6 @@ class FilterBase
     //!
     Eigen::MatrixXd identity_;
 
-    //! @brief Whether or not we've received any measurements
-    //!
-    bool initialized_;
-
-    //! @brief Tracks the time the filter was last updated using a measurement.
-    //!
-    //! This value is used to monitor sensor readings with respect to the sensorTimeout_.
-    //! We also use it to compute the time delta values for our prediction step.
-    //!
-    double lastMeasurementTime_;
-
-    //! @brief The time of reception of the most recent control term
-    //!
-    double latestControlTime_;
-
-    //! @brief Holds the last predicted state of the filter
-    //!
-    Eigen::VectorXd predictedState_;
-
     //! @brief As we move through the world, we follow a predict/update
     //! cycle. If one were to imagine a scenario where all we did was make
     //! predictions without correcting, the error in our position estimate
@@ -480,18 +493,6 @@ class FilterBase
     //! (times deltaT) to the state estimate covariance matrix.
     //!
     Eigen::MatrixXd processNoiseCovariance_;
-
-    //! @brief The updates to the filter - both predict and correct - are driven
-    //! by measurements. If we get a gap in measurements for some reason, we want
-    //! the filter to continue estimating. When this gap occurs, as specified by
-    //! this timeout, we will continue to call predict() at the filter's frequency.
-    //!
-    double sensorTimeout_;
-
-    //! @brief This is the robot's state vector, which is what we are trying to
-    //! filter. The values in this vector are what get reported by the node.
-    //!
-    Eigen::VectorXd state_;
 
     //! @brief The Kalman filter transfer function
     //!
@@ -518,14 +519,9 @@ class FilterBase
     //!
     Eigen::MatrixXd transferFunctionJacobian_;
 
-    //! @brief Whether or not we apply the control term
+    //! @brief Used for outputting debug messages
     //!
-    bool useControl_;
-
-    //! @brief If true, uses the robot's vehicle state and the static process noise covariance matrix to generate a
-    //! dynamic process noise covariance matrix
-    //!
-    bool useDynamicProcessNoiseCovariance_;
+    std::ostream *debugStream_;
 
   private:
     //! @brief Whether or not the filter is in debug mode

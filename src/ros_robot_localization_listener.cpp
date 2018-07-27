@@ -33,6 +33,7 @@
 #include "robot_localization/ros_robot_localization_listener.h"
 #include "robot_localization/ros_filter_utilities.h"
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -69,9 +70,9 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   odom_sub_(nh_, "odometry/filtered", 1),
   accel_sub_(nh_, "accel/filtered", 1),
   sync_(odom_sub_, accel_sub_, 10),
-  tf_listener_(tf_buffer_),
   base_frame_id_(""),
-  world_frame_id_("")
+  world_frame_id_(""),
+  tf_listener_(tf_buffer_)
 {
   int buffer_size;
   nh_p_.param("buffer_size", buffer_size, 10);
@@ -91,7 +92,8 @@ RosRobotLocalizationListener::RosRobotLocalizationListener():
   }
 
   // Load up the process noise covariance (from the launch file/parameter server)
-  // todo: this code is copied from ros_filter. In a refactor, this could be moved to a function in ros_filter_utilities
+  // TODO(reinzor): this code is copied from ros_filter. In a refactor, this could be moved to a function in
+  // ros_filter_utilities
   Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
   process_noise_covariance.setZero();
   XmlRpc::XmlRpcValue process_noise_covar_config;
@@ -373,10 +375,11 @@ bool RosRobotLocalizationListener::getState(const double time,
     geometry_msgs::TransformStamped world_requested_to_world_transform;
     try
     {
+      // TODO(reinzor): magic number
       world_requested_to_world_transform = tf_buffer_.lookupTransform(world_frame_id,
                                                                       world_frame_id_,
                                                                       ros::Time(time),
-                                                                      ros::Duration(0.1));  // TODO: magic number
+                                                                      ros::Duration(0.1));
 
       if ( findAncestor(tf_buffer_, world_frame_id, base_frame_id_) )
       {
@@ -407,11 +410,11 @@ bool RosRobotLocalizationListener::getState(const double time,
     base_to_target_transform = tf_buffer_.lookupTransform(base_frame_id_,
                                                           frame_id,
                                                           ros::Time(time),
-                                                          ros::Duration(0.1));  // TODO: magic number
+                                                          ros::Duration(0.1));  // TODO(reinzor): magic number
 
     // Check that frame_id is a child of the base frame. If it is not, it does not make sense to request its state.
     // Do this after tf lookup, so we know that there is a connection.
-    if ( ! findAncestor(tf_buffer_, frame_id, base_frame_id_) )
+    if ( !findAncestor(tf_buffer_, frame_id, base_frame_id_) )
     {
       ROS_ERROR_STREAM("You are trying to get the state of " << frame_id << ", but this frame is not a child of the "
                                                                             "base frame: " << base_frame_id_ << ".");
@@ -493,7 +496,8 @@ bool RosRobotLocalizationListener::getState(const double time,
   rot_6d.setIdentity();
 
   rot_6d.block<POSITION_SIZE, POSITION_SIZE>(POSITION_OFFSET, POSITION_OFFSET) = target_pose_base.rotation();
-  rot_6d.block<ORIENTATION_SIZE, ORIENTATION_SIZE>(ORIENTATION_OFFSET, ORIENTATION_OFFSET) = target_pose_base.rotation();
+  rot_6d.block<ORIENTATION_SIZE, ORIENTATION_SIZE>(ORIENTATION_OFFSET, ORIENTATION_OFFSET) =
+    target_pose_base.rotation();
 
   // Rotate the covariance
   covariance.block<POSE_SIZE, POSE_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =

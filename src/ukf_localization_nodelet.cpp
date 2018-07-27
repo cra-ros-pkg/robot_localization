@@ -35,6 +35,8 @@
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+
+#include <memory>
 #include <vector>
 
 namespace RobotLocalization
@@ -43,7 +45,7 @@ namespace RobotLocalization
 class UkfNodelet : public nodelet::Nodelet
 {
 private:
-  std::auto_ptr<RosUkf> ukf;
+  std::unique_ptr<RosUkf> ukf;
 
 public:
   virtual void onInit()
@@ -59,7 +61,7 @@ public:
     nh_priv.param("kappa", args[1], 0.0);
     nh_priv.param("beta",  args[2], 2.0);
 
-    ukf.reset(new RosUkf(nh, nh_priv, args));
+    ukf = std::make_unique<RosUkf>(nh, nh_priv, args);
     ukf->initialize();
   }
 };
