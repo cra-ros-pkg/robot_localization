@@ -1,0 +1,3 @@
+[submodule "ros-sensor-fusion-tutorial"]
+	path = ros-sensor-fusion-tutorial
+	url = https://github.com/methylDragon/ros-sensor-fusion-tutorial.git
