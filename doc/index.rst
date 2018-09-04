@@ -15,6 +15,7 @@ robot_localization wiki
    migrating_from_robot_pose_ekf
    integrating_gps
    CHANGELOG
+   user_contributed_tutorials
 
 Features
 ========
