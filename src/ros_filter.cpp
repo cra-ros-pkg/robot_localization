@@ -150,12 +150,7 @@ namespace RobotLocalization
     previousMeasurements_.clear();
     previousMeasurementCovariances_.clear();
 
-    // Clear the measurement queue.
-    // This prevents us from immediately undoing our reset.
-    while (!measurementQueue_.empty() && ros::ok())
-    {
-      measurementQueue_.pop();
-    }
+    clearMeasurementQueue();
 
     filterStateHistory_.clear();
     measurementHistory_.clear();
@@ -1829,17 +1824,13 @@ namespace RobotLocalization
 
     if (toggled_on_)
     {
-      // publish accel TODO
-
-      // publish tf TODO
-
-      // publish position TODO
-
-      
+      // Now we'll integrate any measurements we've received if requested
+      integrateMeasurements(curTime);
     }
-
-    // Now we'll integrate any measurements we've received
-    integrateMeasurements(curTime);
+    else
+    {
+      clearMeasurementQueue();
+    }
 
     // Get latest state and publish it
     nav_msgs::Odometry filteredPosition;
@@ -1971,12 +1962,7 @@ namespace RobotLocalization
     previousMeasurements_.clear();
     previousMeasurementCovariances_.clear();
 
-    // Clear out the measurement queue so that we don't immediately undo our
-    // reset.
-    while (!measurementQueue_.empty() && ros::ok())
-    {
-      measurementQueue_.pop();
-    }
+    clearMeasurementQueue();
 
     filterStateHistory_.clear();
     measurementHistory_.clear();
@@ -3151,6 +3137,16 @@ namespace RobotLocalization
     RF_DEBUG("\nPopped " << poppedMeasurements << " measurements and " <<
              poppedStates << " states from their respective queues." <<
              "\n---- /RosFilter::clearExpiredHistory ----\n");
+  }
+
+  template<typename T>
+  void RosFilter<T>::clearMeasurementQueue()
+  {
+    while (!measurementQueue_.empty() && ros::ok())
+    {
+      measurementQueue_.pop();
+    }
+    return;
   }
 }  // namespace RobotLocalization
 
