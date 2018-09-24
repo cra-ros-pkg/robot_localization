@@ -337,6 +337,10 @@ protected:
   //!
   void clearExpiredHistory(const rclcpp::Time cutoff_time);
 
+  //! @brief Clears measurement queue
+  //!
+  void clearMeasurementQueue();
+
   //! @brief Adds a diagnostic message to the accumulating map and updates the
   //! error level
   //! @param[in] error_level - The error level of the diagnostic

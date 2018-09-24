@@ -121,11 +121,7 @@ void RosFilter<T>::reset()
   previous_measurements_.clear();
   previous_measurement_covariances_.clear();
 
-  // Clear the measurement queue.
-  // This prevents us from immediately undoing our reset.
-  while (!measurement_queue_.empty() && rclcpp::ok()) {
-    measurement_queue_.pop();
-  }
+  clearMeasurementQueue();
 
   filter_state_history_.clear();
   measurement_history_.clear();
@@ -1836,18 +1832,13 @@ void RosFilter<T>::periodicUpdate()
 {
   rclcpp::Time cur_time = this->now();
 
-  if (toggled_on_)
-  {
-    // publish accel TODO
-
-    // publish tf TODO
-
-    // publish position TODO
-
+  if (toggled_on_) {
+    // Now we'll integrate any measurements we've received
+    integrateMeasurements(cur_time);
+  } else {
+    clearMeasurementQueue();
   }
 
-  // Now we'll integrate any measurements we've received
-  integrateMeasurements(cur_time);
 
   // Get latest state and publish it
   nav_msgs::msg::Odometry filtered_position;
@@ -2003,11 +1994,7 @@ void RosFilter<T>::setPoseCallback(
   previous_measurements_.clear();
   previous_measurement_covariances_.clear();
 
-  // Clear out the measurement queue so that we don't immediately undo our
-  // reset.
-  while (!measurement_queue_.empty() && rclcpp::ok()) {
-    measurement_queue_.pop();
-  }
+  clearMeasurementQueue();
 
   filter_state_history_.clear();
   measurement_history_.clear();
@@ -3153,6 +3140,17 @@ void RosFilter<T>::clearExpiredHistory(const rclcpp::Time cutoff_time)
     popped_states <<
     " states from their respective queues." <<
     "\n---- /RosFilter<T>::clearExpiredHistory ----\n");
+}
+
+template<typename T>
+void RosFilter<T>::clearMeasurementQueue()
+{
+  // Clear the measurement queue.
+  // This prevents us from immediately undoing our reset.
+  while (!measurement_queue_.empty() && rclcpp::ok()) {
+    measurement_queue_.pop();
+  }
+  return;
 }
 }  // namespace robot_localization
 
