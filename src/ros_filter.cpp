@@ -151,15 +151,14 @@ void RosFilter<T>::toggleFilterProcessingCallback(
   const std::shared_ptr<
     robot_localization::srv::ToggleFilterProcessing::Response> resp)
 {
-  if (req->on == toggled_on_)
-  {
+  if (req->on == toggled_on_) {
     RCLCPP_WARN(this->get_logger(),
       "Service was called to toggle filter processing but state was already as "
       "requested.");
     resp->status = false;
-  }
-  else
-  {
+  } else {
+    RCLCPP_INFO(this->get_logger(),
+      "Toggling filter measurement filtering to %s.", req->on ? "On" : "Off");
     toggled_on_ = req->on;
     resp->status = true;
   }
@@ -1838,6 +1837,8 @@ void RosFilter<T>::periodicUpdate()
     // Now we'll integrate any measurements we've received
     integrateMeasurements(cur_time);
   } else {
+    // Or clear out measurements since we're not currently processing new
+    // entries
     clearMeasurementQueue();
   }
 
@@ -3152,7 +3153,6 @@ void RosFilter<T>::clearMeasurementQueue()
   while (!measurement_queue_.empty() && rclcpp::ok()) {
     measurement_queue_.pop();
   }
-  return;
 }
 }  // namespace robot_localization
 
