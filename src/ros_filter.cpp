@@ -55,6 +55,7 @@ namespace RobotLocalization
       publishTransform_(true),
       resetOnTimeJump_(false),
       smoothLaggedData_(false),
+      toggled_on_(true),
       twoDMode_(false),
       useControl_(false),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
@@ -174,6 +175,23 @@ namespace RobotLocalization
 
     // clear all waiting callbacks
     ros::getGlobalCallbackQueue()->clear();
+  }
+
+  template<typename T>
+  bool RosFilter<T>::toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request& req,
+                                                    robot_localization::ToggleFilterProcessing::Response& resp)
+  {
+    if (req.on == toggled_on_)
+    {
+      ROS_WARN_STREAM("Service was called to toggle filter processing but state was already as requested.");
+      resp.status = false;
+    }
+    else
+    {
+      toggled_on_ = req.on;
+      resp.status = true;
+    }
+    return true;
   }
 
   // @todo: Replace with AccelWithCovarianceStamped
@@ -983,6 +1001,9 @@ namespace RobotLocalization
 
     // Create a service for manually enabling the filter
     enableFilterSrv_ = nhLocal_.advertiseService("enable", &RosFilter<T>::enableFilterSrvCallback, this);
+
+    // Create a service for toggling processing new measurements while still publishing
+    toggleFilterProcessingSrv_ = nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
 
     // Init the last last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
@@ -1805,6 +1826,17 @@ namespace RobotLocalization
     }
 
     ros::Time curTime = ros::Time::now();
+
+    if (toggled_on_)
+    {
+      // publish accel TODO
+
+      // publish tf TODO
+
+      // publish position TODO
+
+      
+    }
 
     // Now we'll integrate any measurements we've received
     integrateMeasurements(curTime);

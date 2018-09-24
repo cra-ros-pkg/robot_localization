@@ -50,6 +50,7 @@ add_service_files(
     GetState.srv
     SetDatum.srv
     SetPose.srv
+    ToggleFilterProcessing.srv
 )
 
 generate_messages(

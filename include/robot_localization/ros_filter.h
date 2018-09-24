@@ -38,6 +38,7 @@
 #include "robot_localization/filter_base.h"
 
 #include <robot_localization/SetPose.h>
+#include <robot_localization/ToggleFilterProcessing.h>
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -125,6 +126,13 @@ template<class T> class RosFilter
     //! @brief Resets the filter to its initial state
     //!
     void reset();
+
+    //! @brief Service callback to toggle processing measurements for a standby mode but continuing to publish
+    //! @param[in] request - The state requested, on (True) or off (False)
+    //! @param[out] response - status if upon success
+    //! @return boolean true if successful, false if not
+    bool toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request&,
+                                        robot_localization::ToggleFilterProcessing::Response&);
 
     //! @brief Callback method for receiving all acceleration (IMU) messages
     //! @param[in] msg - The ROS IMU message to take in.
@@ -427,6 +435,9 @@ template<class T> class RosFilter
     //!
     bool publishTransform_;
 
+    //! @brief Whether the filter should process new measurements or not.
+    bool toggled_on_;
+
     //! @brief Whether to reset the filters when backwards jump in time is detected
     //!
     //! This is usually the case when logs are being used and a jump in the logi
@@ -597,6 +608,11 @@ template<class T> class RosFilter
     //! @brief Parameter that specifies the how long we wait for a transform to become available.
     //!
     ros::Duration tfTimeout_;
+
+    //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
+    //! Uses a robot_localization ToggleFilterProcessing service.
+    //!
+    ros::ServiceServer toggleFilterProcessingSrv_;
 
     //! @brief timer calling periodicUpdate
     //!
