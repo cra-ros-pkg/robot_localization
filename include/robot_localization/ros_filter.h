@@ -298,6 +298,10 @@ template<class T> class RosFilter
     //!
     void clearExpiredHistory(const double cutoffTime);
 
+    //! @brief Clears measurement queue
+    //!
+    void clearMeasurementQueue();
+
     //! @brief Adds a diagnostic message to the accumulating map and updates the error level
     //! @param[in] errLevel - The error level of the diagnostic
     //! @param[in] topicAndClass - The sensor topic (if relevant) and class of diagnostic
