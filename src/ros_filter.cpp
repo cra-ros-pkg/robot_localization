@@ -172,6 +172,7 @@ namespace RobotLocalization
     }
     else
     {
+      ROS_INFO("Toggling filter measurement filtering to %s.", req.on ? "On" : "Off");
       toggled_on_ = req.on;
       resp.status = true;
     }
@@ -1818,6 +1819,7 @@ namespace RobotLocalization
     }
     else
     {
+      // or clear out measurements since we're not currently processing new entries
       clearMeasurementQueue();
     }
 
