@@ -5,10 +5,6 @@ if(NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
 find_package(ament_cmake REQUIRED)
 find_package(rcl REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -29,6 +25,7 @@ set(library_name rl_lib)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
+  "srv/ToggleFilterProcessing.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs

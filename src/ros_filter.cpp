@@ -61,6 +61,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
+  toggled_on_(true),
   smooth_lagged_data_(false),
   two_d_mode_(false),
   use_control_(false),
@@ -144,6 +145,26 @@ void RosFilter<T>::reset()
 
   // clear all waiting callbacks
   // ros::getGlobalCallbackQueue()->clear();
+}
+
+template<typename T>
+void RosFilter<T>::toggleFilterProcessingCallback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<ToggleFilterProcessing::Request> req,
+  const std::shared_ptr<ToggleFilterProcessing::Response> resp);
+{
+  if (req.on == toggled_on_)
+  {
+    ROS_WARN_STREAM("Service was called to toggle filter processing but state "
+      "was already as requested.");
+    resp.status = false;
+  }
+  else
+  {
+    toggled_on_ = req.on;
+    resp.status = true;
+  }
+  return true;
 }
 
 // @todo: Replace with AccelWithCovarianceStamped
@@ -959,6 +980,13 @@ void RosFilter<T>::loadParams()
   set_pose_service_ =
     this->create_service<robot_localization::srv::SetPose>(
     "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
+    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  // Create a service for toggling processing new measurements while still
+  // publishing
+  toggle_filter_processing_srv_ =
+    this->create_service<robot_localization::srv::ToggleFilterProcessing>(
+    "toggle", std::bind(&RosFilter<T>::toggleFilterProcessingCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
@@ -1807,6 +1835,16 @@ template<typename T>
 void RosFilter<T>::periodicUpdate()
 {
   rclcpp::Time cur_time = this->now();
+
+  if (toggled_on_)
+  {
+    // publish accel TODO
+
+    // publish tf TODO
+
+    // publish position TODO
+
+  }
 
   // Now we'll integrate any measurements we've received
   integrateMeasurements(cur_time);

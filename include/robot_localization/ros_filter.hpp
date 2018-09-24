@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
 #include <robot_localization/srv/set_pose.hpp>
+#include <robot_localization/srv/toggle_filter_processing.hpp>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -114,6 +115,17 @@ public:
   //! @brief Resets the filter to its initial state
   //!
   void reset();
+
+  //! @brief Service callback to toggle processing measurements for a standby
+  //! mode but continuing to publish
+  //! @param[in] request - The state requested, on (True) or off (False)
+  //! @param[out] response - status if upon success
+  //! @return boolean true if successful, false if not
+  //!
+  void toggleFilterProcessingCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<ToggleFilterProcessing::Request> req,
+    const std::shared_ptr<ToggleFilterProcessing::Response> resp);
 
   //! @brief Callback method for receiving all acceleration (IMU) messages
   //! @param[in] msg - The ROS IMU message to take in.
@@ -459,6 +471,10 @@ protected:
   //!
   bool publish_transform_;
 
+  //! @brief Whether the filter should process new measurements or not.
+  //!
+  bool toggled_on_;
+
   //! @brief Whether to reset the filters when backwards jump in time is
   //! detected
   //!
@@ -659,6 +675,13 @@ protected:
   //! transform
   //!
   rclcpp::Duration tf_time_offset_;
+
+  //! @brief Service that allows another node to toggle on/off filter
+  //! processing while still publishing.
+  //! Uses a robot_localization ToggleFilterProcessing service.
+  //!
+  rclcpp::Service<ToggleFilterProcessing>::SharedPtr
+    toggle_filter_processing_srv_;
 
   //! @brief Subscribes to the control input topic
   //!
