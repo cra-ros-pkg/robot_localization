@@ -69,7 +69,7 @@ namespace RobotLocalization
       smoothLaggedData_(false),
       disabledAtStartup_(false),
       enabled_(false),
-      toggled_on_(true)
+      toggledOn_(true)
   {
     stateVariableNames_.push_back("X");
     stateVariableNames_.push_back("Y");
@@ -165,7 +165,7 @@ namespace RobotLocalization
   bool RosFilter<T>::toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request& req,
                                                     robot_localization::ToggleFilterProcessing::Response& resp)
   {
-    if (req.on == toggled_on_)
+    if (req.on == toggledOn_)
     {
       ROS_WARN_STREAM("Service was called to toggle filter processing but state was already as requested.");
       resp.status = false;
@@ -173,7 +173,7 @@ namespace RobotLocalization
     else
     {
       ROS_INFO("Toggling filter measurement filtering to %s.", req.on ? "On" : "Off");
-      toggled_on_ = req.on;
+      toggledOn_ = req.on;
       resp.status = true;
     }
     return true;
@@ -1812,7 +1812,7 @@ namespace RobotLocalization
 
     ros::Time curTime = ros::Time::now();
 
-    if (toggled_on_)
+    if (toggledOn_)
     {
       // Now we'll integrate any measurements we've received if requested
       integrateMeasurements(curTime);

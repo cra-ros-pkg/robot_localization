@@ -633,8 +633,8 @@ template<class T> class RosFilter
     //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
     bool enabled_;
 
-    //! $brief Whether the filter should process new measurements or not.
-    bool toggled_on_;
+    //! @brief Whether the filter should process new measurements or not.
+    bool toggledOn_;
 
     //! @brief Message that contains our latest transform (i.e., state)
     //!
