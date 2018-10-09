@@ -477,10 +477,6 @@ protected:
   //!
   bool publish_transform_;
 
-  //! @brief Whether the filter should process new measurements or not.
-  //!
-  bool toggled_on_;
-
   //! @brief Whether to reset the filters when backwards jump in time is
   //! detected
   //!
@@ -492,6 +488,10 @@ protected:
   //! @brief Whether or not we use smoothing
   //!
   bool smooth_lagged_data_;
+
+  //! @brief Whether the filter should process new measurements or not.
+  //!
+  bool toggled_on_;
 
   //! @brief Whether or not we're in 2D mode
   //!

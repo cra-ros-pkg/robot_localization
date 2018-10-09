@@ -61,8 +61,9 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
-  toggled_on_(true),
+  reset_on_time_jump_(false),
   smooth_lagged_data_(false),
+  toggled_on_(true),
   two_d_mode_(false),
   use_control_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
@@ -1837,13 +1838,13 @@ void RosFilter<T>::periodicUpdate()
     // Now we'll integrate any measurements we've received
     integrateMeasurements(cur_time);
   } else {
-    // Or clear out measurements since we're not currently processing new
-    // entries
+    // Clear out measurements since we're not currently processing new entries
     clearMeasurementQueue();
 
-    // Reset last measurement time so we don't get a large delta on
-    // reinitialization
-    filter_.setLastMeasurementTime(this->now());
+    // Reset last measurement time so we don't get a large time delta on toggle
+    if (filter_.getInitializedStatus()) {
+      filter_.setLastMeasurementTime(this->now());
+    }
   }
 
   // Get latest state and publish it
