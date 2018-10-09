@@ -55,7 +55,7 @@ namespace RobotLocalization
       publishTransform_(true),
       resetOnTimeJump_(false),
       smoothLaggedData_(false),
-      toggled_on_(true),
+      toggledOn_(true),
       twoDMode_(false),
       useControl_(false),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
@@ -176,7 +176,7 @@ namespace RobotLocalization
   bool RosFilter<T>::toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request& req,
                                                     robot_localization::ToggleFilterProcessing::Response& resp)
   {
-    if (req.on == toggled_on_)
+    if (req.on == toggledOn_)
     {
       ROS_WARN_STREAM("Service was called to toggle filter processing but state was already as requested.");
       resp.status = false;
@@ -184,7 +184,7 @@ namespace RobotLocalization
     else
     {
       ROS_INFO("Toggling filter measurement filtering to %s.", req.on ? "On" : "Off");
-      toggled_on_ = req.on;
+      toggledOn_ = req.on;
       resp.status = true;
     }
     return true;

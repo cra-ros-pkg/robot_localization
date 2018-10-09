@@ -440,7 +440,7 @@ template<class T> class RosFilter
     bool publishTransform_;
 
     //! @brief Whether the filter should process new measurements or not.
-    bool toggled_on_;
+    bool toggledOn_;
 
     //! @brief Whether to reset the filters when backwards jump in time is detected
     //!
