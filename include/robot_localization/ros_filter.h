@@ -439,9 +439,6 @@ template<class T> class RosFilter
     //!
     bool publishTransform_;
 
-    //! @brief Whether the filter should process new measurements or not.
-    bool toggledOn_;
-
     //! @brief Whether to reset the filters when backwards jump in time is detected
     //!
     //! This is usually the case when logs are being used and a jump in the logi
@@ -452,6 +449,9 @@ template<class T> class RosFilter
     //! @brief Whether or not we use smoothing
     //!
     bool smoothLaggedData_;
+
+    //! @brief Whether the filter should process new measurements or not.
+    bool toggledOn_;
 
     //! @brief Whether or not we're in 2D mode
     //!
