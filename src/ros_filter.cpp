@@ -986,7 +986,7 @@ void RosFilter<T>::loadParams()
     "toggle", std::bind(&RosFilter<T>::toggleFilterProcessingCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-  // Init the last last measurement time so we don't get a huge initial delta
+  // Init the last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
 
   // Now pull in each topic to which we want to subscribe.
@@ -1840,8 +1840,11 @@ void RosFilter<T>::periodicUpdate()
     // Or clear out measurements since we're not currently processing new
     // entries
     clearMeasurementQueue();
-  }
 
+    // Reset last measurement time so we don't get a large delta on
+    // reinitialization
+    filter_.setLastMeasurementTime(this->now());
+  }
 
   // Get latest state and publish it
   nav_msgs::msg::Odometry filtered_position;
