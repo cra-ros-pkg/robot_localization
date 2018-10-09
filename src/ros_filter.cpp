@@ -955,7 +955,7 @@ namespace RobotLocalization
     // Create a service for toggling processing new measurements while still publishing
     toggleFilterProcessingSrv_ = nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
 
-    // Init the last last measurement time so we don't get a huge initial delta
+    // Init the last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
 
     // Now pull in each topic to which we want to subscribe.
@@ -1832,6 +1832,9 @@ namespace RobotLocalization
       {
         // or clear out measurements since we're not currently processing new entries
         clearMeasurementQueue();
+
+        // Reset last measurement time so we don't get a large delta on reinitialization
+        filter_.setLastMeasurementTime(ros::Time::now().toSec());
       }
 
       // Get latest state and publish it
