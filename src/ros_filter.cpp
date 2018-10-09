@@ -1830,11 +1830,14 @@ namespace RobotLocalization
       }
       else
       {
-        // or clear out measurements since we're not currently processing new entries
+        // clear out measurements since we're not currently processing new entries
         clearMeasurementQueue();
 
-        // Reset last measurement time so we don't get a large delta on reinitialization
-        filter_.setLastMeasurementTime(ros::Time::now().toSec());
+        // Reset last measurement time so we don't get a large time delta on toggle on
+        if (filter_.getInitializedStatus())
+        {
+          filter_.setLastMeasurementTime(ros::Time::now().toSec());
+        }
       }
 
       // Get latest state and publish it
