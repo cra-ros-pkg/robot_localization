@@ -589,7 +589,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         //   "Measurement time is " << std::setprecision(20) <<
         //   first_measurement_time <<
         //   ", current time is " << current_time <<
-        //   ", history length is " << history_length_);
+        //   ", history length is " << history_length_ << ".");
         restored_measurement_count = 0;
       }
 
@@ -3027,7 +3027,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   RF_DEBUG("\nRequested time was " << std::setprecision(20) <<
     filter_utilities::toSec(time) << "\n")
 
-  int history_size = filter_state_history_.size();
+  size_t history_size = filter_state_history_.size();
 
   // Walk back through the queue until we reach a filter state whose time stamp
   // is less than or equal to the requested time. Since every saved state after
@@ -3082,7 +3082,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
     while (!measurement_history_.empty() &&
       measurement_history_.back()->time_ > time)
     {
-      // Don't need to save measurements that predate our earliest state time
+      // Don't need to restore measurements that predate our earliest state time
       if (state->last_measurement_time_ <= measurement_history_.back()->time_) {
         measurement_queue_.push(measurement_history_.back());
         restored_measurements++;
