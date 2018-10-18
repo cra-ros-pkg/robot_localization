@@ -554,7 +554,7 @@ namespace RobotLocalization
           ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Received old measurement for topic " <<
             firstMeasurementTopic << ", but history interval is insufficiently sized. Measurement time is " <<
             std::setprecision(20) << firstMeasurementTime << ", current time is " << currentTime.toSec() <<
-            ", history length is " << historyLength_);
+            ", history length is " << historyLength_ << ".");
           restoredMeasurementCount = 0;
         }
 
@@ -3065,7 +3065,7 @@ namespace RobotLocalization
     RF_DEBUG("\n----- RosFilter::revertTo -----\n");
     RF_DEBUG("\nRequested time was " << std::setprecision(20) << time << "\n")
 
-    int history_size = filterStateHistory_.size();
+    size_t history_size = filterStateHistory_.size();
 
     // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the
     // requested time. Since every saved state after that time will be overwritten/corrected, we can pop from
@@ -3113,7 +3113,7 @@ namespace RobotLocalization
       int restored_measurements = 0;
       while (!measurementHistory_.empty() && measurementHistory_.back()->time_ > time)
       {
-        // Don't need to save measurements that predate our earliest state time
+        // Don't need to restore measurements that predate our earliest state time
         if (state->lastMeasurementTime_ <= measurementHistory_.back()->time_)
         {
           measurementQueue_.push(measurementHistory_.back());
