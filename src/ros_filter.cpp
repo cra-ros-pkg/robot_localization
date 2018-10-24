@@ -548,12 +548,13 @@ namespace RobotLocalization
         int originalCount = static_cast<int>(measurementQueue_.size());
         const double firstMeasurementTime =  firstMeasurement->time_;
         const std::string firstMeasurementTopic =  firstMeasurement->topicName_;
-        if (!revertTo(firstMeasurement->time_ - 1e-9))  // revertTo may invalidate firstMeasurement
+        if (!revertTo(firstMeasurementTime - 1e-9))  // revertTo may invalidate firstMeasurement
         {
           RF_DEBUG("ERROR: history interval is too small to revert to time " << firstMeasurementTime << "\n");
           ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Received old measurement for topic " <<
-              firstMeasurementTopic << ", but history interval is insufficiently sized to revert state and "
-            "measurement queue.");
+            firstMeasurementTopic << ", but history interval is insufficiently sized. Measurement time is " <<
+            std::setprecision(20) << firstMeasurementTime << ", current time is " << currentTime.toSec() <<
+            ", history length is " << historyLength_ << ".");
           restoredMeasurementCount = 0;
         }
 
@@ -1986,6 +1987,8 @@ namespace RobotLocalization
   {
     RF_DEBUG("------ RosFilter::setPoseCallback ------\nPose message:\n" << *msg);
 
+    ROS_INFO_STREAM("Received set_pose request with value\n" << *msg);
+
     std::string topicName("setPose");
 
     // Get rid of any initial poses (pretend we've never had a measurement)
@@ -2023,10 +2026,6 @@ namespace RobotLocalization
     filter_.setEstimateErrorCovariance(measurementCovariance);
 
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
-
-    // This method can apparently cancel all callbacks, and may stop the executing of the very callback that we're
-    // currently in. Therefore, nothing of consequence should come after it.
-    ros::getGlobalCallbackQueue()->clear();
 
     RF_DEBUG("\n------ /RosFilter::setPoseCallback ------\n");
   }
@@ -3066,6 +3065,8 @@ namespace RobotLocalization
     RF_DEBUG("\n----- RosFilter::revertTo -----\n");
     RF_DEBUG("\nRequested time was " << std::setprecision(20) << time << "\n")
 
+    size_t history_size = filterStateHistory_.size();
+
     // Walk back through the queue until we reach a filter state whose time stamp is less than or equal to the
     // requested time. Since every saved state after that time will be overwritten/corrected, we can pop from
     // the queue. If the history is insufficiently short, we just take the oldest state we have.
@@ -3088,14 +3089,17 @@ namespace RobotLocalization
     {
       RF_DEBUG("Insufficient history to revert to time " << time << "\n");
 
-      if (lastHistoryState.get() != NULL)
+      if (lastHistoryState)
       {
         RF_DEBUG("Will revert to oldest state at " << lastHistoryState->latestControlTime_ << ".\n");
+        ROS_WARN_STREAM_DELAYED_THROTTLE(historyLength_, "Could not revert to state with time " <<
+          std::setprecision(20) << time << ". Instead reverted to state with time " <<
+          lastHistoryState->lastMeasurementTime_ << ". History size was " << history_size);
       }
     }
 
     // If we have a valid reversion state, revert
-    if (lastHistoryState.get() != NULL)
+    if (lastHistoryState)
     {
       // Reset filter to the latest state from the queue.
       const FilterStatePtr &state = lastHistoryState;
@@ -3104,18 +3108,23 @@ namespace RobotLocalization
       filter_.setLastMeasurementTime(state->lastMeasurementTime_);
 
       RF_DEBUG("Reverted to state with time " << std::setprecision(20) << state->lastMeasurementTime_ << "\n");
-    }
 
-    // Repeat for measurements, but push every measurement onto the measurement queue as we go
-    int restored_measurements = 0;
-    while (!measurementHistory_.empty() && measurementHistory_.back()->time_ > time)
-    {
-      measurementQueue_.push(measurementHistory_.back());
-      measurementHistory_.pop_back();
-      restored_measurements++;
-    }
+      // Repeat for measurements, but push every measurement onto the measurement queue as we go
+      int restored_measurements = 0;
+      while (!measurementHistory_.empty() && measurementHistory_.back()->time_ > time)
+      {
+        // Don't need to restore measurements that predate our earliest state time
+        if (state->lastMeasurementTime_ <= measurementHistory_.back()->time_)
+        {
+          measurementQueue_.push(measurementHistory_.back());
+          restored_measurements++;
+        }
 
-    RF_DEBUG("Restored " << restored_measurements << " to measurement queue.\n");
+        measurementHistory_.pop_back();
+      }
+
+      RF_DEBUG("Restored " << restored_measurements << " to measurement queue.\n");
+    }
 
     RF_DEBUG("\n----- /RosFilter::revertTo\n");
 
