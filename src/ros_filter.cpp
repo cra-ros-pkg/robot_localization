@@ -68,7 +68,8 @@ namespace RobotLocalization
       useControl_(false),
       smoothLaggedData_(false),
       disabledAtStartup_(false),
-      enabled_(false)
+      enabled_(false),
+      toggledOn_(true)
   {
     stateVariableNames_.push_back("X");
     stateVariableNames_.push_back("Y");
@@ -103,12 +104,7 @@ namespace RobotLocalization
     previousMeasurements_.clear();
     previousMeasurementCovariances_.clear();
 
-    // Clear the measurement queue.
-    // This prevents us from immediately undoing our reset.
-    while (!measurementQueue_.empty() && ros::ok())
-    {
-      measurementQueue_.pop();
-    }
+    clearMeasurementQueue();
 
     filterStateHistory_.clear();
     measurementHistory_.clear();
@@ -128,6 +124,24 @@ namespace RobotLocalization
 
     // clear all waiting callbacks
     ros::getGlobalCallbackQueue()->clear();
+  }
+
+  template<typename T>
+  bool RosFilter<T>::toggleFilterProcessingCallback(robot_localization::ToggleFilterProcessing::Request& req,
+                                                    robot_localization::ToggleFilterProcessing::Response& resp)
+  {
+    if (req.on == toggledOn_)
+    {
+      ROS_WARN_STREAM("Service was called to toggle filter processing but state was already as requested.");
+      resp.status = false;
+    }
+    else
+    {
+      ROS_INFO("Toggling filter measurement filtering to %s.", req.on ? "On" : "Off");
+      toggledOn_ = req.on;
+      resp.status = true;
+    }
+    return true;
   }
 
   // @todo: Replace with AccelWithCovarianceStamped
@@ -938,7 +952,10 @@ namespace RobotLocalization
     // Create a service for manually enabling the filter
     enableFilterSrv_ = nhLocal_.advertiseService("enable", &RosFilter<T>::enableFilterSrvCallback, this);
 
-    // Init the last last measurement time so we don't get a huge initial delta
+    // Create a service for toggling processing new measurements while still publishing
+    toggleFilterProcessingSrv_ = nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
+
+    // Init the last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
 
     // Now pull in each topic to which we want to subscribe.
@@ -1806,8 +1823,22 @@ namespace RobotLocalization
       ros::spinOnce();
       curTime = ros::Time::now();
 
-      // Now we'll integrate any measurements we've received
-      integrateMeasurements(curTime);
+      if (toggledOn_)
+      {
+        // Now we'll integrate any measurements we've received if requested
+        integrateMeasurements(curTime);
+      }
+      else
+      {
+        // clear out measurements since we're not currently processing new entries
+        clearMeasurementQueue();
+
+        // Reset last measurement time so we don't get a large time delta on toggle on
+        if (filter_.getInitializedStatus())
+        {
+          filter_.setLastMeasurementTime(ros::Time::now().toSec());
+        }
+      }
 
       // Get latest state and publish it
       nav_msgs::Odometry filteredPosition;
@@ -1962,12 +1993,7 @@ namespace RobotLocalization
     previousMeasurements_.clear();
     previousMeasurementCovariances_.clear();
 
-    // Clear out the measurement queue so that we don't immediately undo our
-    // reset.
-    while (!measurementQueue_.empty() && ros::ok())
-    {
-      measurementQueue_.pop();
-    }
+    clearMeasurementQueue();
 
     filterStateHistory_.clear();
     measurementHistory_.clear();
@@ -3138,6 +3164,16 @@ namespace RobotLocalization
     RF_DEBUG("\nPopped " << poppedMeasurements << " measurements and " <<
              poppedStates << " states from their respective queues." <<
              "\n---- /RosFilter::clearExpiredHistory ----\n");
+  }
+
+  template<typename T>
+  void RosFilter<T>::clearMeasurementQueue()
+  {
+    while (!measurementQueue_.empty() && ros::ok())
+    {
+      measurementQueue_.pop();
+    }
+    return;
   }
 }  // namespace RobotLocalization
 
