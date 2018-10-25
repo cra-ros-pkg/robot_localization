@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.4.4 (2018-10-25)
+------------------
 * Adding more output for measurement history failures
 * Adding filter processing toggle service
 * Waiting for valid ROS time before starting navsat_transform_node
