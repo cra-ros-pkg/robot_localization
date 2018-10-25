@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing tests
+* Contributors: Tom Moore
+
 2.6.1 (2018-10-25)
 ------------------
 * Adding more output for measurement history failures
