@@ -954,7 +954,8 @@ namespace RobotLocalization
     enableFilterSrv_ = nhLocal_.advertiseService("enable", &RosFilter<T>::enableFilterSrvCallback, this);
 
     // Create a service for toggling processing new measurements while still publishing
-    toggleFilterProcessingSrv_ = nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
+    toggleFilterProcessingSrv_ =
+      nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
 
     // Init the last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
@@ -1809,7 +1810,8 @@ namespace RobotLocalization
     // Wait for the filter to be enabled
     while (!enabled_ && ros::ok())
     {
-      ROS_WARN_STREAM_ONCE("[" << ros::this_node::getName() << ":] This filter is disabled. To enable it call the service " << ros::this_node::getName() << "/enable");
+      ROS_WARN_STREAM_ONCE("[" << ros::this_node::getName() <<
+        ":] This filter is disabled. To enable it call the service " << ros::this_node::getName() << "/enable");
       ros::spinOnce();
       if (enabled_)
       {
@@ -2046,9 +2048,13 @@ namespace RobotLocalization
                                              std_srvs::Empty::Response&)
   {
     RF_DEBUG("\n[" << ros::this_node::getName() << ":]" << " ------ /RosFilter::enableFilterSrvCallback ------\n");
-    if (enabled_) {
-      ROS_WARN_STREAM("[" << ros::this_node::getName() << ":] Asking for enabling filter service, but the filter was already enabled! Use param disabled_at_startup.");
-    } else {
+    if (enabled_)
+    {
+      ROS_WARN_STREAM("[" << ros::this_node::getName() <<
+        ":] Asking for enabling filter service, but the filter was already enabled! Use param disabled_at_startup.");
+    }
+    else
+    {
       ROS_INFO_STREAM("[" << ros::this_node::getName() << ":] Enabling filter...");
       enabled_ = true;
     }
