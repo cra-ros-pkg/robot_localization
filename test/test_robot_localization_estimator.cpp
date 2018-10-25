@@ -93,11 +93,11 @@ TEST(RLETest, StateBuffer)
   }
 
   // We filled the buffer with more states that it can hold, so its size should now be equal to the capacity
-  EXPECT_EQ(estimator.getSize(), buffer_capacity);
+  EXPECT_EQ(static_cast<int>(estimator.getSize()), buffer_capacity);
 
   // Clear the buffer and check if it's really empty afterwards
   estimator.clearBuffer();
-  EXPECT_EQ(estimator.getSize(), 0);
+  EXPECT_EQ(estimator.getSize(), 0u);
 
   // Add states at time 1 through 3 inclusive to the buffer (buffer is not yet full)
   for ( int i = 1; i < 4; i++ )

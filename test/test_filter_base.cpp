@@ -59,7 +59,7 @@ class FilterDerived : public FilterBase
       EXPECT_EQ(val, measurement.time_);
       EXPECT_EQ(measurement.topicName_, "topic");
 
-      EXPECT_EQ(measurement.updateVector_.size(), 10);
+      EXPECT_EQ(measurement.updateVector_.size(), 10u);
       for (size_t i = 0; i < measurement.updateVector_.size(); ++i)
       {
         EXPECT_EQ(measurement.updateVector_[i], true);

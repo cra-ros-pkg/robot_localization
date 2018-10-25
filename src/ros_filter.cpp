@@ -1000,7 +1000,8 @@ namespace RobotLocalization
     enableFilterSrv_ = nhLocal_.advertiseService("enable", &RosFilter<T>::enableFilterSrvCallback, this);
 
     // Create a service for toggling processing new measurements while still publishing
-    toggleFilterProcessingSrv_ = nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
+    toggleFilterProcessingSrv_ =
+      nhLocal_.advertiseService("toggle", &RosFilter<T>::toggleFilterProcessingCallback, this);
 
     // Init the last measurement time so we don't get a huge initial delta
     filter_.setLastMeasurementTime(ros::Time::now().toSec());
