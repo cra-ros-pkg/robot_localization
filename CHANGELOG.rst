@@ -2,21 +2,21 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.5.2 (2018-04-11)
-------------------
-* Add published accel topic to documentation
-* adding log statements for nans in the invertable matrix
-* Fixing issue with potential seg fault
-* Contributors: Oleg Kalachev, Tom Moore, stevemacenski
+Forthcoming
+-----------
+* Adding more output for measurement history failures
+* Adding filter processing toggle service
+* Waiting for valid ROS time before starting navsat_transform_node
+* Contributors: Tom Moore, stevemacenski
 
 2.6.0 (2018-07-27)
 ------------------
 * Moving to C++14, adding error flags, and fixing all warnings
-* 2.5.2
-* Changelogs
+* Contributors: Tom Moore
+
+2.5.2 (2018-04-11)
+------------------
 * Add published accel topic to documentation
-* swap validateFilterOutput logic and 1 line
-* redefining error in ros filter for ros logging
 * adding log statements for nans in the invertable matrix
 * Fixing issue with potential seg fault
 * Contributors: Oleg Kalachev, Tom Moore, stevemacenski
