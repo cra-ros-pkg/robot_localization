@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Linting
+* Contributors: Tom Moore
+
 2.4.4 (2018-10-25)
 ------------------
 * Adding more output for measurement history failures
