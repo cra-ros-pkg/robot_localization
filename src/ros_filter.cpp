@@ -380,7 +380,7 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
 
     message.header.stamp = filter_.getLastMeasurementTime();
     message.header.frame_id = world_frame_id_;
-    message.child_frame_id = base_link_frame_id_;
+    message.child_frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -414,7 +414,7 @@ bool RosFilter<T>::getFilteredAccelMessage(
 
     // Fill header information
     message.header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
-    message.header.frame_id = base_link_frame_id_;
+    message.header.frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -715,7 +715,9 @@ void RosFilter<T>::loadParams()
   map_frame_id_ = this->declare_parameter("map_frame", std::string("map"));
   odom_frame_id_ = this->declare_parameter("odom_frame", std::string("odom"));
   base_link_frame_id_ = this->declare_parameter("base_link_frame",
-      std::string("base_link"));
+    std::string("base_link"));
+  base_link_output_frame_id_ = this->declare_parameter("base_link_frame_output",
+    base_link_frame_id_);
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -746,11 +748,14 @@ void RosFilter<T>::loadParams()
 
   if (map_frame_id_ == odom_frame_id_ ||
     odom_frame_id_ == base_link_frame_id_ ||
-    map_frame_id_ == base_link_frame_id_)
+    map_frame_id_ == base_link_frame_id_ ||
+    odom_frame_id_ == base_link_output_frame_id_ ||
+    map_frame_id_ == base_link_output_frame_id_)
   {
     std::cerr <<
       "Invalid frame configuration! The values for map_frame, odom_frame, "
-      "and base_link_frame must be unique." <<
+      "and base_link_frame must be unique. If using a base_link_frame_output "
+      "values, it must not match the map_frame or odom_frame."
       "\n";
   }
 
@@ -930,7 +935,8 @@ void RosFilter<T>::loadParams()
   RF_DEBUG("tf_prefix is " <<
     tf_prefix << "\nmap_frame is " << map_frame_id_ <<
     "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
-    base_link_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
+    base_link_frame_id_ << "\nbase_link_output_frame is " <<
+    base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
     "\ntransform_time_offset is " <<
     filter_utilities::toSec(tf_time_offset_) <<
     "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
