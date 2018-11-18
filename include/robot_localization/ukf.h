@@ -39,6 +39,8 @@
 #include <vector>
 #include <set>
 #include <queue>
+#include <cmath>
+
 
 namespace RobotLocalization
 {
@@ -71,6 +73,72 @@ class Ukf: public FilterBase
     //! @brief Destructor for the Ukf class
     //!
     ~Ukf();
+    
+    
+    double calculateLambda(const double alpha, const double kappa, const int n) {
+      return std::pow(alpha,2)*(n+kappa)-n;
+    }
+
+
+    double calculateGamma(const double lambda, const int n) {
+      return std::sqrt(n+lambda);
+    }
+
+
+    int pointsPerState(const int state) {
+      return 2*state+1;
+    }
+    
+    
+    void sigmaPoints(
+        std::vector<Eigen::VectorXd>& sigma,
+        const Eigen::VectorXd& state,
+        const Eigen::MatrixXd& covariance,
+        Eigen::MatrixXd& cholesky,
+        const double gamma);
+
+    
+    void sumWeightedMean(
+      Eigen::VectorXd& state,
+      const std::vector<Eigen::VectorXd>& sigma,
+      const std::vector<double>& weights);
+    
+    
+    void sumWeightedCovariance(
+      Eigen::MatrixXd& covariance,
+      const std::vector<Eigen::VectorXd>& sigma_x,
+      const Eigen::VectorXd& state_a,
+      const std::vector<Eigen::VectorXd>& sigma_z,
+      const Eigen::VectorXd& state_b,
+      const std::vector<double>& weight);
+    
+    
+    inline void sumWeightedCovariance(
+      Eigen::MatrixXd& covariance,
+      const std::vector<Eigen::VectorXd>& sigma,
+      const Eigen::VectorXd& belief,
+      const std::vector<double>& weight,
+      const Eigen::MatrixXd& noise);
+    
+    
+    inline void kalmanGain(
+      Eigen::MatrixXd& gain,
+      const Eigen::MatrixXd& covar,
+      const Eigen::MatrixXd& obser,
+      Eigen::MatrixXd& obser_inv);
+      
+    inline void updateState(
+      Eigen::VectorXd& state,
+      const Eigen::VectorXd& innov,
+      const Eigen::MatrixXd& gain);
+
+
+    inline void updateCovariance(
+      Eigen::MatrixXd& covar,
+      const Eigen::MatrixXd& gain,
+      const Eigen::MatrixXd& obser);
+
+    
 
     //! @brief Carries out the correct step in the predict/update cycle.
     //!
@@ -98,6 +166,8 @@ class Ukf: public FilterBase
     //! @brief This matrix is used to generate the sigmaPoints_
     //!
     Eigen::MatrixXd weightedCovarSqrt_;
+    
+    
 
     //! @brief The weights associated with each sigma point when generating
     //! a new state
@@ -112,6 +182,9 @@ class Ukf: public FilterBase
     //! @brief Used in weight generation for the sigma points
     //!
     double lambda_;
+    
+    
+    double gamma_;
 
     //! @brief Used to determine if we need to re-compute the sigma
     //! points when carrying out multiple corrections

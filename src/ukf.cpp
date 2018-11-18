@@ -58,11 +58,14 @@ namespace RobotLocalization
     double kappa = args[1];
     double beta = args[2];
 
-    size_t sigmaCount = (STATE_SIZE << 1) + 1;
+    // size_t sigmaCount = (STATE_SIZE << 1) + 1;
+    size_t sigmaCount = this->pointsPerState(STATE_SIZE);
     sigmaPoints_.resize(sigmaCount, Eigen::VectorXd(STATE_SIZE));
 
     // Prepare constants
-    lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
+    // lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
+    this->lambda_ = this->calculateLambda(alpha, kappa, STATE_SIZE);
+    this->gamma_ = this->calculateGamma(this->lambda_, STATE_SIZE);
 
     stateWeights_.resize(sigmaCount);
     covarWeights_.resize(sigmaCount);
@@ -82,6 +85,105 @@ namespace RobotLocalization
   {
   }
 
+
+
+  void Ukf::sigmaPoints(
+    std::vector<Eigen::VectorXd>& sigma,
+    const Eigen::VectorXd& state,
+    const Eigen::MatrixXd& covariance,
+    Eigen::MatrixXd& cholesky,
+    const double gamma)
+  {
+    cholesky = covariance.llt().matrixL();
+    cholesky *= gamma;
+    sigma[0] = state;
+    int vars = state.size();
+    for (int i = 0; i < vars; ++i) {
+      sigma[i+1] = state+cholesky.col(i);
+      sigma[i+vars+1] = state-cholesky.col(i);
+    }
+  }
+  
+  
+  void Ukf::sumWeightedMean(
+    Eigen::VectorXd& state,
+    const std::vector<Eigen::VectorXd>& sigma,
+    const std::vector<double>& weights)
+  {
+    state.setZero();
+    int points = sigma.size();
+    for (int i = 0; i < points; ++i)
+      state.noalias() += sigma[i] * weights[i];
+  }
+
+
+  inline void Ukf::sumWeightedCovariance(
+    Eigen::MatrixXd& covariance,
+    const std::vector<Eigen::VectorXd>& sigma,
+    const Eigen::VectorXd& belief,
+    const std::vector<double>& weight,
+    const Eigen::MatrixXd& noise)
+  {
+    this->sumWeightedCovariance(
+      covariance,
+      sigma, belief,
+      sigma, belief,
+      weight);
+    covariance.noalias() += noise;
+  }
+
+
+  void Ukf::sumWeightedCovariance(
+    Eigen::MatrixXd& covariance,
+    const std::vector<Eigen::VectorXd>& sigma_x,
+    const Eigen::VectorXd& state_a,
+    const std::vector<Eigen::VectorXd>& sigma_z,
+    const Eigen::VectorXd& state_b,
+    const std::vector<double>& weight)
+  {
+    covariance.setZero();
+    int rows = sigma_x[0].rows(),
+        inner = sigma_x.size(),
+        cols = sigma_z[0].rows();
+    for (int i = 0; i < rows; ++i)
+      for (int j = 0; j < cols; ++j)
+        for (int k = 0; k < inner; ++k)
+          covariance(i,j) += 
+            weight[k] *
+              (sigma_x[k](i)-state_a(i)) *
+              (sigma_z[k](j)-state_b(j));
+  }
+
+
+  void Ukf::kalmanGain(
+    Eigen::MatrixXd& gain,
+    const Eigen::MatrixXd& covar,
+    const Eigen::MatrixXd& obser,
+    Eigen::MatrixXd& obser_inv)
+  {
+	obser_inv = obser.inverse();
+    gain = covar * obser_inv;
+  }
+  
+  
+  void Ukf::updateState(
+    Eigen::VectorXd& state,
+    const Eigen::VectorXd& innov,
+    const Eigen::MatrixXd& gain)
+  {
+    state.noalias() += gain * innov;
+  }
+
+
+  void Ukf::updateCovariance(
+    Eigen::MatrixXd& covar,
+    const Eigen::MatrixXd& gain,
+    const Eigen::MatrixXd& obser)
+  {
+    covar.noalias() -= gain * obser * gain.transpose();
+  }
+
+
   void Ukf::correct(const Measurement &measurement)
   {
     FB_DEBUG("---------------------- Ukf::correct ----------------------\n" <<
@@ -94,23 +196,8 @@ namespace RobotLocalization
     // that event, the sigma points need to be updated to reflect the current state.
     // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
     if (!uncorrected_)
-    {
-      // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-      weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
-
-      // Compute sigma points
-
-      // First sigma point is the current state
-      sigmaPoints_[0] = state_;
-
-      // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-      // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-      for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
-      {
-        sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
-        sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
-      }
-    }
+      this->sigmaPoints(this->sigmaPoints_, this->state_,
+		this->estimateErrorCovariance_, this->weightedCovarSqrt_, this->gamma_);
 
     // We don't want to update everything, so we need to build matrices that only update
     // the measured parts of our state vector
@@ -215,28 +302,36 @@ namespace RobotLocalization
              "\nMeasurement subset is:\n" << measurementSubset <<
              "\nMeasurement covariance subset is:\n" << measurementCovarianceSubset <<
              "\nState-to-measurement subset is:\n" << stateToMeasurementSubset << "\n");
+    
+    // h function
+    int points = sigmaPoints_.size();
+    for (int i = 0; i < points; ++i)
+        sigmaPointMeasurements[i] = stateToMeasurementSubset * sigmaPoints_[i];
+	
+	this->sumWeightedMean(
+		predictedMeasurement,
+		sigmaPointMeasurements,
+		stateWeights_);
+    
+    this->sumWeightedCovariance(
+      predictedMeasCovar,
+      sigmaPointMeasurements,
+      predictedMeasurement,
+      covarWeights_,
+      measurementCovarianceSubset);
+    
+    this->sumWeightedCovariance(
+      crossCovar, 
+      sigmaPoints_,
+      state_,
+      sigmaPointMeasurements, 
+      predictedMeasurement,
+      covarWeights_);
 
-    // (1) Generate sigma points, use them to generate a predicted measurement
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      sigmaPointMeasurements[sigmaInd] = stateToMeasurementSubset * sigmaPoints_[sigmaInd];
-      predictedMeasurement.noalias() += stateWeights_[sigmaInd] * sigmaPointMeasurements[sigmaInd];
-    }
-
-    // (2) Use the sigma point measurements and predicted measurement to compute a predicted
-    // measurement covariance matrix P_zz and a state/measurement cross-covariance matrix P_xz.
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      sigmaDiff = sigmaPointMeasurements[sigmaInd] - predictedMeasurement;
-      predictedMeasCovar.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-      crossCovar.noalias() += covarWeights_[sigmaInd] * ((sigmaPoints_[sigmaInd] - state_) * sigmaDiff.transpose());
-    }
-
-    // (3) Compute the Kalman gain, making sure to use the actual measurement covariance: K = P_xz * (P_zz + R)^-1
-    Eigen::MatrixXd invInnovCov = (predictedMeasCovar + measurementCovarianceSubset).inverse();
-    kalmanGainSubset = crossCovar * invInnovCov;
-
-    // (4) Apply the gain to the difference between the actual and predicted measurements: x = x + K(z - z_hat)
+    Eigen::MatrixXd invInnovCov(updateSize, updateSize);
+    this->kalmanGain(kalmanGainSubset,
+	  crossCovar, predictedMeasCovar, invInnovCov);
+    
     innovationSubset = (measurementSubset - predictedMeasurement);
 
     // Wrap angles in the innovation
@@ -257,14 +352,15 @@ namespace RobotLocalization
         }
       }
     }
+    
 
     // (5) Check Mahalanobis distance of innovation
     if (checkMahalanobisThreshold(innovationSubset, invInnovCov, measurement.mahalanobisThresh_))
     {
-      state_.noalias() += kalmanGainSubset * innovationSubset;
-
-      // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      this->updateState(this->state_, innovationSubset, kalmanGainSubset);
+      this->updateCovariance(
+		this->estimateErrorCovariance_,
+		kalmanGainSubset, predictedMeasCovar);
 
       wrapStateAngles();
 
@@ -280,7 +376,8 @@ namespace RobotLocalization
                "\n\n---------------------- /Ukf::correct ----------------------\n");
     }
   }
-
+  
+  
   void Ukf::predict(const double referenceTime, const double delta)
   {
     FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
@@ -335,51 +432,29 @@ namespace RobotLocalization
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
 
-    // (1) Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-    weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
-
-    // (2) Compute sigma points *and* pass them through the transfer function to save
-    // the extra loop
-
-    // First sigma point is the current state
-    sigmaPoints_[0] = transferFunction_ * state_;
-
-    // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-    // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-    for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
-    {
-      sigmaPoints_[sigmaInd + 1] = transferFunction_ * (state_ + weightedCovarSqrt_.col(sigmaInd));
-      sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = transferFunction_ * (state_ - weightedCovarSqrt_.col(sigmaInd));
-    }
-
-    // (3) Sum the weighted sigma points to generate a new state prediction
-    state_.setZero();
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
-    }
-
-    // (4) Now us the sigma points and the predicted state to compute a predicted covariance
-    estimateErrorCovariance_.setZero();
-    Eigen::VectorXd sigmaDiff(STATE_SIZE);
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
-      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-    }
-
+    this->sigmaPoints(
+		this->sigmaPoints_, this->state_, 
+		this->estimateErrorCovariance_, 
+		this->weightedCovarSqrt_, this->gamma_);
+    
+    // process model
+    int points = this->sigmaPoints_.size();
+    for (int i = 0; i < points; ++i)
+		this->sigmaPoints_[i] = this->transferFunction_ * this->sigmaPoints_[i];
+    
     // (5) Not strictly in the theoretical UKF formulation, but necessary here
     // to ensure that we actually incorporate the processNoiseCovariance_
     Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
-
-    if (useDynamicProcessNoiseCovariance_)
-    {
+    if (useDynamicProcessNoiseCovariance_) {
       computeDynamicProcessNoiseCovariance(state_, delta);
       processNoiseCovariance = &dynamicProcessNoiseCovariance_;
     }
-
-    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
-
+    
+    this->sumWeightedMean(this->state_, this->sigmaPoints_, this->stateWeights_);
+    this->sumWeightedCovariance(this->estimateErrorCovariance_,
+      this->sigmaPoints_, this->state_, this->covarWeights_,
+      delta * (*processNoiseCovariance));
+    
     // Keep the angles bounded
     wrapStateAngles();
 
