@@ -291,6 +291,10 @@ class NavSatTransform
     //! @brief Publisher for gps data
     //!
     ros::Publisher gps_odom_pub_;
+    
+    //! @brief Service for set datum
+    //!
+    ros::ServiceServer datum_srv_;
 
     //! @brief Transform buffer for managing coordinate transforms
     //!

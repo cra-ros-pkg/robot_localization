@@ -92,7 +92,7 @@ namespace RobotLocalization
     transform_timeout_.fromSec(transform_timeout);
 
     // Subscribe to the messages and services we need
-    ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
+    datum_srv_ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
     if (use_manual_datum_ && nh_priv.hasParam("datum"))
     {
