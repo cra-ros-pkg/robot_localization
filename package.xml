@@ -8,7 +8,7 @@
   <author email="ayrton04@gmail.com">Tom Moore</author> 
   <maintainer email="ayrton04@gmail.com">Tom Moore</maintainer>
 
-  <license>BSD</license>
+  <license>Apache License 2.0</license>
 
   <url type="website">http://ros.org/wiki/robot_localization</url>
 
@@ -26,6 +26,8 @@
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
   
   <exec_depend>rosidl_default_runtime</exec_depend>
 

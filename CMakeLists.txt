@@ -87,10 +87,17 @@ install(
 #)
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
   find_package(ament_cmake_cppcheck REQUIRED)
   find_package(ament_cmake_cpplint REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)
   find_package(ament_cmake_uncrustify REQUIRED)
+
+
+  #### FILTER BASE TESTS ####
+  ament_add_gtest(filter_base-test test/test_filter_base.cpp)
+  target_link_libraries(filter_base-test rl_lib)
   
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
@@ -99,6 +106,11 @@ if(BUILD_TESTING)
   ament_cpplint()
   ament_lint_cmake()
   ament_uncrustify()
+
+install(
+  TARGETS 
+  filter_base-test
+  DESTINATION lib/${PROJECT_NAME})
 endif()
 
 ament_export_dependencies(rosidl_default_runtime)
