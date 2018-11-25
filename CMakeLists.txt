@@ -131,4 +131,10 @@ ament_export_libraries(
   rl_lib
 )
 
+# Install params config files.
+install(DIRECTORY
+  params
+  DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()
