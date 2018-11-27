@@ -294,6 +294,8 @@ namespace RobotLocalization
     // We'll need these trig calculations a lot.
     double sp = ::sin(pitch);
     double cp = ::cos(pitch);
+    double cpi = 1.0 / cp;
+    double tp = sp * cpi;
 
     double sr = ::sin(roll);
     double cr = ::cos(roll);
@@ -322,15 +324,13 @@ namespace RobotLocalization
     transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
     transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
     transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
-    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
-    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
-    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
-    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
-    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
-    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
+    transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
+    transferFunction_(StateMemberRoll, StateMemberVpitch) = sr * tp * delta;
+    transferFunction_(StateMemberRoll, StateMemberVyaw) = cr * tp * delta;
+    transferFunction_(StateMemberPitch, StateMemberVpitch) = cr * delta;
+    transferFunction_(StateMemberPitch, StateMemberVyaw) = -sr * delta;
+    transferFunction_(StateMemberYaw, StateMemberVpitch) = sr * cpi * delta;
+    transferFunction_(StateMemberYaw, StateMemberVyaw) = cr * cpi * delta;
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
