@@ -218,7 +218,6 @@ namespace RobotLocalization
     double xVel = state_(StateMemberVx);
     double yVel = state_(StateMemberVy);
     double zVel = state_(StateMemberVz);
-    double rollVel = state_(StateMemberVroll);
     double pitchVel = state_(StateMemberVpitch);
     double yawVel = state_(StateMemberVyaw);
     double xAcc = state_(StateMemberAx);
@@ -228,6 +227,8 @@ namespace RobotLocalization
     // We'll need these trig calculations a lot.
     double sp = ::sin(pitch);
     double cp = ::cos(pitch);
+    double cpi = 1.0 / cp;
+    double tp = sp * cpi;
 
     double sr = ::sin(roll);
     double cr = ::cos(roll);
@@ -256,15 +257,13 @@ namespace RobotLocalization
     transferFunction_(StateMemberZ, StateMemberAx) = 0.5 * transferFunction_(StateMemberZ, StateMemberVx) * delta;
     transferFunction_(StateMemberZ, StateMemberAy) = 0.5 * transferFunction_(StateMemberZ, StateMemberVy) * delta;
     transferFunction_(StateMemberZ, StateMemberAz) = 0.5 * transferFunction_(StateMemberZ, StateMemberVz) * delta;
-    transferFunction_(StateMemberRoll, StateMemberVroll) = transferFunction_(StateMemberX, StateMemberVx);
-    transferFunction_(StateMemberRoll, StateMemberVpitch) = transferFunction_(StateMemberX, StateMemberVy);
-    transferFunction_(StateMemberRoll, StateMemberVyaw) = transferFunction_(StateMemberX, StateMemberVz);
-    transferFunction_(StateMemberPitch, StateMemberVroll) = transferFunction_(StateMemberY, StateMemberVx);
-    transferFunction_(StateMemberPitch, StateMemberVpitch) = transferFunction_(StateMemberY, StateMemberVy);
-    transferFunction_(StateMemberPitch, StateMemberVyaw) = transferFunction_(StateMemberY, StateMemberVz);
-    transferFunction_(StateMemberYaw, StateMemberVroll) = transferFunction_(StateMemberZ, StateMemberVx);
-    transferFunction_(StateMemberYaw, StateMemberVpitch) = transferFunction_(StateMemberZ, StateMemberVy);
-    transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);
+    transferFunction_(StateMemberRoll, StateMemberVroll) = delta;
+    transferFunction_(StateMemberRoll, StateMemberVpitch) = sr * tp * delta;
+    transferFunction_(StateMemberRoll, StateMemberVyaw) = cr * tp * delta;
+    transferFunction_(StateMemberPitch, StateMemberVpitch) = cr * delta;
+    transferFunction_(StateMemberPitch, StateMemberVyaw) = -sr * delta;
+    transferFunction_(StateMemberYaw, StateMemberVpitch) = sr * cpi * delta;
+    transferFunction_(StateMemberYaw, StateMemberVyaw) = cr * cpi * delta;
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
@@ -280,54 +279,51 @@ namespace RobotLocalization
     zCoeff = -cy * sp * sr + sy * cr;
     double dFx_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
                     (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFR_dR = 1 + (yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dFR_dR = 1.0 + (cr * tp * pitchVel - sr * tp * yawVel) * delta;
 
     xCoeff = -cy * sp;
     yCoeff = cy * cp * sr;
     zCoeff = cy * cp * cr;
     double dFx_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFR_dP = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dFR_dP = (cpi * cpi * sr * pitchVel + cpi * cpi * cr * yawVel) * delta;
 
     xCoeff = -sy * cp;
     yCoeff = -sy * sp * sr - cy * cr;
     zCoeff = -sy * sp * cr + cy * sr;
     double dFx_dY = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFR_dY = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = sy * sp * cr - cy * sr;
     zCoeff = -sy * sp * sr - cy * cr;
     double dFy_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
                     (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFP_dR = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dFP_dR = (-sr * pitchVel - cr * yawVel) * delta;
 
     xCoeff = -sy * sp;
     yCoeff = sy * cp * sr;
     zCoeff = sy * cp * cr;
     double dFy_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFP_dP = 1 + (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     xCoeff = cy * cp;
     yCoeff = cy * sp * sr - sy * cr;
     zCoeff = cy * sp * cr + sy * sr;
     double dFy_dY = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFP_dY = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
 
     yCoeff = cp * cr;
     zCoeff = -cp * sr;
     double dFz_dR = (yCoeff * yVel + zCoeff * zVel) * delta +
                     (yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFY_dR = (yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dFY_dR = (cr * cpi * pitchVel - sr * cpi * yawVel) * delta;
 
     xCoeff = -cp;
     yCoeff = -sp * sr;
     zCoeff = -sp * cr;
     double dFz_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFY_dP = (xCoeff * rollVel + yCoeff * pitchVel + zCoeff * yawVel) * delta;
+    double dFY_dP = (sr * tp * cpi * pitchVel - cr * tp * cpi * yawVel) * delta;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transferFunctionJacobian_ = transferFunction_;
@@ -341,10 +337,7 @@ namespace RobotLocalization
     transferFunctionJacobian_(StateMemberZ, StateMemberPitch) = dFz_dP;
     transferFunctionJacobian_(StateMemberRoll, StateMemberRoll) = dFR_dR;
     transferFunctionJacobian_(StateMemberRoll, StateMemberPitch) = dFR_dP;
-    transferFunctionJacobian_(StateMemberRoll, StateMemberYaw) = dFR_dY;
     transferFunctionJacobian_(StateMemberPitch, StateMemberRoll) = dFP_dR;
-    transferFunctionJacobian_(StateMemberPitch, StateMemberPitch) = dFP_dP;
-    transferFunctionJacobian_(StateMemberPitch, StateMemberYaw) = dFP_dY;
     transferFunctionJacobian_(StateMemberYaw, StateMemberRoll) = dFY_dR;
     transferFunctionJacobian_(StateMemberYaw, StateMemberPitch) = dFY_dP;
 
