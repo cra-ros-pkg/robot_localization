@@ -292,6 +292,8 @@ void Ukf::predict(
   // We'll need these trig calculations a lot.
   double sp = ::sin(pitch);
   double cp = ::cos(pitch);
+  double cpi = 1.0 / cp;
+  double tp = sp * cpi;
 
   double sr = ::sin(roll);
   double cr = ::cos(roll);
@@ -333,24 +335,13 @@ void Ukf::predict(
     0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta_sec;
   transfer_function_(StateMemberZ, StateMemberAz) =
     0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta_sec;
-  transfer_function_(StateMemberRoll, StateMemberVroll) =
-    transfer_function_(StateMemberX, StateMemberVx);
-  transfer_function_(StateMemberRoll, StateMemberVpitch) =
-    transfer_function_(StateMemberX, StateMemberVy);
-  transfer_function_(StateMemberRoll, StateMemberVyaw) =
-    transfer_function_(StateMemberX, StateMemberVz);
-  transfer_function_(StateMemberPitch, StateMemberVroll) =
-    transfer_function_(StateMemberY, StateMemberVx);
-  transfer_function_(StateMemberPitch, StateMemberVpitch) =
-    transfer_function_(StateMemberY, StateMemberVy);
-  transfer_function_(StateMemberPitch, StateMemberVyaw) =
-    transfer_function_(StateMemberY, StateMemberVz);
-  transfer_function_(StateMemberYaw, StateMemberVroll) =
-    transfer_function_(StateMemberZ, StateMemberVx);
-  transfer_function_(StateMemberYaw, StateMemberVpitch) =
-    transfer_function_(StateMemberZ, StateMemberVy);
-  transfer_function_(StateMemberYaw, StateMemberVyaw) =
-    transfer_function_(StateMemberZ, StateMemberVz);
+  transfer_function_(StateMemberRoll, StateMemberVroll) = delta_sec;
+  transfer_function_(StateMemberRoll, StateMemberVpitch) = sr * tp * delta_sec;
+  transfer_function_(StateMemberRoll, StateMemberVyaw) = cr * tp * delta_sec;
+  transfer_function_(StateMemberPitch, StateMemberVpitch) = cr * delta_sec;
+  transfer_function_(StateMemberPitch, StateMemberVyaw) = -sr * delta_sec;
+  transfer_function_(StateMemberYaw, StateMemberVpitch) = sr * cpi * delta_sec;
+  transfer_function_(StateMemberYaw, StateMemberVyaw) = cr * cpi * delta_sec;
   transfer_function_(StateMemberVx, StateMemberAx) = delta_sec;
   transfer_function_(StateMemberVy, StateMemberAy) = delta_sec;
   transfer_function_(StateMemberVz, StateMemberAz) = delta_sec;

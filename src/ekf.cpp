@@ -228,7 +228,6 @@ void Ekf::predict(
   double x_vel = state_(StateMemberVx);
   double y_vel = state_(StateMemberVy);
   double z_vel = state_(StateMemberVz);
-  double roll_vel = state_(StateMemberVroll);
   double pitch_vel = state_(StateMemberVpitch);
   double yaw_vel = state_(StateMemberVyaw);
   double x_acc = state_(StateMemberAx);
@@ -238,6 +237,8 @@ void Ekf::predict(
   // We'll need these trig calculations a lot.
   double sp = ::sin(pitch);
   double cp = ::cos(pitch);
+  double cpi = 1.0 / cp;
+  double tp = sp * cpi;
 
   double sr = ::sin(roll);
   double cr = ::cos(roll);
@@ -279,24 +280,13 @@ void Ekf::predict(
     0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta_sec;
   transfer_function_(StateMemberZ, StateMemberAz) =
     0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta_sec;
-  transfer_function_(StateMemberRoll, StateMemberVroll) =
-    transfer_function_(StateMemberX, StateMemberVx);
-  transfer_function_(StateMemberRoll, StateMemberVpitch) =
-    transfer_function_(StateMemberX, StateMemberVy);
-  transfer_function_(StateMemberRoll, StateMemberVyaw) =
-    transfer_function_(StateMemberX, StateMemberVz);
-  transfer_function_(StateMemberPitch, StateMemberVroll) =
-    transfer_function_(StateMemberY, StateMemberVx);
-  transfer_function_(StateMemberPitch, StateMemberVpitch) =
-    transfer_function_(StateMemberY, StateMemberVy);
-  transfer_function_(StateMemberPitch, StateMemberVyaw) =
-    transfer_function_(StateMemberY, StateMemberVz);
-  transfer_function_(StateMemberYaw, StateMemberVroll) =
-    transfer_function_(StateMemberZ, StateMemberVx);
-  transfer_function_(StateMemberYaw, StateMemberVpitch) =
-    transfer_function_(StateMemberZ, StateMemberVy);
-  transfer_function_(StateMemberYaw, StateMemberVyaw) =
-    transfer_function_(StateMemberZ, StateMemberVz);
+  transfer_function_(StateMemberRoll, StateMemberVroll) = delta_sec;
+  transfer_function_(StateMemberRoll, StateMemberVpitch) = sr * tp * delta_sec;
+  transfer_function_(StateMemberRoll, StateMemberVyaw) = cr * tp * delta_sec;
+  transfer_function_(StateMemberPitch, StateMemberVpitch) = cr * delta_sec;
+  transfer_function_(StateMemberPitch, StateMemberVyaw) = -sr * delta_sec;
+  transfer_function_(StateMemberYaw, StateMemberVpitch) = sr * cpi * delta_sec;
+  transfer_function_(StateMemberYaw, StateMemberVyaw) = cr * cpi * delta_sec;
   transfer_function_(StateMemberVx, StateMemberAx) = delta_sec;
   transfer_function_(StateMemberVy, StateMemberAy) = delta_sec;
   transfer_function_(StateMemberVz, StateMemberAz) = delta_sec;
@@ -312,7 +302,7 @@ void Ekf::predict(
   z_coeff = -cy * sp * sr + sy * cr;
   double dFx_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFR_dR = 1 + (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFR_dR = 1.0 + (cr * tp * pitch_vel - sr * tp * yaw_vel) * delta_sec;
 
   x_coeff = -cy * sp;
   y_coeff = cy * cp * sr;
@@ -322,7 +312,7 @@ void Ekf::predict(
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFR_dP =
-    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (cpi * cpi * sr * pitch_vel + cpi * cpi * cr * yaw_vel) * delta_sec;
 
   x_coeff = -sy * cp;
   y_coeff = -sy * sp * sr - cy * cr;
@@ -331,14 +321,12 @@ void Ekf::predict(
     (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
-  double dFR_dY =
-    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   y_coeff = sy * sp * cr - cy * sr;
   z_coeff = -sy * sp * sr - cy * cr;
   double dFy_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFP_dR = (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFP_dR = (-sr * pitch_vel - cr * yaw_vel) * delta_sec;
 
   x_coeff = -sy * sp;
   y_coeff = sy * cp * sr;
@@ -347,9 +335,6 @@ void Ekf::predict(
     (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
-  double dFP_dP =
-    1 +
-    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = cy * cp;
   y_coeff = cy * sp * sr - sy * cr;
@@ -358,14 +343,12 @@ void Ekf::predict(
     (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
-  double dFP_dY =
-    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   y_coeff = cp * cr;
   z_coeff = -cp * sr;
   double dFz_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
     (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFY_dR = (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFY_dR = (cr * cpi * pitch_vel - sr * cpi * yaw_vel) * delta_sec;
 
   x_coeff = -cp;
   y_coeff = -sp * sr;
@@ -375,7 +358,7 @@ void Ekf::predict(
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFY_dP =
-    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (sr * tp * cpi * pitch_vel - cr * tp * cpi * yaw_vel) * delta_sec;
 
   // Much of the transfer function Jacobian is identical to the transfer
   // function
@@ -390,10 +373,7 @@ void Ekf::predict(
   transfer_function_jacobian_(StateMemberZ, StateMemberPitch) = dFz_dP;
   transfer_function_jacobian_(StateMemberRoll, StateMemberRoll) = dFR_dR;
   transfer_function_jacobian_(StateMemberRoll, StateMemberPitch) = dFR_dP;
-  transfer_function_jacobian_(StateMemberRoll, StateMemberYaw) = dFR_dY;
   transfer_function_jacobian_(StateMemberPitch, StateMemberRoll) = dFP_dR;
-  transfer_function_jacobian_(StateMemberPitch, StateMemberPitch) = dFP_dP;
-  transfer_function_jacobian_(StateMemberPitch, StateMemberYaw) = dFP_dY;
   transfer_function_jacobian_(StateMemberYaw, StateMemberRoll) = dFY_dR;
   transfer_function_jacobian_(StateMemberYaw, StateMemberPitch) = dFY_dP;
 
