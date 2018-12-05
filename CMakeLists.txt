@@ -120,8 +120,8 @@ if(BUILD_TESTING)
 
 
   #### UKF TESTS #####
-  #ament_add_gtest(test_ukf test/test_ukf.cpp)
-  #target_link_libraries(test_ukf rl_lib)
+  ament_add_gtest(test_ukf test/test_ukf.cpp)
+  target_link_libraries(test_ukf rl_lib)
   
   ament_add_gtest(test_ukf_localization_node_interfaces
                      test/test_ukf_localization_node_interfaces.cpp)
@@ -141,6 +141,7 @@ install(
   #test_filter_base_diagnostics_timestamps
   test_ekf
   test_ekf_localization_node_interfaces
+  test_ukf
   test_ukf_localization_node_interfaces
   DESTINATION lib/${PROJECT_NAME})
 endif()
