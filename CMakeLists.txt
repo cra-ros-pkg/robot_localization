@@ -110,6 +110,15 @@ if(BUILD_TESTING)
   #target_link_libraries(test_filter_base_diagnostics_timestamps rl_lib)
   #add_dependencies(test_filter_base_diagnostics_timestamps se_node)
   
+  #### EKF TESTS ###### 
+
+  ament_add_gtest(test_ekf test/test_ekf.cpp)
+  target_link_libraries(test_ekf rl_lib)
+
+  ament_add_gtest(test_ekf_localization_node_interfaces
+                    test/test_ekf_localization_node_interfaces.cpp)
+  target_link_libraries(test_ekf_localization_node_interfaces rl_lib)
+
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
   # consider to be C instead.
@@ -122,6 +131,8 @@ install(
   TARGETS 
   filter_base-test
   #test_filter_base_diagnostics_timestamps
+  test_ekf
+  test_ekf_localization_node_interfaces
   DESTINATION lib/${PROJECT_NAME})
 endif()
 
@@ -134,6 +145,7 @@ ament_export_libraries(
 # Install params config files.
 install(DIRECTORY
   params
+  launch
   DESTINATION share/${PROJECT_NAME}
 )
 
