@@ -409,7 +409,16 @@ template<class T> class RosFilter
 
     //! @brief tf frame name for the robot's body frame
     //!
+    //! All velocity and linear acceleration data is transformed into this frame before being fused
+    //!
     std::string baseLinkFrameId_;
+
+    //! @brief tf frame name for the robot's body frame
+    //!
+    //! When the final state is computed, we "override" the output transform and message to have this frame for its
+    //! child_frame_id. This helps to enable disconnected TF trees when multiple EKF instances are being run.
+    //!
+    std::string baseLinkOutputFrameId_;
 
     //! @brief Subscribes to the control input topic
     //!
