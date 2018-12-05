@@ -935,6 +935,9 @@ namespace robot_localization
     	return true;
 					};
 
+    set_pose_service_ = node_->create_service<robot_localization::srv::SetPose>(
+    		"set_pose", setPoseSrvCallback);
+
     // Init the last last measurement time so we don't get a huge initial delta
     filter_->setLastMeasurementTime(node_->now());
 
