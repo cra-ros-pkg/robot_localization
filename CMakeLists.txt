@@ -111,7 +111,6 @@ if(BUILD_TESTING)
   #add_dependencies(test_filter_base_diagnostics_timestamps se_node)
   
   #### EKF TESTS ###### 
-
   ament_add_gtest(test_ekf test/test_ekf.cpp)
   target_link_libraries(test_ekf rl_lib)
 
@@ -119,6 +118,15 @@ if(BUILD_TESTING)
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces rl_lib)
 
+
+  #### UKF TESTS #####
+  #ament_add_gtest(test_ukf test/test_ukf.cpp)
+  #target_link_libraries(test_ukf rl_lib)
+  
+  ament_add_gtest(test_ukf_localization_node_interfaces
+                     test/test_ukf_localization_node_interfaces.cpp)
+  target_link_libraries(test_ukf_localization_node_interfaces rl_lib)
+  
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
   # consider to be C instead.
@@ -133,6 +141,7 @@ install(
   #test_filter_base_diagnostics_timestamps
   test_ekf
   test_ekf_localization_node_interfaces
+  test_ukf_localization_node_interfaces
   DESTINATION lib/${PROJECT_NAME})
 endif()
 
