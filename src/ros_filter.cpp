@@ -925,6 +925,16 @@ namespace robot_localization
     //set_pose_service_ = node_->create_service<robot_localization::srv::SetPose>(
     //  "set_pose", std::bind(&RosFilter::setPoseSrvCallback, this, std::placeholders::_1, std::placeholders::_2));
 
+    // Added setpose service callback
+    auto setPoseSrvCallback =
+    		[this]( std::shared_ptr<robot_localization::srv::SetPose::Request> request,
+    				std::shared_ptr<robot_localization::srv::SetPose::Response> response) -> bool
+					{
+    	geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg = std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(request->pose);
+    	setPoseCallback(msg);
+    	return true;
+					};
+
     // Init the last last measurement time so we don't get a huge initial delta
     filter_->setLastMeasurementTime(node_->now());
 
@@ -1931,7 +1941,8 @@ namespace robot_localization
     RF_DEBUG("\n------ /RosFilter::setPoseCallback ------\n");
   }
 
-
+// Commented as setPoseSrvCallback replaced with lamda function.
+/*
   bool RosFilter::setPoseSrvCallback(
     robot_localization::srv::SetPose::Request& request,
     robot_localization::srv::SetPose::Response&)
@@ -1940,7 +1951,7 @@ namespace robot_localization
     setPoseCallback(msg);
 
     return true;
-  }
+  }*/
 
   void RosFilter::twistCallback(
     const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,

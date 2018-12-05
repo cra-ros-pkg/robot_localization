@@ -251,9 +251,11 @@ class RosFilter
     //!
     //! @param[in] request - Custom service request with pose information
     //! @return true if successful, false if not
-    bool setPoseSrvCallback(
+
+    // Commented as setPoseSrvCallback replaced with lamda function.
+    /* bool setPoseSrvCallback(
       robot_localization::srv::SetPose::Request& request,
-      robot_localization::srv::SetPose::Response&);
+      robot_localization::srv::SetPose::Response&); */
 
     //! @brief Callback method for receiving all twist messages
     //! @param[in] msg - The ROS stamped twist with covariance message to take in.
