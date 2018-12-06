@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, 2018 Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -121,10 +121,10 @@ private:
 
 public:
   std::vector<diagnostic_msgs::msg::DiagnosticArray> diagnostics;
-  rclcpp::Node::SharedPtr nh;
+  rclcpp::Node::SharedPtr node_;
 
   DiagnosticsHelper() {
-    nh = rclcpp::Node::make_shared(
+    node_ = rclcpp::Node::make_shared(
         "filter_base_diagnostics_timestamps_test_interfaces");
 
     // ready the valid messages.
@@ -137,26 +137,26 @@ public:
     rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
     custom_qos_profile.depth = 10;
     // subscribe to diagnostics and create publishers for the odometry messages.
-    odom_pub_ = nh->create_publisher<nav_msgs::msg::Odometry>(
+    odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(
         "example/odom", custom_qos_profile);
     pose_pub_ =
-        nh->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
             "example/pose", custom_qos_profile);
     twist_pub_ =
-        nh->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
+        node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
             "example/twist", custom_qos_profile);
-    imu_pub_ = nh->create_publisher<sensor_msgs::msg::Imu>("example/imu/data",
-                                                           custom_qos_profile);
+    imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
+        "example/imu/data", custom_qos_profile);
 
     diagnostic_sub_ =
-        nh->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+        node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
             "/diagnostics",
             [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
               diagnostics.push_back(*msg);
             });
 
     set_pose_ =
-        nh->create_client<robot_localization::srv::SetPose>("/set_pose");
+        node_->create_client<robot_localization::srv::SetPose>("/set_pose");
   }
 
   void publishMessages(rclcpp::Time t) {
@@ -204,13 +204,12 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   // For about a second, send correct messages.
   rclcpp::Rate loopRate(10);
   for (size_t i = 0; i < 10; ++i) {
-    rclcpp::spin_some(dh_.nh);
-    rclcpp::Time now_time = rclcpp::Clock().now();
-    dh_.publishMessages(now_time);
+    rclcpp::spin_some(dh_.node_);
+    dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
 
-  rclcpp::spin_some(dh_.nh);
+  rclcpp::spin_some(dh_.node_);
 
   // create an empty timestamp and send all messages with this empty timestamp.
   static uint32_t empty_sec = 0;
@@ -220,12 +219,12 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   rclcpp::Time empty = msg;
 
   dh_.publishMessages(empty);
-  rclcpp::spin_some(dh_.nh);
+  rclcpp::spin_some(dh_.node_);
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
 
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.nh);
+    rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
   }
 
@@ -276,27 +275,24 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   // For about a second, send correct messages.
   rclcpp::Rate loopRate(10);
   for (size_t i = 0; i < 10; ++i) {
-    rclcpp::spin_some(dh_.nh);
-    rclcpp::Time now_time = rclcpp::Clock().now();
-    dh_.publishMessages(now_time);
+    rclcpp::spin_some(dh_.node_);
+    dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
-  rclcpp::spin_some(dh_.nh);
+  rclcpp::spin_some(dh_.node_);
 
   // Set the pose to the current timestamp.
-  rclcpp::Time now_time = rclcpp::Clock().now();
-  dh_.setPose(now_time);
+  dh_.setPose((dh_.node_)->now());
 
-  rclcpp::spin_some(dh_.nh);
+  rclcpp::spin_some(dh_.node_);
 
   // send messages from one second before that pose reset.
-  rclcpp::Time pose_reset_time = rclcpp::Clock().now();
-  dh_.publishMessages(pose_reset_time - rclcpp::Duration(1));
+  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.nh);
+    rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
   }
   /*
@@ -348,19 +344,19 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   // For two seconds send correct messages.
   rclcpp::Rate loopRate(10);
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.nh);
-    dh_.publishMessages(rclcpp::Clock().now());
+    rclcpp::spin_some(dh_.node_);
+    dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
-  rclcpp::spin_some(dh_.nh);
+  rclcpp::spin_some(dh_.node_);
 
   // Send message that is one second in the past.
-  dh_.publishMessages(rclcpp::Clock().now() - rclcpp::Duration(1));
+  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.nh);
+    rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
   }
 
@@ -411,11 +407,10 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-
+  ::testing::InitGoogleTest(&argc, argv);
   // Give ekf_localization_node time to initialize
-  rclcpp::Rate(2).sleep();
-
-  testing::InitGoogleTest(&argc, argv);
+  rclcpp::Rate(0.5).sleep();
+  int ret = RUN_ALL_TESTS();
   rclcpp::shutdown();
-  return RUN_ALL_TESTS();
+  return ret;
 }
