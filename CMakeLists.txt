@@ -118,6 +118,14 @@ if(BUILD_TESTING)
                     test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces rl_lib)
 
+  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag1 rl_lib)
+
+  ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag2 rl_lib)
+  
+  ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ekf_localization_node_bag3 rl_lib)
 
   #### UKF TESTS #####
   ament_add_gtest(test_ukf test/test_ukf.cpp)
@@ -126,6 +134,15 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf_localization_node_interfaces
                      test/test_ukf_localization_node_interfaces.cpp)
   target_link_libraries(test_ukf_localization_node_interfaces rl_lib)
+  
+  ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag1 rl_lib)
+  
+  ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag2 rl_lib)
+  
+  ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
+  target_link_libraries(test_ukf_localization_node_bag3 rl_lib) 
   
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
@@ -141,8 +158,14 @@ install(
   #test_filter_base_diagnostics_timestamps
   test_ekf
   test_ekf_localization_node_interfaces
+  test_ekf_localization_node_bag1
+  test_ekf_localization_node_bag2
+  test_ekf_localization_node_bag3
   test_ukf
   test_ukf_localization_node_interfaces
+  test_ukf_localization_node_bag1
+  test_ukf_localization_node_bag2
+  test_ukf_localization_node_bag3
   DESTINATION lib/${PROJECT_NAME})
 endif()
 
