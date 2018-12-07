@@ -102,14 +102,14 @@ if(BUILD_TESTING)
   #### FILTER BASE TESTS ####
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
   target_link_libraries(filter_base-test rl_lib)
- 
+
   #### TODO(someone): Need commented diagnostics source code in R_L src to execute this testcase.
   # This test uses se_node node for convenience.
   #ament_add_gtest(test_filter_base_diagnostics_timestamps
   #                  test/test_filter_base_diagnostics_timestamps.cpp)
   #target_link_libraries(test_filter_base_diagnostics_timestamps rl_lib)
   #add_dependencies(test_filter_base_diagnostics_timestamps se_node)
- 
+
   #### EKF TESTS ######
   ament_add_gtest(test_ekf test/test_ekf.cpp)
   target_link_libraries(test_ekf rl_lib)
@@ -123,27 +123,26 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag2 rl_lib)
- 
+
   ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag3 rl_lib)
 
   #### UKF TESTS #####
   ament_add_gtest(test_ukf test/test_ukf.cpp)
   target_link_libraries(test_ukf rl_lib)
- 
-  ament_add_gtest(test_ukf_localization_node_interfaces
-                     test/test_ukf_localization_node_interfaces.cpp)
+
+  ament_add_gtest(test_ukf_localization_node_interfaces test/test_ukf_localization_node_interfaces.cpp)
   target_link_libraries(test_ukf_localization_node_interfaces rl_lib)
- 
+
   ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag1 rl_lib)
- 
+
   ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag2 rl_lib)
- 
+
   ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 rl_lib)
- 
+
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
   # consider to be C instead.
