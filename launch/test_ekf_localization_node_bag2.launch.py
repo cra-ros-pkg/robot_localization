@@ -22,13 +22,29 @@ import launch.actions
 from launch.actions import DeclareLaunchArgument
 
 
+
 def generate_launch_description():
 
     parameters_file_dir = pathlib.Path(__file__).resolve().parent
-    print(parameters_file_dir)         
     parameters_file_path = parameters_file_dir / 'test_ekf_localization_node_bag2.yaml'    
     os.environ['FILE_PATH'] = str(parameters_file_dir)
-    print(parameters_file_dir)
+
+    se_node = launch_ros.actions.Node(
+            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_bag2_ekf',
+	    output='screen',
+	    parameters=[
+                parameters_file_path,
+                str(parameters_file_path),
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],],)
+
+    test_ekf_localization_node_bag2 =  launch_ros.actions.Node(
+            package='robot_localization', node_executable='test_ekf_localization_node_bag2', node_name='test_ekf_localization_node_bag2_pose',
+            output='screen',
+	parameters=[
+                parameters_file_path,
+                str(parameters_file_path),
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],],)
+
     return LaunchDescription([
         launch.actions.DeclareLaunchArgument(
             'output_final_position',
@@ -36,36 +52,11 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument(
             'output_location',
 	    default_value='ekf2.txt'),
-	
-	launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_bag2_ekf',
-	    output='screen',
-	    parameters=[
-                parameters_file_path,
-                str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],                   
-           ],
-           ),
-        launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ekf_localization_node_bag2', node_name='test_ekf_localization_node_bag2_pose',
-            output='screen',
-	parameters=[
-                parameters_file_path,
-                str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],
-        ],
-	),
+	se_node,
+        test_ekf_localization_node_bag2,
+        launch.actions.RegisterEventHandler(
+            event_handler=launch.event_handlers.OnProcessExit(
+                target_action=test_ekf_localization_node_bag2,
+                on_exit=[launch.actions.EmitEvent(event=launch.events.Shutdown())],
+            )),
 ])
-
-
-
-
-
-
-
-
-
-
-
-
-
