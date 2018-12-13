@@ -1,4 +1,4 @@
-idist: bionic
+dist: bionic
 sudo: enabled
 language: generic
 
@@ -17,6 +17,7 @@ install:
   - sudo apt install python3-argcomplete
   - sudo apt install python3-colcon-common-extensions
   - sudo apt install build-essential
+  - source /opt/ros/bouncy/setup.bash
   - source ~/${ROS2_WS_ROBOT_LOCALIZATION}/install/setup.bash
   - sudo rosdep init
   - rosdep update
