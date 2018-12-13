@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,34 +30,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "rclcpp/rclcpp.hpp"
-#include "robot_localization/srv/set_pose.hpp"
+#include <gtest/gtest.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
-#include <gtest/gtest.h>
 #include <iostream>
-
 #include <chrono>
 #include <functional>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <memory>
+#include "rclcpp/rclcpp.hpp"
+#include "robot_localization/srv/set_pose.hpp"
 
 nav_msgs::msg::Odometry filtered_;
 bool stateUpdated_;
 
-void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
   filtered_ = *msg;
   stateUpdated_ = true;
 }
 
-void resetFilter(rclcpp::Node::SharedPtr node_) {
+void resetFilter(rclcpp::Node::SharedPtr node_)
+{
   auto client =
-      node_->create_client<robot_localization::srv::SetPose>("set_pose");
+    node_->create_client<robot_localization::srv::SetPose>("set_pose");
   auto setPoseRequest =
-      std::make_shared<robot_localization::srv::SetPose::Request>();
+    std::make_shared<robot_localization::srv::SetPose::Request>();
 
   setPoseRequest->pose.pose.pose.orientation.w = 1;
   setPoseRequest->pose.header.frame_id = "odom";
@@ -78,16 +80,17 @@ void resetFilter(rclcpp::Node::SharedPtr node_) {
   double deltaZ = 0.0;
 
   while (!stateUpdated_ ||
-         ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1) {
+    ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
+  {
     rclcpp::spin_some(node_);
     rclcpp::Rate(100).sleep();
 
     deltaX = filtered_.pose.pose.position.x -
-             setPoseRequest->pose.pose.pose.position.x;
+      setPoseRequest->pose.pose.pose.position.x;
     deltaY = filtered_.pose.pose.position.y -
-             setPoseRequest->pose.pose.pose.position.y;
+      setPoseRequest->pose.pose.pose.position.y;
     deltaZ = filtered_.pose.pose.position.z -
-             setPoseRequest->pose.pose.pose.position.z;
+      setPoseRequest->pose.pose.pose.position.z;
   }
   EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
@@ -96,15 +99,15 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
   stateUpdated_ = false;
 
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_OdomPoseBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_OdomPoseBasicIO_testcase");
 
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "odom_input0", custom_qos_profile);
+    "odom_input0", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -128,15 +131,15 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
   // Now check the values from the callback
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x),
-            0.01);
+    0.01);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
-            0.01); // Configuration for this variable for this sensor is false
+    0.01);         // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z),
-            0.01);
+    0.01);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7],
-            0.25); // Configuration for this variable for this sensor is false
+    0.25);         // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter(node_);
@@ -144,15 +147,15 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
 TEST(InterfacesTest, OdomTwistBasicIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_OdomTwistBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_OdomTwistBasicIO_testcase");
 
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "odom_input2", custom_qos_profile);
+    "odom_input2", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   nav_msgs::msg::Odometry odom;
   odom.twist.twist.linear.x = 5.0;
@@ -179,7 +182,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
   resetFilter(node_);
@@ -197,7 +200,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 50.0), 1.0);
 
   resetFilter(node_);
@@ -214,7 +217,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - odom.twist.twist.linear.z),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 25.0), 1.0);
 
   resetFilter(node_);
@@ -232,13 +235,13 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(
-      ::fabs(filtered_.twist.twist.angular.z - odom.twist.twist.angular.z),
-      0.1);
+    ::fabs(filtered_.twist.twist.angular.z - odom.twist.twist.angular.z),
+    0.1);
   EXPECT_LT(
-      ::fabs(filtered_.pose.pose.position.x - filtered_.pose.pose.position.y),
-      0.5);
+    ::fabs(filtered_.pose.pose.position.x - filtered_.pose.pose.position.y),
+    0.5);
 
   resetFilter(node_);
 
@@ -283,7 +286,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 15), 1.0);
 
   resetFilter(node_);
@@ -294,11 +297,11 @@ TEST(InterfacesTest, PoseBasicIO) {
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto posePub =
-      node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-          "pose_input0", custom_qos_profile);
+    node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    "pose_input0", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.pose.pose.position.x = 20.0;
@@ -326,15 +329,15 @@ TEST(InterfacesTest, PoseBasicIO) {
 
   // Now check the values from the callback
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
-            0.1); // Configuration for this variable for this sensor is false
+    0.1);         // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z),
-            0.1);
+    0.1);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7],
-            0.25); // Configuration for this variable for this sensor is false
+    0.25);         // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter(node_);
@@ -342,15 +345,15 @@ TEST(InterfacesTest, PoseBasicIO) {
 
 TEST(InterfacesTest, TwistBasicIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_TwistBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_TwistBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto twistPub =
-      node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-          "twist_input0", custom_qos_profile);
+    node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
+    "twist_input0", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   geometry_msgs::msg::TwistWithCovarianceStamped twist;
   twist.twist.twist.linear.x = 5.0;
@@ -376,7 +379,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
   resetFilter(node_);
@@ -394,7 +397,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - twist.twist.twist.linear.y),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 50.0), 1.0);
 
   resetFilter(node_);
@@ -411,7 +414,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - twist.twist.twist.linear.z),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 25.0), 1.0);
 
   resetFilter(node_);
@@ -428,13 +431,13 @@ TEST(InterfacesTest, TwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(
-      ::fabs(filtered_.twist.twist.angular.z - twist.twist.twist.angular.z),
-      0.1);
+    ::fabs(filtered_.twist.twist.angular.z - twist.twist.twist.angular.z),
+    0.1);
   EXPECT_LT(
-      ::fabs(filtered_.pose.pose.position.x - filtered_.pose.pose.position.y),
-      0.5);
+    ::fabs(filtered_.pose.pose.position.x - filtered_.pose.pose.position.y),
+    0.5);
 
   resetFilter(node_);
 
@@ -480,7 +483,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
-            0.1);
+    0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 15), 1.0);
 
   resetFilter(node_);
@@ -488,14 +491,14 @@ TEST(InterfacesTest, TwistBasicIO) {
 
 TEST(InterfacesTest, ImuPoseBasicIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_ImuPoseBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_ImuPoseBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "/imu_input0", custom_qos_profile);
+    "/imu_input0", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -563,14 +566,14 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 
 TEST(InterfacesTest, ImuTwistBasicIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_ImuTwistBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_ImuTwistBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "/imu_input1", custom_qos_profile);
+    "/imu_input1", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -684,14 +687,14 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
 
 TEST(InterfacesTest, ImuAccBasicIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_ImuAccBasicIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_ImuAccBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "imu_input2", custom_qos_profile);
+    "imu_input2", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
@@ -759,14 +762,14 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 
 TEST(InterfacesTest, OdomDifferentialIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_OdomDifferentialIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_OdomDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "/odom_input1", custom_qos_profile);
+    "/odom_input1", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -832,15 +835,15 @@ TEST(InterfacesTest, OdomDifferentialIO) {
 
 TEST(InterfacesTest, PoseDifferentialIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_PoseDifferentialIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_PoseDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto posePub =
-      node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-          "/pose_input1", custom_qos_profile);
+    node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    "/pose_input1", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.pose.pose.position.x = 20.0;
@@ -908,19 +911,19 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 
 TEST(InterfacesTest, ImuDifferentialIO) {
   auto node_ =
-      rclcpp::Node::make_shared("InterfacesTest_ImuDifferentialIO_testcase");
+    rclcpp::Node::make_shared("InterfacesTest_ImuDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
 
   auto imu0Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "/imu_input0", custom_qos_profile);
+    "/imu_input0", custom_qos_profile);
   auto imu1Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "/imu_input1", custom_qos_profile);
+    "/imu_input1", custom_qos_profile);
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "/imu_input3", custom_qos_profile);
+    "/imu_input3", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
-      "/odometry/filtered", filterCallback);
+    "/odometry/filtered", filterCallback);
 
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
@@ -942,8 +945,8 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   size_t setCount = 0;
   while (setCount++ < 10) {
     imu.header.stamp = node_->now();
-    imu0Pub->publish(imu); // Use this to move the absolute orientation
-    imu1Pub->publish(imu); // Use this to keep velocities at 0
+    imu0Pub->publish(imu);  // Use this to move the absolute orientation
+    imu1Pub->publish(imu);  // Use this to keep velocities at 0
     rclcpp::spin_some(node_);
     rclcpp::Rate(10).sleep();
   }
@@ -1002,7 +1005,8 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   resetFilter(node_);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char ** argv)
+{
   rclcpp::init(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
 

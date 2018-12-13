@@ -115,7 +115,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_ekf rl_lib)
 
   ament_add_gtest(test_ekf_localization_node_interfaces
-                    test/test_ekf_localization_node_interfaces.cpp)
+  test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces rl_lib)
 
   ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)

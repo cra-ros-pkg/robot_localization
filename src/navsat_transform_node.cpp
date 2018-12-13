@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/navsat_transform.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <robot_localization/navsat_transform.hpp>
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
 
@@ -43,5 +43,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-

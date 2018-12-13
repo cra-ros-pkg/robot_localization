@@ -30,6 +30,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <gtest/gtest.h>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <memory>
+#include <iostream>
+#include <vector>
+
 #include "rclcpp/clock.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -37,25 +46,19 @@
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/srv/set_pose.hpp"
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
-#include <gtest/gtest.h>
-#include <iostream>
-#include <vector>
 
-namespace robot_localization {
+namespace robot_localization
+{
 
 /*
   Convenience functions to get valid messages.
 */
 
-geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr getValidPose() {
+geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr getValidPose()
+{
   auto pose_msg =
-      std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>();
+    std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>();
   pose_msg->header.frame_id = "base_link";
   pose_msg->pose.pose.position.x = 1;
   pose_msg->pose.pose.orientation.w = 1;
@@ -65,9 +68,10 @@ geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr getValidPose() {
   return pose_msg;
 }
 
-geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr getValidTwist() {
+geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr getValidTwist()
+{
   auto twist_msg =
-      std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
+    std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
   twist_msg->header.frame_id = "base_link";
   for (size_t i = 0; i < 6; i++) {
     twist_msg->twist.covariance[i * 6 + i] = 1;
@@ -75,7 +79,8 @@ geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr getValidTwist() {
   return twist_msg;
 }
 
-sensor_msgs::msg::Imu::SharedPtr getValidImu() {
+sensor_msgs::msg::Imu::SharedPtr getValidImu()
+{
   auto imu_msg = std::make_shared<sensor_msgs::msg::Imu>();
   imu_msg->header.frame_id = "base_link";
   imu_msg->orientation.w = 1;
@@ -87,7 +92,8 @@ sensor_msgs::msg::Imu::SharedPtr getValidImu() {
   return imu_msg;
 }
 
-nav_msgs::msg::Odometry::SharedPtr getValidOdometry() {
+nav_msgs::msg::Odometry::SharedPtr getValidOdometry()
+{
   auto odom_msg = std::make_shared<nav_msgs::msg::Odometry>();
   odom_msg->header.frame_id = "odom";
   odom_msg->child_frame_id = "base_link";
@@ -101,13 +107,14 @@ nav_msgs::msg::Odometry::SharedPtr getValidOdometry() {
   It provides convenience to send valid messages with a specified timestamp.
   All diagnostic messages are stored into the public diagnostics attribute.
 */
-class DiagnosticsHelper {
+class DiagnosticsHelper
+{
 private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-      pose_pub_;
+    pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
-      twist_pub_;
+    twist_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
 
   std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped> pose_msg_;
@@ -116,16 +123,17 @@ private:
   std::shared_ptr<sensor_msgs::msg::Imu> imu_msg_;
 
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr
-      diagnostic_sub_;
+    diagnostic_sub_;
   rclcpp::Client<robot_localization::srv::SetPose>::SharedPtr set_pose_;
 
 public:
   std::vector<diagnostic_msgs::msg::DiagnosticArray> diagnostics;
   rclcpp::Node::SharedPtr node_;
 
-  DiagnosticsHelper() {
+  DiagnosticsHelper()
+  {
     node_ = rclcpp::Node::make_shared(
-        "filter_base_diagnostics_timestamps_test_interfaces");
+      "filter_base_diagnostics_timestamps_test_interfaces");
 
     // ready the valid messages.
     pose_msg_ = getValidPose();
@@ -138,28 +146,29 @@ public:
     custom_qos_profile.depth = 10;
     // subscribe to diagnostics and create publishers for the odometry messages.
     odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(
-        "example/odom", custom_qos_profile);
+      "example/odom", custom_qos_profile);
     pose_pub_ =
-        node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-            "example/pose", custom_qos_profile);
+      node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+      "example/pose", custom_qos_profile);
     twist_pub_ =
-        node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-            "example/twist", custom_qos_profile);
+      node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
+      "example/twist", custom_qos_profile);
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
-        "example/imu/data", custom_qos_profile);
+      "example/imu/data", custom_qos_profile);
 
     diagnostic_sub_ =
-        node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-            "/diagnostics",
-            [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
-              diagnostics.push_back(*msg);
-            });
+      node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics",
+      [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
+        diagnostics.push_back(*msg);
+      });
 
     set_pose_ =
-        node_->create_client<robot_localization::srv::SetPose>("/set_pose");
+      node_->create_client<robot_localization::srv::SetPose>("/set_pose");
   }
 
-  void publishMessages(rclcpp::Time t) {
+  void publishMessages(rclcpp::Time t)
+  {
     odom_msg_->header.stamp = t;
     odom_msg_->header.frame_id += 1;
     odom_pub_->publish(odom_msg_);
@@ -177,16 +186,17 @@ public:
     imu_pub_->publish(imu_msg_);
   }
 
-  void setPose(rclcpp::Time t) {
+  void setPose(rclcpp::Time t)
+  {
     auto request =
-        std::make_shared<robot_localization::srv::SetPose::Request>();
+      std::make_shared<robot_localization::srv::SetPose::Request>();
     request->pose.pose = getValidPose()->pose;
     request->pose.header.stamp = t;
     set_pose_->async_send_request(request);
   }
 };
 
-} // namespace robot_localization
+}  // namespace robot_localization
 
 /*
   First test; we run for a bit; then send messagse with an empty timestamp.
@@ -234,11 +244,13 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   */
   for (size_t i = 0; i < dh_.diagnostics.size(); i++) {
     for (size_t status_index = 0;
-         status_index < dh_.diagnostics[i].status.size(); status_index++) {
+      status_index < dh_.diagnostics[i].status.size(); status_index++)
+    {
       for (size_t key = 0;
-           key < dh_.diagnostics[i].status[status_index].values.size(); key++) {
+        key < dh_.diagnostics[i].status[status_index].values.size(); key++)
+      {
         diagnostic_msgs::msg::KeyValue kv =
-            dh_.diagnostics[i].status[status_index].values[key];
+          dh_.diagnostics[i].status[status_index].values[key];
         // Now the keys can be checked to see whether we found our warning.
 
         if (kv.key == "imu0_timestamp") {
@@ -301,11 +313,13 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   */
   for (size_t i = 0; i < dh_.diagnostics.size(); i++) {
     for (size_t status_index = 0;
-         status_index < dh_.diagnostics[i].status.size(); status_index++) {
+      status_index < dh_.diagnostics[i].status.size(); status_index++)
+    {
       for (size_t key = 0;
-           key < dh_.diagnostics[i].status[status_index].values.size(); key++) {
+        key < dh_.diagnostics[i].status[status_index].values.size(); key++)
+      {
         diagnostic_msgs::msg::KeyValue kv =
-            dh_.diagnostics[i].status[status_index].values[key];
+          dh_.diagnostics[i].status[status_index].values[key];
         // Now the keys can be checked to see whether we found our warning.
 
         if (kv.key == "imu0_timestamp") {
@@ -366,11 +380,13 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   */
   for (size_t i = 0; i < dh_.diagnostics.size(); i++) {
     for (size_t status_index = 0;
-         status_index < dh_.diagnostics[i].status.size(); status_index++) {
+      status_index < dh_.diagnostics[i].status.size(); status_index++)
+    {
       for (size_t key = 0;
-           key < dh_.diagnostics[i].status[status_index].values.size(); key++) {
+        key < dh_.diagnostics[i].status[status_index].values.size(); key++)
+      {
         diagnostic_msgs::msg::KeyValue kv =
-            dh_.diagnostics[i].status[status_index].values[key];
+          dh_.diagnostics[i].status[status_index].values[key];
         // Now the keys can be checked to see whether we found our warning.
 
         if (kv.key == "imu0_acceleration_timestamp") {
@@ -405,7 +421,8 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   EXPECT_TRUE(received_warning_twist);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char ** argv)
+{
   rclcpp::init(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   // Give ekf_localization_node time to initialize

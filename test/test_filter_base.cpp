@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, 2018 Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,28 +30,33 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/filter_base.hpp"
-#include "robot_localization/filter_common.hpp"
-#include <robot_localization/filter_utilities.hpp>
-
-#include <Eigen/Dense>
 #include <gtest/gtest.h>
+#include <Eigen/Dense>
+
 #include <iostream>
 #include <queue>
 #include <string>
 
+#include "robot_localization/filter_common.hpp"
+#include <robot_localization/filter_utilities.hpp>
+#include "robot_localization/filter_base.hpp"
+
 using robot_localization::Measurement;
 using robot_localization::STATE_SIZE;
 
-namespace robot_localization {
+namespace robot_localization
+{
 
-class FilterDerived : public FilterBase {
+class FilterDerived : public FilterBase
+{
 public:
   rclcpp::Time val;
 
-  FilterDerived() : val(0) {}
+  FilterDerived()
+  : val(0) {}
 
-  void correct(const Measurement &measurement) {
+  void correct(const Measurement & measurement)
+  {
     EXPECT_EQ(val, measurement.time_);
     EXPECT_EQ(measurement.topic_name_, "topic");
 
@@ -60,25 +65,29 @@ public:
       EXPECT_EQ(measurement.update_vector_[i], true);
     }
   }
-  void predict(const rclcpp::Time &reference_time,
-               const rclcpp::Duration &delta) {}
+  void predict(
+    const rclcpp::Time & reference_time,
+    const rclcpp::Duration & delta) {}
 };
 
-class FilterDerived2 : public FilterBase {
+class FilterDerived2 : public FilterBase
+{
 public:
   FilterDerived2() {}
 
-  void correct(const Measurement &measurement) {}
+  void correct(const Measurement & measurement) {}
 
-  void predict(const rclcpp::Time &reference_time,
-               const rclcpp::Duration &delta) {}
+  void predict(
+    const rclcpp::Time & reference_time,
+    const rclcpp::Duration & delta) {}
 
-  void processMeasurement(const Measurement &measurement) {
+  void processMeasurement(const Measurement & measurement)
+  {
     FilterBase::processMeasurement(measurement);
   }
 };
 
-} // namespace robot_localization
+}  // namespace robot_localization
 
 TEST(FilterBaseTest, MeasurementStruct) {
   robot_localization::Measurement meas1;
@@ -197,7 +206,8 @@ TEST(FilterBaseTest, MeasurementProcessing) {
   EXPECT_EQ(derived.getLastMeasurementTime(), meas.time_);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char ** argv)
+{
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

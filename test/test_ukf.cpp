@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,31 +30,35 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "robot_localization/ros_filter.hpp"
-#include "robot_localization/ukf.hpp"
 #include <gtest/gtest.h>
 #include <robot_localization/filter_base.hpp>
-
+#include <memory>
 #include <limits>
 #include <vector>
+
+#include "robot_localization/ros_filter.hpp"
+#include "robot_localization/ukf.hpp"
+
 
 using robot_localization::RosFilter;
 using robot_localization::STATE_SIZE;
 using robot_localization::Ukf;
 
-class RosUkfPassThrough : public robot_localization::RosFilter {
+class RosUkfPassThrough : public robot_localization::RosFilter
+{
 public:
-  explicit RosUkfPassThrough(rclcpp::Node::SharedPtr node,
-                             robot_localization::FilterBase::UniquePtr &filter)
-      : RosFilter(node, filter) {}
+  explicit RosUkfPassThrough(
+    rclcpp::Node::SharedPtr node,
+    robot_localization::FilterBase::UniquePtr & filter)
+  : RosFilter(node, filter) {}
   ~RosUkfPassThrough() {}
-  robot_localization::Ukf::UniquePtr &getFilter() { return filter_; }
+  robot_localization::Ukf::UniquePtr & getFilter() {return filter_;}
 };
 
 TEST(UkfTest, Measurements) {
   auto node_ = rclcpp::Node::make_shared("ukf");
   robot_localization::FilterBase::UniquePtr filter =
-      std::make_unique<robot_localization::Ukf>();
+    std::make_unique<robot_localization::Ukf>();
 
   double alpha = 0.001;
   double kappa = 0.0;
@@ -88,14 +92,14 @@ TEST(UkfTest, Measurements) {
   // Ensure that measurements are being placed in the queue correctly
   rclcpp::Time time1(1000);
   ukf.robot_localization::RosFilter::enqueueMeasurement(
-      "odom0", measurement, measurementCovariance, updateVector,
-      std::numeric_limits<double>::max(), time1);
+    "odom0", measurement, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time1);
 
   ukf.robot_localization::RosFilter::integrateMeasurements(rclcpp::Time(1001));
 
   EXPECT_EQ(ukf.getFilter()->getState(), measurement);
   EXPECT_EQ(ukf.getFilter()->getEstimateErrorCovariance(),
-            measurementCovariance);
+    measurementCovariance);
 
   ukf.getFilter()->setEstimateErrorCovariance(initialCovar);
 
@@ -114,8 +118,8 @@ TEST(UkfTest, Measurements) {
   rclcpp::Time time2(1002);
 
   ukf.robot_localization::RosFilter::enqueueMeasurement(
-      "odom0", measurement2, measurementCovariance, updateVector,
-      std::numeric_limits<double>::max(), time2);
+    "odom0", measurement2, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time2);
 
   ukf.robot_localization::RosFilter::integrateMeasurements(rclcpp::Time(1003));
 
@@ -125,7 +129,8 @@ TEST(UkfTest, Measurements) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char ** argv)
+{
   rclcpp::init(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   int ret = RUN_ALL_TESTS();
