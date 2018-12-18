@@ -253,7 +253,9 @@ static inline void LLtoUTM(
 
   // Compute the UTM Zone from the latitude and longitude
   char zone_buf[] = {0, 0, 0, 0};
-  snprintf(zone_buf, sizeof(zone_buf), "%d%c", ZoneNumber,
+  // We &0x3fU to let GCC know the size of ZoneNumber. In this case, it's under
+  // 63 (6bits)
+  snprintf(zone_buf, sizeof(zone_buf), "%d%c", ZoneNumber & 0x3fU,
     UTMLetterDesignator(Lat));
   UTMZone = std::string(zone_buf);
 
