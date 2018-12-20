@@ -191,10 +191,10 @@ void Ekf::correct(const Measurement & measurement)
 
     // (4) Update the estimate error covariance using the Joseph form: (I -
     // KH)P(I - KH)' + KRK'
-    Eigen::MatrixXd gainResidual = identity_;
-    gainResidual.noalias() -= kalman_gain_subset * state_to_measurement_subset;
+    Eigen::MatrixXd gain_residual = identity_;
+    gain_residual.noalias() -= kalman_gain_subset * state_to_measurement_subset;
     estimate_error_covariance_ =
-      gainResidual * estimate_error_covariance_ * gainResidual.transpose();
+      gain_residual * estimate_error_covariance_ * gain_residual.transpose();
     estimate_error_covariance_.noalias() += kalman_gain_subset *
       measurement_covariance_subset *
       kalman_gain_subset.transpose();
