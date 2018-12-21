@@ -1,7 +1,5 @@
 
-**********This file describes the work done and steps to perform test on the robot localization package.**********
-
-"https://github.com/Rohita83/robot_localization"
+**********This file describes the work done and steps to perform test on the robot localization package for ROS2.**********
 
 Work Done by referring ROS1 kinetic branch robot localization test folder.
 1)Migrated all test.cpp into ROS2 style
@@ -66,22 +64,22 @@ Terminal1:-
 source /opt/ros/melodic/setup.bash
 roscore
 
-Termianl2:- (Run ros1_bridge):-
+Terminal2:- (Run ros1_bridge):-
 source ~/ros2_ws/install/setup.bash
 source /opt/ros/melodic/setup.bash
 ros2 run ros1_bridge dynamic_bridge --bridge-all-topics	
 
-Termianl3:- (Play .bag from ROS1):-
+Terminal3:- (Play .bag from ROS1):-
 source /opt/ros/melodic/setup.bash
 rosparam set /use_sim_time true
 rosbag play ~/rl_ws/src/robot_localization/test/test1.bag --clock -d 5
 
-Termianl4:- (Launch TestCase launch.py):-
+Terminal4:- (Launch TestCase launch.py):-
 source /opt/ros/bouncy/setup.bash
 source ~/rl_ws/install/setup.bash
 ros2 launch robot_localization test_ekf_localization_node_bag1.launch.py
 
-Termianl5:- (Run static_transform_publisher):-
+Terminal5:- (Run static_transform_publisher):-
 source /opt/ros/bouncy/setup.bash
 ros2 run tf2_ros static_transform_publisher 0 -0.3 0.52 -1.570796327 0 1.570796327 base_link imu_link
 
@@ -92,17 +90,17 @@ Terminal1:-
 source /opt/ros/melodic/setup.bash
 roscore
 
-Termianl2:- (Run ros1_bridge):-
+Terminal2:- (Run ros1_bridge):-
 source ~/ros2_ws/install/setup.bash
 source /opt/ros/melodic/setup.bash
 ros2 run ros1_bridge dynamic_bridge --bridge-all-topics	
 
-Termianl3:- (Play .bag from ROS1):-
+Terminal3:- (Play .bag from ROS1):-
 source /opt/ros/melodic/setup.bash
 rosparam set /use_sim_time true
 rosbag play ~/rl_ws/src/robot_localization/test/test2.bag --clock -d 5
 
-Termianl4:- (Launch TestCase launch.py):-
+Terminal4:- (Launch TestCase launch.py):-
 source /opt/ros/bouncy/setup.bash
 source ~/rl_ws/install/setup.bash
 ros2 launch robot_localization test_ekf_localization_node_bag2.launch.py
@@ -113,17 +111,17 @@ Terminal1:-
 source /opt/ros/melodic/setup.bash
 roscore
 
-Termianl2:- (Run ros1_bridge):-
+Terminal2:- (Run ros1_bridge):-
 source ~/ros2_ws/install/setup.bash
 source /opt/ros/melodic/setup.bash
 ros2 run ros1_bridge dynamic_bridge --bridge-all-topics	
 
-Termianl3:- (Play .bag from ROS1):-
+Terminal3:- (Play .bag from ROS1):-
 source /opt/ros/melodic/setup.bash
 rosparam set /use_sim_time true
 rosbag play ~/rl_ws/src/robot_localization/test/test3.bag --clock -d 5
 
-Termianl4:- (Launch TestCase launch.py):-
+Terminal4:- (Launch TestCase launch.py):-
 source /opt/ros/bouncy/setup.bash
 source ~/rl_ws/install/setup.bash
 ros2 launch robot_localization test_ekf_localization_node_bag3.launch.py
