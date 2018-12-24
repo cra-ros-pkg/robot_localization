@@ -9,10 +9,10 @@ cmd1="source /opt/ros/melodic/setup.sh; roscore; exec /bin/bash"
 cmd2="source ~/ros2_ws/install/setup.bash; source /opt/ros/melodic/setup.bash; ros2 run ros1_bridge dynamic_bridge --bridge-all-topics; exec /bin/bash"
 
 #Command to play .bag from ROS1
-cmd3="sleep 2; source /opt/ros/melodic/setup.bash; rosparam set /use_sim_time true; rosbag play ~/rl_ws/src/robot_localization/test/test3.bag --clock -d 5; exec /bin/bash"
+cmd3="source /opt/ros/melodic/setup.bash; rosparam set /use_sim_time true; rosbag play ~/rl_ws/src/robot_localization/test/test3.bag --clock -d 5; exec /bin/bash"
 
 #Command to launch TestCase launch.py
-cmd4="sleep 2; source /opt/ros/bouncy/setup.bash; source ~/rl_ws/install/setup.bash; ros2 launch robot_localization test_ukf_localization_node_bag3.launch.py; exec /bin/bash"
+cmd4="source ~/rl_ws/install/setup.bash; ros2 launch robot_localization test_ukf_localization_node_bag3.launch.py; exec /bin/bash"
 
 gnome-terminal --tab -t "roscore" -- /bin/bash -c "$cmd1" 
 sleep 1
