@@ -56,6 +56,7 @@ RosFilter::RosFilter(
   rclcpp::Node::SharedPtr node,
   robot_localization::FilterBase::UniquePtr & filter)
 :     // staticDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
+  tf_buffer_(node->get_clock()), // Added this line to fix the build on crystal
   tf_listener_(tf_buffer_),
   // dynamicDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0), history_length_(0),
