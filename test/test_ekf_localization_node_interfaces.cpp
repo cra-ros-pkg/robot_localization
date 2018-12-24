@@ -45,6 +45,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/srv/set_pose.hpp"
 
+using namespace std::chrono_literals;
+
 nav_msgs::msg::Odometry filtered_;
 bool stateUpdated_;
 
@@ -70,28 +72,29 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   setPoseRequest->pose.header.stamp = node_->now();
 
-  client->async_send_request(setPoseRequest);
-  rclcpp::spin_some(node_);
-  rclcpp::Rate(100).sleep();
-  stateUpdated_ = false;
+  if (!client->wait_for_service(10s)) {
+     ASSERT_TRUE(false) << "service not available after waiting";
+   }
+
+  auto result = client->async_send_request(setPoseRequest);
+  auto ret = rclcpp::spin_until_future_complete(node_, result, 5s);  // Wait for the result.
 
   double deltaX = 0.0;
   double deltaY = 0.0;
   double deltaZ = 0.0;
 
-  while (!stateUpdated_ ||
-    ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
+  if(ret == rclcpp::executor::FutureReturnCode::SUCCESS)
   {
-    rclcpp::spin_some(node_);
-    rclcpp::Rate(100).sleep();
-
-    deltaX = filtered_.pose.pose.position.x -
-      setPoseRequest->pose.pose.pose.position.x;
-    deltaY = filtered_.pose.pose.position.y -
-      setPoseRequest->pose.pose.pose.position.y;
-    deltaZ = filtered_.pose.pose.position.z -
-      setPoseRequest->pose.pose.pose.position.z;
+	  rclcpp::spin_some(node_);
+	  rclcpp::Rate(100).sleep();
+	  deltaX = filtered_.pose.pose.position.x -
+			  setPoseRequest->pose.pose.pose.position.x;
+	  deltaY = filtered_.pose.pose.position.y -
+			  setPoseRequest->pose.pose.pose.position.y;
+	  deltaZ = filtered_.pose.pose.position.z -
+			  setPoseRequest->pose.pose.pose.position.z;
   }
+
   EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
 
@@ -570,7 +573,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
-    "/imu_input1", custom_qos_profile);
+    "imu_input1", custom_qos_profile);
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", filterCallback);
@@ -585,11 +588,11 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
 
   imu.header.frame_id = "base_link";
 
-  rclcpp::Rate loopRate(50);
+  rclcpp::Rate loopRate1(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
+    loopRate1.sleep();
     rclcpp::spin_some(node_);
   }
 
@@ -613,12 +616,13 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   imu.angular_velocity.x = 0.0;
   imu.angular_velocity.y = -(M_PI / 2.0);
 
+  rclcpp::Rate loopRate2(50);
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
+    loopRate2.sleep();
     rclcpp::spin_some(node_);
   }
 
@@ -638,12 +642,13 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   imu.angular_velocity.y = 0;
   imu.angular_velocity.z = M_PI / 4.0;
 
+  rclcpp::Rate loopRate3(50);
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
+    loopRate3.sleep();
     rclcpp::spin_some(node_);
   }
 
@@ -668,10 +673,11 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   imuIgnore.angular_velocity.z = 100;
   imuIgnore.angular_velocity_covariance[0] = -1;
 
+  rclcpp::Rate loopRate4(50);
   for (size_t i = 0; i < 50; ++i) {
     imuIgnore.header.stamp = node_->now();
     imuPub->publish(imuIgnore);
-    loopRate.sleep();
+    loopRate4.sleep();
     rclcpp::spin_some(node_);
   }
 
