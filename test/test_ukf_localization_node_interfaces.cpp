@@ -46,6 +46,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/srv/set_pose.hpp"
 
+using namespace std::chrono_literals;
 nav_msgs::msg::Odometry filtered_;
 bool stateUpdated_;
 
@@ -71,28 +72,29 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   setPoseRequest->pose.header.stamp = node_->now();
 
-  client->async_send_request(setPoseRequest);
-  rclcpp::spin_some(node_);
-  rclcpp::Rate(100).sleep();
-  stateUpdated_ = false;
+  if (!client->wait_for_service(10s)) {
+     ASSERT_TRUE(false) << "service not available after waiting";
+   }
+
+  auto result = client->async_send_request(setPoseRequest);
+  auto ret = rclcpp::spin_until_future_complete(node_, result, 5s);  // Wait for the result.
 
   double deltaX = 0.0;
   double deltaY = 0.0;
   double deltaZ = 0.0;
 
-  while (!stateUpdated_ ||
-    ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
+  if(ret == rclcpp::executor::FutureReturnCode::SUCCESS)
   {
-    rclcpp::spin_some(node_);
-    rclcpp::Rate(100).sleep();
-
-    deltaX = filtered_.pose.pose.position.x -
-      setPoseRequest->pose.pose.pose.position.x;
-    deltaY = filtered_.pose.pose.position.y -
-      setPoseRequest->pose.pose.pose.position.y;
-    deltaZ = filtered_.pose.pose.position.z -
-      setPoseRequest->pose.pose.pose.position.z;
+	  rclcpp::spin_some(node_);
+	  rclcpp::Rate(100).sleep();
+	  deltaX = filtered_.pose.pose.position.x -
+			  setPoseRequest->pose.pose.pose.position.x;
+	  deltaY = filtered_.pose.pose.position.y -
+			  setPoseRequest->pose.pose.pose.position.y;
+	  deltaZ = filtered_.pose.pose.position.z -
+			  setPoseRequest->pose.pose.pose.position.z;
   }
+
   EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
 
