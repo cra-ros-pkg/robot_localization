@@ -39,7 +39,7 @@
 			5. git checkout -b ros2-crystal-devel remotes/origin/ros2-crystal-devel
 			6. cd ~/rl_ws_crystal
 			7. source /opt/ros/crystal/setup.bash
-			8. source ~/diagnostics/install/setup.bash //This command will source to diagnostics pkg
+			8. source ~/diagnostics_ws/install/setup.bash //This command will source to diagnostics pkg
 			9. colcon build
 
 	4. System should have both ROS1 & ROS2. Note: We have verified on ROS1(i.e. melodic) & ROS2 (i.e. crystal).
