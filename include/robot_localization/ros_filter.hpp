@@ -48,11 +48,9 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
-/*
-#include <diagnostic_msgs/DiagnosticStatus.h>
-#include <diagnostic_updater/diagnostic_updater.h>
-#include <diagnostic_updater/publisher.h>
-*/
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 #include <robot_localization/filter_base.hpp>
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
@@ -326,8 +324,8 @@ protected:
   //! @brief Aggregates all diagnostics so they can be published
   //! @param[in] wrapper - The diagnostic status wrapper to update
   //!
-  // void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper
-  // &wrapper);
+  void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper
+   &wrapper);
 
   //! @brief Utility method for copying covariances from ROS covariance arrays
   //! to Eigen matrices
@@ -665,7 +663,7 @@ protected:
 
   //! @brief Used for updating the diagnostics
   //!
-  // diagnostic_updater::Updater diagnosticUpdater_;
+  diagnostic_updater::Updater diagnostic_updater_;
 
   //! @brief Our filter (EKF, UKF, etc.)
   //!

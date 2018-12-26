@@ -55,10 +55,10 @@ namespace robot_localization
 RosFilter::RosFilter(
   rclcpp::Node::SharedPtr node,
   robot_localization::FilterBase::UniquePtr & filter)
-:     // staticDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
+: static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
+  dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   tf_buffer_(node->get_clock()), // Added this line to fix the build on crystal
   tf_listener_(tf_buffer_),
-  // dynamicDiagErrorLevel_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0), history_length_(0),
   last_set_pose_time_(0, 0, RCL_ROS_TIME), latest_control_(),
   latest_control_time_(0, 0, RCL_ROS_TIME), tf_timeout_(0),
@@ -83,7 +83,7 @@ RosFilter::RosFilter(
   state_variable_names_.push_back("Y_ACCELERATION");
   state_variable_names_.push_back("Z_ACCELERATION");
 
-  // diagnostic_updater_.setHardwareID("none");
+  diagnostic_updater_.setHardwareID("none");
 }
 
 RosFilter::~RosFilter() {topic_subs_.clear();}
@@ -187,14 +187,16 @@ void RosFilter::accelerationCallback(
     //{
     //  reset();
     //}
-    /*
-    std::stringstream stream;
-    stream << "The " << topic_name << " message has a timestamp before that of
-    the previous message received," << " this message will be ignored. This may
-    indicate a bad timestamp. (message time: " << msg->header.stamp.nanosec <<
-    ")"; addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN, topic_name
-    + "_timestamp", stream.str(), false);
-    */
+
+	  std::stringstream stream;
+	  stream << "The " << topic_name << " message has a timestamp before that of "
+			  "the previous message received," << " this message will be ignored. This may"
+			  " indicate a bad timestamp. (message time: " << msg->header.stamp.nanosec <<
+			  ")";
+
+	  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN, topic_name
+			  + "_timestamp", stream.str(), false);
+
 
     RF_DEBUG("Message is too old. Last message time for " <<
       topic_name << " is " <<
@@ -397,17 +399,14 @@ void RosFilter::imuCallback(
   // If we've just reset the filter, then we want to ignore any messages
   // that arrive with an older timestamp
   if (last_set_pose_time_ >= msg->header.stamp) {
-    /*
-    std::stringstream stream;
-    stream << "The " << topic_name << " message has a timestamp equal to or
-    before the last filter reset, " << "this message will be ignored. This may
-    indicate an empty or bad timestamp. (message time: " <<
-              msg->header.stamp.nanosec << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                  topic_name + "_timestamp",
-                  stream.str(),
-                  false);
-    */
+	  std::stringstream stream;
+	  stream << "The " << topic_name << " message has a timestamp equal to or"
+			  " before the last filter reset, " << "this message will be ignored. This may"
+			  "indicate an empty or bad timestamp. (message time: " <<msg->header.stamp.nanosec
+			  << ")";
+	  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+			  topic_name + "_timestamp", stream.str(), false);
+
 
     RF_DEBUG("Received message that preceded the most recent pose reset. "
       "Ignoring...");
@@ -1021,16 +1020,13 @@ void RosFilter::loadParams()
           node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic,
           odom_callback));
       } else {
-        /*
+
         std::stringstream stream;
-        stream << odom_topic << " is listed as an input topic, but all update
-        variables are false";
+        stream << odom_topic << " is listed as an input topic, but all update "
+        		"variables are false";
 
         addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                      odom_topic + "_configuration",
-                      stream.str(),
-                      true);
-        */
+                      odom_topic + "_configuration", stream.str(), true);
       }
 
       if (pose_update_sum > 0) {
@@ -1448,56 +1444,53 @@ void RosFilter::loadParams()
    *    1. Multiple non-differential input sources
    *    2. No absolute *or* velocity measurements for pose variables
    */
-  /*if (print_diagnostics_)
+  if (print_diagnostics_)
   {
-    for (int state_var = StateMemberX; state_var <= StateMemberYaw; ++state_var)
-    {
-      if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] > 1)
-      {
-        std::stringstream stream;
-        stream <<  abs_pose_var_counts[static_cast<StateMembers>(state_var -
-  POSITION_OFFSET)] << " absolute pose inputs detected for " <<
-  state_variable_names_[state_var] <<
-            ". This may result in oscillations. Please ensure that your
-  variances for each " "measured variable are set appropriately.";
+	  for (int state_var = StateMemberX; state_var <= StateMemberYaw; ++state_var)
+	  {
+		  if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] > 1)
+		  {
+			  std::stringstream stream;
+			  stream <<  abs_pose_var_counts[static_cast<StateMembers>(state_var -
+					  POSITION_OFFSET)] << " absolute pose inputs detected for " <<
+							  state_variable_names_[state_var] <<
+							  ". This may result in oscillations. Please ensure that your"
+							  "variances for each measured variable are set appropriately.";
 
-        addDiagnostic(
-          diagnostic_msgs::msg::DiagnosticStatus::WARN,
-          state_variable_names_[state_var] + "_configuration",
-          stream.str(),
-          true);
-      }
-      else if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] == 0)
-      {
-        if ((static_cast<StateMembers>(state_var) == StateMemberX &&
-             twist_var_counts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
-            (static_cast<StateMembers>(state_var) == StateMemberY &&
-             twist_var_counts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
-            (static_cast<StateMembers>(state_var) == StateMemberZ &&
-             twist_var_counts[static_cast<StateMembers>(StateMemberVz)] == 0 &&
-             two_d_mode_ == false) ||
-            (static_cast<StateMembers>(state_var) == StateMemberRoll &&
-             twist_var_counts[static_cast<StateMembers>(StateMemberVroll)] == 0
-  && two_d_mode_ == false) || (static_cast<StateMembers>(state_var) ==
-  StateMemberPitch &&
-             twist_var_counts[static_cast<StateMembers>(StateMemberVpitch)] == 0
-  && two_d_mode_ == false) || (static_cast<StateMembers>(state_var) ==
-  StateMemberYaw && twist_var_counts[static_cast<StateMembers>(StateMemberVyaw)]
-  == 0))
-        {
-          std::stringstream stream;
-          stream << "Neither " << state_variable_names_[state_var] << " nor its
-  " "velocity is being measured. This will result in unbounded " "error growth
-  and erratic filter behavior.";
+			  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+					  state_variable_names_[state_var] + "_configuration",
+					  stream.str(), true);
+		  }
+		  else if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] == 0)
+		  {
+			  if ((static_cast<StateMembers>(state_var) == StateMemberX &&
+					  twist_var_counts[static_cast<StateMembers>(StateMemberVx)] == 0) ||
+					  (static_cast<StateMembers>(state_var) == StateMemberY &&
+							  twist_var_counts[static_cast<StateMembers>(StateMemberVy)] == 0) ||
+							  (static_cast<StateMembers>(state_var) == StateMemberZ &&
+									  twist_var_counts[static_cast<StateMembers>(StateMemberVz)] == 0 &&
+									  two_d_mode_ == false) ||
+									  (static_cast<StateMembers>(state_var) == StateMemberRoll &&
+											  twist_var_counts[static_cast<StateMembers>(StateMemberVroll)] == 0
+											  && two_d_mode_ == false) || (static_cast<StateMembers>(state_var) ==
+													  StateMemberPitch &&
+													  twist_var_counts[static_cast<StateMembers>(StateMemberVpitch)] == 0
+													  && two_d_mode_ == false) || (static_cast<StateMembers>(state_var) ==
+															  StateMemberYaw && twist_var_counts[static_cast<StateMembers>(StateMemberVyaw)]
+																								 == 0))
+			  {
+				  std::stringstream stream;
+				  stream << "Neither " << state_variable_names_[state_var] << " nor its "
+						  "velocity is being measured. This will result in unbounded"
+						  "error growth and erratic filter behavior.";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-                        state_variable_names_[state_var] + "_configuration",
-                        stream.str(),
-                        true);
-        }
-      }
-    }
-  } */
+				  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+						  state_variable_names_[state_var] + "_configuration",
+						  stream.str(), true);
+			  }
+		  }
+	  }
+  }
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
@@ -1564,10 +1557,8 @@ void RosFilter::odometryCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    // addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-    //              topic_name + "_timestamp",
-    //              stream.str(),
-    //              false);
+    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    		topic_name + "_timestamp", stream.str(), false);
     RF_DEBUG("Received message that preceded the most recent pose reset. "
       "Ignoring...");
 
@@ -1620,15 +1611,13 @@ void RosFilter::poseCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    // addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-    //              topic_name + "_timestamp",
-    //              stream.str(),
-    //              false);
+    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    		topic_name + "_timestamp", stream.str(), false);
     return;
   }
 
-  RF_DEBUG("------ RosFilter::poseCallback (" << topic_name << ") ------\n")
-  // "Pose message:\n" << *msg);
+  RF_DEBUG("------ RosFilter::poseCallback (" << topic_name << ") ------\n"
+  "Pose message:\n" << msg);
 
   //  Put the initial value in the lastMessagTimes_ for this variable if it's
   //  empty
@@ -1678,22 +1667,19 @@ void RosFilter::poseCallback(
     //{
     //  reset();
     // }
-    /*
-    std::stringstream stream;
-    stream << "The " << topic_name << " message has a timestamp before that of
-    the previous message received," << " this message will be ignored. This may
-    indicate a bad timestamp. (message time: " <<
-              msg->header.stamp.nanoseconds() << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                  topic_name + "_timestamp",
-                  stream.str(),
-                  false);
 
-    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is
-    "
-             << last_message_times_[topic_name] << ", current message time is "
-             << msg->header.stamp << ".\n");
-    */
+    std::stringstream stream;
+    stream << "The " << topic_name << " message has a timestamp before that of "
+    		"the previous message received," << " this message will be ignored. This may "
+			"indicate a bad timestamp. (message time: " <<msg->header.stamp.nanosec
+			<< ")";
+    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    		topic_name + "_timestamp",stream.str(), false);
+
+    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is "
+    		<< filter_utilities::toSec(last_message_times_[topic_name]) <<
+			", current message time is " << filter_utilities::toSec(msg->header.stamp)
+    << ".\n");
   }
 
   RF_DEBUG("\n----- /RosFilter::poseCallback (" << topic_name << ") ------\n");
@@ -1703,23 +1689,19 @@ void RosFilter::run()
 {
   loadParams();
 
-  /*
   if (print_diagnostics_)
   {
-    diagnostic_updater_.add("Filter diagnostic updater", this,
-  &RosFilter::aggregateDiagnostics);
+	  diagnostic_updater_.add("Filter diagnostic updater", this,
+			  &RosFilter::aggregateDiagnostics);
   }
-
 
   // Set up the frequency diagnostic
   double minFrequency = frequency_ - 2;
   double maxFrequency = frequency_ + 2;
   diagnostic_updater::HeaderlessTopicDiagnostic freqDiag("odometry/filtered",
-                                                         diagnostic_updater_,
-                                                         diagnostic_updater::FrequencyStatusParam(&minFrequency,
-                                                                                                  &maxFrequency,
-                                                                                                  0.1, 10));
-  */
+		  diagnostic_updater_,
+		  diagnostic_updater::FrequencyStatusParam(&minFrequency,
+				  &maxFrequency, 0.1, 10));
 
   // We may need to broadcast a different transform than
   // the one we've already calculated.
@@ -1846,10 +1828,10 @@ void RosFilter::run()
       // Fire off the position and the transform
       position_pub->publish(filtered_position);
 
-      // if (print_diagnostics_)
-      //{
-      //  freqDiag.tick();
-      //}
+      if (print_diagnostics_)
+      {
+    	  freqDiag.tick();
+      }
     }
 
     // Publish the acceleration if desired and filter is initialized
@@ -1864,14 +1846,15 @@ void RosFilter::run()
      * files and using simulated time, so we have to check for
      * time suddenly moving backwards as well as the standard
      * timeout criterion before publishing. */
-    // double diag_duration = (cur_time - last_diag_time).nanoseconds();
-    // if (print_diagnostics_ &&
-    //    (diag_duration >= diagnostic_updater_.getPeriod() || diag_duration <
-    //    0.0))
-    // {
-    //  diagnostic_updater_.force_update();
-    //  last_diag_time = cur_time;
-    //}
+
+    double diag_duration = (cur_time - last_diag_time).nanoseconds();
+    if (print_diagnostics_ &&
+    		(diag_duration >= diagnostic_updater_.getPeriod() ||
+    				diag_duration < 0.0))
+    {
+    	diagnostic_updater_.force_update();
+    	last_diag_time = cur_time;
+    }
 
     // Clear out expired history data
     if (smooth_lagged_data_) {
@@ -1890,9 +1873,10 @@ void RosFilter::setPoseCallback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
   RF_DEBUG(
-    "------ RosFilter::setPoseCallback ------\nPose message:\n")   // << *msg);
+    "------ RosFilter::setPoseCallback ------\nPose message:\n" << msg);
 
-  std::string topic_name("setPose");
+  //std::string topic_name("setPose");
+  std::string topic_name("set_pose");
 
   // Get rid of any initial poses (pretend we've never had a measurement)
   initial_measurements_.clear();
@@ -1972,15 +1956,13 @@ void RosFilter::twistCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    // addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-    //              topic_name + "_timestamp",
-    //              stream.str(),
-    //              false);
+    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    		topic_name + "_timestamp", stream.str(), false);
     return;
   }
 
-  RF_DEBUG("------ RosFilter::twistCallback (" << topic_name << ") ------\n")
-  // "Twist message:\n" << *msg);
+  RF_DEBUG("------ RosFilter::twistCallback (" << topic_name << ") ------\n"
+  "Twist message:\n" << msg);
 
   if (last_message_times_.count(topic_name) == 0) {
     last_message_times_.insert(
@@ -2023,32 +2005,27 @@ void RosFilter::twistCallback(
       topic_name << " is now " <<
       filter_utilities::toSec(last_message_times_[topic_name]) <<
       "\n");
-  } else {
-    // else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
-    //{
-    //  reset();
-    //}
-    /*
+  }
+/*  else if (reset_on_time_jump_ && rclcpp::Time::isSimTime()) {
+	  reset();
+  }*/
+  else {
     std::stringstream stream;
-    stream << "The " << topic_name << " message has a timestamp before that of
-    the previous message received," << " this message will be ignored. This may
-    indicate a bad timestamp. (message time: " <<
-              msg->header.stamp.nanoseconds() << ")";
+    stream << "The " << topic_name << " message has a timestamp before that of "
+    		"the previous message received," << " this message will be ignored. This may "
+			"indicate a bad timestamp. (message time: " <<msg->header.stamp.nanosec << ")";
     addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                  topic_name + "_timestamp",
-                  stream.str(),
-                  false);
+    		topic_name + "_timestamp", stream.str(),false);
 
-    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is
-    " << last_message_times_[topic_name] <<
-      ", current message time is " << msg->header.stamp << ".\n");
-    */
+    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is"
+    		<< filter_utilities::toSec(last_message_times_[topic_name]) <<
+			", current message time is " <<	filter_utilities::toSec(msg->header.stamp)
+    << ".\n");
   }
 
   RF_DEBUG("\n----- /RosFilter::twistCallback (" << topic_name << ") ------\n");
 }
 
-/*
 void RosFilter::addDiagnostic(
   const int errLevel,
   const std::string &topicAndClass,
@@ -2057,65 +2034,72 @@ void RosFilter::addDiagnostic(
 {
   if (staticDiag)
   {
-    staticDiagnostics_[topicAndClass] = message;
-    staticDiagErrorLevel_ = std::max(staticDiagErrorLevel_, errLevel);
+    static_diagnostics_[topicAndClass] = message;
+    static_diag_error_level_ = std::max(static_diag_error_level_, errLevel);
   }
   else
   {
-    dynamicDiagnostics_[topicAndClass] = message;
-    dynamicDiagErrorLevel_ = std::max(dynamicDiagErrorLevel_, errLevel);
+    dynamic_diagnostics_[topicAndClass] = message;
+    dynamic_diag_error_level_ = std::max(dynamic_diag_error_level_, errLevel);
   }
 }
 
 void RosFilter::aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper
-&wrapper)
+		&wrapper)
 {
-  wrapper.clear();
-  wrapper.clearSummary();
+	wrapper.clear();
+	wrapper.clearSummary();
 
-  int maxErrLevel = std::max(staticDiagErrorLevel_, dynamicDiagErrorLevel_);
+	int maxErrLevel = std::max(static_diag_error_level_, dynamic_diag_error_level_);
 
-  // Report the overall status
-  switch (maxErrLevel)
-  {
-    case diagnostic_msgs::msg::DiagnosticStatus::ERROR:
-      wrapper.summary(maxErrLevel,
-                      "Erroneous data or settings detected for a
-robot_localization state estimation node_->"); break; case
-diagnostic_msgs::msg::DiagnosticStatus::WARN: wrapper.summary(maxErrLevel,
-                      "Potentially erroneous data or settings detected for "
-                      "a robot_localization state estimation node_->");
-      break;
-    case diagnostic_msgs::msg::DiagnosticStatus::STALE:
-      wrapper.summary(maxErrLevel,
-                      "The state of the robot_localization state estimation node
-is stale."); break; case diagnostic_msgs::msg::DiagnosticStatus::OK:
-      wrapper.summary(maxErrLevel,
-                      "The robot_localization state estimation node appears to
-be functioning properly."); break; default: break;
-  }
+	// Report the overall status
+	switch (maxErrLevel)
+	{
+	case diagnostic_msgs::msg::DiagnosticStatus::ERROR:
+		wrapper.summary(maxErrLevel,
+				"Erroneous data or settings detected for a "
+				"robot_localization state estimation node_->");
+		break;
+	case
+	diagnostic_msgs::msg::DiagnosticStatus::WARN: wrapper.summary(maxErrLevel,
+			"Potentially erroneous data or settings detected for "
+			"a robot_localization state estimation node_->");
+	break;
+	case diagnostic_msgs::msg::DiagnosticStatus::STALE:
+		wrapper.summary(maxErrLevel,
+				"The state of the robot_localization state estimation "
+				"node is stale.");
+		break;
+	case
+	diagnostic_msgs::msg::DiagnosticStatus::OK:
+		wrapper.summary(maxErrLevel,
+				"The robot_localization state estimation node appears to "
+				"be functioning properly.");
+		break;
+	default:
+		break;
+	}
 
-  // Aggregate all the static messages
-  for (std::map<std::string, std::string>::iterator diagIt =
-staticDiagnostics_.begin(); diagIt != staticDiagnostics_.end();
-      ++diagIt)
-  {
-    wrapper.add(diagIt->first, diagIt->second);
-  }
+	// Aggregate all the static messages
+	for (std::map<std::string, std::string>::iterator diagIt =
+			static_diagnostics_.begin(); diagIt != static_diagnostics_.end();
+			++diagIt)
+	{
+		wrapper.add(diagIt->first, diagIt->second);
+	}
 
-  // Aggregate all the dynamic messages, then clear them
-  for (std::map<std::string, std::string>::iterator diagIt =
-dynamicDiagnostics_.begin(); diagIt != dynamicDiagnostics_.end();
-      ++diagIt)
-  {
-    wrapper.add(diagIt->first, diagIt->second);
-  }
-  dynamicDiagnostics_.clear();
+	// Aggregate all the dynamic messages, then clear them
+	for (std::map<std::string, std::string>::iterator diagIt =
+			dynamic_diagnostics_.begin(); diagIt != dynamic_diagnostics_.end();
+			++diagIt)
+	{
+		wrapper.add(diagIt->first, diagIt->second);
+	}
+	dynamic_diagnostics_.clear();
 
-  // Reset the warning level for the dynamic diagnostic messages
-  dynamicDiagErrorLevel_ = diagnostic_msgs::msg::DiagnosticStatus::OK;
+	// Reset the warning level for the dynamic diagnostic messages
+	dynamic_diag_error_level_ = diagnostic_msgs::msg::DiagnosticStatus::OK;
 }
-*/
 
 void RosFilter::copyCovariance(
   const double * arr, Eigen::MatrixXd & covariance,
@@ -2127,58 +2111,49 @@ void RosFilter::copyCovariance(
     for (size_t j = 0; j < dimension; j++) {
       covariance(i, j) = arr[dimension * i + j];
 
-      /*
       if (print_diagnostics_)
       {
-        std::string iVar = state_variable_names_[offset + i];
+    	  std::string iVar = state_variable_names_[offset + i];
 
-        if (covariance(i, j) > 1e3 && (update_vector[offset  + i] ||
-      update_vector[offset  + j]))
-        {
-          std::string jVar = state_variable_names_[offset + j];
+    	  if (covariance(i, j) > 1e3 && (update_vector[offset  + i] ||
+    			  update_vector[offset  + j]))
+    	  {
+    		  std::string jVar = state_variable_names_[offset + j];
 
-          std::stringstream stream;
-          stream << "The covariance at position (" << dimension * i + j << "),
-      which corresponds to " << (i == j ? iVar + " variance" : iVar + " and " +
-      jVar + " covariance") <<
-              ", the value is extremely large (" << covariance(i, j) << "), but
-      the update vector for " << (i == j ? iVar : iVar + " and/or " + jVar) << "
-      is set to true. This may produce undesirable results.";
+    		  std::stringstream stream;
+    		  stream << "The covariance at position (" << dimension * i + j
+    				  << "), which corresponds to " << (i == j ? iVar + " variance" : iVar + " and " +
+    						  jVar + " covariance") <<
+							  ", the value is extremely large (" << covariance(i, j) << "), but "
+							  "the update vector for " << (i == j ? iVar : iVar + " and/or " + jVar)
+							  << "is set to true. This may produce undesirable results.";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                        topic_name + "_covariance",
-                        stream.str(),
-                        false);
-        }
+    		  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    				  topic_name + "_covariance",	stream.str(), false);
+    	  }
         else if (update_vector[i] && i == j && covariance(i, j) == 0)
         {
-          std::stringstream stream;
-          stream << "The covariance at position (" << dimension * i + j << "),
-      which corresponds to " << iVar << " variance, was zero. This will be
-      replaced with a small value to maintain filter " "stability, but should be
-      corrected at the message origin node_->";
+        	std::stringstream stream;
+        	stream << "The covariance at position (" << dimension * i + j
+        			<< "), which corresponds to " << iVar << " variance, was zero. This"
+					"will be replaced with a small value to maintain filter stability, "
+					"but should be corrected at the message origin node_->";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                        topic_name + "_covariance",
-                        stream.str(),
-                        false);
+        	addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+        			topic_name + "_covariance",stream.str(),false);
         }
         else if (update_vector[i] && i == j && covariance(i, j) < 0)
         {
-          std::stringstream stream;
-          stream << "The covariance at position (" << dimension * i + j <<
-                    "), which corresponds to " << iVar << " variance, was
-      negative. This will be replaced with a " "small positive value to maintain
-      filter stability, but should be corrected at the message " "origin
-      node_->";
+        	std::stringstream stream;
+        	stream << "The covariance at position (" << dimension * i + j <<
+        			"), which corresponds to " << iVar << " variance, was"
+					"negative. This will be replaced with a small positive value to maintain"
+					"filter stability, but should be corrected at the message origin node_->";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                        topic_name + "_covariance",
-                        stream.str(),
-                        false);
+        	addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+        			topic_name + "_covariance", stream.str(),false);
         }
       }
-      */
     }
   }
 }
@@ -2426,23 +2401,20 @@ bool RosFilter::preparePose(
   {
     orientation.setValue(0.0, 0.0, 0.0, 1.0);
 
-    /*
     if (update_vector[StateMemberRoll] ||
         update_vector[StateMemberPitch] ||
         update_vector[StateMemberYaw])
     {
       std::stringstream stream;
       stream << "The " << topic_name <<
-        " message contains an invalid orientation quaternion, " <<
-         "but its configuration is such that orientation data is being used.
-    Correcting...";
+    		  " message contains an invalid orientation quaternion, " <<
+			  "but its configuration is such that orientation data is being used."
+			  " Correcting...";
 
       addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
-                    topic_name + "_orientation",
-                    stream.str(),
-                    false);
+    		  topic_name + "_orientation",stream.str(),false);
     }
-    */
+
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
   }

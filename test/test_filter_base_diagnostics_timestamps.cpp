@@ -133,7 +133,7 @@ public:
   DiagnosticsHelper()
   {
     node_ = rclcpp::Node::make_shared(
-      "filter_base_diagnostics_timestamps_test_interfaces");
+      "test_filter_base_diagnostics");
 
     // ready the valid messages.
     pose_msg_ = getValidPose();
@@ -164,35 +164,32 @@ public:
       });
 
     set_pose_ =
-      node_->create_client<robot_localization::srv::SetPose>("/set_pose");
+      node_->create_client<robot_localization::srv::SetPose>("set_pose");
   }
 
   void publishMessages(rclcpp::Time t)
   {
     odom_msg_->header.stamp = t;
-    odom_msg_->header.frame_id += 1;
     odom_pub_->publish(odom_msg_);
 
     pose_msg_->header.stamp = t;
-    pose_msg_->header.frame_id += 1;
     pose_pub_->publish(pose_msg_);
 
     twist_msg_->header.stamp = t;
-    twist_msg_->header.frame_id += 1;
     twist_pub_->publish(twist_msg_);
 
     imu_msg_->header.stamp = t;
-    imu_msg_->header.frame_id += 1;
     imu_pub_->publish(imu_msg_);
   }
 
   void setPose(rclcpp::Time t)
   {
-    auto request =
+    auto setPoseRequest =
       std::make_shared<robot_localization::srv::SetPose::Request>();
-    request->pose.pose = getValidPose()->pose;
-    request->pose.header.stamp = t;
-    set_pose_->async_send_request(request);
+    setPoseRequest->pose.header.frame_id = "base_link";
+    setPoseRequest->pose.pose = getValidPose()->pose;
+    setPoseRequest->pose.header.stamp = t;
+    set_pose_->async_send_request(setPoseRequest);
   }
 };
 
@@ -293,13 +290,16 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   }
   rclcpp::spin_some(dh_.node_);
 
+  rclcpp::Time curr = (dh_.node_)->now();
   // Set the pose to the current timestamp.
-  dh_.setPose((dh_.node_)->now());
+  dh_.setPose(curr);
 
   rclcpp::spin_some(dh_.node_);
 
+  //wait for 1 sec to make synchronize setPose msg & before msg
+  sleep(1);
   // send messages from one second before that pose reset.
-  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1));
+  dh_.publishMessages(curr - rclcpp::Duration(1,0));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
@@ -356,7 +356,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   bool received_warning_pose = false;
 
   // For two seconds send correct messages.
-  rclcpp::Rate loopRate(10);
+  rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 20; ++i) {
     rclcpp::spin_some(dh_.node_);
     dh_.publishMessages((dh_.node_)->now());
@@ -365,7 +365,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   rclcpp::spin_some(dh_.node_);
 
   // Send message that is one second in the past.
-  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1));
+  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1,0));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.

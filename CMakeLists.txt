@@ -9,6 +9,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 #find_package(geographic_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -36,6 +37,7 @@ include_directories(
   ${rclcpp_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}
+  ${diagnostic_updater_INCLUDE_DIRS}
   ${nav_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${tf2_ros_INCLUDE_DIRS}
@@ -66,6 +68,7 @@ target_link_libraries(
   ${rclcpp_LIBRARIES}
   ${geometry_msgs_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
+  ${diagnostic_updater_LIBRARIES}
   ${nav_msgs_LIBRARIES}
   ${sensor_msgs_LIBRARIES}
   ${tf2_ros_LIBRARIES}
@@ -105,10 +108,10 @@ if(BUILD_TESTING)
 
   #### TODO(someone): Need commented diagnostics source code in R_L src to execute this testcase.
   # This test uses se_node node for convenience.
-  #ament_add_gtest(test_filter_base_diagnostics_timestamps
-  #                  test/test_filter_base_diagnostics_timestamps.cpp)
-  #target_link_libraries(test_filter_base_diagnostics_timestamps rl_lib)
-  #add_dependencies(test_filter_base_diagnostics_timestamps se_node)
+  ament_add_gtest(test_filter_base_diagnostics_timestamps
+                    test/test_filter_base_diagnostics_timestamps.cpp)
+  target_link_libraries(test_filter_base_diagnostics_timestamps rl_lib)
+  add_dependencies(test_filter_base_diagnostics_timestamps se_node)
 
   #### EKF TESTS ######
   ament_add_gtest(test_ekf test/test_ekf.cpp)
@@ -154,7 +157,7 @@ if(BUILD_TESTING)
 install(
   TARGETS
   filter_base-test
-  #test_filter_base_diagnostics_timestamps
+  test_filter_base_diagnostics_timestamps
   test_ekf
   test_ekf_localization_node_interfaces
   test_ekf_localization_node_bag1
