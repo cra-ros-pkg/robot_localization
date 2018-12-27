@@ -29,22 +29,24 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <gtest/gtest.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+// Header files names ahs been updated as per ros2
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <gtest/gtest.h>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-#include <functional>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+#include <chrono>
+#include <functional>
 #include <iostream>
 #include <memory>
-#include <chrono>
 
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/srv/set_pose.hpp"
+
+using namespace std::chrono_literals;
 
 nav_msgs::msg::Odometry filtered_;
 bool stateUpdated_;
@@ -57,6 +59,7 @@ void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
 void resetFilter(rclcpp::Node::SharedPtr node_)
 {
+  // ros2 style service-client server has been implemented
   auto client =
     node_->create_client<robot_localization::srv::SetPose>("set_pose");
   auto setPoseRequest =
@@ -71,21 +74,21 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   setPoseRequest->pose.header.stamp = node_->now();
 
-  client->async_send_request(setPoseRequest);
-  rclcpp::spin_some(node_);
-  rclcpp::Rate(100).sleep();
-  stateUpdated_ = false;
+  if (!client->wait_for_service(10s)) {
+    ASSERT_TRUE(false) << "service not available after waiting";
+  }
+
+  auto result = client->async_send_request(setPoseRequest);
+  auto ret = rclcpp::spin_until_future_complete(node_, result,
+      5s);                                            // Wait for the result.
 
   double deltaX = 0.0;
   double deltaY = 0.0;
   double deltaZ = 0.0;
-
-  while (!stateUpdated_ ||
-    ::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) > 0.1)
-  {
+  // Timing and spinning is updated as per ros2
+  if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
     rclcpp::spin_some(node_);
     rclcpp::Rate(100).sleep();
-
     deltaX = filtered_.pose.pose.position.x -
       setPoseRequest->pose.pose.pose.position.x;
     deltaY = filtered_.pose.pose.position.y -
@@ -93,17 +96,19 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
     deltaZ = filtered_.pose.pose.position.z -
       setPoseRequest->pose.pose.pose.position.z;
   }
+
   EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
 
 TEST(InterfacesTest, OdomPoseBasicIO) {
   stateUpdated_ = false;
-
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_OdomPoseBasicIO_testcase");
 
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
     "odom_input0", custom_qos_profile);
 
@@ -121,7 +126,7 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
   odom.header.frame_id = "odom";
   odom.child_frame_id = "base_link";
-
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     odom.header.stamp = node_->now();
@@ -134,24 +139,26 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x),
     0.01);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
-    0.01);         // Configuration for this variable for this sensor is false
+    0.01);          // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z),
     0.01);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7],
-    0.25);         // Configuration for this variable for this sensor is false
+    0.25);          // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.6);
 
   resetFilter(node_);
 }
 
 TEST(InterfacesTest, OdomTwistBasicIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_OdomTwistBasicIO_testcase");
 
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
     "odom_input2", custom_qos_profile);
 
@@ -172,7 +179,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   odom.header.frame_id = "odom";
   odom.child_frame_id = "base_link";
-
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 400; ++i) {
     odom.header.stamp = node_->now();
@@ -294,9 +301,11 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 }
 
 TEST(InterfacesTest, PoseBasicIO) {
+  // node handle is created as per ros2
   auto node_ = rclcpp::Node::make_shared("InterfacesTest_PoseBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto posePub =
     node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "pose_input0", custom_qos_profile);
@@ -318,7 +327,7 @@ TEST(InterfacesTest, PoseBasicIO) {
   }
 
   pose.header.frame_id = "odom";
-
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(50);
 
   for (size_t i = 0; i < 50; ++i) {
@@ -332,23 +341,25 @@ TEST(InterfacesTest, PoseBasicIO) {
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
-    0.1);         // Configuration for this variable for this sensor is false
+    0.1);          // Configuration for this variable for this sensor is false
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z),
     0.1);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
   EXPECT_LT(filtered_.pose.covariance[7],
-    0.25);         // Configuration for this variable for this sensor is false
+    0.25);          // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
   resetFilter(node_);
 }
 
 TEST(InterfacesTest, TwistBasicIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_TwistBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto twistPub =
     node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
     "twist_input0", custom_qos_profile);
@@ -369,7 +380,7 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
 
   twist.header.frame_id = "base_link";
-
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 400; ++i) {
     twist.header.stamp = node_->now();
@@ -491,10 +502,12 @@ TEST(InterfacesTest, TwistBasicIO) {
 }
 
 TEST(InterfacesTest, ImuPoseBasicIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuPoseBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
     "/imu_input0", custom_qos_profile);
 
@@ -514,6 +527,7 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate1(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
@@ -566,10 +580,12 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 }
 
 TEST(InterfacesTest, ImuTwistBasicIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuTwistBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
     "/imu_input1", custom_qos_profile);
 
@@ -585,7 +601,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   }
 
   imu.header.frame_id = "base_link";
-
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
@@ -684,10 +700,12 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
 }
 
 TEST(InterfacesTest, ImuAccBasicIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuAccBasicIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto imuPub = node_->create_publisher<sensor_msgs::msg::Imu>(
     "imu_input2", custom_qos_profile);
 
@@ -706,6 +724,7 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 
   // Move with constant acceleration for 1 second,
   // then check our velocity.
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(50);
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
@@ -759,10 +778,12 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 }
 
 TEST(InterfacesTest, OdomDifferentialIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_OdomDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto odomPub = node_->create_publisher<nav_msgs::msg::Odometry>(
     "/odom_input1", custom_qos_profile);
 
@@ -811,6 +832,7 @@ TEST(InterfacesTest, OdomDifferentialIO) {
   }
 
   // Slowly move the position, and hope that the differential position keeps up
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     odom.pose.pose.position.x += 0.01;
@@ -832,10 +854,12 @@ TEST(InterfacesTest, OdomDifferentialIO) {
 }
 
 TEST(InterfacesTest, PoseDifferentialIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_PoseDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
+  // publish and subscribe calls have been changed as per ros2
   auto posePub =
     node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "/pose_input1", custom_qos_profile);
@@ -887,6 +911,7 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 
   // Issue this location repeatedly, and see if we get
   // a final reported position of (1, 2, -3)
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     pose.pose.pose.position.x += 0.01;
@@ -908,11 +933,12 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 }
 
 TEST(InterfacesTest, ImuDifferentialIO) {
+  // node handle is created as per ros2
   auto node_ =
     rclcpp::Node::make_shared("InterfacesTest_ImuDifferentialIO_testcase");
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 5;
-
+  // publish and subscribe calls have been changed as per ros2
   auto imu0Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
     "/imu_input0", custom_qos_profile);
   auto imu1Pub = node_->create_publisher<sensor_msgs::msg::Imu>(
@@ -962,6 +988,7 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   double yawFinal = yaw;
 
   // Move the orientation slowly, and see if we can push it to 0
+  // changed the spinning and timing as per ros2
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 100; ++i) {
     yawFinal -= 0.01 * (3.0 * M_PI / 4.0);

@@ -45,6 +45,8 @@ using robot_localization::Ekf;
 using robot_localization::RosFilter;
 using robot_localization::STATE_SIZE;
 
+//the class defination has been changed to inherit the rosfilter class information.
+//Filter algorithm info is being passed in the Test function and not through the below class.
 class RosEkfPassThrough : public robot_localization::RosFilter
 {
 public:
@@ -53,14 +55,16 @@ public:
     robot_localization::FilterBase::UniquePtr & filter)
   : RosFilter(node, filter) {}
   ~RosEkfPassThrough() {}
+  //getFilter() is created in order to return the filter instance which is receving from the rosfilter class
   robot_localization::Ekf::UniquePtr & getFilter() {return filter_;}
 };
 
 TEST(EkfTest, Measurements) {
+  //node handle is created as per ros2
   auto node_ = rclcpp::Node::make_shared("ekf");
   robot_localization::FilterBase::UniquePtr filter =
     std::make_unique<robot_localization::Ekf>();
-
+  //create the instance of the class and pass parameters
   RosEkfPassThrough ekf(node_, filter);
   Eigen::MatrixXd initialCovar(15, 15);
 
