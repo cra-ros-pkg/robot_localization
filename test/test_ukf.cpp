@@ -30,20 +30,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
 #include <robot_localization/filter_base.hpp>
-#include <memory>
+#include <gtest/gtest.h>
 #include <limits>
+#include <memory>
 #include <vector>
 
 #include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ukf.hpp"
 
-
 using robot_localization::RosFilter;
 using robot_localization::STATE_SIZE;
 using robot_localization::Ukf;
 
+// the class defination has been changed to inherit the rosfilter class
+// information. Filter algorithm info is being passed in the Test function and
+// not through the below class.
 class RosUkfPassThrough : public robot_localization::RosFilter
 {
 public:
@@ -52,10 +54,13 @@ public:
     robot_localization::FilterBase::UniquePtr & filter)
   : RosFilter(node, filter) {}
   ~RosUkfPassThrough() {}
+  // getFilter() is created in order to return the filter instance which is
+  // receving from the rosfilter class
   robot_localization::Ukf::UniquePtr & getFilter() {return filter_;}
 };
 
 TEST(UkfTest, Measurements) {
+  // node handle is created as per ros2
   auto node_ = rclcpp::Node::make_shared("ukf");
   robot_localization::FilterBase::UniquePtr filter =
     std::make_unique<robot_localization::Ukf>();
@@ -67,7 +72,7 @@ TEST(UkfTest, Measurements) {
   node_->get_parameter("alpha", alpha);
   node_->get_parameter("kappa", kappa);
   node_->get_parameter("beta", beta);
-
+  // create the instance of the class and pass parameters
   RosUkfPassThrough ukf(node_, filter);
   Eigen::MatrixXd initialCovar(15, 15);
 

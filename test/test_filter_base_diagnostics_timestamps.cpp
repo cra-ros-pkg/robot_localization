@@ -30,15 +30,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-#include <memory>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
 #include <vector>
 
+#include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include "rclcpp/clock.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -46,7 +47,6 @@
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/srv/set_pose.hpp"
-#include "diagnostic_msgs/msg/diagnostic_array.hpp"
 
 namespace robot_localization
 {
@@ -132,8 +132,7 @@ public:
 
   DiagnosticsHelper()
   {
-    node_ = rclcpp::Node::make_shared(
-      "test_filter_base_diagnostics");
+    node_ = rclcpp::Node::make_shared("test_filter_base_diagnostics");
 
     // ready the valid messages.
     pose_msg_ = getValidPose();
@@ -296,10 +295,10 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
 
   rclcpp::spin_some(dh_.node_);
 
-  //wait for 1 sec to make synchronize setPose msg & before msg
+  // wait for 1 sec to make synchronize setPose msg & before msg
   sleep(1);
   // send messages from one second before that pose reset.
-  dh_.publishMessages(curr - rclcpp::Duration(1,0));
+  dh_.publishMessages(curr - rclcpp::Duration(1, 0));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
@@ -365,7 +364,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   rclcpp::spin_some(dh_.node_);
 
   // Send message that is one second in the past.
-  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1,0));
+  dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1, 0));
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.

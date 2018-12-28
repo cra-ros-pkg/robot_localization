@@ -30,19 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
 #include <nav_msgs/msg/odometry.hpp>
+#include <gtest/gtest.h>
 #include <cmath>
 #include <fstream>
 #include <functional>  // for bind()
 
-#include <sstream>
 #include <iostream>
 #include <memory>
-
+#include <sstream>
 #include <string>
 #include "rclcpp/rclcpp.hpp"
-
 
 // using namespace std;
 
@@ -56,6 +54,7 @@ void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 }
 
 TEST(BagTest, PoseCheck) {
+  // node handle is created as per ros2
   auto node = rclcpp::Node::make_shared("localization_node_bag_pose_tester");
 
   double finalX = 0;
@@ -64,7 +63,7 @@ TEST(BagTest, PoseCheck) {
   double tolerance = 0;
   bool outputFinalPosition = false;
   std::string finalPositionFile;
-
+  // getting parameters value from yaml file using get_parameter() API
   node->get_parameter("final_x", finalX);
   node->get_parameter("final_y", finalY);
   node->get_parameter("final_z", finalZ);
@@ -83,10 +82,10 @@ TEST(BagTest, PoseCheck) {
     std::cout << "Parameter value (" << parameter.get_type_name() <<
       "): " << parameter.value_to_string() << std::endl;
   }
-
+  // subscribe call has been changed as per ros2
   auto filteredSub = node->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", filterCallback);
-
+  // changed the spinning and timing as per ros2
   while (rclcpp::ok()) {
     rclcpp::spin_some(node);
     rclcpp::Rate(3).sleep();
