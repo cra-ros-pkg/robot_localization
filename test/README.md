@@ -13,24 +13,25 @@
 	2. Migrated yaml files into ROS2 style
 	3. Migrated .test files into launch.py in ROS2 style
 	4. Migrated CMakeLists.txt and package.xml
-	5. Created Automated scripts in order to run test cases except bag related test cases.
+	5. Created Automated scripts in order to run test cases
 	6. Added .travis.yml file in order to check for CI build
 	7. Followed cosmetics rules and updated the files with cppcheck, cpplint and uncrustify rules.
 
 **Pre-requisites:**
 
 	1. System should have installed bouncy distro. Check out installation instructions and tutorials https://index.ros.org/doc/ros2/.
-	AGAIN PLEASE NOTE THAT IN ORDER TO USE THE AUTOMATED SCRIPTS, YOU HAVE TO FOLLOW THE SAME DIRECTORY STRUCTURE PROVIDED IN THIS README.
+	
 	2. User should checkout launch pkg & build (Refer steps below).
 
 		Steps to checkout launch pkg (master) & build:
 
-			1. mkdir -p rl_ws/src
-			2. cd ~/rl_ws/src
-			3. git clone git@github.com:ros2/launch.git
-			4. cd ~/rl_ws 
-			5. source /opt/ros/bouncy/setup.bash
-			6. colcon build
+			1. Open the new terminal and run below commands.
+			2. mkdir -p rl_ws/src
+			3. cd ~/rl_ws/src
+			4. git clone git@github.com:ros2/launch.git
+			5. cd ~/rl_ws 
+			6. source /opt/ros/bouncy/setup.bash
+			7. colcon build
 
 	3. System should have checkout ros2 robot_localization pkg & build (Refer Steps below).
 
@@ -46,18 +47,18 @@
 			7. colcon build
 
 	4. System should have both ROS1 & ROS2. Note: We have verified on ROS1(i.e. melodic) & ROS2 (i.e. bouncy).
-	5. ros1_bridge pkg should be available in ros2 workspace.
+	5. ros1_bridge pkg should be available in ros2 workspace i.e. ros2_ws.
 
 **Limitations:-** 
 
 	1. colcon test does not work as launch.py files can not be executed/added with CMakeLists.txt as of now.
 	2. Each test/launch.py files have been tested independently.
 	3. Use of ros1 bridge to play rosbag files as rosbag is not available in ros2.
-	4. Bag related testcases launch files will not terminate automatically i.e. user will have to do manually ctrl+C after bag duration finish.
+	4. Bag related testcases launch files will not terminate automatically i.e. user will have to do manually ctrl+C once bag is stop.
 
 **Future Work:-**
 
-	1. All Test launch.py files should be executed using "colcon test" automatically. Currently we have built automated script "robot_localization_test_cases.sh" which performs all the test cases except bag related test cases.
+	1. All Test launch.py files should be executed using "colcon test" automatically. Currently we have built automated script "robot_localization_test_cases.sh" which performs all the test cases except bag related test cases.For bag related test cases also, respective scripts are available.
 	2. Remove the dependency with ros1_bridge to play bag file from ROS1 using rosbag.
 
 **TESTING**
@@ -66,12 +67,20 @@ There are two ways to run the test cases:
 
 	1. Using automated scripts
 	The script files are placed in the /test folder of robot localization.
-	Go to the test folder path and run the shell scripts provided that you have downloaded the git source code explained above.
-	Do not forget to source the install "source install/setup.bash"
-	For example:-
-	./robot_localization_test_cases.sh -> to run all other test cases except bag related test cases
-	./test_ekf_localization_node_bag1.sh -> to run the bag1 ekf test case
-	With bag related scripts, multiple terminals will be opened, check the terminal on which bag is playing.Once is bag stoped, chekck the terminal on which launch.py is running, you will see, test cases are passing after pressing ctrl+c.
+	Run the test cases as follows:-
+	# Goto workspace path and set the source accordingly.
+	cd ~/rl_ws
+	Note: Do not forget to source the install "source install/setup.bash"
+
+	./src/robot_localization/test/robot_localization_test_cases.sh   -> to run all other test cases except bag related test cases
+	./src/robot_localization/test/test_ekf_localization_node_bag1.sh -> to run the bag1 ekf test case
+	./src/robot_localization/test/test_ekf_localization_node_bag2.sh -> to run the bag2 ekf test case
+	./src/robot_localization/test/test_ekf_localization_node_bag3.sh -> to run the bag3 ekf test case
+	./src/robot_localization/test/test_ukf_localization_node_bag1.sh -> to run the bag1 ukf test case
+	./src/robot_localization/test/test_ukf_localization_node_bag2.sh -> to run the bag2 ukf test case
+	./src/robot_localization/test/test_ukf_localization_node_bag3.sh -> to run the bag3 ukf test case
+
+	With bag related scripts, multiple terminals will be opened, check the terminal on which bag is playing.Once bag is stoped, check the terminal on which launch.py is running, you will see, test cases are passing after pressing ctrl+c.
 
 	2. Using launch files independently
 	Below are the steps to run the test case independently using launch files.
