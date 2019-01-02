@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
+ * Copyright (c) 2014, 2015, 2016  Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ROBOT_LOCALIZATION_FILTER_COMMON_H
-#define ROBOT_LOCALIZATION_FILTER_COMMON_H
+#ifndef ROBOT_LOCALIZATION__FILTER_COMMON_HPP_
+#define ROBOT_LOCALIZATION__FILTER_COMMON_HPP_
 
 namespace robot_localization
 {
@@ -93,11 +93,11 @@ const int ORIENTATION_SIZE = 3;
 const int ACCELERATION_SIZE = 3;
 
 /**
-  * @brief Common constants
-  */
+ * @brief Common constants
+ */
 const double PI = 3.141592653589793;
 const double TAU = 6.283185307179587;
 
 }  // namespace robot_localization
 
-#endif  // ROBOT_LOCALIZATION_FILTER_COMMON_H
+#endif  // ROBOT_LOCALIZATION__FILTER_COMMON_HPP_

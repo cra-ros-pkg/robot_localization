@@ -1,0 +1,43 @@
+dist: bionic
+sudo: enabled
+language: generic
+
+env:
+  global:
+    - ROS2_WS_ROBOT_LOCALIZATION=~/ros2_ws_robot_localization
+    - ROS2_WS_ROBOT_LOCALIZATION_SRC=${ROS2_WS_ROBOT_LOCALIZATION}/src
+
+# command to install dependencies
+install:
+  - sudo apt update && sudo apt install curl 
+  - curl http://repo.ros2.org/repos.key | sudo apt-key add -
+  -  sudo sh -c 'echo "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main `lsb_release -cs` main" > /etc/apt/sources.list.d/ros2-latest.list'
+  - export ROS_DISTRO=bouncy
+  - sudo apt update && sudo apt install -y python3-rosdep ros-$ROS_DISTRO-ros-base
+  - sudo apt install python3-argcomplete
+  - sudo apt install python3-colcon-common-extensions
+  - sudo apt install build-essential
+  - source /opt/ros/bouncy/setup.bash
+  - source ~/${ROS2_WS_ROBOT_LOCALIZATION}/install/setup.bash
+  - sudo rosdep init
+  - rosdep update
+  - sudo apt install python3-pip
+  - sudo pip3 install argcomplete setuptools pytest pep257 flake8
+  - sudo -H python3 -m pip install -U setuptools
+
+    
+# command to run tests
+script:
+#  - mkdir -p $ROS2_WS_ROBOT_LOCALIZATION
+  - mkdir -p $ROS2_WS_ROBOT_LOCALIZATION_SRC
+  - ln -s $TRAVIS_BUILD_DIR $ROS2_WS_ROBOT_LOCALIZATION_SRC
+  - cd $ROS2_WS_ROBOT_LOCALIZATION
+  - colcon build
+#  - colcon test
+
+branches:
+  only:
+    - ros2
+
+notifications:
+email: false

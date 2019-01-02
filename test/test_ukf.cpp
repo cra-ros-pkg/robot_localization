@@ -1,0 +1,145 @@
+/*
+ * Copyright (c) 2014, 2015, 2016 Charles River Analytics, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <robot_localization/filter_base.hpp>
+#include <gtest/gtest.h>
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "robot_localization/ros_filter.hpp"
+#include "robot_localization/ukf.hpp"
+
+using robot_localization::RosFilter;
+using robot_localization::STATE_SIZE;
+using robot_localization::Ukf;
+
+// the class defination has been changed to inherit the rosfilter class
+// information. Filter algorithm info is being passed in the Test function and
+// not through the below class.
+class RosUkfPassThrough : public robot_localization::RosFilter
+{
+public:
+  explicit RosUkfPassThrough(
+    rclcpp::Node::SharedPtr node,
+    robot_localization::FilterBase::UniquePtr & filter)
+  : RosFilter(node, filter) {}
+  ~RosUkfPassThrough() {}
+  // getFilter() is created in order to return the filter instance which is
+  // receving from the rosfilter class
+  robot_localization::Ukf::UniquePtr & getFilter() {return filter_;}
+};
+
+TEST(UkfTest, Measurements) {
+  // node handle is created as per ros2
+  auto node_ = rclcpp::Node::make_shared("ukf");
+  robot_localization::FilterBase::UniquePtr filter =
+    std::make_unique<robot_localization::Ukf>();
+
+  double alpha = 0.001;
+  double kappa = 0.0;
+  double beta = 2.0;
+
+  node_->get_parameter("alpha", alpha);
+  node_->get_parameter("kappa", kappa);
+  node_->get_parameter("beta", beta);
+  // create the instance of the class and pass parameters
+  RosUkfPassThrough ukf(node_, filter);
+  Eigen::MatrixXd initialCovar(15, 15);
+
+  initialCovar.setIdentity();
+  initialCovar *= 0.5;
+
+  ukf.getFilter()->setEstimateErrorCovariance(initialCovar);
+
+  Eigen::VectorXd measurement(STATE_SIZE);
+  measurement.setIdentity();
+
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
+    measurement[i] = i * 0.01 * STATE_SIZE;
+  }
+  Eigen::MatrixXd measurementCovariance(STATE_SIZE, STATE_SIZE);
+  measurementCovariance.setIdentity();
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
+    measurementCovariance(i, i) = 1e-9;
+  }
+  std::vector<bool> updateVector(STATE_SIZE, true);
+
+  // Ensure that measurements are being placed in the queue correctly
+  rclcpp::Time time1(1000);
+  ukf.robot_localization::RosFilter::enqueueMeasurement(
+    "odom0", measurement, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time1);
+
+  ukf.robot_localization::RosFilter::integrateMeasurements(rclcpp::Time(1001));
+
+  EXPECT_EQ(ukf.getFilter()->getState(), measurement);
+  EXPECT_EQ(ukf.getFilter()->getEstimateErrorCovariance(),
+    measurementCovariance);
+
+  ukf.getFilter()->setEstimateErrorCovariance(initialCovar);
+
+  // Now fuse another measurement and check the output.
+  // We know what the filter's state should be when
+  // this is complete, so we'll check the difference and
+  // make sure it's suitably small.
+  Eigen::VectorXd measurement2 = measurement;
+
+  measurement2 *= 2.0;
+
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
+    measurementCovariance(i, i) = 1e-9;
+  }
+
+  rclcpp::Time time2(1002);
+
+  ukf.robot_localization::RosFilter::enqueueMeasurement(
+    "odom0", measurement2, measurementCovariance, updateVector,
+    std::numeric_limits<double>::max(), time2);
+
+  ukf.robot_localization::RosFilter::integrateMeasurements(rclcpp::Time(1003));
+
+  measurement = measurement2.eval() - ukf.getFilter()->getState();
+  for (size_t i = 0; i < STATE_SIZE; ++i) {
+    EXPECT_LT(::fabs(measurement[i]), 0.001);
+  }
+}
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  int ret = RUN_ALL_TESTS();
+  rclcpp::shutdown();
+
+  return ret;
+}
