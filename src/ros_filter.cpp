@@ -715,9 +715,9 @@ void RosFilter<T>::loadParams()
   map_frame_id_ = this->declare_parameter("map_frame", std::string("map"));
   odom_frame_id_ = this->declare_parameter("odom_frame", std::string("odom"));
   base_link_frame_id_ = this->declare_parameter("base_link_frame",
-    std::string("base_link"));
+      std::string("base_link"));
   base_link_output_frame_id_ = this->declare_parameter("base_link_frame_output",
-    base_link_frame_id_);
+      base_link_frame_id_);
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -1865,13 +1865,13 @@ void RosFilter<T>::periodicUpdate()
           tf2::fromMsg(world_base_link_trans_msg_.transform,
             world_base_link_trans);
 
-          tf2::Transform odom_base_link_trans;
+          tf2::Transform base_link_odom_trans;
           tf2::fromMsg(tf_buffer_
             ->lookupTransform(base_link_frame_id_,
             odom_frame_id_,
             tf2::TimePointZero)
             .transform,
-            odom_base_link_trans);
+            base_link_odom_trans);
 
           /*
            * First, see these two references:
@@ -1896,7 +1896,7 @@ void RosFilter<T>::periodicUpdate()
            * transform.
            */
           tf2::Transform map_odom_trans;
-          map_odom_trans.mult(world_base_link_trans, odom_base_link_trans);
+          map_odom_trans.mult(world_base_link_trans, base_link_odom_trans);
 
           geometry_msgs::msg::TransformStamped map_odom_trans_msg;
           map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);
