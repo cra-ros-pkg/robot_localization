@@ -27,7 +27,7 @@
 			1. Open the new terminal and run below commands.
 			2. mkdir -p diagnostics_ws/src
 			3. cd ~/diagnostics_ws/src
-			4. git clone git@github.com:vaibhavbhadade/diagnostics.git //Note: branch should be remotes/origin/ros2-devel 
+			4. git clone git@github.com:vaibhavbhadade/diagnostics.git -b ros2-devel 
 			5. cd ~/diagnostics_ws
 			6. source /opt/ros/crystal/setup.bash
 			7. colcon build
