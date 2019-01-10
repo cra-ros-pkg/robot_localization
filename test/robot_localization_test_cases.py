@@ -41,6 +41,11 @@ class TestCPUMonitor(unittest.TestCase):
         os.system("ros2 run robot_localization filter_base-test")
 
     @classmethod
+    def test_filter_base_diagnostics_timestamps(self):
+        print("test_filter_base_diagnostics_timestamps Testcases Execution Start...")
+        os.system("ros2 launch robot_localization test_filter_base_diagnostics_timestamps.launch.py")
+
+    @classmethod
     def setUpClass(cls):
         rclpy.init()
         cls.node = rclpy.create_node(TEST_NODE, namespace=TEST_NAMESPACE)
