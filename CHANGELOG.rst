@@ -2,6 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Renaming odom to base link trans
+* Fixing Euler body-to-world transformations
+* Enabling the user to override the output child_frame_id
+* Contributors: Tom Moore
+
 2.4.5 (2018-10-25)
 ------------------
 * Linting
