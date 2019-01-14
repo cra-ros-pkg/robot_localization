@@ -1874,9 +1874,9 @@ namespace RobotLocalization
             tf2::Transform worldBaseLinkTrans;
             tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
 
-            tf2::Transform odomBaseLinkTrans;
+            tf2::Transform baseLinkOdomTrans;
             tf2::fromMsg(tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0)).transform,
-                         odomBaseLinkTrans);
+                         baseLinkOdomTrans);
 
             /*
              * First, see these two references:
@@ -1897,7 +1897,7 @@ namespace RobotLocalization
             */
 
             tf2::Transform mapOdomTrans;
-            mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
+            mapOdomTrans.mult(worldBaseLinkTrans, baseLinkOdomTrans);
 
             geometry_msgs::TransformStamped mapOdomTransMsg;
             mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
