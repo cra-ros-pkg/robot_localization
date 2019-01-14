@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.4.6 (2019-01-14)
+------------------
 * Renaming odom to base link trans
 * Fixing Euler body-to-world transformations
 * Enabling the user to override the output child_frame_id
