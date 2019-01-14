@@ -1789,7 +1789,7 @@ namespace RobotLocalization
     // We may need to broadcast a different transform than
     // the one we've already calculated.
     tf2::Transform mapOdomTrans;
-    tf2::Transform odomBaseLinkTrans;
+    tf2::Transform baseLinkOdomTrans;
     geometry_msgs::TransformStamped mapOdomTransMsg;
     ros::Time curTime;
     ros::Time lastDiagTime = ros::Time::now();
@@ -1890,7 +1890,7 @@ namespace RobotLocalization
                      baseLinkFrameId_,
                      odomFrameId_,
                      ros::Time(filter_.getLastMeasurementTime()),
-                     odomBaseLinkTrans,
+                     baseLinkOdomTrans,
                      true))
               {
                 ROS_ERROR_STREAM_DELAYED_THROTTLE(1.0, "Unable to retrieve " << odomFrameId_ << "->" <<
@@ -1916,7 +1916,7 @@ namespace RobotLocalization
                * the inverse of that entire transform.
               */
 
-              mapOdomTrans.mult(worldBaseLinkTrans, odomBaseLinkTrans);
+              mapOdomTrans.mult(worldBaseLinkTrans, baseLinkOdomTrans);
 
               mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
               mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
