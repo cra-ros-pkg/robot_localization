@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.3 (2019-01-14)
+------------------
 * Rename odomBaseLinkTrans to baseLinkOdomTrans
   Adhere to the naming convention <fromFrame><toFrame>Trans used for worldBaseLinkTrans and mapOdomTrans.
 * Add const& to catch values to prevent the error:  catching polymorphic type ‘class tf2::TransformException’ by value
