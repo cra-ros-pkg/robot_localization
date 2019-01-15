@@ -270,6 +270,14 @@ class NavSatTransform
     //!
     double yaw_offset_;
 
+    //! @brief UTM's meridian convergence
+    //!
+    //! Angle between projected meridian (True North) and UTM's grid Y-axis.
+    //! For UTM projection (Ellipsoidal Transverse Mercator) it is zero on the equator and non-zero everywhere else.
+    //! It increases as the poles are approached or as we're getting farther from central meridian.
+    //!
+    double utm_meridian_convergence_;
+
     //! @brief Parameter that specifies the how long we wait for a transform to become available.
     //!
     ros::Duration transform_timeout_;
