@@ -73,6 +73,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_manual_datum_(false),
   use_odometry_yaw_(false),
   utm_broadcaster_(*this),
+  utm_meridian_convergence_(0.0),
   utm_odom_tf_yaw_(0.0),
   utm_zone_(""),
   world_frame_id_("odom"),
@@ -218,27 +219,31 @@ void NavSatTransform::computeTransform()
      * However, all the nodes in robot_localization assume that orientation
      * data, including that reported by IMUs, is reported in an ENU frame, with
      * a 0 yaw value being reported when facing east and increasing
-     * counter-clockwise (i.e., towards north). Conveniently, this aligns with
-     * the UTM grid, where X is east and Y is north. However, we have two
-     * additional considerations:
+     * counter-clockwise (i.e., towards north). To make the world frame ENU
+     * aligned, where X is east and Y is north, we have to take into account
+     * three additional considerations:
      *   1. The IMU may have its non-ENU frame data transformed to ENU, but
-     * there's a possibility that its data has not been corrected for magnetic
-     *      declination. We need to account for this. A positive magnetic
-     *      declination is counter-clockwise in an ENU frame. Therefore, if
-     *      we have a magnetic declination of N radians, then when the sensor
-     *      is facing a heading of N, it reports 0. Therefore, we need to add
-     *      the declination angle.
+     *      there's a possibility that its data has not been corrected for
+     *      magnetic declination. We need to account for this. A positive
+     *      magnetic declination is counter-clockwise in an ENU frame.
+     *      Therefore, if we have a magnetic declination of N radians, then when
+     *      the sensor is facing a heading of N, it reports 0. Therefore, we
+     *      need to add the declination angle.
      *   2. To account for any other offsets that may not be accounted for by
-     * the IMU driver or any interim processing node, we expose a yaw offset
-     * that lets users work with navsat_transform_node.
+     *      the IMU driver or any interim processing node, we expose a yaw
+     *      offset that lets users work with navsat_transform_node.
+     *   3. UTM grid isn't aligned with True East\North. To account for the
+     *      difference we need to add meridian convergence angle.
      */
-    imu_yaw += (magnetic_declination_ + yaw_offset_);
+    imu_yaw += (magnetic_declination_ + yaw_offset_ +
+      utm_meridian_convergence_);
 
     RCLCPP_INFO(
       this->get_logger(),
-      "Corrected for magnetic declination of %d"
-      "and user-specified offset of %d Transform heading factor is now %d",
-      magnetic_declination_, yaw_offset_, imu_yaw);
+      "Corrected for magnetic declination of %g, "
+      "user-specified offset of %g and meridian convergence of %g. "
+      "Transform heading factor is now %g",
+      magnetic_declination_, yaw_offset_, utm_meridian_convergence_, imu_yaw);
 
     // Convert to tf-friendly structures
     tf2::Quaternion imu_quat;
@@ -351,7 +356,7 @@ void NavSatTransform::getRobotOriginUtmPose(
     double pitch;
     double yaw;
     mat.getRPY(roll, pitch, yaw);
-    yaw += (magnetic_declination_ + yaw_offset_);
+    yaw += (magnetic_declination_ + yaw_offset_ + utm_meridian_convergence_);
     utm_orientation.setRPY(roll, pitch, yaw);
 
     // Rotate the GPS linear offset by the orientation
@@ -660,7 +665,8 @@ void NavSatTransform::setTransformGps(
   double utm_x = 0;
   double utm_y = 0;
   navsat_conversions::LLtoUTM(msg->latitude, msg->longitude, utm_y, utm_x,
-    utm_zone_);
+    utm_zone_, utm_meridian_convergence_);
+  utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
 
   RCLCPP_INFO(
     this->get_logger(), "Datum (latitude, longitude, altitude) is (%d, %d, %d)",
