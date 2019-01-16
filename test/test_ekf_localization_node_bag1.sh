@@ -1,12 +1,6 @@
 #!/bin/bash
 
 #************************ test_ekf_localization_node_bag1 ***************************
-$PWD = `pwd`
-echo "Current Working Directory = $PWD"
-ROS1_DISTRO=melodic
-ROS2_DISTRO=bouncy
-echo "ROS1_DISTRO = $ROS1_DISTRO"
-echo "ROS2_DISTRO = $ROS2_DISTRO"
 
 # In this automatic Script, multiple terminals will be opened, user need to check the terminal on which bag is playing. Once bag is stoped, check the terminal on which launch.py is running, user will see, test cases result (Pass Or Fail) after pressing ctrl+c.
 
@@ -20,7 +14,7 @@ echo "ROS2_DISTRO = $ROS2_DISTRO"
 #Command to run roscore
 cmd1="source /opt/ros/$ROS1_DISTRO/setup.sh; roscore; exec /bin/bash"
 
-#Command torRun ros1_bridge
+#Command to run ros1_bridge
 cmd2="source ~/ros2_ws/install/setup.bash; source /opt/ros/$ROS1_DISTRO/setup.bash; ros2 run ros1_bridge dynamic_bridge --bridge-all-topics; exec /bin/bash"
 
 #Command to play .bag from ROS1

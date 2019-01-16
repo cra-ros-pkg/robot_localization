@@ -106,7 +106,6 @@ if(BUILD_TESTING)
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
   target_link_libraries(filter_base-test rl_lib)
 
-  #### TODO(someone): Need commented diagnostics source code in R_L src to execute this testcase.
   # This test uses se_node node for convenience.
   ament_add_gtest(test_filter_base_diagnostics_timestamps
                     test/test_filter_base_diagnostics_timestamps.cpp)
