@@ -179,12 +179,16 @@ static inline char UTMLetterDesignator(double Lat)
  * East Longitudes are positive, West longitudes are negative.
  * North latitudes are positive, South latitudes are negative
  * Lat and Long are in fractional degrees
+ * Meridian convergence is computed as for Spherical Transverse Mercator,
+ * which gives quite good approximation.
+ * 
+ * @param[out] gamma meridian convergence at point (degrees).
  *
  * Written by Chuck Gantz- chuck.gantz@globalstar.com
  */
 static inline void LLtoUTM(const double Lat, const double Long,
                            double &UTMNorthing, double &UTMEasting,
-                           std::string &UTMZone)
+                           std::string &UTMZone, double &gamma)
 {
   double a = WGS84_A;
   double eccSquared = UTM_E2;
@@ -249,6 +253,8 @@ static inline void LLtoUTM(const double Lat, const double Long,
                *(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24
                  + (61-58*T+T*T+600*C-330*eccPrimeSquared)*A*A*A*A*A*A/720)));
 
+  gamma = atan(tan(LongRad-LongOriginRad)*sin(LatRad)) * DEGREES_PER_RADIAN;
+
   if (Lat < 0)
           {
             // 10000000 meter offset for southern hemisphere
@@ -257,16 +263,37 @@ static inline void LLtoUTM(const double Lat, const double Long,
 }
 
 /**
+ * Convert lat/long to UTM coords.  Equations from USGS Bulletin 1532
+ *
+ * East Longitudes are positive, West longitudes are negative.
+ * North latitudes are positive, South latitudes are negative
+ * Lat and Long are in fractional degrees
+ *
+ * Written by Chuck Gantz- chuck.gantz@globalstar.com
+ */
+static inline void LLtoUTM(const double Lat, const double Long,
+                           double &UTMNorthing, double &UTMEasting,
+                           std::string &UTMZone)
+{
+  double gamma;
+  LLtoUTM(Lat, Long, UTMNorthing, UTMEasting, UTMZone, gamma);
+}
+
+/**
  * Converts UTM coords to lat/long.  Equations from USGS Bulletin 1532
  *
  * East Longitudes are positive, West longitudes are negative.
  * North latitudes are positive, South latitudes are negative
  * Lat and Long are in fractional degrees.
+ * Meridian convergence is computed as for Spherical Transverse Mercator,
+ * which gives quite good approximation.
+ * 
+ * @param[out] gamma meridian convergence at point (degrees).
  *
  * Written by Chuck Gantz- chuck.gantz@globalstar.com
  */
 static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
-                           const std::string &UTMZone, double& Lat,  double& Long )
+                           const std::string &UTMZone, double& Lat, double& Long, double &gamma)
 {
   double k0 = UTM_K0;
   double a = WGS84_A;
@@ -321,6 +348,24 @@ static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
                  *D*D*D*D*D/120)
                 / cos(phi1Rad));
   Long = LongOrigin + Long * DEGREES_PER_RADIAN;
+
+  gamma = atan(tanh(x/(k0*a))*tan(y/(k0*a))) * DEGREES_PER_RADIAN;
+}
+
+/**
+ * Converts UTM coords to lat/long.  Equations from USGS Bulletin 1532
+ *
+ * East Longitudes are positive, West longitudes are negative.
+ * North latitudes are positive, South latitudes are negative
+ * Lat and Long are in fractional degrees.
+ *
+ * Written by Chuck Gantz- chuck.gantz@globalstar.com
+ */
+static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
+                           const std::string &UTMZone, double& Lat, double& Long)
+{
+  double gamma;
+  UTMtoLL(UTMNorthing, UTMEasting, UTMZone, Lat, Long, gamma);
 }
 
 }  // namespace NavsatConversions
