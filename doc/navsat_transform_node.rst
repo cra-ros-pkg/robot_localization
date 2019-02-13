@@ -47,6 +47,11 @@ If *true*, ``navsat_transform_node`` will wait to get a datum from either:
 * The ``datum`` parameter
 * The ``set_datum`` service
 
+~broadcast_utm_transform_as_parent_frame
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If *true*, ``navsat_transform_node`` will publish the utm->world_frame transform instead of the world_frame->utm transform. 
+Note that for the transform to be published ``broadcast_utm_transform`` also has to be set to *true*.
+
 Subscribed Topics
 =================
 * ``imu/data`` A `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ message with orientation data
@@ -63,4 +68,4 @@ Published Topics
 
 Published Transforms
 ====================
-* ``world_frame->utm`` (optional) - If the ``broadcast_utm_transform`` parameter is set to  *true*, ``navsat_transform_node`` calculates a transform from the  *utm* frame to the ``frame_id`` of the input odometry data. By default, the *utm* frame is published as a child of the odometry frame by using the inverse transform. With use of the ``broadcast_utm_as_parent_frame`` parameter, the *utm* frame will be published as a parent of the odometry frame. This is useful if you have multiple robots within one TF tree.
+* ``world_frame->utm`` (optional) - If the ``broadcast_utm_transform`` parameter is set to  *true*, ``navsat_transform_node`` calculates a transform from the  *utm* frame to the ``frame_id`` of the input odometry data. By default, the *utm* frame is published as a child of the odometry frame by using the inverse transform. With use of the ``broadcast_utm_transform_as_parent_frame`` parameter, the *utm* frame will be published as a parent of the odometry frame. This is useful if you have multiple robots within one TF tree.
