@@ -50,7 +50,7 @@ If *true*, ``navsat_transform_node`` will wait to get a datum from either:
 ~broadcast_utm_transform_as_parent_frame
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If *true*, ``navsat_transform_node`` will publish the utm->world_frame transform instead of the world_frame->utm transform. 
-Note that ``broadcast_utm_transform`` also has to be set to *true*.
+Note that for the transform to be published ``broadcast_utm_transform`` also has to be set to *true*.
 
 Subscribed Topics
 =================
