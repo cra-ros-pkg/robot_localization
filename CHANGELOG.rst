@@ -2,6 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Meridian convergence adjustment added to navsat_transform.
+* Documentation changes
+* Add broadcast_utm_transform_as_parent_frame
+* Enable build optimisations if no build type configured.
+* Contributors: G.A. vd. Hoorn, Pavlo Kolomiiets, diasdm
+
 2.6.3 (2019-01-14)
 ------------------
 * Rename odomBaseLinkTrans to baseLinkOdomTrans
