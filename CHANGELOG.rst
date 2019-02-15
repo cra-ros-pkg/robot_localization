@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.4 (2019-02-15)
+------------------
 * Meridian convergence adjustment added to navsat_transform.
 * Documentation changes
 * Add broadcast_utm_transform_as_parent_frame
