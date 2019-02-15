@@ -59,7 +59,6 @@ FilterBase::FilterBase()
   estimate_error_covariance_(STATE_SIZE, STATE_SIZE),
   identity_(STATE_SIZE, STATE_SIZE),
   process_noise_covariance_(STATE_SIZE, STATE_SIZE),
-  transfer_function_(STATE_SIZE, STATE_SIZE),
   transfer_function_jacobian_(STATE_SIZE, STATE_SIZE), debug_(false)
 {
   reset();
@@ -76,12 +75,8 @@ void FilterBase::reset()
   predicted_state_.setZero();
   control_acceleration_.setZero();
 
-  // Prepare the invariant parts of the transfer
-  // function
-  transfer_function_.setIdentity();
-
-  // Clear the Jacobian
-  transfer_function_jacobian_.setZero();
+  // Set the invariant part of the transfer function Jacobian
+  transfer_function_jacobian_.setIdentity();
 
   // Set the estimate error covariance. We want our measurements
   // to be accepted rapidly when the filter starts, so we should
