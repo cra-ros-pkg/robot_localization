@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.5.6 (2019-02-15)
+------------------
 * Documentation changes
 * Add broadcast_utm_transform_as_parent_frame
 * Enable build optimisations if no build type configured.
