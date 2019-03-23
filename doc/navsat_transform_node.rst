@@ -52,6 +52,10 @@ If *true*, ``navsat_transform_node`` will wait to get a datum from either:
 If *true*, ``navsat_transform_node`` will publish the utm->world_frame transform instead of the world_frame->utm transform. 
 Note that for the transform to be published ``broadcast_utm_transform`` also has to be set to *true*.
 
+~transform_timeout
+^^^^^^^^^^^^^^^^^^
+This parameter specifies how long we would like to wait if a transformation is not available yet. Defaults to 0 if not set. The value 0 means we just get us the latest available (see ``tf2`` implementation) transform.
+
 Subscribed Topics
 =================
 * ``imu/data`` A `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ message with orientation data
