@@ -6,6 +6,7 @@ if(NOT WIN32)
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(angles REQUIRED)
 find_package(rclcpp REQUIRED)
 #find_package(geographic_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
@@ -33,6 +34,7 @@ include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
+  ${angles_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}

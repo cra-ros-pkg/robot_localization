@@ -30,12 +30,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__EKF_HPP_
 #define ROBOT_LOCALIZATION__EKF_HPP_
 
 #include <robot_localization/filter_base.hpp>
+
 #include <vector>
+
 
 namespace robot_localization
 {
@@ -43,42 +44,37 @@ namespace robot_localization
 /**
  * @brief Extended Kalman filter class
  *
- * Implementation of an extended Kalman filter (EKF). This class derives from
- * FilterBase and overrides the predict() and correct() methods in keeping with
- * the discrete time EKF algorithm.
+ * Implementation of an extended Kalman filter (EKF). This class derives from FilterBase and
+ * overrides the predict() and correct() methods in keeping with the discrete time EKF algorithm.
  */
 class Ekf : public FilterBase
 {
 public:
   /**
-   * @brief Constructor for the Ekf class
+   * @brief Constructor
    */
   Ekf();
 
   /**
-   * @brief Destructor for the Ekf class
+   * @brief Destructor
    */
-  ~Ekf();
+  ~Ekf() = default;
 
   /**
    * @brief Carries out the correct step in the predict/update cycle.
-   *
    * @param[in] measurement - The measurement to fuse with our estimate
    */
-  void correct(const Measurement & measurement) override;
+  void correct(const Measurement& measurement) override;
 
   /**
    * @brief Carries out the predict step in the predict/update cycle.
    *
-   * Projects the state and error matrices forward using a model of the
-   * vehicle's motion.
+   * Projects the state and error matrices forward using a model of the vehicle's motion.
    *
    * @param[in] reference_time - The time at which the prediction is being made
    * @param[in] delta - The time step over which to predict.
    */
-  void predict(
-    const rclcpp::Time & reference_time,
-    const rclcpp::Duration & delta) override;
+  void predict(const rclcpp::Time& reference_time, const rclcpp::Duration& delta) override;
 };
 
 }  // namespace robot_localization
