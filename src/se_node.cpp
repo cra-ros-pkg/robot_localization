@@ -45,7 +45,47 @@
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("se_node");
+  auto node = rclcpp::Node::make_shared("se_node", rclcpp::NodeOptions().allow_undeclared_parameters(true));
+  node->declare_parameter("frequency");
+  node->declare_parameter("sensor_timeout");
+  node->declare_parameter("two_d_mode");
+  node->declare_parameter("transform_time_offset");
+  node->declare_parameter("transform_timeout");
+  node->declare_parameter("print_diagnostics");
+  node->declare_parameter("debug");
+  node->declare_parameter("debug_out_file");
+  node->declare_parameter("publish_tf");
+  node->declare_parameter("publish_acceleration");
+  node->declare_parameter("map_frame");
+  node->declare_parameter("odom_frame");
+  node->declare_parameter("base_link_frame");
+  node->declare_parameter("world_frame");
+  node->declare_parameter("odom0");
+  node->declare_parameter("odom0_config");
+  node->declare_parameter("odom0_queue_size");
+  node->declare_parameter("odom0_nodelay");
+  node->declare_parameter("odom0_differential");
+  node->declare_parameter("odom0_relative");
+  node->declare_parameter("odom0_pose_rejection_threshold");
+  node->declare_parameter("odom0_twist_rejection_threshold");
+  node->declare_parameter("imu0");
+  node->declare_parameter("imu0_config");
+  node->declare_parameter("imu0_nodelay");
+  node->declare_parameter("imu0_differential");
+  node->declare_parameter("imu0_relative");
+  node->declare_parameter("imu0_queue_size");
+  node->declare_parameter("imu0_pose_rejection_threshold");
+  node->declare_parameter("imu0_twist_rejection_threshold");
+  node->declare_parameter("imu0_linear_acceleration_rejection_threshold");
+  node->declare_parameter("imu0_remove_gravitational_acceleration");
+  node->declare_parameter("use_control");
+  node->declare_parameter("stamped_control");
+  node->declare_parameter("control_timeout");
+  node->declare_parameter("control_config");
+  node->declare_parameter("acceleration_limits");
+  node->declare_parameter("deceleration_limits");
+  node->declare_parameter("acceleration_gains");
+  node->declare_parameter("deceleration_gains");
 
   std::string filter_type = "ekf";
   node->get_parameter("filter_type", filter_type);
