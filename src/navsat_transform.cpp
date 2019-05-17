@@ -475,12 +475,22 @@ namespace RobotLocalization
       latest_utm_pose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
       latest_utm_covariance_.setZero();
 
+      // The position_covariance matrix is in (deg, deg, m) while UTM is in (m, m, m) for (X, Y, Z)
+      // covariance([values...]) = sigma => covariance(c * [values...]) = c * sigma
+      std::array<double, POSITION_SIZE*POSITION_SIZE> covariance_factor = { 1, 1, 1,
+                                                                 1, 1, 1,
+                                                                 1, 1, 1 };
+      // Using coarse values. Can be modified to use WGS80
+      // However the difference in covariance doesn't affect the output to that degree
+      covariance_factor[0] = std::cos(msg->latitude * RADIANS_PER_DEGREE) * 111320;
+      covariance_factor[4] = 110574;
       // Copy the measurement's covariance matrix so that we can rotate it later
       for (size_t i = 0; i < POSITION_SIZE; i++)
       {
         for (size_t j = 0; j < POSITION_SIZE; j++)
         {
-          latest_utm_covariance_(i, j) = msg->position_covariance[POSITION_SIZE * i + j];
+          latest_utm_covariance_(i, j) = (msg->position_covariance[POSITION_SIZE * i + j] * 
+                                          covariance_factor[POSITION_SIZE * i + j]);
         }
       }
 
