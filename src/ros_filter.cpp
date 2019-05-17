@@ -58,7 +58,7 @@ RosFilter::RosFilter(
 : static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   tf_buffer_(node->get_clock()), // Added this line to fix the build on crystal
-  tf_listener_(tf_buffer_, node->create_sub_node("transform_listener_impl"), false),
+  tf_listener_(tf_buffer_, rclcpp::Node::make_shared("transform_listener_impl", std::string(node->get_name()) + "/transform_listener_impl")),
   frequency_(30.0), history_length_(0),
   last_set_pose_time_(0, 0, RCL_ROS_TIME), latest_control_(),
   latest_control_time_(0, 0, RCL_ROS_TIME), tf_timeout_(0),
