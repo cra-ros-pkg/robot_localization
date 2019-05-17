@@ -58,14 +58,15 @@ RosFilter::RosFilter(
 : static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   tf_buffer_(node->get_clock()), // Added this line to fix the build on crystal
-  tf_listener_(tf_buffer_),
+  tf_listener_(tf_buffer_, node->create_sub_node("transform_listener_impl"), false),
   frequency_(30.0), history_length_(0),
   last_set_pose_time_(0, 0, RCL_ROS_TIME), latest_control_(),
   latest_control_time_(0, 0, RCL_ROS_TIME), tf_timeout_(0),
   tf_time_offset_(0), print_diagnostics_(true), node_(node),
   gravitational_acceleration_(9.80665), publish_transform_(true),
   publish_acceleration_(false), two_d_mode_(false), use_control_(false),
-  smooth_lagged_data_(false), filter_(std::move(filter))
+  smooth_lagged_data_(false), filter_(std::move(filter)),
+  diagnostic_updater_(node->create_sub_node("diagnostic_updater"))
 {
   state_variable_names_.push_back("X");
   state_variable_names_.push_back("Y");
