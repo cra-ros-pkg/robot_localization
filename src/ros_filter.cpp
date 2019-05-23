@@ -755,6 +755,7 @@ namespace RobotLocalization
     FilterUtilities::appendPrefix(tfPrefix, mapFrameId_);
     FilterUtilities::appendPrefix(tfPrefix, odomFrameId_);
     FilterUtilities::appendPrefix(tfPrefix, baseLinkFrameId_);
+    FilterUtilities::appendPrefix(tfPrefix, baseLinkOutputFrameId_);
     FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
 
     // Whether we're publshing the world_frame->base_link_frame transform
