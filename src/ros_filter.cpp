@@ -768,6 +768,7 @@ void RosFilter<T>::loadParams()
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, odom_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, base_link_frame_id_);
+    filter_utilities::appendPrefix(tf_prefix, base_link_output_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, world_frame_id_);
   }
 
