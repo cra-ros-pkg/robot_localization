@@ -66,6 +66,7 @@ RosFilter::RosFilter(
   gravitational_acceleration_(9.80665), publish_transform_(true),
   publish_acceleration_(false), two_d_mode_(false), use_control_(false),
   smooth_lagged_data_(false), filter_(std::move(filter)),
+  qos_(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)),
   diagnostic_updater_(node->create_sub_node("diagnostic_updater"))
 {
   state_variable_names_.push_back("X");
@@ -910,7 +911,7 @@ void RosFilter::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose",
+    "set_pose", qos_,
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -1019,7 +1020,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(
           node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic,
-          odom_callback));
+          qos_, odom_callback));
       } else {
 
         std::stringstream stream;
@@ -1136,7 +1137,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
-            pose_topic, pose_callback));
+            pose_topic, qos_, pose_callback));
 
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
@@ -1213,7 +1214,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
-            twist_topic, twist_callback));
+            twist_topic, qos_, twist_callback));
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1363,7 +1364,7 @@ void RosFilter::loadParams()
             twist_callback_data, accel_callback_data);
 
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, imu_callback));
+            imu_topic, qos_, imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "
@@ -1437,7 +1438,7 @@ void RosFilter::loadParams()
       deceleration_gains);
 
     control_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel",
+      "cmd_vel", qos_,
       std::bind(&RosFilter::controlCallback, this, std::placeholders::_1));
   }
 
@@ -1719,7 +1720,7 @@ void RosFilter::run()
 
   // Publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr position_pub =
-    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered");
+    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered", qos_);
   tf2_ros::TransformBroadcaster world_transform_broadcaster(node_);
 
   // Optional acceleration publisher
@@ -1728,7 +1729,7 @@ void RosFilter::run()
   if (publish_acceleration_) {
     accel_pub =
       node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered");
+      "accel/filtered", qos_);
   }
 
   rclcpp::Rate loop_rate(frequency_);

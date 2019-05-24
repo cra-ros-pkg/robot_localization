@@ -653,6 +653,8 @@ protected:
   //!
   rclcpp::Node::SharedPtr node_;
 
+  rclcpp::QoS qos_;
+
   //! @brief Transform buffer for managing coordinate transforms
   //!
   tf2_ros::Buffer tf_buffer_;
