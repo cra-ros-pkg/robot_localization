@@ -94,6 +94,9 @@ namespace RobotLocalization
     // Subscribe to the messages and services we need
     datum_srv_ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
+    to_ll_srv_ = nh.advertiseService("toLL", &NavSatTransform::toLLCallback, this);
+    from_ll_srv_ = nh.advertiseService("fromLL", &NavSatTransform::fromLLCallback, this);
+
     if (use_manual_datum_ && nh_priv.hasParam("datum"))
     {
       XmlRpc::XmlRpcValue datum_config;
@@ -343,6 +346,79 @@ namespace RobotLocalization
     imu->header.frame_id = base_link_frame_id_;
     sensor_msgs::ImuConstPtr imu_ptr(imu);
     imuCallback(imu_ptr);
+
+    return true;
+  }
+
+  bool NavSatTransform::toLLCallback(robot_localization::ToLL::Request& request, robot_localization::ToLL::Response& response)
+  {
+    if (!transform_good_)
+    {
+      return false;
+    }
+    tf2::Transform odom_as_utm;
+
+    tf2::Vector3 point;
+    tf2::fromMsg(request.map_point, point);
+
+    tf2::Transform pose;
+    pose.setOrigin(point);
+
+    odom_as_utm.mult(utm_world_trans_inverse_, pose);
+    odom_as_utm.setRotation(tf2::Quaternion::getIdentity());
+
+    // Now convert the data back to lat/long and place into the message
+    NavsatConversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
+                               odom_as_utm.getOrigin().getX(),
+                               utm_zone_,
+                               response.ll_point.latitude,
+                               response.ll_point.longitude);
+    response.ll_point.altitude = odom_as_utm.getOrigin().getZ();
+
+    return true;
+  }
+
+  bool NavSatTransform::fromLLCallback(robot_localization::FromLL::Request& request, robot_localization::FromLL::Response& response)
+  {
+    double altitude = request.ll_point.altitude;
+    double longitude = request.ll_point.longitude;
+    double latitude = request.ll_point.latitude;
+
+    tf2::Transform utm_pose;
+
+    double utmY, utmX;
+
+    std::string utm_zone_tmp;
+    NavsatConversions::LLtoUTM(latitude, longitude, utmY, utmX, utm_zone_tmp);
+    utm_pose.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+
+    nav_msgs::Odometry gps_odom;
+
+    if (!transform_good_)
+    {
+      return false;
+    }
+
+    tf2::Transform transformed_utm_gps;
+
+    transformed_utm_gps.mult(utm_world_transform_, utm_pose);
+    transformed_utm_gps.setRotation(tf2::Quaternion::getIdentity());
+
+    // Set header information stamp because we would like to know the robot's position at that timestamp
+    gps_odom.header.frame_id = world_frame_id_;
+    gps_odom.header.stamp = gps_update_time_;
+
+    // Want the pose of the vehicle origin, not the GPS
+    tf2::Transform transformed_utm_robot;
+    getRobotOriginWorldPose(transformed_utm_gps, transformed_utm_robot, gps_odom.header.stamp);
+
+    // Now fill out the message. Set the orientation to the identity.
+    tf2::toMsg(transformed_utm_robot, gps_odom.pose.pose);
+    gps_odom.pose.pose.position.z = (zero_altitude_ ? 0.0 : gps_odom.pose.pose.position.z);
+
+    response.map_point.x = gps_odom.pose.pose.position.x;
+    response.map_point.y = gps_odom.pose.pose.position.y;
+    response.map_point.z = gps_odom.pose.pose.position.z;
 
     return true;
   }
