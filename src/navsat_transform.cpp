@@ -350,7 +350,8 @@ namespace RobotLocalization
     return true;
   }
 
-  bool NavSatTransform::toLLCallback(robot_localization::ToLL::Request& request, robot_localization::ToLL::Response& response)
+  bool NavSatTransform::toLLCallback(robot_localization::ToLL::Request& request,
+                                     robot_localization::ToLL::Response& response)
   {
     if (!transform_good_)
     {
@@ -378,7 +379,8 @@ namespace RobotLocalization
     return true;
   }
 
-  bool NavSatTransform::fromLLCallback(robot_localization::FromLL::Request& request, robot_localization::FromLL::Response& response)
+  bool NavSatTransform::fromLLCallback(robot_localization::FromLL::Request& request,
+                                       robot_localization::FromLL::Response& response)
   {
     double altitude = request.ll_point.altitude;
     double longitude = request.ll_point.longitude;
