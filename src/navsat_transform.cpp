@@ -343,8 +343,7 @@ bool NavSatTransform::toLLCallback(
   const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
   std::shared_ptr<robot_localization::srv::ToLL::Response> response)
 {
-  if (!transform_good_)
-  {
+  if (!transform_good_) {
     return false;
   }
   tf2::Transform odom_as_utm;
@@ -362,10 +361,10 @@ bool NavSatTransform::toLLCallback(
 
   // Now convert the data back to lat/long and place into the message
   navsat_conversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
-                             odom_as_utm.getOrigin().getX(),
-                             utm_zone_,
-                             response->ll_point.latitude,
-                             response->ll_point.longitude);
+    odom_as_utm.getOrigin().getX(),
+    utm_zone_,
+    response->ll_point.latitude,
+    response->ll_point.longitude);
   response->ll_point.altitude = odom_as_utm.getOrigin().getZ();
 
   return true;
@@ -389,8 +388,7 @@ bool NavSatTransform::fromLLCallback(
 
   nav_msgs::msg::Odometry gps_odom;
 
-  if (!transform_good_)
-  {
+  if (!transform_good_) {
     return false;
   }
 
