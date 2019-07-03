@@ -136,6 +136,16 @@ class NavSatTransform
     //!
     void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
 
+    //! @brief Transforms the passed in pose from utm to map frame
+    //! @param[in] utm_pose the pose in utm frame to use to transform
+    //!
+    nav_msgs::Odometry utmToMap(const tf2::Transform& utm_pose) const;
+
+    //! @brief Transforms the passed in point from map frame to lat/long
+    //! @param[in] point the point in map frame to use to transform
+    //!
+    void mapToLL(const tf2::Vector3& point, double& latitude, double& longitude, double& altitude) const;
+
     //! @brief Whether or not we broadcast the UTM transform
     //!
     bool broadcast_utm_transform_;
