@@ -162,6 +162,20 @@ private:
   void setTransformOdometry(const nav_msgs::msg::Odometry::SharedPtr & msg);
 
   /**
+   * @brief Transforms the passed in pose from utm to map frame
+   *  @param[in] utm_pose the pose in utm frame to use to transform
+   */
+  nav_msgs::msg::Odometry utmToMap(const tf2::Transform & utm_pose) const;
+
+  /**
+   * @brief Transforms the passed in point from map frame to lat/long
+   * @param[in] point the point in map frame to use to transform
+   */
+  void mapToLL(
+    const tf2::Vector3 & point, double & latitude, double & longitude,
+    double & altitude) const;
+
+  /**
    * @brief Frame ID of the robot's body frame
    *
    * This is needed for obtaining transforms from the robot's body frame to the
