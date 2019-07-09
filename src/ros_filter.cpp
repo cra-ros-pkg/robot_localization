@@ -107,8 +107,6 @@ namespace RobotLocalization
   template<typename T>
   void RosFilter<T>::initialize()
   {
-    ros::Time::init();
-
     loadParams();
 
     if (printDiagnostics_)
