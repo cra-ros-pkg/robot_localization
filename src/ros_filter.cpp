@@ -1733,11 +1733,13 @@ void RosFilter::run()
   }
 
   rclcpp::Rate loop_rate(frequency_);
+  rclcpp::executors::SingleThreadedExecutor exec;
+  exec.add_node(node_);
 
   while (rclcpp::ok()) {
     // The spin will call all the available callbacks and enqueue
     // their received measurements
-    rclcpp::spin_some(node_);
+    exec.spin_some();
     cur_time = node_->now();
 
     // Now we'll integrate any measurements we've received
