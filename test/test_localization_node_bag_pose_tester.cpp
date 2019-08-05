@@ -64,12 +64,12 @@ TEST(BagTest, PoseCheck) {
   bool outputFinalPosition = false;
   std::string finalPositionFile;
   // getting parameters value from yaml file using get_parameter() API
-  node->get_parameter("final_x", finalX);
-  node->get_parameter("final_y", finalY);
-  node->get_parameter("final_z", finalZ);
-  node->get_parameter("tolerance", tolerance);
-  node->get_parameter_or("output_final_position", outputFinalPosition, false);
-  node->get_parameter_or("output_location", finalPositionFile,
+  node->declare_parameter("final_x", finalX);
+  node->declare_parameter("final_y", finalY);
+  node->declare_parameter("final_z", finalZ);
+  node->declare_parameter("tolerance", tolerance);
+  outputFinalPosition = node->declare_parameter("output_final_position", false);
+  finalPositionFile = node->declare_parameter("output_location",
     std::string("test.txt"));
 
   auto parameters_client = std::make_shared<rclcpp::SyncParametersClient>(node);

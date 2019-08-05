@@ -69,9 +69,9 @@ TEST(UkfTest, Measurements) {
   double kappa = 0.0;
   double beta = 2.0;
 
-  node_->get_parameter("alpha", alpha);
-  node_->get_parameter("kappa", kappa);
-  node_->get_parameter("beta", beta);
+  node_->declare_parameter("alpha", alpha);
+  node_->declare_parameter("kappa", kappa);
+  node_->declare_parameter("beta", beta);
   // create the instance of the class and pass parameters
   RosUkfPassThrough ukf(node_, filter);
   Eigen::MatrixXd initialCovar(15, 15);

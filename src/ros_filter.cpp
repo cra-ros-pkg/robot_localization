@@ -988,7 +988,7 @@ void RosFilter::loadParams()
         relative = false;
       }
 
-      node_->get_parameter(odom_topic_name, odom_topic);
+      node_->declare_parameter(odom_topic_name, odom_topic);
 
       // Check for pose rejection threshold
       double pose_mahalanobis_thresh = std::numeric_limits<double>::max();

@@ -80,13 +80,10 @@ void NavSatTransform::run()
   double transform_timeout = 0.0;
 
   // Load the parameters we need
-  magnetic_declination_ = node_->declare_parameter(
-    "magnetic_declination_radians", magnetic_declination_);
+  magnetic_declination_ = node_->declare_parameter("magnetic_declination_radians");
   yaw_offset_ = node_->declare_parameter("yaw_offset", 0.0);
-  broadcast_utm_transform_ = node_->declare_parameter("broadcast_utm_transform",
-    false);
-  broadcast_utm_transform_as_parent_frame_ = node_->declare_parameter(
-    "broadcast_utm_transform_as_parent_frame", false);
+  node_->declare_parameter("broadcast_utm_transform", broadcast_utm_transform_, false);
+  broadcast_utm_transform_as_parent_frame_ = node_->declare_parameter("broadcast_utm_transform_as_parent_frame", false);
   zero_altitude_ = node_->declare_parameter("zero_altitude", false);
   publish_gps_ = node_->declare_parameter("publish_filtered_gps", false);
   use_odometry_yaw_ = node_->declare_parameter("use_odometry_yaw", false);
@@ -134,12 +131,12 @@ void NavSatTransform::run()
   }
 
   auto gps_odom_pub =
-    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps");
+    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", 10);
   rclcpp::Subscription::SharedPtr filtered_gps_pub;
 
   if (publish_gps_) {
     filtered_gps_pub =
-      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered");
+      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", 10);
   }
 
   // Sleep for the parameterized amount of time, to give
@@ -160,13 +157,13 @@ void NavSatTransform::run()
     } else {
       nav_msgs::msg::Odometry gps_odom;
       if (prepareGpsOdometry(gps_odom)) {
-        gps_odom_pub->publish(gps_odom);
+        gps_odom_pub->publish(*gps_odom);
       }
 
       if (publish_gps_) {
         sensor_msgs::msg::NavSatFix odom_gps;
         if (prepareFilteredGps(odom_gps)) {
-          filtered_gps_pub.publish(odom_gps);
+          filtered_gps_pub.publish(*odom_gps);
         }
       }
     }
