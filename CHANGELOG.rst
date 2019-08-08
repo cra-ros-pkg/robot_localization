@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.5 (2019-08-08)
+------------------
 * fix: wall time used when `use_sim_time` is true
 * Created service for converting to / from lat long
 * Fix bug with tf_prefix
