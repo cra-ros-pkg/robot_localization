@@ -2,6 +2,16 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* fix: wall time used when `use_sim_time` is true
+* Created service for converting to / from lat long
+* Fix bug with tf_prefix
+* Adding new contribution to doc
+* Add missing undocumented params
+* Update wiki location
+* Contributors: Andrew Grindstaff, Axel Mousset, Charles Brian Quinn, Oswin So, Tom Moore
+
 2.6.4 (2019-02-15)
 ------------------
 * Meridian convergence adjustment added to navsat_transform.
