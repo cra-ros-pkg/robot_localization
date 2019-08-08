@@ -1,0 +1,3 @@
+geometry_msgs/Point map_point
+---
+geographic_msgs/GeoPoint ll_point

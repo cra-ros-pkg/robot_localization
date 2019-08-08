@@ -34,6 +34,8 @@
 #define ROBOT_LOCALIZATION_NAVSAT_TRANSFORM_H
 
 #include <robot_localization/SetDatum.h>
+#include <robot_localization/ToLL.h>
+#include <robot_localization/FromLL.h>
 
 #include <ros/ros.h>
 
@@ -76,6 +78,14 @@ class NavSatTransform
     //! @brief Callback for the datum service
     //!
     bool datumCallback(robot_localization::SetDatum::Request& request, robot_localization::SetDatum::Response&);
+
+    //! @brief Callback for the to Lat Long service
+    //!
+    bool toLLCallback(robot_localization::ToLL::Request& request, robot_localization::ToLL::Response& response);
+
+    //! @brief Callback for the from Lat Long service
+    //!
+    bool fromLLCallback(robot_localization::FromLL::Request& request, robot_localization::FromLL::Response& response);
 
     //! @brief Given the pose of the navsat sensor in the UTM frame, removes the offset from the vehicle's centroid
     //! and returns the UTM-frame pose of said centroid.
@@ -125,6 +135,16 @@ class NavSatTransform
     //! @param[in] msg The odometry message to use in the transform
     //!
     void setTransformOdometry(const nav_msgs::OdometryConstPtr& msg);
+
+    //! @brief Transforms the passed in pose from utm to map frame
+    //! @param[in] utm_pose the pose in utm frame to use to transform
+    //!
+    nav_msgs::Odometry utmToMap(const tf2::Transform& utm_pose) const;
+
+    //! @brief Transforms the passed in point from map frame to lat/long
+    //! @param[in] point the point in map frame to use to transform
+    //!
+    void mapToLL(const tf2::Vector3& point, double& latitude, double& longitude, double& altitude) const;
 
     //! @brief Whether or not we broadcast the UTM transform
     //!
@@ -303,6 +323,14 @@ class NavSatTransform
     //! @brief Service for set datum
     //!
     ros::ServiceServer datum_srv_;
+
+    //! @brief Service for to Lat Long
+    //!
+    ros::ServiceServer to_ll_srv_;
+
+    //! @brief Service for from Lat Long
+    //!
+    ros::ServiceServer from_ll_srv_;
 
     //! @brief Transform buffer for managing coordinate transforms
     //!
