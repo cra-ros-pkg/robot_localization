@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.4.8 (2019-08-08)
+------------------
 * Adding new contribution to doc
 * Add missing undocumented params
 * Update wiki location
