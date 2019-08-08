@@ -2,6 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Adding new contribution to doc
+* Add missing undocumented params
+* Update wiki location
+* Fix bug with tf_prefix
+* Contributors: Andrew Grindstaff, Charles Brian Quinn, Tom Moore
+
 2.4.7 (2019-02-15)
 ------------------
 * Documentation fixes
