@@ -5,9 +5,13 @@ if(NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-#find_package(geographic_msgs REQUIRED)
+find_package(geographic_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -20,12 +24,12 @@ find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  #"srv/SetDatum.srv"
+  "srv/SetDatum.srv"
   "srv/SetPose.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
-    #geographic_msgs
+    geographic_msgs
     diagnostic_msgs
   ADD_LINTER_TESTS
 )
@@ -35,6 +39,7 @@ include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
+  ${geographic_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${diagnostic_msgs_INCLUDE_DIRS}
   ${diagnostic_updater_INCLUDE_DIRS}
@@ -50,6 +55,7 @@ add_library(
   src/ukf.cpp
   src/filter_base.cpp
   src/filter_utilities.cpp
+  src/navsat_transform.cpp
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
 
@@ -61,11 +67,17 @@ add_executable(
   src/se_node.cpp
 )
 
+add_executable(
+  navsat_transform_node
+  src/navsat_transform_node.cpp
+)
+
 target_link_libraries(
   rl_lib
   ${angles_LIBRARIES}
   ${EIGEN3_LIBRARIES}
   ${rclcpp_LIBRARIES}
+  ${geographic_msgs_LIBRARIES}
   ${geometry_msgs_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
   ${diagnostic_updater_LIBRARIES}
@@ -81,10 +93,16 @@ target_link_libraries(
   rl_lib
 )
 
+target_link_libraries(
+  navsat_transform_node
+  rl_lib
+)
+
 install(
   TARGETS
   rl_lib
   se_node
+  navsat_transform_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -95,7 +113,6 @@ install(
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-
   find_package(ament_cmake_cppcheck REQUIRED)
   find_package(ament_cmake_cpplint REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)
