@@ -100,9 +100,9 @@ target_link_libraries(
 
 install(
   TARGETS
+  navsat_transform_node
   rl_lib
   se_node
-  navsat_transform_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

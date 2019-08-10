@@ -250,6 +250,11 @@ private:
   bool publish_gps_;
 
   /**
+   * @brief Queue size/QoS of publishers and subscribers
+   */
+  int queue_size_;
+
+  /**
    * @brief Transform buffer for managing coordinate transforms
    */
   tf2_ros::Buffer tf_buffer_;
@@ -345,9 +350,19 @@ private:
    */
   bool zero_altitude_;
 
+  /**
+   * @brief Private node member
+   */
   rclcpp::Node::SharedPtr node_;
+
+  /**
+   * @brief IMU Subscription
+   */
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
-  
+    
+  /**
+   * @brief Navsatfix publisher
+   */
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub;
 };
 

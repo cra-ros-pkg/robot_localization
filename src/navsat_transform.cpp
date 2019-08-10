@@ -55,16 +55,30 @@ using namespace std::chrono_literals;
 
 namespace robot_localization
 {
-NavSatTransform::NavSatTransform(std::shared_ptr<rclcpp::Node> node)
-: magnetic_declination_(0.0), utm_odom_tf_yaw_(0.0), yaw_offset_(0.0),
-  transform_timeout_(0ns), broadcast_utm_transform_(false),
+NavSatTransform::NavSatTransform(std::shared_ptr<rclcpp::Node> node) : 
+  base_link_frame_id_("base_link"),
+  broadcast_utm_transform_(false),
   broadcast_utm_transform_as_parent_frame_(false),
-  has_transform_odom_(false), has_transform_gps_(false),
-  has_transform_imu_(false), transform_good_(false), gps_frame_id_(""),
-  gps_updated_(false), odom_updated_(false), publish_gps_(false),
-  use_odometry_yaw_(false), use_manual_datum_(false), zero_altitude_(false),
-  world_frame_id_("odom"), base_link_frame_id_("base_link"), utm_zone_(""), 
-  tf_buffer_(node->get_clock()), tf_listener_(tf_buffer_), utm_broadcaster_(node)
+  gps_frame_id_(""),
+  gps_updated_(false),
+  has_transform_gps_(false),
+  has_transform_imu_(false),
+  has_transform_odom_(false),
+  magnetic_declination_(0.0),
+  odom_updated_(false),
+  publish_gps_(false),
+  tf_buffer_(node->get_clock()),
+  tf_listener_(tf_buffer_),
+  transform_good_(false), 
+  use_manual_datum_(false), 
+  use_odometry_yaw_(false), 
+  utm_broadcaster_(node),
+  utm_odom_tf_yaw_(0.0), 
+  utm_zone_(""), 
+  world_frame_id_("odom"), 
+  yaw_offset_(0.0),
+  transform_timeout_(0ns), 
+  zero_altitude_(false)
 {
   latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
   latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
@@ -80,7 +94,7 @@ void NavSatTransform::run()
   double transform_timeout = 0.0;
 
   // Load the parameters we need
-  magnetic_declination_ = node_->get_parameter("magnetic_declination_radians").as_double();
+  magnetic_declination_ = node_->declare_parameter("magnetic_declination_radians", 0.0);
   node_->get_parameter_or("yaw_offset", yaw_offset_, 0.0);
   node_->get_parameter_or("broadcast_utm_transform", broadcast_utm_transform_,
     false);
@@ -93,6 +107,8 @@ void NavSatTransform::run()
   node_->get_parameter_or("frequency", frequency, 10.0);
   node_->get_parameter_or("delay", delay, 0.0);
   node_->get_parameter_or("transform_timeout", transform_timeout, 0.0);
+  queue_size_ = node_->declare_parameter("queue_size", 10);
+
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
   auto datum_srv = node_->create_service<robot_localization::srv::SetDatum>(
@@ -123,9 +139,9 @@ void NavSatTransform::run()
   }
 
   auto odom_sub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", 10, std::bind(&NavSatTransform::odomCallback, this, _1));
+    "odometry/filtered", queue_size_, std::bind(&NavSatTransform::odomCallback, this, _1));
   auto gps_sub = node_->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", 10, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+    "gps/fix", queue_size_, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub = node_->create_subscription<sensor_msgs::msg::Imu>(
@@ -133,11 +149,11 @@ void NavSatTransform::run()
   }
 
   auto gps_odom_pub =
-    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", 10);
+    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", queue_size_);
 
   if (publish_gps_) {
     filtered_gps_pub =
-      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", 10);
+      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", queue_size_);
   }
 
   // Sleep for the parameterized amount of time, to give
