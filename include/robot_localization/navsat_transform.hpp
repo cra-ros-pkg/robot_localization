@@ -57,7 +57,7 @@ public:
   /**
    * @brief Constructor
    */
-  NavSatTransform(std::shared_ptr<rclcpp::Node> node_);
+  NavSatTransform(std::shared_ptr<rclcpp::Node> node);
 
   /**
    * @brief Destructor

@@ -55,7 +55,7 @@ using namespace std::chrono_literals;
 
 namespace robot_localization
 {
-NavSatTransform::NavSatTransform(std::shared_ptr<rclcpp::Node> node_)
+NavSatTransform::NavSatTransform(std::shared_ptr<rclcpp::Node> node)
 : magnetic_declination_(0.0), utm_odom_tf_yaw_(0.0), yaw_offset_(0.0),
   transform_timeout_(0ns), broadcast_utm_transform_(false),
   broadcast_utm_transform_as_parent_frame_(false),
@@ -64,10 +64,11 @@ NavSatTransform::NavSatTransform(std::shared_ptr<rclcpp::Node> node_)
   gps_updated_(false), odom_updated_(false), publish_gps_(false),
   use_odometry_yaw_(false), use_manual_datum_(false), zero_altitude_(false),
   world_frame_id_("odom"), base_link_frame_id_("base_link"), utm_zone_(""), 
-  tf_buffer_(node_->get_clock()), tf_listener_(tf_buffer_), utm_broadcaster_(node_)
+  tf_buffer_(node->get_clock()), tf_listener_(tf_buffer_), utm_broadcaster_(node)
 {
   latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
   latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
+  node_ = node;
 }
 
 NavSatTransform::~NavSatTransform() {}
@@ -270,8 +271,8 @@ void NavSatTransform::computeTransform()
 }
 
 bool NavSatTransform::datumCallback(
-  std::shared_ptr<robot_localization::srv::SetDatum::Request> request,
-  std::shared_ptr<robot_localization::srv::SetDatum::Response>)
+  robot_localization::srv::SetDatum::Request::SharedPtr request,
+  robot_localization::srv::SetDatum::Response::SharedPtr)
 {
   // If we get a service call with a manual datum, even if we already computed
   // the transform using the robot's initial pose, then we want to assume that
