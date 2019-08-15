@@ -61,7 +61,7 @@ public:
     nh_priv.param("kappa", args[1], 0.0);
     nh_priv.param("beta",  args[2], 2.0);
 
-    ukf = std::make_unique<RosUkf>(nh, nh_priv, args);
+    ukf = std::make_unique<RosUkf>(nh, nh_priv, getName(), args);
     ukf->initialize();
   }
 };

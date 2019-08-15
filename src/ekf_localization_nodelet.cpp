@@ -54,7 +54,7 @@ public:
     ros::NodeHandle nh      = getNodeHandle();
     ros::NodeHandle nh_priv = getPrivateNodeHandle();
 
-    ekf = std::make_unique<RosEkf>(nh, nh_priv);
+    ekf = std::make_unique<RosEkf>(nh, nh_priv, getName());
     ekf->initialize();
   }
 };

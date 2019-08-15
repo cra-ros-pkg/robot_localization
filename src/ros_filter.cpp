@@ -46,7 +46,10 @@
 namespace RobotLocalization
 {
   template<typename T>
-  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
+  RosFilter<T>::RosFilter(ros::NodeHandle nh,
+                          ros::NodeHandle nh_priv,
+                          std::string node_name,
+                          std::vector<double> args) :
       disabledAtStartup_(false),
       enabled_(false),
       predictToCurrentTime_(false),
@@ -77,6 +80,7 @@ namespace RobotLocalization
       filter_(args),
       nh_(nh),
       nhLocal_(nh_priv),
+      diagnosticUpdater_(nh, nh_priv, node_name),
       tfListener_(tfBuffer_)
   {
     stateVariableNames_.push_back("X");
@@ -97,6 +101,11 @@ namespace RobotLocalization
 
     diagnosticUpdater_.setHardwareID("none");
   }
+
+  template<typename T>
+  RosFilter<T>::RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args) :
+      RosFilter<T>::RosFilter(nh, nh_priv, ros::this_node::getName(), args)
+  {}
 
   template<typename T>
   RosFilter<T>::~RosFilter()
