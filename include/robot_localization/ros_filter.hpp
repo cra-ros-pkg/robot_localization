@@ -442,6 +442,11 @@ protected:
   //!
   bool publish_transform_;
 
+
+  //! @brief Queue size for publish and subscribe
+  //!
+  int queue_size_;
+
   //! @brief Whether to reset the filters when backwards jump in time is
   //! detected
   //!
