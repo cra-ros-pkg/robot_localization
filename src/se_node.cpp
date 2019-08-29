@@ -52,8 +52,6 @@ int main(int argc, char ** argv)
   std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(),
     ::tolower);
 
-  std::cout << "Start running SE NODE" << std::endl;
-
   robot_localization::FilterBase::UniquePtr filter;
 
   if (filter_type == "ukf") {
