@@ -25,6 +25,7 @@
   <depend>nav_msgs</depend>
   <build_depend>rclcpp</build_depend>
   <build_depend>rmw_implementation</build_depend>
+  <depend>rmw</depend>
   <depend>sensor_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>

@@ -39,6 +39,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rcl/time.h>
 #include <rclcpp/rclcpp.hpp>
+#include <rmw/qos_profiles.h>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -65,7 +66,13 @@ RosFilter::RosFilter(
   tf_time_offset_(0), print_diagnostics_(true), node_(node),
   gravitational_acceleration_(9.80665), publish_transform_(true),
   publish_acceleration_(false), two_d_mode_(false), use_control_(false),
-  smooth_lagged_data_(false), filter_(std::move(filter))
+  smooth_lagged_data_(false), filter_(std::move(filter)),
+  diagnostic_updater_(
+    node->get_node_base_interface(),
+    node->get_node_logging_interface(),
+    node->get_node_parameters_interface(),
+    node->get_node_timers_interface(),
+    node->get_node_topics_interface())
 {
   state_variable_names_.push_back("X");
   state_variable_names_.push_back("Y");
@@ -910,6 +917,7 @@ void RosFilter::loadParams()
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "set_pose",
+    rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)),
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -1018,6 +1026,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(
           node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic,
+          rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)),
           odom_callback));
       } else {
 
@@ -1135,7 +1144,8 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
-            pose_topic, pose_callback));
+            pose_topic, rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(
+            rmw_qos_profile_default)), pose_callback));
 
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
@@ -1212,7 +1222,8 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
-            twist_topic, twist_callback));
+            twist_topic, rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(
+            rmw_qos_profile_default)), twist_callback));
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1362,7 +1373,8 @@ void RosFilter::loadParams()
             twist_callback_data, accel_callback_data);
 
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, imu_callback));
+            imu_topic, rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(
+            rmw_qos_profile_default)), imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "
@@ -1437,6 +1449,7 @@ void RosFilter::loadParams()
 
     control_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
       "cmd_vel",
+      rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)),
       std::bind(&RosFilter::controlCallback, this, std::placeholders::_1));
   }
 
@@ -1718,7 +1731,8 @@ void RosFilter::run()
 
   // Publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr position_pub =
-    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered");
+    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered",
+    rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)));
   tf2_ros::TransformBroadcaster world_transform_broadcaster(node_);
 
   // Optional acceleration publisher
@@ -1727,7 +1741,8 @@ void RosFilter::run()
   if (publish_acceleration_) {
     accel_pub =
       node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered");
+      "accel/filtered", rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(
+      rmw_qos_profile_default)));
   }
 
   rclcpp::Rate loop_rate(frequency_);
@@ -1849,7 +1864,7 @@ void RosFilter::run()
 
     double diag_duration = (cur_time - last_diag_time).nanoseconds();
     if (print_diagnostics_ &&
-    		(diag_duration >= diagnostic_updater_.getPeriod() ||
+    		(diag_duration >= diagnostic_updater_.getPeriod().nanoseconds() ||
     				diag_duration < 0.0))
     {
     	diagnostic_updater_.force_update();
