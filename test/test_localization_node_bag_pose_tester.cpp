@@ -84,9 +84,7 @@ TEST(BagTest, PoseCheck) {
   }
   // subscribe call has been changed as per ros2
   auto filteredSub = node->create_subscription<nav_msgs::msg::Odometry>(
-    "/odometry/filtered",
-    rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)),
-    filterCallback);
+    "/odometry/filtered", rclcpp::SystemDefaultsQoS(), filterCallback);
   // changed the spinning and timing as per ros2
   while (rclcpp::ok()) {
     rclcpp::spin_some(node);
