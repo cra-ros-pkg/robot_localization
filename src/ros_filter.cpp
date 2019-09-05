@@ -916,7 +916,7 @@ void RosFilter::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose", rclcpp::SystemDefaultsQoS(),
+    "set_pose", rclcpp::QoS(1),
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -1007,6 +1007,9 @@ void RosFilter::loadParams()
         std::accumulate(pose_update_vec.begin(), pose_update_vec.end(), 0);
       int twist_update_sum =
         std::accumulate(twist_update_vec.begin(), twist_update_vec.end(), 0);
+      int odom_queue_size = 1;
+      node_->get_parameter(odom_topic_name + std::string("_queue_size"),
+        odom_queue_size);
 
       const CallbackData pose_callback_data(
         odom_topic_name + "_pose", pose_update_vec, pose_update_sum,
@@ -1025,7 +1028,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(
           node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic,
-          rclcpp::SystemDefaultsQoS(), odom_callback));
+          rclcpp::QoS(odom_queue_size), odom_callback));
       } else {
 
         std::stringstream stream;
@@ -1073,13 +1076,15 @@ void RosFilter::loadParams()
       RF_DEBUG("Subscribed to " <<
         odom_topic << " (" << odom_topic_name << ")\n\t" <<
         odom_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
-        "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
-        " pose update vector is " << pose_update_vec << "\t" <<
-        odom_topic_name << " twist update vector is " <<
-        twist_update_vec);
+        (differential ? "true" : "false") << "\n\t" <<
+        odom_topic_name << "_pose_rejection_threshold is " <<
+        pose_mahalanobis_thresh << "\n\t" <<
+        odom_topic_name << "_twist_rejection_threshold is " <<
+        twist_mahalanobis_thresh << "\n\t" <<
+        odom_topic_name << "_queue_size is " << odom_queue_size << "\n\t" <<
+        odom_topic_name << " pose update vector is " << pose_update_vec <<
+        "\t" <<
+        odom_topic_name << " twist update vector is " << twist_update_vec);
     }
   } while (more_params);
 
@@ -1117,6 +1122,10 @@ void RosFilter::loadParams()
         std::string("_rejection_threshold"),
         pose_mahalanobis_thresh);
 
+      int pose_queue_size = 1;
+      node_->get_parameter(pose_topic_name + std::string("_queue_size"),
+        pose_queue_size);
+
       // Pull in the sensor's config, zero out values that are invalid for the
       // pose type
       std::vector<bool> pose_update_vec = loadUpdateConfig(pose_topic_name);
@@ -1142,7 +1151,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
-            pose_topic, rclcpp::SystemDefaultsQoS(), pose_callback));
+            pose_topic, rclcpp::QoS(pose_queue_size), pose_callback));
 
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
@@ -1173,10 +1182,11 @@ void RosFilter::loadParams()
       RF_DEBUG("Subscribed to " <<
         pose_topic << " (" << pose_topic_name << ")\n\t" <<
         pose_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
-        "_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << pose_topic_name << " update vector is " <<
-        pose_update_vec);
+        (differential ? "true" : "false") << "\n\t" <<
+        pose_topic_name << "_rejection_threshold is " <<
+        pose_mahalanobis_thresh << "\n\t" <<
+        pose_topic_name << "_queue_size is " << pose_queue_size << "\n\t" <<
+        pose_topic_name << " update vector is " << pose_update_vec);
     }
   } while (more_params);
 
@@ -1196,6 +1206,10 @@ void RosFilter::loadParams()
       node_->get_parameter(twist_topic_name +
         std::string("_rejection_threshold"),
         twist_mahalanobis_thresh);
+
+      int twist_queue_size = 1;
+      node_->get_parameter(twist_topic_name + std::string("_queue_size"),
+        twist_queue_size);
 
       // Pull in the sensor's config, zero out values that are invalid for the
       // twist type
@@ -1219,7 +1233,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
-            twist_topic, rclcpp::SystemDefaultsQoS(), twist_callback));
+            twist_topic, rclcpp::QoS(twist_queue_size), twist_callback));
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1238,8 +1252,9 @@ void RosFilter::loadParams()
       RF_DEBUG("Subscribed to " <<
         twist_topic << " (" << twist_topic_name << ")\n\t" <<
         twist_topic_name << "_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << twist_topic_name <<
-        " update vector is " << twist_update_vec);
+        twist_mahalanobis_thresh << "\n\t" <<
+        twist_topic_name << "_queue_size is " << twist_queue_size << "\n\t" <<
+        twist_topic_name << " update vector is " << twist_update_vec);
     }
   } while (more_params);
 
@@ -1351,6 +1366,10 @@ void RosFilter::loadParams()
         control_update_vector[ControlMemberVz] = 0;
       }
 
+      int imu_queue_size = 1;
+      node_->get_parameter(imu_topic_name + std::string("_queue_size"),
+        imu_queue_size);
+
       if (pose_update_sum + twist_update_sum + accelUpdateSum > 0) {
         const CallbackData pose_callback_data(
           imu_topic_name + "_pose", pose_update_vec, pose_update_sum,
@@ -1369,7 +1388,7 @@ void RosFilter::loadParams()
             twist_callback_data, accel_callback_data);
 
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, rclcpp::SystemDefaultsQoS(), imu_callback));
+            imu_topic, rclcpp::QoS(imu_queue_size), imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "
@@ -1404,18 +1423,22 @@ void RosFilter::loadParams()
       RF_DEBUG("Subscribed to " <<
         imu_topic << " (" << imu_topic_name << ")\n\t" <<
         imu_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
-        "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
-        "_linear_acceleration_rejection_threshold is " <<
-        accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
-        "_remove_gravitational_acceleration is " <<
+        (differential ? "true" : "false") << "\n\t" <<
+        imu_topic_name << "_pose_rejection_threshold is " <<
+        pose_mahalanobis_thresh << "\n\t" <<
+        imu_topic_name << "_twist_rejection_threshold is " <<
+        twist_mahalanobis_thresh << "\n\t" <<
+        imu_topic_name << "_linear_acceleration_rejection_threshold is " <<
+        accel_mahalanobis_thresh << "\n\t" <<
+        imu_topic_name << "_remove_gravitational_acceleration is " <<
         (remove_grav_acc ? "true" : "false") << "\n\t" <<
+        imu_topic_name << "_queue_size is " << imu_queue_size << "\n\t" <<
         imu_topic_name << " pose update vector is " << pose_update_vec <<
-        "\t" << imu_topic_name << " twist update vector is " <<
-        twist_update_vec << "\t" << imu_topic_name <<
-        " acceleration update vector is " << accel_update_vec);
+        "\t" <<
+        imu_topic_name << " twist update vector is " << twist_update_vec <<
+        "\t" <<
+        imu_topic_name << " acceleration update vector is " <<
+        accel_update_vec);
     }
   } while (more_params);
 
@@ -1443,7 +1466,7 @@ void RosFilter::loadParams()
       deceleration_gains);
 
     control_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel", rclcpp::SystemDefaultsQoS(),
+      "cmd_vel", rclcpp::QoS(1),
       std::bind(&RosFilter::controlCallback, this, std::placeholders::_1));
   }
 
@@ -1726,7 +1749,7 @@ void RosFilter::run()
   // Publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr position_pub =
     node_->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered",
-    rclcpp::SystemDefaultsQoS());
+    rclcpp::QoS(20));
   tf2_ros::TransformBroadcaster world_transform_broadcaster(node_);
 
   // Optional acceleration publisher
@@ -1735,7 +1758,7 @@ void RosFilter::run()
   if (publish_acceleration_) {
     accel_pub =
       node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered", rclcpp::SystemDefaultsQoS());
+      "accel/filtered", rclcpp::QoS(20));
   }
 
   rclcpp::Rate loop_rate(frequency_);
