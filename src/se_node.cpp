@@ -48,6 +48,7 @@ int main(int argc, char ** argv)
   auto node = rclcpp::Node::make_shared("se_node");
 
   std::string filter_type = "ekf";
+  node->declare_parameter("filter_type");
   node->get_parameter("filter_type", filter_type);
   std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(),
     ::tolower);
@@ -59,8 +60,11 @@ int main(int argc, char ** argv)
     double kappa = 0.0;
     double beta = 2.0;
 
+    node->declare_parameter("alpha", alpha);
     node->get_parameter("alpha", alpha);
+    node->declare_parameter("kappa", kappa);
     node->get_parameter("kappa", kappa);
+    node->declare_parameter("beta", beta);
     node->get_parameter("beta", beta);
 
     filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta);

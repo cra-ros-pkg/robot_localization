@@ -80,18 +80,29 @@ void NavSatTransform::run()
   double transform_timeout = 0.0;
 
   // Load the parameters we need
+  node_->declare_parameter("magnetic_declination_radians");
   magnetic_declination_ = node_->get_parameter("magnetic_declination_radians");
+  node_->declare_parameter("yaw_offset");
   node_->get_parameter_or("yaw_offset", yaw_offset_, 0.0);
+  node_->declare_parameter("broadcast_utm_transform");
   node_->get_parameter_or("broadcast_utm_transform", broadcast_utm_transform_,
     false);
+  node_->declare_parameter("broadcast_utm_transform_as_parent_frame");
   node_->get_parameter_or("broadcast_utm_transform_as_parent_frame",
     broadcast_utm_transform_as_parent_frame_, false);
+  node_->declare_parameter("zero_altitude");
   node_->get_parameter_or("zero_altitude", zero_altitude_, false);
+  node_->declare_parameter("publish_filtered_gps");
   node_->get_parameter_or("publish_filtered_gps", publish_gps_, false);
+  node_->declare_parameter("use_odometry_yaw");
   node_->get_parameter_or("use_odometry_yaw", use_odometry_yaw_, false);
+  node_->declare_parameter("wait_for_datum");
   node_->get_parameter_or("wait_for_datum", use_manual_datum_, false);
+  node_->declare_parameter("frequency");
   node_->get_parameter_or("frequency", frequency, 10.0);
+  node_->declare_parameter("delay");
   node_->get_parameter_or("delay", delay, 0.0);
+  node_->declare_parameter("transform_timeout");
   node_->get_parameter_or("transform_timeout", transform_timeout, 0.0);
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
@@ -99,6 +110,7 @@ void NavSatTransform::run()
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
   std::vector<double> datum_vals;
+  node_->declare_parameter("datum");
   if (use_manual_datum_ && node_->get_parameter("datum", datum_vals)) {
     double datum_lat = 0.0;
     double datum_lon = 0.0;
