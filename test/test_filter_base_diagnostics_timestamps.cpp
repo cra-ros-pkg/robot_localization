@@ -141,23 +141,21 @@ public:
     imu_msg_ = getValidImu();
 
     // Create a publisher with a custom Quality of Service profile.
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-    custom_qos_profile.depth = 10;
     // subscribe to diagnostics and create publishers for the odometry messages.
     odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "example/odom", custom_qos_profile);
+      "example/odom", rclcpp::SystemDefaultsQoS());
     pose_pub_ =
       node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "example/pose", custom_qos_profile);
+      "example/pose", rclcpp::SystemDefaultsQoS());
     twist_pub_ =
       node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-      "example/twist", custom_qos_profile);
+      "example/twist", rclcpp::SystemDefaultsQoS());
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "example/imu/data", custom_qos_profile);
+      "example/imu/data", rclcpp::SystemDefaultsQoS());
 
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics",
+      "/diagnostics", rclcpp::SystemDefaultsQoS(),
       [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
@@ -169,16 +167,16 @@ public:
   void publishMessages(rclcpp::Time t)
   {
     odom_msg_->header.stamp = t;
-    odom_pub_->publish(odom_msg_);
+    odom_pub_->publish(*odom_msg_);
 
     pose_msg_->header.stamp = t;
-    pose_pub_->publish(pose_msg_);
+    pose_pub_->publish(*pose_msg_);
 
     twist_msg_->header.stamp = t;
-    twist_pub_->publish(twist_msg_);
+    twist_pub_->publish(*twist_msg_);
 
     imu_msg_->header.stamp = t;
-    imu_pub_->publish(imu_msg_);
+    imu_pub_->publish(*imu_msg_);
   }
 
   void setPose(rclcpp::Time t)
