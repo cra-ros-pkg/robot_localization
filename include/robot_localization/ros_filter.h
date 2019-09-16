@@ -111,6 +111,16 @@ template<class T> class RosFilter
     //! The RosFilter constructor makes sure that anyone using
     //! this template is doing so with the correct object type
     //!
+    explicit RosFilter(ros::NodeHandle nh,
+                       ros::NodeHandle nh_priv,
+                       std::string node_name,
+                       std::vector<double> args = std::vector<double>());
+
+    //! @brief Constructor
+    //!
+    //! The RosFilter constructor makes sure that anyone using
+    //! this template is doing so with the correct object type
+    //!
     explicit RosFilter(ros::NodeHandle nh, ros::NodeHandle nh_priv, std::vector<double> args = std::vector<double>());
 
     //! @brief Destructor
