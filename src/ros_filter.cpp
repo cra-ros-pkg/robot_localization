@@ -529,7 +529,6 @@ void RosFilter::integrateMeasurements(const rclcpp::Time & current_time)
         //                         ", but history interval is insufficiently
         //                         sized to " "revert state and measurement
         //                         queue.");
-        restored_measurement_count = 0;
       }
 
       restored_measurement_count =
@@ -1078,7 +1077,6 @@ void RosFilter::loadParams()
 
   // Repeat for pose
   topic_ind = 0;
-  more_params = false;
   do {
     std::stringstream ss;
     ss << "pose" << topic_ind++;
@@ -1175,7 +1173,6 @@ void RosFilter::loadParams()
 
   // Repeat for twist
   topic_ind = 0;
-  more_params = false;
   do {
     std::stringstream ss;
     ss << "twist" << topic_ind++;
@@ -1238,7 +1235,6 @@ void RosFilter::loadParams()
 
   // Repeat for IMU
   topic_ind = 0;
-  more_params = false;
   do {
     std::stringstream ss;
     ss << "imu" << topic_ind++;
