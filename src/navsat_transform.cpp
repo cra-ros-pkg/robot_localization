@@ -80,25 +80,27 @@ void NavSatTransform::run()
   double transform_timeout = 0.0;
 
   // Load the parameters we need
-  magnetic_declination_ = node_->get_parameter("magnetic_declination_radians");
-  node_->get_parameter_or("yaw_offset", yaw_offset_, 0.0);
-  node_->get_parameter_or("broadcast_utm_transform", broadcast_utm_transform_,
+  magnetic_declination_ = node_->declare_parameter(
+    "magnetic_declination_radians", magnetic_declination_);
+  yaw_offset_ = node_->declare_parameter("yaw_offset", 0.0);
+  broadcast_utm_transform_ = node_->declare_parameter("broadcast_utm_transform",
     false);
-  node_->get_parameter_or("broadcast_utm_transform_as_parent_frame",
-    broadcast_utm_transform_as_parent_frame_, false);
-  node_->get_parameter_or("zero_altitude", zero_altitude_, false);
-  node_->get_parameter_or("publish_filtered_gps", publish_gps_, false);
-  node_->get_parameter_or("use_odometry_yaw", use_odometry_yaw_, false);
-  node_->get_parameter_or("wait_for_datum", use_manual_datum_, false);
-  node_->get_parameter_or("frequency", frequency, 10.0);
-  node_->get_parameter_or("delay", delay, 0.0);
-  node_->get_parameter_or("transform_timeout", transform_timeout, 0.0);
+  broadcast_utm_transform_as_parent_frame_ = node_->declare_parameter(
+    "broadcast_utm_transform_as_parent_frame", false);
+  zero_altitude_ = node_->declare_parameter("zero_altitude", false);
+  publish_gps_ = node_->declare_parameter("publish_filtered_gps", false);
+  use_odometry_yaw_ = node_->declare_parameter("use_odometry_yaw", false);
+  use_manual_datum_ = node_->declare_parameter("wait_for_datum", false);
+  frequency = node_->declare_parameter("frequency", 10.0);
+  delay = node_->declare_parameter("delay", 0.0);
+  transform_timeout = node_->declare_parameter("transform_timeout", 0.0);
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
   auto datum_srv = create_service<robot_localization::srv::set_datum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
   std::vector<double> datum_vals;
+  node_->declare_parameter("datum");
   if (use_manual_datum_ && node_->get_parameter("datum", datum_vals)) {
     double datum_lat = 0.0;
     double datum_lon = 0.0;
