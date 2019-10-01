@@ -74,7 +74,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_odometry_yaw_(false),
   utm_broadcaster_(*this),
   utm_meridian_convergence_(0.0),
-  utm_odom_tf_yaw_(0.0),
   utm_zone_(""),
   world_frame_id_("odom"),
   yaw_offset_(0.0),
