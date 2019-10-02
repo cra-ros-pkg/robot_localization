@@ -95,19 +95,16 @@ void NavSatTransform::run()
 
   // Load the parameters we need
   magnetic_declination_ = node_->declare_parameter("magnetic_declination_radians", 0.0);
-  node_->get_parameter_or("yaw_offset", yaw_offset_, 0.0);
-  node_->get_parameter_or("broadcast_utm_transform", broadcast_utm_transform_,
-    false);
-  node_->get_parameter_or("broadcast_utm_transform_as_parent_frame",
-    broadcast_utm_transform_as_parent_frame_, false);
-  node_->get_parameter_or("zero_altitude", zero_altitude_, false);
-  node_->get_parameter_or("publish_filtered_gps", publish_gps_, false);
-  node_->get_parameter_or("use_odometry_yaw", use_odometry_yaw_, false);
-  node_->get_parameter_or("wait_for_datum", use_manual_datum_, false);
-  node_->get_parameter_or("frequency", frequency, 10.0);
-  node_->get_parameter_or("delay", delay, 0.0);
-  node_->get_parameter_or("transform_timeout", transform_timeout, 0.0);
-  queue_size_ = node_->declare_parameter("queue_size", 10);
+  yaw_offset_ = node_->declare_parameter("yaw_offset", 0.0);
+  broadcast_utm_transform_ = node_->declare_parameter("broadcast_utm_transform", false);
+  broadcast_utm_transform_as_parent_frame_ = node_->declare_parameter("broadcast_utm_transform_as_parent_frame", false);
+  zero_altitude_ = node_->declare_parameter("zero_altitude", false);
+  publish_gps_ = node_->declare_parameter("publish_filtered_gps", false);
+  use_odometry_yaw_ = node_->declare_parameter("use_odometry_yaw", false);
+  use_manual_datum_ = node_->declare_parameter("wait_for_datum", false);
+  frequency = node_->declare_parameter("frequency", 10.0);
+  delay = node_->declare_parameter("delay", 0.0);
+  transform_timeout = node_->declare_parameter("transform_timeout", 0.0);
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
@@ -139,9 +136,9 @@ void NavSatTransform::run()
   }
 
   auto odom_sub = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", queue_size_, std::bind(&NavSatTransform::odomCallback, this, _1));
+    "odometry/filtered", 10, std::bind(&NavSatTransform::odomCallback, this, _1));
   auto gps_sub = node_->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", queue_size_, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+    "gps/fix", 10, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub = node_->create_subscription<sensor_msgs::msg::Imu>(
@@ -149,11 +146,11 @@ void NavSatTransform::run()
   }
 
   auto gps_odom_pub =
-    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", queue_size_);
+    node_->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", rclcpp::QoS(10));
 
   if (publish_gps_) {
     filtered_gps_pub =
-      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", queue_size_);
+      node_->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", rclcpp::QoS(10));
   }
 
   // Sleep for the parameterized amount of time, to give
@@ -169,7 +166,7 @@ void NavSatTransform::run()
 
       if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
         // Once we have the transform, we don't need the IMU
-        imu_sub = nullptr;
+        imu_sub.reset();
       }
     } else {
       nav_msgs::msg::Odometry gps_odom;
@@ -269,7 +266,7 @@ void NavSatTransform::computeTransform()
     // it.
     if (broadcast_utm_transform_) {
       geometry_msgs::msg::TransformStamped utm_transform_stamped;
-      utm_transform_stamped.header.stamp = rclcpp::Clock().now();
+      utm_transform_stamped.header.stamp = node_->get_clock()->now();
       utm_transform_stamped.header.frame_id =
         (broadcast_utm_transform_as_parent_frame_ ? "utm" : world_frame_id_);
       utm_transform_stamped.child_frame_id =
@@ -302,7 +299,7 @@ bool NavSatTransform::datumCallback(
   fix.latitude = request->geo_pose.position.latitude;
   fix.longitude = request->geo_pose.position.longitude;
   fix.altitude = request->geo_pose.position.altitude;
-  fix.header.stamp = rclcpp::Clock().now();
+  fix.header.stamp = node_->get_clock()->now();
   fix.position_covariance[0] = 0.1;
   fix.position_covariance[4] = 0.1;
   fix.position_covariance[8] = 0.1;

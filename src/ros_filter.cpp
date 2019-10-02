@@ -55,27 +55,27 @@ namespace robot_localization
 {
 RosFilter::RosFilter(
   rclcpp::Node::SharedPtr node,
-  robot_localization::FilterBase::UniquePtr & filter)
-: static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-  diagnostic_updater_(node),
+  robot_localization::FilterBase::UniquePtr & filter) : 
+  print_diagnostics_(true),
+  publish_acceleration_(false),
+  publish_transform_(true),
+  smooth_lagged_data_(false),
+  two_d_mode_(false),
+  use_control_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-  tf_buffer_(node->get_clock()), // Added this line to fix the build on crystal
-  tf_listener_(tf_buffer_),
+  static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0),
+  gravitational_acceleration_(9.80665),
   history_length_(0),
-  last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_(),
+  last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0),
   tf_time_offset_(0),
-  print_diagnostics_(true),
   node_(node),
-  gravitational_acceleration_(9.80665),
-  publish_transform_(true),
-  publish_acceleration_(false),
-  two_d_mode_(false),
-  use_control_(false),
-  smooth_lagged_data_(false),
+  tf_buffer_(node->get_clock()),
+  tf_listener_(tf_buffer_),
+  diagnostic_updater_(node),
   filter_(std::move(filter))
 {
   state_variable_names_.push_back("X");
@@ -647,9 +647,6 @@ void RosFilter::loadParams()
   // Determine if we'll be printing diagnostic information
   print_diagnostics_ = node_->declare_parameter("print_diagnostics", false);
 
-  // Determine if we'll be printing diagnostic information
-  queue_size_ = node_->declare_parameter("queue_size", 10);
-
   // Check for custom gravitational acceleration value
   gravitational_acceleration_ = node_->declare_parameter(
     "gravitational_acceleration", gravitational_acceleration_);
@@ -932,7 +929,7 @@ void RosFilter::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose", queue_size_,
+    "set_pose", 10,
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -945,7 +942,7 @@ void RosFilter::loadParams()
   auto setPoseSrvCallback =
     [this](
     std::shared_ptr<robot_localization::srv::SetPose::Request> request,
-    std::shared_ptr<robot_localization::srv::SetPose::Response> response)
+    std::shared_ptr<robot_localization::srv::SetPose::Response>)
     -> bool {
       geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
         std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(
@@ -1775,7 +1772,7 @@ void RosFilter::run()
   if (publish_acceleration_) {
     accel_pub =
       node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered", queue_size_);
+      "accel/filtered", rclcpp::QoS(10));
   }
 
   rclcpp::Rate loop_rate(frequency_);

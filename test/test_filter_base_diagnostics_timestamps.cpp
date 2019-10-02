@@ -155,7 +155,7 @@ public:
 
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", rclcpp::SystemDefaultsQoS(),
+      "/diagnostics", custom_qos_profile, 
       [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });

@@ -23,6 +23,37 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
+set(includes
+  include
+  ${EIGEN3_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
+  ${geographic_msgs_INCLUDE_DIRS}
+  ${geometry_msgs_INCLUDE_DIRS}
+  ${diagnostic_msgs_INCLUDE_DIRS}
+  ${diagnostic_updater_INCLUDE_DIRS}
+  ${nav_msgs_INCLUDE_DIRS}
+  ${sensor_msgs_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_geometry_msgs_INCLUDE_DIRS}
+)
+
+set(libraries
+  rl_lib
+  ${angles_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
+  ${rclcpp_LIBRARIES}
+  ${geographic_msgs_LIBRARIES}
+  ${geometry_msgs_LIBRARIES}
+  ${diagnostic_msgs_LIBRARIES}
+  ${diagnostic_updater_LIBRARIES}
+  ${nav_msgs_LIBRARIES}
+  ${sensor_msgs_LIBRARIES}
+  ${tf2_ros_LIBRARIES}
+  ${tf2_LIBRARIES}
+  ${tf2_geometry_msgs_LIBRARIES}
+)
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
@@ -36,18 +67,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
-  include
-  ${EIGEN3_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS}
-  ${geographic_msgs_INCLUDE_DIRS}
-  ${geometry_msgs_INCLUDE_DIRS}
-  ${diagnostic_msgs_INCLUDE_DIRS}
-  ${diagnostic_updater_INCLUDE_DIRS}
-  ${nav_msgs_INCLUDE_DIRS}
-  ${sensor_msgs_INCLUDE_DIRS}
-  ${tf2_ros_INCLUDE_DIRS}
-  ${tf2_INCLUDE_DIRS}
-  ${tf2_geometry_msgs_INCLUDE_DIRS})
+  ${includes}
+)
 
 add_library(
   rl_lib
@@ -73,19 +94,7 @@ add_executable(
 )
 
 target_link_libraries(
-  rl_lib
-  ${angles_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
-  ${rclcpp_LIBRARIES}
-  ${geographic_msgs_LIBRARIES}
-  ${geometry_msgs_LIBRARIES}
-  ${diagnostic_msgs_LIBRARIES}
-  ${diagnostic_updater_LIBRARIES}
-  ${nav_msgs_LIBRARIES}
-  ${sensor_msgs_LIBRARIES}
-  ${tf2_ros_LIBRARIES}
-  ${tf2_LIBRARIES}
-  ${tf2_geometry_msgs_LIBRARIES}
+  ${libraries}
 )
 
 target_link_libraries(
@@ -187,12 +196,6 @@ install(
   DESTINATION lib/${PROJECT_NAME})
 endif()
 
-ament_export_dependencies(rosidl_default_runtime)
-ament_export_include_directories(include)
-ament_export_libraries(
-  rl_lib
-)
-
 # Install params config files.
 install(DIRECTORY
   params
@@ -200,4 +203,7 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+ament_export_dependencies(rosidl_default_runtime)
+ament_export_include_directories(include)
+ament_export_libraries(rl_lib)
 ament_package()

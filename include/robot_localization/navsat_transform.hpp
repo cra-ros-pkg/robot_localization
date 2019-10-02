@@ -250,11 +250,6 @@ private:
   bool publish_gps_;
 
   /**
-   * @brief Queue size/QoS of publishers and subscribers
-   */
-  int queue_size_;
-
-  /**
    * @brief Transform buffer for managing coordinate transforms
    */
   tf2_ros::Buffer tf_buffer_;
