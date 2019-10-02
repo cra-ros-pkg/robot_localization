@@ -1782,7 +1782,6 @@ void RosFilter::run()
     // their received measurements
     rclcpp::spin_some(node_);
     cur_time = node_->now();
-    std::cout << "running node spin some" << std::endl;
 
     // Now we'll integrate any measurements we've received
     integrateMeasurements(cur_time);
