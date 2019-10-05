@@ -51,25 +51,25 @@
 namespace robot_localization
 {
 
-class NavSatTransform
+class NavSatTransform : public rclcpp::Node
 {
 public:
   /**
    * @brief Constructor
    */
-  NavSatTransform(std::shared_ptr<rclcpp::Node> node);
+  NavSatTransform(const rclcpp::NodeOptions &);
 
   /**
    * @brief Destructor
    */
   ~NavSatTransform();
 
-  /**
-   * @brief Main run loop
-   */
-  void run();
-
 private:
+  /**
+   * @brief Callback for computing and publish transform
+   */
+  void transformCallback();
+
   /**
    * @brief Computes the transform from the UTM frame to the odom frame
    */
@@ -167,10 +167,30 @@ private:
   bool broadcast_utm_transform_as_parent_frame_;
 
   /**
+   * @brief TimerBase for publish callback
+   */
+  rclcpp::Service<robot_localization::srv::SetDatum>::SharedPtr datum_srv;
+
+  /**
+   * @brief Navsatfix publisher
+   */
+  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub;
+
+  /**
    * @brief The frame_id of the GPS message (specifies mounting location)
    */
   std::string gps_frame_id_;
 
+  /**
+   * @brief GPS odometry publisher
+   */
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr gps_odom_pub;
+
+  /**
+   * @brief GPS Subscription
+   */
+  rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_sub;
+  
   /**
    * @brief Timestamp of the latest good GPS message
    *
@@ -203,6 +223,11 @@ private:
   bool has_transform_odom_;
 
   /**
+   * @brief IMU Subscription
+   */
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
+
+  /**
    * @brief Covariance for most recent odometry data
    */
   Eigen::MatrixXd latest_odom_covariance_;
@@ -227,6 +252,11 @@ private:
    * environment.
    */
   double magnetic_declination_;
+
+  /**
+   * @brief Odometry Subscription
+   */
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
 
   /**
    * @brief Timestamp of the latest good odometry message
@@ -265,9 +295,20 @@ private:
   bool transform_good_;
 
   /**
+   * @brief Timer
+   */
+  rclcpp::TimerBase::SharedPtr timer_;
+
+  /**
    * @brief Latest IMU orientation
    */
   tf2::Quaternion transform_orientation_;
+
+  /**
+   * @brief Parameter that specifies the how long we wait for a transform to
+   * become available.
+   */
+  tf2::Duration transform_timeout_;
 
   /**
    * @brief Holds the UTM pose that is used to compute the transform
@@ -332,33 +373,12 @@ private:
   double yaw_offset_;
 
   /**
-   * @brief Parameter that specifies the how long we wait for a transform to
-   * become available.
-   */
-  tf2::Duration transform_timeout_;
-
-  /**
    * @brief Whether or not to report 0 altitude
    *
    * If this parameter is true, we always report 0 for the altitude of the
    * converted GPS odometry message.
    */
   bool zero_altitude_;
-
-  /**
-   * @brief Private node member
-   */
-  rclcpp::Node::SharedPtr node_;
-
-  /**
-   * @brief IMU Subscription
-   */
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
-    
-  /**
-   * @brief Navsatfix publisher
-   */
-  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub;
 };
 
 }  // namespace robot_localization
