@@ -213,10 +213,6 @@ class NavSatTransform
     //!
     double utm_meridian_convergence_;
 
-    //! @brief Stores the yaw we need to compute the transform
-    //!
-    double utm_odom_tf_yaw_;
-
     //! @brief IMU's yaw offset
     //!
     //! Your IMU should read 0 when facing *magnetic* north. If it doesn't, this (parameterized) value gives the offset

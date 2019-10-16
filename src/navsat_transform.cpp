@@ -57,7 +57,6 @@ namespace RobotLocalization
     use_odometry_yaw_(false),
     zero_altitude_(false),
     magnetic_declination_(0.0),
-    utm_odom_tf_yaw_(0.0),
     yaw_offset_(0.0),
     base_link_frame_id_("base_link"),
     gps_frame_id_(""),
