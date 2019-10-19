@@ -1407,6 +1407,30 @@ void RosFilter<T>::loadParams()
       // update configuration (as this contains pose information)
       std::vector<bool> update_vec = loadUpdateConfig(imu_topic_name);
 
+      // sanity checks for update config settings
+      std::vector<int> position_update_vec(update_vec.begin() + POSITION_OFFSET,
+        update_vec.begin() + POSITION_OFFSET + POSITION_SIZE);
+      int position_update_sum = std::accumulate(position_update_vec.begin(),
+          position_update_vec.end(), 0);
+      if (position_update_sum > 0) {
+        RCLCPP_WARN(this->get_logger(),
+          "Warning: Some position entries in parameter %s_config are listed "
+          "true, but sensor_msgs/Imu contains no information about position",
+          imu_topic_name);
+      }
+      std::vector<int> linear_velocity_update_vec(
+        update_vec.begin() + POSITION_V_OFFSET,
+        update_vec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE);
+      int linear_velocity_update_sum = std::accumulate(
+        linear_velocity_update_vec.begin(), linear_velocity_update_vec.end(),
+        0);
+      if (linear_velocity_update_sum > 0) {
+        RCLCPP_WARN(this->get_logger(),
+          "Warning: Some linear velocity entries in parameter %s_config are "
+          "listed true, but an sensor_msgs/Imu contains no information about "
+          "linear velocities", imu_topic_name);
+      }
+
       std::vector<bool> pose_update_vec = update_vec;
       // IMU message contains no information about position, filter everything
       // except orientation
