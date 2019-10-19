@@ -1367,6 +1367,26 @@ namespace RobotLocalization
         // update configuration (as this contains pose information)
         std::vector<int> updateVec = loadUpdateConfig(imuTopicName);
 
+        // sanity checks for update config settings
+        std::vector<int> positionUpdateVec(updateVec.begin() + POSITION_OFFSET,
+                                           updateVec.begin() + POSITION_OFFSET + POSITION_SIZE);
+        int positionUpdateSum = std::accumulate(positionUpdateVec.begin(), positionUpdateVec.end(), 0);
+        if (positionUpdateSum > 0)
+        {
+          ROS_WARN_STREAM("Warning: Some position entries in parameter " << imuTopicName << "_config are listed true, "
+                          "but sensor_msgs/Imu contains no information about position");
+        }
+        std::vector<int> linearVelocityUpdateVec(updateVec.begin() + POSITION_V_OFFSET,
+                                                 updateVec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE);
+        int linearVelocityUpdateSum = std::accumulate(linearVelocityUpdateVec.begin(),
+                                                      linearVelocityUpdateVec.end(),
+                                                      0);
+        if (linearVelocityUpdateSum > 0)
+        {
+          ROS_WARN_STREAM("Warning: Some linear velocity entries in parameter " << imuTopicName << "_config are listed "
+                          "true, but an sensor_msgs/Imu contains no information about linear velocities");
+        }
+
         std::vector<int> poseUpdateVec = updateVec;
         // IMU message contains no information about position, filter everything except orientation
         std::fill(poseUpdateVec.begin() + POSITION_OFFSET,
