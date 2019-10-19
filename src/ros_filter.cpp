@@ -1368,6 +1368,10 @@ namespace RobotLocalization
         std::vector<int> updateVec = loadUpdateConfig(imuTopicName);
 
         std::vector<int> poseUpdateVec = updateVec;
+        // IMU message contains no information about position, filter everything except orientation
+        std::fill(poseUpdateVec.begin() + POSITION_OFFSET,
+                  poseUpdateVec.begin() + POSITION_OFFSET + POSITION_SIZE,
+                  0);
         std::fill(poseUpdateVec.begin() + POSITION_V_OFFSET,
                   poseUpdateVec.begin() + POSITION_V_OFFSET + TWIST_SIZE,
                   0);
@@ -1376,8 +1380,12 @@ namespace RobotLocalization
                   0);
 
         std::vector<int> twistUpdateVec = updateVec;
+        // IMU message contains no information about linear speeds, filter everything except angular velocity
         std::fill(twistUpdateVec.begin() + POSITION_OFFSET,
                   twistUpdateVec.begin() + POSITION_OFFSET + POSE_SIZE,
+                  0);
+        std::fill(twistUpdateVec.begin() + POSITION_V_OFFSET,
+                  twistUpdateVec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE,
                   0);
         std::fill(twistUpdateVec.begin() + POSITION_A_OFFSET,
                   twistUpdateVec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE,

@@ -85,6 +85,7 @@ const int POSE_SIZE = 6;
 const int TWIST_SIZE = 6;
 const int POSITION_SIZE = 3;
 const int ORIENTATION_SIZE = 3;
+const int LINEAR_VELOCITY_SIZE = 3;
 const int ACCELERATION_SIZE = 3;
 
 //! @brief Common variables
