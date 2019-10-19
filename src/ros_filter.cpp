@@ -1408,17 +1408,23 @@ void RosFilter<T>::loadParams()
       std::vector<bool> update_vec = loadUpdateConfig(imu_topic_name);
 
       std::vector<bool> pose_update_vec = update_vec;
+      // IMU message contains no information about position, filter everything
+      // except orientation
+      std::fill(pose_update_vec.begin() + POSITION_OFFSET,
+        pose_update_vec.begin() + POSITION_OFFSET + POSITION_SIZE, 0);
       std::fill(pose_update_vec.begin() + POSITION_V_OFFSET,
         pose_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
       std::fill(pose_update_vec.begin() + POSITION_A_OFFSET,
-        pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE,
-        0);
+        pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> twist_update_vec = update_vec;
+      // IMU message contains no information about linear speeds, filter
+      // everything except angular velocity
       std::fill(twist_update_vec.begin() + POSITION_OFFSET,
         twist_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
-      std::fill(
-        twist_update_vec.begin() + POSITION_A_OFFSET,
+      std::fill(twist_update_vec.begin() + POSITION_V_OFFSET,
+        twist_update_vec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE, 0);
+      std::fill(twist_update_vec.begin() + POSITION_A_OFFSET,
         twist_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> accel_update_vec = update_vec;
