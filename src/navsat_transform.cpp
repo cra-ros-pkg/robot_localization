@@ -97,8 +97,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   publish_gps_ = this->declare_parameter("publish_filtered_gps", true);
   use_odometry_yaw_ = this->declare_parameter("use_odometry_yaw", false);
   use_manual_datum_ = this->declare_parameter("wait_for_datum", false);
-  frequency = this->declare_parameter("frequency", 10.0);
-  delay = this->declare_parameter("delay", 0.0);
+  frequency = this->declare_parameter("frequency", frequency);
+  delay = this->declare_parameter("delay", delay);
   transform_timeout = this->declare_parameter("transform_timeout", 0.0);
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
@@ -152,8 +152,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   // other nodes time to start up (not always necessary)
   rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(delay)));
 
-  int interval = (1/frequency) * 1000;  
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(interval), std::bind(&NavSatTransform::transformCallback, this));
+  int interval = (1/frequency);  
+  timer_ = this->create_wall_timer(std::chrono::seconds(interval), std::bind(&NavSatTransform::transformCallback, this));
       
 }
 
