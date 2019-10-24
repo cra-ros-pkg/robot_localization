@@ -103,7 +103,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
-  datum_srv = this->create_service<robot_localization::srv::SetDatum>(
+  datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
   std::vector<double> datum_vals;

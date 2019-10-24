@@ -169,7 +169,7 @@ private:
   /**
    * @brief TimerBase for publish callback
    */
-  rclcpp::Service<robot_localization::srv::SetDatum>::SharedPtr datum_srv;
+  rclcpp::Service<robot_localization::srv::SetDatum>::SharedPtr datum_srv_;
 
   /**
    * @brief Navsatfix publisher
