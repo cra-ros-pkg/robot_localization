@@ -23,23 +23,10 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-set(includes
-  include
-  ${EIGEN3_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS}
-  ${geographic_msgs_INCLUDE_DIRS}
-  ${geometry_msgs_INCLUDE_DIRS}
-  ${diagnostic_msgs_INCLUDE_DIRS}
-  ${diagnostic_updater_INCLUDE_DIRS}
-  ${nav_msgs_INCLUDE_DIRS}
-  ${sensor_msgs_INCLUDE_DIRS}
-  ${tf2_ros_INCLUDE_DIRS}
-  ${tf2_INCLUDE_DIRS}
-  ${tf2_geometry_msgs_INCLUDE_DIRS}
-)
+set(library_name rl_lib)
 
 set(libraries
-  rl_lib
+  ${library_name} 
   ${angles_LIBRARIES}
   ${EIGEN3_LIBRARIES}
   ${rclcpp_LIBRARIES}
@@ -67,11 +54,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
-  ${includes}
+  include
+  ${EIGEN3_INCLUDE_DIRS}
+  ${diagnostic_updater_INCLUDE_DIRS}
 )
 
 add_library(
-  rl_lib
+  ${library_name}
   src/ekf.cpp
   src/ukf.cpp
   src/filter_base.cpp
@@ -80,7 +69,11 @@ add_library(
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
 
-rosidl_target_interfaces(rl_lib
+ament_target_dependencies(${library_name} 
+  ${dependencies}
+)
+
+rosidl_target_interfaces(${library_name}
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 add_executable(
@@ -99,26 +92,27 @@ target_link_libraries(
 
 target_link_libraries(
   se_node
-  rl_lib
+  ${library_name}
 )
 
 target_link_libraries(
   navsat_transform_node
-  rl_lib
+  ${library_name}
+)
+
+ament_target_dependencies(
+  se_node
+  ${library_name}
+  ${dependencies}
 )
 
 install(
   TARGETS
   navsat_transform_node
-  rl_lib
   se_node
+  ${library_name}
   DESTINATION lib/${PROJECT_NAME}
 )
-
-#install(
-#  TARGETS ${PROJECT_NAME}
-#  DESTINATION lib/${PROJECT_NAME}
-#)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
@@ -130,46 +124,46 @@ if(BUILD_TESTING)
 
   #### FILTER BASE TESTS ####
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
-  target_link_libraries(filter_base-test rl_lib)
+  target_link_libraries(filter_base-test ${library_name})
 
   # This test uses se_node node for convenience.
   ament_add_gtest(test_filter_base_diagnostics_timestamps
                     test/test_filter_base_diagnostics_timestamps.cpp)
-  target_link_libraries(test_filter_base_diagnostics_timestamps rl_lib)
+  target_link_libraries(test_filter_base_diagnostics_timestamps ${library_name})
   add_dependencies(test_filter_base_diagnostics_timestamps se_node)
 
   #### EKF TESTS ######
   ament_add_gtest(test_ekf test/test_ekf.cpp)
-  target_link_libraries(test_ekf rl_lib)
+  target_link_libraries(test_ekf ${library_name})
 
   ament_add_gtest(test_ekf_localization_node_interfaces
   test/test_ekf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ekf_localization_node_interfaces rl_lib)
+  target_link_libraries(test_ekf_localization_node_interfaces ${library_name})
 
   ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag1 rl_lib)
+  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
 
   ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag2 rl_lib)
+  target_link_libraries(test_ekf_localization_node_bag2 ${library_name})
 
   ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag3 rl_lib)
+  target_link_libraries(test_ekf_localization_node_bag3 ${library_name})
 
   #### UKF TESTS #####
   ament_add_gtest(test_ukf test/test_ukf.cpp)
-  target_link_libraries(test_ukf rl_lib)
+  target_link_libraries(test_ukf ${library_name})
 
   ament_add_gtest(test_ukf_localization_node_interfaces test/test_ukf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ukf_localization_node_interfaces rl_lib)
+  target_link_libraries(test_ukf_localization_node_interfaces ${library_name})
 
   ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag1 rl_lib)
+  target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
 
   ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag2 rl_lib)
+  target_link_libraries(test_ukf_localization_node_bag2 ${library_name})
 
   ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag3 rl_lib)
+  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
@@ -179,21 +173,22 @@ if(BUILD_TESTING)
   ament_lint_cmake()
   ament_uncrustify()
 
-install(
-  TARGETS
-  filter_base-test
-  test_filter_base_diagnostics_timestamps
-  test_ekf
-  test_ekf_localization_node_interfaces
-  test_ekf_localization_node_bag1
-  test_ekf_localization_node_bag2
-  test_ekf_localization_node_bag3
-  test_ukf
-  test_ukf_localization_node_interfaces
-  test_ukf_localization_node_bag1
-  test_ukf_localization_node_bag2
-  test_ukf_localization_node_bag3
-  DESTINATION lib/${PROJECT_NAME})
+  install(
+    TARGETS
+    filter_base-test
+    test_filter_base_diagnostics_timestamps
+    test_ekf
+    test_ekf_localization_node_interfaces
+    test_ekf_localization_node_bag1
+    test_ekf_localization_node_bag2
+    test_ekf_localization_node_bag3
+    test_ukf
+    test_ukf_localization_node_interfaces
+    test_ukf_localization_node_bag1
+    test_ukf_localization_node_bag2
+    test_ukf_localization_node_bag3
+    DESTINATION lib/${PROJECT_NAME}
+  )
 endif()
 
 # Install params config files.
@@ -203,7 +198,7 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
-ament_export_dependencies(rosidl_default_runtime)
 ament_export_include_directories(include)
-ament_export_libraries(rl_lib)
+ament_export_libraries(${library_name})
+ament_export_dependencies(${dependencies})
 ament_package()

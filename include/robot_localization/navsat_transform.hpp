@@ -174,7 +174,7 @@ private:
   /**
    * @brief Navsatfix publisher
    */
-  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub;
+  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub_;
 
   /**
    * @brief The frame_id of the GPS message (specifies mounting location)
@@ -184,12 +184,12 @@ private:
   /**
    * @brief GPS odometry publisher
    */
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr gps_odom_pub;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr gps_odom_pub_;
 
   /**
    * @brief GPS Subscription
    */
-  rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_sub;
+  rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_sub_;
   
   /**
    * @brief Timestamp of the latest good GPS message
@@ -225,7 +225,7 @@ private:
   /**
    * @brief IMU Subscription
    */
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
 
   /**
    * @brief Covariance for most recent odometry data
@@ -256,7 +256,7 @@ private:
   /**
    * @brief Odometry Subscription
    */
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
   /**
    * @brief Timestamp of the latest good odometry message

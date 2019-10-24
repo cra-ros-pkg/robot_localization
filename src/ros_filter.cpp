@@ -648,8 +648,8 @@ void RosFilter::loadParams()
   print_diagnostics_ = node_->declare_parameter("print_diagnostics", false);
 
   // Check for custom gravitational acceleration value
-  gravitational_acceleration_ = node_->declare_parameter(
-    "gravitational_acceleration", gravitational_acceleration_);
+  gravitational_acceleration_ = node_->declare_parameter("gravitational_acceleration",
+    gravitational_acceleration_);
 
   // Grab the debug param. If true, the node will produce a LOT of output.
   bool debug = node_->declare_parameter("debug", false);
@@ -921,7 +921,7 @@ void RosFilter::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose", 10,
+    "set_pose", 1,
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -995,6 +995,10 @@ void RosFilter::loadParams()
       double twist_mahalanobis_thresh = node_->declare_parameter(odom_topic_name +
         std::string("_twist_rejection_threshold"),
         std::numeric_limits<double>::max());
+      
+      // Set optional custom queue size 
+      int queue_size = node_->declare_parameter(odom_topic_name + 
+        std::string("_queue_size"), 10);
 
       // Now pull in its boolean update vector configuration. Create separate
       // vectors for pose and twist data, and then zero out the opposite values
@@ -1129,6 +1133,10 @@ void RosFilter::loadParams()
         std::string("_rejection_threshold"),
         std::numeric_limits<double>::max());
 
+      // Set optional custom queue size 
+      int queue_size = node_->declare_parameter(pose_topic_name + 
+        std::string("_queue_size"), 10);
+
       // Pull in the sensor's config, zero out values that are invalid for the
       // pose type
       std::vector<bool> pose_update_vec = loadUpdateConfig(pose_topic_name);
@@ -1211,13 +1219,13 @@ void RosFilter::loadParams()
 
     if (more_params) {
       // Check for twist rejection threshold
-      double twist_mahalanobis_thresh = std::numeric_limits<double>::max();
-      twist_mahalanobis_thresh = node_->declare_parameter(twist_topic_name +
-        std::string("_rejection_threshold"), twist_mahalanobis_thresh);
-
-      int twist_queue_size = 1;
-      twist_queue_size = node_->declare_parameter(twist_topic_name +
-        std::string("_queue_size"), twist_queue_size);
+      double twist_mahalanobis_thresh = node_->declare_parameter(twist_topic_name +
+        std::string("_rejection_threshold"),
+        std::numeric_limits<double>::max());
+      
+      // Set optional custom queue size 
+      int queue_size = node_->declare_parameter(twist_topic_name + 
+        std::string("_queue_size"), 10);
 
       // Pull in the sensor's config, zero out values that are invalid for the
       // twist type
@@ -1318,6 +1326,10 @@ void RosFilter::loadParams()
         false);
       remove_gravitational_acceleration_[imu_topic_name + "_acceleration"] =
         remove_grav_acc;
+
+      // Set optional custom queue size 
+      int queue_size = node_->declare_parameter(imu_topic_name + 
+        std::string("_queue_size"), 10);
 
       // Now pull in its boolean update vector configuration and differential
       // update configuration (as this contains pose information)
@@ -1867,7 +1879,6 @@ void RosFilter::run()
       }
 
       // Fire off the position and the transform
-      std::cout << "publish" << std::endl;
       position_pub->publish(filtered_position);
 
       if (print_diagnostics_)

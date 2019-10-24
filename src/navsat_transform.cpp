@@ -99,7 +99,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   use_manual_datum_ = this->declare_parameter("wait_for_datum", false);
   frequency = this->declare_parameter("frequency", frequency);
   delay = this->declare_parameter("delay", delay);
-  transform_timeout = this->declare_parameter("transform_timeout", 0.0);
+  transform_timeout = this->declare_parameter("transform_timeout", transform_timeout);
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
@@ -129,30 +129,30 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
     datumCallback(request, response);
   }
 
-  odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", 10, std::bind(&NavSatTransform::odomCallback, this, _1));
+  odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    "odometry/filtered", 1, std::bind(&NavSatTransform::odomCallback, this, _1));
 
-  gps_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", 10, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+  gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
+    "gps/fix", 1, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
-    imu_sub = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", 10, std::bind(&NavSatTransform::imuCallback, this, _1));
+    imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
+      "imu", 1, std::bind(&NavSatTransform::imuCallback, this, _1));
   }
 
-  gps_odom_pub =
+  gps_odom_pub_ =
     this->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", rclcpp::QoS(10));
 
   if (publish_gps_) {
-    filtered_gps_pub =
+    filtered_gps_pub_ =
       this->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", rclcpp::QoS(10));
   }
 
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
-  rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(delay)));
+  rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::duration<double>(delay)));
 
-  int interval = (1/frequency);  
+  int interval = static_cast<int>(1.0/frequency);  
   timer_ = this->create_wall_timer(std::chrono::seconds(interval), std::bind(&NavSatTransform::transformCallback, this));
       
 }
@@ -166,18 +166,18 @@ void NavSatTransform::transformCallback()
 
     if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
       // Once we have the transform, we don't need the IMU
-      imu_sub.reset();
+      imu_sub_.reset();
     }
   } else {
     nav_msgs::msg::Odometry gps_odom;
     if (prepareGpsOdometry(gps_odom)) {
-      gps_odom_pub->publish(gps_odom);
+      gps_odom_pub_->publish(gps_odom);
     }
 
     if (publish_gps_) {
       sensor_msgs::msg::NavSatFix odom_gps;
       if (prepareFilteredGps(odom_gps)) {
-        filtered_gps_pub->publish(odom_gps);
+        filtered_gps_pub_->publish(odom_gps);
       }
     }
   }
@@ -256,7 +256,7 @@ void NavSatTransform::computeTransform()
     // it.
     if (broadcast_utm_transform_) {
       geometry_msgs::msg::TransformStamped utm_transform_stamped;
-      utm_transform_stamped.header.stamp = this->get_clock()->now();
+      utm_transform_stamped.header.stamp = this->now();
       utm_transform_stamped.header.frame_id =
         (broadcast_utm_transform_as_parent_frame_ ? "utm" : world_frame_id_);
       utm_transform_stamped.child_frame_id =
@@ -289,7 +289,7 @@ bool NavSatTransform::datumCallback(
   fix.latitude = request->geo_pose.position.latitude;
   fix.longitude = request->geo_pose.position.longitude;
   fix.altitude = request->geo_pose.position.altitude;
-  fix.header.stamp = this->get_clock()->now();
+  fix.header.stamp = this->now();
   fix.position_covariance[0] = 0.1;
   fix.position_covariance[4] = 0.1;
   fix.position_covariance[8] = 0.1;
