@@ -207,6 +207,8 @@ static inline char UTMLetterDesignator(double Lat)
  *
  * Written by Chuck Gantz- chuck.gantz@globalstar.com
  */
+#include <iostream>
+
 static inline void LLtoUTM(
   const double Lat, const double Long,
   double & UTMNorthing, double & UTMEasting,

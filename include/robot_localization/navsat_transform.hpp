@@ -79,9 +79,9 @@ private:
    * @brief Callback for the datum service
    */
   void datumCallback(
-    const std::shared_ptr<robot_localization::srv::set_datum::request>
+    const std::shared_ptr<robot_localization::srv::SetDatum::Request>
     request,
-    std::shared_ptr<robot_localization::srv::set_datum::response>);
+    std::shared_ptr<robot_localization::srv::SetDatum::Response>);
 
   /**
    * @brief Given the pose of the navsat sensor in the UTM frame, removes the
@@ -107,19 +107,19 @@ private:
    * @brief Callback for the GPS fix data
    * @param[in] msg The NavSatFix message to process
    */
-  void gpsFixCallback(const sensor_msgs::msg::NavSatFix::ConstPtr & msg);
+  void gpsFixCallback(const sensor_msgs::msg::NavSatFix::SharedPtr msg);
 
   /**
    * @brief Callback for the IMU data
    * @param[in] msg The IMU message to process
    */
-  void imuCallback(const sensor_msgs::msg::Imu::ConstPtr & msg);
+  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg);
 
   /**
    * @brief Callback for the odom data
    * @param[in] msg The odometry message to process
    */
-  void odomCallback(const nav_msgs::msg::Odometry::ConstPtr & msg);
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   /**
    * @brief Converts the odometry data back to GPS and broadcasts it
@@ -138,14 +138,16 @@ private:
    * transform
    * @param[in] msg The NavSatFix message to use in the transform
    */
-  void setTransformGps(const sensor_msgs::msg::NavSatFix::ConstPtr & msg);
+  void setTransformGps(const sensor_msgs::msg::NavSatFix::SharedPtr msg);
 
   /**
    * @brief Used for setting the odometry data that will be used to compute the
    * transform
    * @param[in] msg The odometry message to use in the transform
    */
-  void setTransformOdometry(const nav_msgs::msg::Odometry::ConstPtr & msg);
+  void setTransformOdometry(const nav_msgs::msg::Odometry::SharedPtr msg);
+
+  rclcpp::Node::SharedPtr node_;
 
   /**
    * @brief Frame ID of the robot's body frame
@@ -344,8 +346,6 @@ private:
    * converted GPS odometry message.
    */
   bool zero_altitude_;
-
-  rclcpp::node::Node::SharedPtr node_;
 };
 
 }  // namespace robot_localization

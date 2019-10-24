@@ -1397,7 +1397,8 @@ void RosFilter::loadParams()
             twist_callback_data, accel_callback_data);
 
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, rclcpp::QoS(imu_queue_size), imu_callback));
+            imu_topic, rclcpp::SensorDataQoS(), imu_callback));
+            // imu_topic, rclcpp::QoS(imu_queue_size), imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "
@@ -1520,7 +1521,7 @@ void RosFilter::loadParams()
 			  {
 				  std::stringstream stream;
 				  stream << "Neither " << state_variable_names_[state_var] << " nor its "
-						  "velocity is being measured. This will result in unbounded"
+						  "velocity is being measured. This will result in unbounded "
 						  "error growth and erratic filter behavior.";
 
 				  addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::ERROR,
