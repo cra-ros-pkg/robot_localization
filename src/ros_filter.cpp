@@ -968,6 +968,8 @@ void RosFilter::loadParams()
     if (rclcpp::PARAMETER_NOT_SET != node_->get_parameter(odom_topic_name, parameter)) {
       more_params = true;
       odom_topic = node_->get_parameter(odom_topic_name, parameter);
+    } else {
+        node_->undeclare_parameter(odom_topic_name);
     };
 
     if (more_params) {
@@ -1110,6 +1112,8 @@ void RosFilter::loadParams()
     if (rclcpp::PARAMETER_NOT_SET != node_->get_parameter(pose_topic_name, parameter)) {
       more_params = true;
       pose_topic = node_->get_parameter(pose_topic_name, parameter);
+    } else {
+        node_->undeclare_parameter(pose_topic_name);
     };
 
     if (more_params) {
@@ -1215,6 +1219,8 @@ void RosFilter::loadParams()
     if (rclcpp::PARAMETER_NOT_SET != node_->get_parameter(twist_topic_name, parameter)) {
       more_params = true;
       twist_topic = node_->get_parameter(twist_topic_name, parameter);
+    } else {
+        node_->undeclare_parameter(twist_topic_name);
     };
 
     if (more_params) {
@@ -1288,6 +1294,8 @@ void RosFilter::loadParams()
     if (rclcpp::PARAMETER_NOT_SET != node_->get_parameter(imu_topic_name, parameter)) {
       more_params = true;
       imu_topic = node_->get_parameter(imu_topic_name, parameter);
+    } else {
+        node_->undeclare_parameter(imu_topic_name);
     };
 
     if (more_params) {
