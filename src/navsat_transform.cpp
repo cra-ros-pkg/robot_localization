@@ -152,9 +152,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   // other nodes time to start up (not always necessary)
   rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::duration<double>(delay)));
 
-  int interval = static_cast<int>(1.0/frequency);  
-  timer_ = this->create_wall_timer(std::chrono::seconds(interval), std::bind(&NavSatTransform::transformCallback, this));
-      
+  auto interval = std::chrono::duration<double>(1.0/frequency);
+  timer_ = this->create_wall_timer(interval, std::bind(&NavSatTransform::transformCallback, this)); 
 }
 
 NavSatTransform::~NavSatTransform() {}

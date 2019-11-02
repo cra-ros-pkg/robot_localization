@@ -3052,4 +3052,3 @@ void RosFilter::clearExpiredHistory(const rclcpp::Time cutoff_time)
     "\n---- /RosFilter::clearExpiredHistory ----\n");
 }
 }  // namespace robot_localization
-

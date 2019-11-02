@@ -28,13 +28,13 @@ set(library_name rl_lib)
 set(libraries
   ${library_name} 
   ${angles_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
-  ${rclcpp_LIBRARIES}
-  ${geographic_msgs_LIBRARIES}
-  ${geometry_msgs_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
   ${diagnostic_updater_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
+  ${geographic_msgs_LIBRARIES}
+  ${geometry_msgs_LIBRARIES}
   ${nav_msgs_LIBRARIES}
+  ${rclcpp_LIBRARIES}
   ${sensor_msgs_LIBRARIES}
   ${tf2_ros_LIBRARIES}
   ${tf2_LIBRARIES}
