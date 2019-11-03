@@ -100,7 +100,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   frequency = this->declare_parameter("frequency", frequency);
   delay = this->declare_parameter("delay", delay);
   transform_timeout = this->declare_parameter("transform_timeout", transform_timeout);
-  queue_size_ = this->declare_parameter("queue_size", 5);
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
@@ -131,14 +130,14 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
   }
 
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size_)), std::bind(&NavSatTransform::odomCallback, this, _1));
+    "odometry/filtered", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::odomCallback, this, _1));
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size_)), std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+    "gps/fix", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size_)), std::bind(&NavSatTransform::imuCallback, this, _1));
+      "imu", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::imuCallback, this, _1));
   }
 
   gps_odom_pub_ =
