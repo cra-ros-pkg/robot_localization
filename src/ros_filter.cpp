@@ -1038,8 +1038,8 @@ void RosFilter::loadParams()
             pose_callback_data, twist_callback_data);
 
         topic_subs_.push_back(
-          node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic,
-          rclcpp::QoS(odom_queue_size), odom_callback));
+          node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), 
+          odom_callback));
       } else {
         std::stringstream stream;
         stream << odom_topic << " is listed as an input topic, but all update "
@@ -1166,7 +1166,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
-            pose_topic, rclcpp::QoS(pose_queue_size), pose_callback));
+            pose_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), pose_callback));
 
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
@@ -1255,7 +1255,7 @@ void RosFilter::loadParams()
 
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
-            twist_topic, rclcpp::QoS(twist_queue_size), twist_callback));
+            twist_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), twist_callback));
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1416,7 +1416,7 @@ void RosFilter::loadParams()
             twist_callback_data, accel_callback_data);
 
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, rclcpp::QoS(imu_queue_size), imu_callback));
+            imu_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "

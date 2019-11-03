@@ -280,6 +280,11 @@ private:
   bool publish_gps_;
 
   /**
+   * @brief Custom Sensor Queue-size
+   */
+  int queue_size_;
+  
+  /**
    * @brief Transform buffer for managing coordinate transforms
    */
   tf2_ros::Buffer tf_buffer_;
