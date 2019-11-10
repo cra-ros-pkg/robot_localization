@@ -129,15 +129,17 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
     datumCallback(request, response);
   }
 
+  auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(1)).durability_volatile().best_effort();
+
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::odomCallback, this, _1));
+    "odometry/filtered", custom_qos, std::bind(&NavSatTransform::odomCallback, this, _1));
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, 1)), std::bind(&NavSatTransform::imuCallback, this, _1));
+      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1));
   }
 
   gps_odom_pub_ =

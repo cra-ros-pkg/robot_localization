@@ -1038,9 +1038,9 @@ void RosFilter::loadParams()
             std::placeholders::_1, odom_topic_name,
             pose_callback_data, twist_callback_data);
 
+        auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(queue_size)).durability_volatile().best_effort();
         topic_subs_.push_back(
-          node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), 
-          odom_callback));
+          node_->create_subscription<nav_msgs::msg::Odometry>(odom_topic, custom_qos, odom_callback));
       } else {
         std::stringstream stream;
         stream << odom_topic << " is listed as an input topic, but all update "
@@ -1166,9 +1166,11 @@ void RosFilter::loadParams()
           std::bind(&RosFilter::poseCallback, this, std::placeholders::_1,
             callback_data, world_frame_id_, false);
 
+        auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(queue_size)).durability_volatile().best_effort();
+
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
-            pose_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), pose_callback));
+            pose_topic, custom_qos, pose_callback));
 
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
@@ -1256,9 +1258,10 @@ void RosFilter::loadParams()
             std::placeholders::_1, callback_data,
             base_link_frame_id_);
 
+        auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(queue_size)).durability_volatile().best_effort();
         topic_subs_.push_back(node_->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
-            twist_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), twist_callback));
+            twist_topic, custom_qos, twist_callback));
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1418,9 +1421,10 @@ void RosFilter::loadParams()
           std::bind(&RosFilter::imuCallback, this, std::placeholders::_1,
             imu_topic_name, pose_callback_data,
             twist_callback_data, accel_callback_data);
-
+            
+        auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(queue_size)).durability_volatile().best_effort();
         topic_subs_.push_back(node_->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic, rclcpp::SensorDataQoS(rclcpp::QoSInitialization(RMW_QOS_POLICY_HISTORY_KEEP_LAST, queue_size)), imu_callback));
+            imu_topic, custom_qos, imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
           " is listed as an input topic, "
