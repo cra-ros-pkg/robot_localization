@@ -129,7 +129,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options) :
     datumCallback(request, response);
   }
 
-  auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(1)).durability_volatile().best_effort();
+  auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/filtered", custom_qos, std::bind(&NavSatTransform::odomCallback, this, _1));
