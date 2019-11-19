@@ -64,8 +64,8 @@ public:
    * args[2] contains the beta parameter.
    */
   explicit Ukf(
-    const bool alpha = 0.001, const bool kappa = 0.0,
-    const bool beta = 2.0);
+    const double alpha = 0.001, const double kappa = 0.0,
+    const double beta = 2.0);
 
   /**
    * @brief  Destructor for the Ukf class

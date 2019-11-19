@@ -324,8 +324,8 @@ protected:
   //! @brief Aggregates all diagnostics so they can be published
   //! @param[in] wrapper - The diagnostic status wrapper to update
   //!
-  void aggregateDiagnostics(diagnostic_updater::DiagnosticStatusWrapper
-   &wrapper);
+  void aggregateDiagnostics(
+    diagnostic_updater::DiagnosticStatusWrapper & wrapper);
 
   //! @brief Utility method for copying covariances from ROS covariance arrays
   //! to Eigen matrices

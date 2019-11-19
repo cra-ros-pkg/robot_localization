@@ -38,7 +38,7 @@
 
 namespace robot_localization
 {
-Ukf::Ukf(const bool alpha, const bool kappa, const bool beta)
+Ukf::Ukf(const double alpha, const double kappa, const double beta)
 : FilterBase(),     // Must initialize filter base!
   uncorrected_(true)
 {
