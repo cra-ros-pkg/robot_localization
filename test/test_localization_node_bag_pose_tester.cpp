@@ -57,19 +57,13 @@ TEST(BagTest, PoseCheck) {
   // node handle is created as per ros2
   auto node = rclcpp::Node::make_shared("localization_node_bag_pose_tester");
 
-  double finalX = 0;
-  double finalY = 0;
-  double finalZ = 0;
-  double tolerance = 0;
-  bool outputFinalPosition = false;
-  std::string finalPositionFile;
   // getting parameters value from yaml file using get_parameter() API
-  node->declare_parameter("final_x", finalX);
-  node->declare_parameter("final_y", finalY);
-  node->declare_parameter("final_z", finalZ);
-  node->declare_parameter("tolerance", tolerance);
-  outputFinalPosition = node->declare_parameter("output_final_position", false);
-  finalPositionFile = node->declare_parameter("output_location",
+  double finalX = node->declare_parameter("final_x", 0);
+  double finalY = node->declare_parameter("final_y", 0);
+  double finalZ = node->declare_parameter("final_z", 0);
+  double tolerance = node->declare_parameter("tolerance", 0);
+  bool outputFinalPosition = node->declare_parameter("output_final_position", false);
+  std::string finalPositionFile = node->declare_parameter("output_location",
       std::string("test.txt"));
 
   auto parameters_client = std::make_shared<rclcpp::SyncParametersClient>(node);

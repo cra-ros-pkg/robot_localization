@@ -915,7 +915,7 @@ void RosFilter::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     node_->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose", 1,
+    "set_pose", rclcpp::QoS(1),
     std::bind(&RosFilter::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -1483,7 +1483,7 @@ void RosFilter::loadParams()
       deceleration_gains);
 
     control_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel", 1,
+      "cmd_vel", rclcpp::QoS(1),
       std::bind(&RosFilter::controlCallback, this, std::placeholders::_1));
   }
 
@@ -2202,8 +2202,7 @@ std::vector<bool> RosFilter::loadUpdateConfig(const std::string & topic_name)
   std::vector<bool> update_vector(STATE_SIZE, 0);
   const std::string topc_config_name = topic_name + "_config";
 
-  node_->declare_parameter(topc_config_name, update_vector);
-  node_->get_parameter(topc_config_name, update_vector);
+  update_vector = node_->declare_parameter(topc_config_name, update_vector);
 
   return update_vector;
 }
