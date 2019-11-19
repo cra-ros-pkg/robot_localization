@@ -26,7 +26,7 @@ find_package(Eigen3 REQUIRED)
 set(library_name rl_lib)
 
 set(libraries
-  ${library_name} 
+  ${library_name}
   ${angles_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
   ${diagnostic_updater_LIBRARIES}
@@ -69,7 +69,7 @@ add_library(
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
 
-ament_target_dependencies(${library_name} 
+ament_target_dependencies(${library_name}
   ${dependencies}
 )
 

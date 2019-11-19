@@ -70,7 +70,7 @@ TEST(BagTest, PoseCheck) {
   node->declare_parameter("tolerance", tolerance);
   outputFinalPosition = node->declare_parameter("output_final_position", false);
   finalPositionFile = node->declare_parameter("output_location",
-    std::string("test.txt"));
+      std::string("test.txt"));
 
   auto parameters_client = std::make_shared<rclcpp::SyncParametersClient>(node);
   // Get parameters

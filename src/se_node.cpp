@@ -47,21 +47,16 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("se_node");
 
-  std::string filter_type = "ekf";
-  filter_type = node->declare_parameter("filter_type", filter_type);
+  std::string filter_type = node->declare_parameter("filter_type", "ekf");
   std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(),
     ::tolower);
 
   robot_localization::FilterBase::UniquePtr filter;
 
   if (filter_type == "ukf") {
-    double alpha = 0.001;
-    double kappa = 0.0;
-    double beta = 2.0;
-
-    alpha = node->declare_parameter("alpha", alpha);
-    kappa = node->declare_parameter("kappa", kappa);
-    beta = node->declare_parameter("beta", beta);
+    double alpha = node->declare_parameter("alpha", 0.001);
+    double kappa = node->declare_parameter("kappa", 0.0);
+    double beta = node->declare_parameter("beta", 2.0);
 
     filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta);
   } else {

@@ -57,7 +57,7 @@ public:
   /**
    * @brief Constructor
    */
-  NavSatTransform(const rclcpp::NodeOptions &);
+  explicit NavSatTransform(const rclcpp::NodeOptions &);
 
   /**
    * @brief Destructor
@@ -190,7 +190,7 @@ private:
    * @brief GPS Subscription
    */
   rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_sub_;
-  
+
   /**
    * @brief Timestamp of the latest good GPS message
    *
