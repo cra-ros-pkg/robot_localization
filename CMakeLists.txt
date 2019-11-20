@@ -10,6 +10,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(rcl REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geographic_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
@@ -24,22 +25,6 @@ find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 set(library_name rl_lib)
-
-set(libraries
-  ${library_name}
-  ${angles_LIBRARIES}
-  ${diagnostic_msgs_LIBRARIES}
-  ${diagnostic_updater_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
-  ${geographic_msgs_LIBRARIES}
-  ${geometry_msgs_LIBRARIES}
-  ${nav_msgs_LIBRARIES}
-  ${rclcpp_LIBRARIES}
-  ${sensor_msgs_LIBRARIES}
-  ${tf2_ros_LIBRARIES}
-  ${tf2_LIBRARIES}
-  ${tf2_geometry_msgs_LIBRARIES}
-)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDatum.srv"
@@ -56,7 +41,6 @@ include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
-  ${diagnostic_updater_INCLUDE_DIRS}
 )
 
 add_library(
@@ -68,10 +52,6 @@ add_library(
   src/navsat_transform.cpp
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp)
-
-ament_target_dependencies(${library_name}
-  ${dependencies}
-)
 
 rosidl_target_interfaces(${library_name}
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
@@ -87,12 +67,32 @@ add_executable(
 )
 
 target_link_libraries(
-  ${libraries}
+  ${library_name}
+  ${EIGEN3_LIBRARIES}
+)
+
+ament_target_dependencies(
+  ${library_name}
+  diagnostic_msgs
+  diagnostic_updater
+  geometry_msgs
+  nav_msgs
+  rcl
+  rclcpp
+  sensor_msgs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
 )
 
 target_link_libraries(
   se_node
   ${library_name}
+)
+
+ament_target_dependencies(
+  se_node
+  rclcpp
 )
 
 target_link_libraries(
@@ -101,9 +101,8 @@ target_link_libraries(
 )
 
 ament_target_dependencies(
-  se_node
-  ${library_name}
-  ${dependencies}
+  navsat_transform_node
+  rclcpp
 )
 
 install(
@@ -200,5 +199,4 @@ install(DIRECTORY
 
 ament_export_include_directories(include)
 ament_export_libraries(${library_name})
-ament_export_dependencies(${dependencies})
 ament_package()
