@@ -2200,9 +2200,9 @@ void RosFilter::copyCovariance(
 std::vector<bool> RosFilter::loadUpdateConfig(const std::string & topic_name)
 {
   std::vector<bool> update_vector(STATE_SIZE, 0);
-  const std::string topc_config_name = topic_name + "_config";
+  const std::string topic_config_name = topic_name + "_config";
 
-  update_vector = node_->declare_parameter(topc_config_name, update_vector);
+  update_vector = node_->declare_parameter(topic_config_name, update_vector);
 
   return update_vector;
 }

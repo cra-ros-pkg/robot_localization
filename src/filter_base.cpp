@@ -373,6 +373,44 @@ void FilterBase::prepareControl(
   }
 }
 
+inline double FilterBase::computeControlAcceleration(
+  const double state,
+  const double control,
+  const double acceleration_limit,
+  const double acceleration_gain,
+  const double deceleration_limit,
+  const double deceleration_gain)
+{
+  FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
+
+  const double error = control - state;
+  const bool same_sign = (::fabs(error) <= ::fabs(control) + 0.01);
+  const double set_point = (same_sign ? control : 0.0);
+  const bool decelerating = ::fabs(set_point) < ::fabs(state);
+  double limit = acceleration_limit;
+  double gain = acceleration_gain;
+
+  if (decelerating) {
+    limit = deceleration_limit;
+    gain = deceleration_gain;
+  }
+
+  const double final_accel = std::min(std::max(gain * error, -limit), limit);
+
+  FB_DEBUG("Control value: " <<
+    control << "\n" <<
+    "State value: " << state << "\n" <<
+    "Error: " << error << "\n" <<
+    "Same sign: " << (same_sign ? "true" : "false") << "\n" <<
+    "Set point: " << set_point << "\n" <<
+    "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
+    "Limit: " << limit << "\n" <<
+    "Gain: " << gain << "\n" <<
+    "Final is " << final_accel << "\n");
+
+  return final_accel;
+}
+
 void FilterBase::wrapStateAngles()
 {
   state_(StateMemberRoll) =
