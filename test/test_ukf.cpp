@@ -65,9 +65,9 @@ TEST(UkfTest, Measurements) {
   robot_localization::FilterBase::UniquePtr filter =
     std::make_unique<robot_localization::Ukf>();
 
-  double alpha = node_->declare_parameter("alpha", 0.001);
-  double kappa = node_->declare_parameter("kappa", 0.0);
-  double beta = node_->declare_parameter("beta", 2.0);
+  /*double alpha =*/ node_->declare_parameter("alpha", 0.001);
+  /*double kappa =*/ node_->declare_parameter("kappa", 0.0);
+  /*double beta =*/ node_->declare_parameter("beta", 2.0);
   // create the instance of the class and pass parameters
   RosUkfPassThrough ukf(node_, filter);
   Eigen::MatrixXd initialCovar(15, 15);
