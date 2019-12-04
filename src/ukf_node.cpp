@@ -44,11 +44,13 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   rclcpp::NodeOptions options;
   options.arguments({"ukf_filter_node"});
-  auto filter = std::make_shared<robot_localization::RosUkf>(options);
+  std::shared_ptr<robot_localization::RosUkf> filter =
+    std::make_shared<robot_localization::RosUkf>(options);
   double alpha = filter->declare_parameter("alpha", 0.001);
   double kappa = filter->declare_parameter("kappa", 0.0);
   double beta = filter->declare_parameter("beta", 2.0);
   filter->getFilter().setConstants(alpha, kappa, beta);
+  filter->initialize();
   rclcpp::spin(filter->get_node_base_interface());
   rclcpp::shutdown();
   return 0;

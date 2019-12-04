@@ -39,8 +39,8 @@
 
 namespace robot_localization
 {
-  typedef RosFilter<Ekf> RosEkf;
   typedef RosFilter<Ukf> RosUkf;
+  typedef RosFilter<Ekf> RosEkf;
 }
 
 #endif  // ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H

@@ -46,7 +46,7 @@
 #include <vector>
 
 #define RF_DEBUG(msg) \
-  if (filter_->getDebug()) { \
+  if (filter_.getDebug()) { \
     debug_stream_ << msg; \
   }
 

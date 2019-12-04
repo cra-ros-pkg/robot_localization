@@ -123,7 +123,7 @@ ekf_filter_node:
         odom0_twist_rejection_threshold: 1.0
 
 # Further input parameter examples
-        odom1: example/another_odom
+        odom1: example/odom2
         odom1_config: [false, false, true,
                        false, false, false,
                        false, false, false,

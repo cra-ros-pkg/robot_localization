@@ -55,6 +55,63 @@ namespace robot_localization
 {
 
 template<typename T>
+RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
+: Node(options.arguments()[0], options),
+  print_diagnostics_(true),
+  publish_acceleration_(false),
+  publish_transform_(true),
+  smooth_lagged_data_(false),
+  two_d_mode_(false),
+  use_control_(false),
+  dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
+  static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
+  frequency_(30.0),
+  gravitational_acceleration_(9.80665),
+  history_length_(0),
+  latest_control_(),
+  last_set_pose_time_(0, 0, RCL_ROS_TIME),
+  latest_control_time_(0, 0, RCL_ROS_TIME),
+  tf_timeout_(0),
+  tf_time_offset_(0)
+{
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+
+  state_variable_names_.push_back("X");
+  state_variable_names_.push_back("Y");
+  state_variable_names_.push_back("Z");
+  state_variable_names_.push_back("ROLL");
+  state_variable_names_.push_back("PITCH");
+  state_variable_names_.push_back("YAW");
+  state_variable_names_.push_back("X_VELOCITY");
+  state_variable_names_.push_back("Y_VELOCITY");
+  state_variable_names_.push_back("Z_VELOCITY");
+  state_variable_names_.push_back("ROLL_VELOCITY");
+  state_variable_names_.push_back("PITCH_VELOCITY");
+  state_variable_names_.push_back("YAW_VELOCITY");
+  state_variable_names_.push_back("X_ACCELERATION");
+  state_variable_names_.push_back("Y_ACCELERATION");
+  state_variable_names_.push_back("Z_ACCELERATION");
+}
+
+template<typename T>
+RosFilter<T>::~RosFilter()
+{
+  topic_subs_.clear();
+  timer_.reset();
+  set_pose_sub_.reset();
+  control_sub_.reset();
+  tf_listener_.reset();
+  tf_buffer_.reset();
+  diagnostic_updater_.reset();
+  world_transform_broadcaster_.reset();
+  set_pose_service_.reset();
+  freq_diag_.reset();
+  accel_pub_.reset();
+  position_pub_.reset();
+}
+
+template<typename T>
 void RosFilter<T>::reset()
 {
   // Get rid of any initial poses (pretend we've never had a measurement)
@@ -1068,7 +1125,7 @@ void RosFilter<T>::loadParams()
     rclcpp::Parameter parameter;
     if (rclcpp::PARAMETER_NOT_SET != this->get_parameter(pose_topic_name, parameter)) {
       more_params = true;
-      pose_topic = this->get_parameter(pose_topic_name, parameter);
+      pose_topic = parameter.as_string();
     } else {
       more_params = false;
       this->undeclare_parameter(pose_topic_name);
@@ -1743,7 +1800,7 @@ void RosFilter<T>::initialize()
   }
 
   timer_ = this->create_wall_timer(
-    filter_utilities::secToNanosec(1./frequency_),
+    std::chrono::seconds(static_cast<int>(1.0/frequency_)),
     std::bind(&RosFilter<T>::periodicUpdate, this));
 }
 
@@ -1876,7 +1933,7 @@ void RosFilter<T>::periodicUpdate()
     clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
   }
 
-  if ((this->now - cur_time).seconds() > 1./frequency_) {
+  if ((this->now() - cur_time).seconds() > 1./frequency_) {
     std::cerr <<
       "Failed to meet update rate! Try decreasing the rate, limiting "
       "sensor output frequency, or limiting the number of sensors.\n";
@@ -2904,15 +2961,15 @@ bool RosFilter<T>::prepareTwist(
 }
 
 template<typename T>
-void RosFilter<T>::saveFilterState(FilterBase::UniquePtr & filter)
+void RosFilter<T>::saveFilterState(T & filter)
 {
   FilterStatePtr state = FilterStatePtr(new FilterState());
-  state->state_ = Eigen::VectorXd(filter->getState());
+  state->state_ = Eigen::VectorXd(filter.getState());
   state->estimate_error_covariance_ =
-    Eigen::MatrixXd(filter->getEstimateErrorCovariance());
-  state->last_measurement_time_ = filter->getLastMeasurementTime();
-  state->latest_control_ = Eigen::VectorXd(filter->getControl());
-  state->latest_control_time_ = filter->getControlTime();
+    Eigen::MatrixXd(filter.getEstimateErrorCovariance());
+  state->last_measurement_time_ = filter.getLastMeasurementTime();
+  state->latest_control_ = Eigen::VectorXd(filter.getControl());
+  state->latest_control_time_ = filter.getControlTime();
   filter_state_history_.push_back(state);
   RF_DEBUG("Saved state with timestamp " <<
     std::setprecision(20) <<
@@ -3004,3 +3061,6 @@ void RosFilter<T>::clearExpiredHistory(const rclcpp::Time cutoff_time)
     "\n---- /RosFilter<T>::clearExpiredHistory ----\n");
 }
 }  // namespace robot_localization
+
+template class robot_localization::RosFilter<robot_localization::Ekf>;
+template class robot_localization::RosFilter<robot_localization::Ukf>;

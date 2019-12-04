@@ -103,64 +103,13 @@ public:
   //! The RosFilter constructor makes sure that anyone using
   //! this template is doing so with the correct object type
   //!
-  explicit RosFilter(const rclcpp::NodeOptions & options)
-  : Node(options.arguments()[0], options),
-    print_diagnostics_(true),
-    publish_acceleration_(false),
-    publish_transform_(true),
-    smooth_lagged_data_(false),
-    two_d_mode_(false),
-    use_control_(false),
-    dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-    static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-    frequency_(30.0),
-    gravitational_acceleration_(9.80665),
-    history_length_(0),
-    latest_control_(),
-    last_set_pose_time_(0, 0, RCL_ROS_TIME),
-    latest_control_time_(0, 0, RCL_ROS_TIME),
-    tf_timeout_(0),
-    tf_time_offset_(0)
-    {
-      tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-      tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
-
-      state_variable_names_.push_back("X");
-      state_variable_names_.push_back("Y");
-      state_variable_names_.push_back("Z");
-      state_variable_names_.push_back("ROLL");
-      state_variable_names_.push_back("PITCH");
-      state_variable_names_.push_back("YAW");
-      state_variable_names_.push_back("X_VELOCITY");
-      state_variable_names_.push_back("Y_VELOCITY");
-      state_variable_names_.push_back("Z_VELOCITY");
-      state_variable_names_.push_back("ROLL_VELOCITY");
-      state_variable_names_.push_back("PITCH_VELOCITY");
-      state_variable_names_.push_back("YAW_VELOCITY");
-      state_variable_names_.push_back("X_ACCELERATION");
-      state_variable_names_.push_back("Y_ACCELERATION");
-      state_variable_names_.push_back("Z_ACCELERATION");
-    };
+  explicit RosFilter(const rclcpp::NodeOptions & options);
 
   //! @brief Destructor
   //!
   //! Clears out the message filters and topic subscribers.
   //!
-  ~RosFilter()
-  {
-    topic_subs_.clear();
-    timer_.reset();
-    set_pose_sub_.reset();
-    control_sub_.reset();
-    tf_listener_.reset();
-    tf_buffer_.reset();
-    diagnostic_updater_.reset();
-    world_transform_broadcaster_.reset();
-    set_pose_service_.reset();
-    freq_diag_.reset();
-    accel_pub_.reset();
-    position_pub_.reset();
-  }
+  ~RosFilter();
 
   //! @brief Resets the filter to its initial state
   //!
@@ -362,7 +311,7 @@ protected:
   //! older measurements come in.
   //! @param[in] filter - The filter base object whose state we want to save
   //!
-  void saveFilterState(FilterBase::UniquePtr & filter);
+  void saveFilterState(T & filter);
 
   //! @brief Removes measurements and filter states older than the given cutoff
   //! time.
