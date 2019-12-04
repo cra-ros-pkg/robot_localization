@@ -4,11 +4,11 @@
 ekf_localization:
     ros__parameters:
         debug: true
-        debug_out_file: /home/user/debug_ekf_localization.txt
-        odom0: example/odom
-        pose0: example/pose
-        twist0: example/twist
-        imu0: example/imu/data
+        debug_out_file: debug_ekf_localization.txt
+        odom0: /example/odom
+        pose0: /example/pose
+        twist0: /example/twist
+        imu0: /example/imu/data
 
         odom0_config: [false,  false,  false,
                        false, false, false,

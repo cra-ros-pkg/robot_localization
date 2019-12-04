@@ -53,6 +53,7 @@
 
 namespace robot_localization
 {
+using namespace std::chrono_literals;
 
 template<typename T>
 RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
@@ -1798,8 +1799,10 @@ void RosFilter<T>::initialize()
       "accel/filtered", rclcpp::QoS(10));
   }
 
+  double timespan = 1.0 / frequency_;
+  int timespan_ms = static_cast<int>(timespan * 1000);
   timer_ = this->create_wall_timer(
-    std::chrono::seconds(static_cast<int>(1.0 / frequency_)),
+    std::chrono::milliseconds(timespan_ms),
     std::bind(&RosFilter<T>::periodicUpdate, this));
 }
 

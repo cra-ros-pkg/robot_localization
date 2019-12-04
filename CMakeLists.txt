@@ -133,10 +133,15 @@ if(BUILD_TESTING)
   target_link_libraries(filter_base-test ${library_name})
 
   # This test uses ekf node for convenience.
-  ament_add_gtest(test_filter_base_diagnostics_timestamps
+  ament_add_gtest_executable(test_filter_base_diagnostics_timestamps
                     test/test_filter_base_diagnostics_timestamps.cpp)
   target_link_libraries(test_filter_base_diagnostics_timestamps ${library_name})
-  add_dependencies(test_filter_base_diagnostics_timestamps ekf_node ukf_node)
+  add_dependencies(test_filter_base_diagnostics_timestamps ekf_node)
+  ament_add_test(test_filter_base_diagnostics_timestamps
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_filter_base_diagnostics_timestamps.launch.py"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
   #### EKF TESTS ######
   ament_add_gtest(test_ekf test/test_ekf.cpp)
@@ -164,7 +169,6 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
-
   ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag2 ${library_name})
 

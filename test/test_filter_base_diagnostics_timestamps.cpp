@@ -143,20 +143,20 @@ public:
     // Create a publisher with a custom Quality of Service profile.
     // subscribe to diagnostics and create publishers for the odometry messages.
     odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "example/odom", rclcpp::SystemDefaultsQoS());
+      "example/odom", rclcpp::SensorDataQoS());
     pose_pub_ =
       node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "example/pose", rclcpp::SystemDefaultsQoS());
+      "example/pose", rclcpp::SensorDataQoS());
     twist_pub_ =
       node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-      "example/twist", rclcpp::SystemDefaultsQoS());
+      "example/twist", rclcpp::SensorDataQoS());
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "example/imu/data", rclcpp::SystemDefaultsQoS());
+      "example/imu/data", rclcpp::SensorDataQoS());
 
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", rclcpp::SystemDefaultsQoS(),
-      [this](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
+      [&](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
 
@@ -246,7 +246,6 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
         diagnostic_msgs::msg::KeyValue kv =
           dh_.diagnostics[i].status[status_index].values[key];
         // Now the keys can be checked to see whether we found our warning.
-
         if (kv.key == "imu0_timestamp") {
           received_warning_imu = true;
         }
