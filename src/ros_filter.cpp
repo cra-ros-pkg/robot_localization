@@ -1788,7 +1788,8 @@ void RosFilter<T>::initialize()
   }
 
   timer_ = this->create_wall_timer(
-      1./frequency_, std::bind(&RosFilter<T>::periodicUpdate, this));
+    filter_utilities::secToNanosec(1./frequency_),
+    std::bind(&RosFilter<T>::periodicUpdate, this));
 }
 
 template<typename T>
