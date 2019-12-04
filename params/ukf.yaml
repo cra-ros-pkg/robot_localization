@@ -1,5 +1,5 @@
 ### ukf config file ###
-se_node:
+ukf_filter_node:
     ros__parameters:
 # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
 # computation until it receives at least one message from one of the inputs. It will then run continuously at the
