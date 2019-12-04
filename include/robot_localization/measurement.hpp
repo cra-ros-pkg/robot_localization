@@ -40,6 +40,9 @@
 #include <rclcpp/macros.hpp>
 #include <rclcpp/time.hpp>
 
+namespace robot_localization
+{
+
 /**
  * @brief Structure used for storing and comparing measurements
  * (for priority queues)
@@ -95,5 +98,7 @@ struct Measurement
   }
 };
 using MeasurementPtr = std::shared_ptr<Measurement>;
+
+}
 
 #endif  // ROBOT_LOCALIZATION__MEASUREMENT_HPP_

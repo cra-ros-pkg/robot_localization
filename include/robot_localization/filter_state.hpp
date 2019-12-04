@@ -40,6 +40,9 @@
 #include <rclcpp/macros.hpp>
 #include <rclcpp/time.hpp>
 
+namespace robot_localization
+{
+
 /**
  * @brief Structure used for storing and comparing filter states
  *
@@ -77,5 +80,7 @@ struct FilterState
   }
 };
 using FilterStatePtr = std::shared_ptr<FilterState>;
+
+}
 
 #endif  // ROBOT_LOCALIZATION__FILTER_STATE_HPP_
