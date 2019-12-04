@@ -63,9 +63,8 @@
 #include <numeric>
 #include <queue>
 #include <string>
+#include <memory>
 #include <vector>
-
-#include <rclcpp/rclcpp.hpp>
 
 namespace robot_localization
 {
@@ -95,7 +94,8 @@ using MeasurementQueue =
 using MeasurementHistoryDeque = std::deque<MeasurementPtr>;
 using FilterStateHistoryDeque = std::deque<FilterStatePtr>;
 
-template<class T> class RosFilter : public rclcpp::Node
+template<class T>
+class RosFilter : public rclcpp::Node
 {
 public:
   //! @brief Constructor

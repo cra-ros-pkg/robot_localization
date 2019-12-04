@@ -40,6 +40,11 @@
 #include <rclcpp/macros.hpp>
 #include <rclcpp/time.hpp>
 
+#include <limits>
+#include <string>
+#include <vector>
+#include <memory>
+
 namespace robot_localization
 {
 
@@ -99,6 +104,6 @@ struct Measurement
 };
 using MeasurementPtr = std::shared_ptr<Measurement>;
 
-}
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION__MEASUREMENT_HPP_

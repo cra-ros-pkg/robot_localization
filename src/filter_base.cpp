@@ -40,6 +40,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 namespace robot_localization
 {

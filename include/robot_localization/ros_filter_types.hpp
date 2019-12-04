@@ -30,8 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H_
-#define ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H_
+#ifndef ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
+#define ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
 
 #include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ekf.hpp"
@@ -39,8 +39,8 @@
 
 namespace robot_localization
 {
-  typedef RosFilter<Ukf> RosUkf;
-  typedef RosFilter<Ekf> RosEkf;
+typedef RosFilter<Ukf> RosUkf;
+typedef RosFilter<Ekf> RosEkf;
 }
 
-#endif  // ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H
+#endif  // ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_

@@ -63,7 +63,7 @@ public:
    * constains the alpha parameter, args[1] contains the kappa parameter, and
    * args[2] contains the beta parameter.
    */
-  explicit Ukf();
+  Ukf();
 
   /**
    * @brief  Destructor for the Ukf class

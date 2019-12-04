@@ -470,7 +470,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           pos_ptr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) +
-            (j + ORIENTATION_SIZE)] =
+          (j + ORIENTATION_SIZE)] =
             msg->orientation_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -502,7 +502,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           twist_ptr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) +
-            (j + ORIENTATION_SIZE)] =
+          (j + ORIENTATION_SIZE)] =
             msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -1519,7 +1519,7 @@ void RosFilter<T>::loadParams()
       if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] > 1) {
         std::stringstream stream;
         stream << abs_pose_var_counts[static_cast<StateMembers>(state_var -
-          POSITION_OFFSET)] << " absolute pose inputs detected for " <<
+        POSITION_OFFSET)] << " absolute pose inputs detected for " <<
           state_variable_names_[state_var] <<
           ". This may result in oscillations. Please ensure that your"
           "variances for each measured variable are set appropriately.";
@@ -1757,7 +1757,6 @@ void RosFilter<T>::poseCallback(
 template<typename T>
 void RosFilter<T>::initialize()
 {
-
   diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(
     shared_from_this());
   diagnostic_updater_->setHardwareID("none");
@@ -1775,7 +1774,7 @@ void RosFilter<T>::initialize()
   // Set up the frequency diagnostic
   double minFrequency = frequency_ - 2;
   double maxFrequency = frequency_ + 2;
-  freq_diag_ = 
+  freq_diag_ =
     std::make_unique<diagnostic_updater::HeaderlessTopicDiagnostic>(
     "odometry/filtered",
     *diagnostic_updater_,
@@ -1800,7 +1799,7 @@ void RosFilter<T>::initialize()
   }
 
   timer_ = this->create_wall_timer(
-    std::chrono::seconds(static_cast<int>(1.0/frequency_)),
+    std::chrono::seconds(static_cast<int>(1.0 / frequency_)),
     std::bind(&RosFilter<T>::periodicUpdate, this));
 }
 
@@ -1933,7 +1932,7 @@ void RosFilter<T>::periodicUpdate()
     clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
   }
 
-  if ((this->now() - cur_time).seconds() > 1./frequency_) {
+  if ((this->now() - cur_time).seconds() > 1. / frequency_) {
     std::cerr <<
       "Failed to meet update rate! Try decreasing the rate, limiting "
       "sensor output frequency, or limiting the number of sensors.\n";

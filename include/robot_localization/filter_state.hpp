@@ -35,10 +35,11 @@
 #ifndef ROBOT_LOCALIZATION__FILTER_STATE_HPP_
 #define ROBOT_LOCALIZATION__FILTER_STATE_HPP_
 
-#include <Eigen/Dense>
-#include <rclcpp/duration.hpp>
-#include <rclcpp/macros.hpp>
-#include <rclcpp/time.hpp>
+#include <memory>
+#include "Eigen/Dense"
+#include "rclcpp/duration.hpp"
+#include "rclcpp/macros.hpp"
+#include "rclcpp/time.hpp"
 
 namespace robot_localization
 {
@@ -81,6 +82,6 @@ struct FilterState
 };
 using FilterStatePtr = std::shared_ptr<FilterState>;
 
-}
+}  // namespace robot_localization
 
 #endif  // ROBOT_LOCALIZATION__FILTER_STATE_HPP_
