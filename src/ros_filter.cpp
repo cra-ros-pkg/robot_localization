@@ -55,51 +55,6 @@ namespace robot_localization
 {
 
 template<typename T>
-RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
-: Node("RosFilter", options),
-  print_diagnostics_(true),
-  publish_acceleration_(false),
-  publish_transform_(true),
-  smooth_lagged_data_(false),
-  two_d_mode_(false),
-  use_control_(false),
-  dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-  static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
-  frequency_(30.0),
-  gravitational_acceleration_(9.80665),
-  history_length_(0),
-  latest_control_(),
-  last_set_pose_time_(0, 0, RCL_ROS_TIME),
-  latest_control_time_(0, 0, RCL_ROS_TIME),
-  tf_timeout_(0),
-  tf_time_offset_(0),
-  tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_)
-{
-  state_variable_names_.push_back("X");
-  state_variable_names_.push_back("Y");
-  state_variable_names_.push_back("Z");
-  state_variable_names_.push_back("ROLL");
-  state_variable_names_.push_back("PITCH");
-  state_variable_names_.push_back("YAW");
-  state_variable_names_.push_back("X_VELOCITY");
-  state_variable_names_.push_back("Y_VELOCITY");
-  state_variable_names_.push_back("Z_VELOCITY");
-  state_variable_names_.push_back("ROLL_VELOCITY");
-  state_variable_names_.push_back("PITCH_VELOCITY");
-  state_variable_names_.push_back("YAW_VELOCITY");
-  state_variable_names_.push_back("X_ACCELERATION");
-  state_variable_names_.push_back("Y_ACCELERATION");
-  state_variable_names_.push_back("Z_ACCELERATION");
-}
-
-template<typename T>
-RosFilter<T>::~RosFilter()
-{
-  topic_subs_.clear();
-}
-
-template<typename T>
 void RosFilter<T>::reset()
 {
   // Get rid of any initial poses (pretend we've never had a measurement)
@@ -121,7 +76,7 @@ void RosFilter<T>::reset()
   last_set_pose_time_ = rclcpp::Time(0);
 
   // clear tf buffer to avoid TF_OLD_DATA errors
-  tf_buffer_.clear();
+  tf_buffer_->clear();
 
   // clear last message timestamp, so older messages will be accepted
   last_message_times_.clear();
@@ -1834,7 +1789,7 @@ void RosFilter<T>::periodicUpdate()
 
           tf2::Transform odom_base_link_trans;
           tf2::fromMsg(tf_buffer_
-            .lookupTransform(base_link_frame_id_,
+            ->lookupTransform(base_link_frame_id_,
             odom_frame_id_,
             tf2::TimePointZero)
             .transform,
@@ -2284,7 +2239,7 @@ bool RosFilter<T>::prepareAcceleration(
   // we have to handle the situation.
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_, target_frame, msg_frame, msg->header.stamp, tf_timeout_,
+    tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
     target_frame_trans);
 
   if (can_transform) {
@@ -2304,7 +2259,7 @@ bool RosFilter<T>::prepareAcceleration(
         // transform state orientation to IMU frame
         tf2::Transform imuFrameTrans;
         ros_filter_utilities::lookupTransformSafe(
-          tf_buffer_, msg_frame, target_frame, msg->header.stamp, tf_timeout_,
+          tf_buffer_.get(), msg_frame, target_frame, msg->header.stamp, tf_timeout_,
           imuFrameTrans);
         stateTmp = imuFrameTrans.getBasis() * stateTmp;
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
@@ -2479,7 +2434,7 @@ bool RosFilter<T>::preparePose(
   // 2. Get the target frame transformation
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_, final_target_frame, pose_tmp.frame_id_,
+    tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
     rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
     target_frame_trans);
 
@@ -2861,7 +2816,7 @@ bool RosFilter<T>::prepareTwist(
   // 4. We need to transform this into the target frame (probably base_link)
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_, target_frame, msg_frame, msg->header.stamp, tf_timeout_,
+    tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
     target_frame_trans);
 
   if (can_transform) {

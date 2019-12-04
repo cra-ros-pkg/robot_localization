@@ -282,12 +282,12 @@ private:
   /**
    * @brief Transform buffer for managing coordinate transforms
    */
-  tf2_ros::Buffer tf_buffer_;
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
   /**
    * @brief Transform listener for receiving transforms
    */
-  tf2_ros::TransformListener tf_listener_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
   /**
    * @brief Whether or not we've computed a good heading

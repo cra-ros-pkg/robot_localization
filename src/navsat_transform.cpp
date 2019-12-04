@@ -68,8 +68,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   magnetic_declination_(0.0),
   odom_updated_(false),
   publish_gps_(false),
-  tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_),
   transform_good_(false),
   transform_timeout_(0ns),
   use_manual_datum_(false),
@@ -81,6 +79,9 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   yaw_offset_(0.0),
   zero_altitude_(false)
 {
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+
   latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
   latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
 
@@ -337,7 +338,7 @@ void NavSatTransform::getRobotOriginUtmPose(
   // Get linear offset from origin for the GPS
   tf2::Transform offset;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_, base_link_frame_id_, gps_frame_id_, transform_time,
+    tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
     transform_timeout_, offset);
 
   if (can_transform) {
@@ -384,13 +385,13 @@ void NavSatTransform::getRobotOriginWorldPose(
   // Remove the offset from base_link
   tf2::Transform gps_offset_rotated;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_, base_link_frame_id_, gps_frame_id_, transform_time,
+    tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
     transform_timeout_, gps_offset_rotated);
 
   if (can_transform) {
     tf2::Transform robot_orientation;
     can_transform = ros_filter_utilities::lookupTransformSafe(
-      tf_buffer_, world_frame_id_, base_link_frame_id_, transform_time,
+      tf_buffer_.get(), world_frame_id_, base_link_frame_id_, transform_time,
       transform_timeout_, robot_orientation);
 
     if (can_transform) {
@@ -473,7 +474,7 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     // Correct for the IMU's orientation w.r.t. base_link
     tf2::Transform target_frame_trans;
     bool can_transform = ros_filter_utilities::lookupTransformSafe(
-      tf_buffer_, base_link_frame_id_, msg->header.frame_id,
+      tf_buffer_.get(), base_link_frame_id_, msg->header.frame_id,
       msg->header.stamp, transform_timeout_, target_frame_trans);
 
     if (can_transform) {
