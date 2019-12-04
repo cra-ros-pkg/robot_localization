@@ -1,4 +1,5 @@
 # Copyright 2018 Open Source Robotics Foundation, Inc.
+# Copyright 2019 Samsung Research America
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +14,7 @@
 # limitations under the License.
 
 from launch import LaunchDescription
+from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 import os
 import yaml
@@ -24,21 +26,10 @@ from launch.actions import DeclareLaunchArgument
 def generate_launch_description():
     return LaunchDescription([
         launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ukf', node_name='test_ukf',
-	    output='screen'            
-           ),       
-       
+            package='robot_localization',
+            node_executable='ukf_node',
+            node_name='ukf_filter_node',
+            output='screen',
+            parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'ukf.yaml')],
+           ),
 ])
-
-
-
-
-
-
-
-
-
-
-
-
-
