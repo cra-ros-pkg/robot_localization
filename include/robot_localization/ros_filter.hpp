@@ -104,7 +104,7 @@ public:
   //! this template is doing so with the correct object type
   //!
   explicit RosFilter(const rclcpp::NodeOptions & options)
-  : Node("RosFilter", options),
+  : Node(options.arguments()[0], options),
     print_diagnostics_(true),
     publish_acceleration_(false),
     publish_transform_(true),
@@ -222,6 +222,14 @@ public:
     Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurement_covariance,
     std::vector<bool> & update_vector);
+
+  //! @brief Method to get filter
+  //! @param[out] filter - the underlying templated filter
+  //!
+  T & getFilter()
+  {
+    return filter_;
+  }
 
   //! @brief Retrieves the EKF's output for broadcasting
   //! @param[out] message - The standard ROS odometry message to be filled

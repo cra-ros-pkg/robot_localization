@@ -70,6 +70,8 @@ public:
    */
   ~Ukf();
 
+  void setConstants(double alpha, double kappa, double beta);
+
   /**
    * @brief  Carries out the correct step in the predict/update cycle.
    *

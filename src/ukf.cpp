@@ -39,22 +39,22 @@
 namespace robot_localization
 {
 Ukf::Ukf()
-: FilterBase(),     // Must initialize filter base!
+: FilterBase(),
   uncorrected_(true)
 {
-  // TODO figure out how to handle these params STEVE
-  double alpha = 0.001; //this->declare_parameter("alpha", 0.001);
-  double kappa = 0.0; //this->declare_parameter("kappa", 0.0);
-  double beta = 2.0; //this->declare_parameter("beta", 2.0);
-
   size_t sigma_count = (STATE_SIZE << 1) + 1;
   sigma_points_.resize(sigma_count, Eigen::VectorXd(STATE_SIZE));
-
-  // Prepare constants
-  lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
-
   state_weights_.resize(sigma_count);
   covar_weights_.resize(sigma_count);
+}
+
+Ukf::~Ukf() {}
+
+void Ukf::setConstants(double alpha, double kappa, double beta)
+{
+  // Prepare constants
+  size_t sigma_count = (STATE_SIZE << 1) + 1;
+  lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
 
   state_weights_[0] = lambda_ / (STATE_SIZE + lambda_);
   covar_weights_[0] = state_weights_[0] + (1 - (alpha * alpha) + beta);
@@ -65,8 +65,6 @@ Ukf::Ukf()
     covar_weights_[i] = state_weights_[i];
   }
 }
-
-Ukf::~Ukf() {}
 
 void Ukf::correct(const Measurement & measurement)
 {
