@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Locus Robotics
+ * Copyright (c) 2014, 2015, 2016, Charles River Analytics, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,46 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ekf.hpp>
-#include <robot_localization/filter_base.hpp>
-#include <robot_localization/ros_filter.hpp>
-#include <robot_localization/ukf.hpp>
+#ifndef ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H_
+#define ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H_
 
-#include <rclcpp/rclcpp.hpp>
+#include "robot_localization/ros_filter.hpp"
+#include "robot_localization/ekf.hpp"
+#include "robot_localization/ukf.hpp"
 
-#include <algorithm>
-#include <string>
-#include <memory>
-#include <vector>
-
-int main(int argc, char ** argv)
+namespace robot_localization
 {
-  rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("se_node");
-
-  std::string filter_type = node->declare_parameter("filter_type", "ekf");
-  std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(),
-    ::tolower);
-
-  robot_localization::FilterBase::UniquePtr filter;
-
-  if (filter_type == "ukf") {
-    double alpha = node->declare_parameter("alpha", 0.001);
-    double kappa = node->declare_parameter("kappa", 0.0);
-    double beta = node->declare_parameter("beta", 2.0);
-
-    filter = std::make_unique<robot_localization::Ukf>(alpha, kappa, beta);
-  } else {
-    if (filter_type != "ekf") {
-      std::cerr << "Unsupported filter type of " << filter_type <<
-        " specified. Defaulting to ekf.\n";
-    }
-
-    filter = std::make_unique<robot_localization::Ekf>();
-  }
-
-  robot_localization::RosFilter ros_filter(node, filter);
-  ros_filter.run();
-
-  return 0;
+  typedef RosFilter<Ekf> RosEkf;
+  typedef RosFilter<Ukf> RosUkf;
 }
+
+#endif  // ROBOT_LOCALIZATION__ROS_FILTER_TYPES_H

@@ -40,7 +40,7 @@
 namespace robot_localization
 {
 Ekf::Ekf()
-: FilterBase()     // Must initialize filter base!
+: FilterBase()
 {}
 
 Ekf::~Ekf() {}

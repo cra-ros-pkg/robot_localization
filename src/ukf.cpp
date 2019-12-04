@@ -38,10 +38,15 @@
 
 namespace robot_localization
 {
-Ukf::Ukf(const double alpha, const double kappa, const double beta)
+Ukf::Ukf()
 : FilterBase(),     // Must initialize filter base!
   uncorrected_(true)
 {
+  // TODO figure out how to handle these params STEVE
+  double alpha = 0.001; //this->declare_parameter("alpha", 0.001);
+  double kappa = 0.0; //this->declare_parameter("kappa", 0.0);
+  double beta = 2.0; //this->declare_parameter("beta", 2.0);
+
   size_t sigma_count = (STATE_SIZE << 1) + 1;
   sigma_points_.resize(sigma_count, Eigen::VectorXd(STATE_SIZE));
 
