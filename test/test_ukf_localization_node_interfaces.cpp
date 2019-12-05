@@ -726,9 +726,9 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.4);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.4);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.4);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.41);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.41);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.41);
 
   imu.linear_acceleration.x = 0.0;
   imu.linear_acceleration.y = 0.0;
