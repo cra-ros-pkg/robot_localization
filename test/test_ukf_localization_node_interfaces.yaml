@@ -108,11 +108,3 @@ test_ukf_localization_node_interfaces_ukf:
         alpha: 0.001
         kappa: 0.0
         beta: 2.0
-
-
-
-
-
-
-
-

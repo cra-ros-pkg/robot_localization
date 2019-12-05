@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Launch file for test_ukf_localization_node_interfaces."""
+"""Launch file for test_ekf_localization_node_interfaces."""
 
+import launch
 from launch import LaunchDescription
 import launch_ros.actions
 import os
@@ -28,10 +29,12 @@ def generate_launch_description():
     parameters_file_path = parameters_file_dir / 'test_ukf_localization_node_interfaces.yaml'    
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
-	 #*****test_ukf_localization_node_interfaces.test***** 
+     #*****test_ukf_localization_node_interfaces.test***** 
     ukf_node = launch_ros.actions.Node(
-            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_interfaces_ukf',
-	    output='screen',
+            package='robot_localization',
+            node_executable='ukf_node',
+            node_name='test_ukf_localization_node_interfaces_ukf',
+            output='screen',
             parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
@@ -39,13 +42,10 @@ def generate_launch_description():
            ],)
 
     test_ukf_localization_node_interfaces = launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ukf_localization_node_interfaces',node_name='test_ukf_localization_node_interfaces_int',
-            output='screen',
-        parameters=[
-                parameters_file_path,
-                str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ukf_localization_node_interfaces.yaml'],
-           ],)
+            package='robot_localization',
+            node_executable='test_ukf_localization_node_interfaces',
+            node_name='test_ukf_localization_node_interfaces_int',
+            output='screen')
 
     return LaunchDescription([
         launch.actions.DeclareLaunchArgument(
