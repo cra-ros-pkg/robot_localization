@@ -943,26 +943,10 @@ void RosFilter<T>::loadParams()
     std::bind(&RosFilter<T>::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
-  // set_pose_service_ =
-  // this->create_service<robot_localization::srv::SetPose>(
-  //  "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
-  //  std::placeholders::_1, std::placeholders::_2));
-
-  // Added setpose service callback
-  auto setPoseSrvCallback =
-    [this](
-    std::shared_ptr<robot_localization::srv::SetPose::Request> request,
-    std::shared_ptr<robot_localization::srv::SetPose::Response>)
-    -> bool {
-      geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
-        std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        request->pose);
-      setPoseCallback(msg);
-      return true;
-    };
-
-  set_pose_service_ = this->create_service<robot_localization::srv::SetPose>(
-    "set_pose", setPoseSrvCallback);
+  set_pose_service_ =
+  this->create_service<robot_localization::srv::SetPose>(
+   "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
+   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
@@ -2001,18 +1985,19 @@ void RosFilter<T>::setPoseCallback(
   RF_DEBUG("\n------ /RosFilter<T>::setPoseCallback ------\n");
 }
 
-// Commented as setPoseSrvCallback replaced with lamda function.
-/*
-  bool RosFilter<T>::setPoseSrvCallback(
-    robot_localization::srv::SetPose::Request& request,
-    robot_localization::srv::SetPose::Response&)
-  {
-    geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
-  std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(request.pose);
-    setPoseCallback(msg);
+template<typename T>
+bool RosFilter<T>::setPoseSrvCallback(
+  const std::shared_ptr<rmw_request_id_t>/*request_header*/,
+  const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
+  std::shared_ptr<robot_localization::srv::SetPose::Response> /*response*/)
+{
+  geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
+    std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    request->pose);
+  setPoseCallback(msg);
 
-    return true;
-  }*/
+  return true;
+}
 
 template<typename T>
 void RosFilter<T>::twistCallback(

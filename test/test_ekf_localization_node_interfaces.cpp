@@ -89,8 +89,8 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
     // timing and spinning has been changed as per ros2
+    rclcpp::Rate(1).sleep();
     rclcpp::spin_some(node_);
-    rclcpp::Rate(100).sleep();
     deltaX = filtered_.pose.pose.position.x -
       setPoseRequest->pose.pose.pose.position.x;
     deltaY = filtered_.pose.pose.position.y -
@@ -101,6 +101,7 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
+
 TEST(InterfacesTest, OdomPoseBasicIO) {
   stateUpdated_ = false;
   // node handle is created as per ros2
@@ -176,7 +177,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   odom.header.frame_id = "odom";
   odom.child_frame_id = "base_link";
-  // changed the spinnin and timing as per ros2
+
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 400; ++i) {
     odom.header.stamp = node_->now();

@@ -1,7 +1,6 @@
 # <!-- YAML file for test_ukf_localization_node_interfaces_ukf -->
 test_ukf_localization_node_interfaces_ukf:
     ros__parameters:
-        filter_type: "ukf"
         frequency: 30.0
 
         sensor_timeout: 0.1

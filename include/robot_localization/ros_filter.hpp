@@ -276,11 +276,10 @@ public:
   //!
   //! @param[in] request - Custom service request with pose information
   //! @return true if successful, false if not
-
-  // Commented as setPoseSrvCallback replaced with lamda function.
-  /* bool setPoseSrvCallback(
-    robot_localization::srv::SetPose::Request& request,
-    robot_localization::srv::SetPose::Response&); */
+  bool setPoseSrvCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
+    std::shared_ptr<robot_localization::srv::SetPose::Response> response);
 
   //! @brief Callback method for receiving all twist messages
   //! @param[in] msg - The ROS stamped twist with covariance message to take in.

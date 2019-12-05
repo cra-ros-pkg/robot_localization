@@ -29,8 +29,8 @@ def generate_launch_description():
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
 	 #*****test_ukf_localization_node_interfaces.test***** 
-    se_node = launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ukf_localization_node_interfaces_ukf',
+    ukf_node = launch_ros.actions.Node(
+            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_interfaces_ukf',
 	    output='screen',
             parameters=[
                 parameters_file_path,
@@ -51,7 +51,7 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument(
             'output_final_position',
             default_value='false'),
-        se_node,
+        ukf_node,
         test_ukf_localization_node_interfaces,
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(

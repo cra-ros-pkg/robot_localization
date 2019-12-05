@@ -30,9 +30,11 @@ def generate_launch_description():
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
 	 #*****test_ekf_localization_node_interfaces.test***** 
-    se_node = launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_interfaces_ekf',
-	    output='screen',
+    ekf_node = launch_ros.actions.Node(
+            package='robot_localization',
+            node_executable='ekf_node',
+            node_name='test_ekf_localization_node_interfaces_ekf',
+	        output='screen',
             parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
@@ -40,19 +42,16 @@ def generate_launch_description():
            ],)
 
     test_ekf_localization_node_interfaces = launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ekf_localization_node_interfaces',node_name='test_ekf_localization_node_interfaces_int',
-            output='screen',
-        parameters=[
-                parameters_file_path,
-                str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_interfaces.yaml'],
-           ],)
+            package='robot_localization',
+            node_executable='test_ekf_localization_node_interfaces',
+            node_name='test_ekf_localization_node_interfaces_int',
+            output='screen')
 
     return LaunchDescription([
         launch.actions.DeclareLaunchArgument(
             'output_final_position',
             default_value='false'),
-        se_node,
+        ekf_node,
         test_ekf_localization_node_interfaces,
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
