@@ -151,14 +151,14 @@ if(BUILD_TESTING)
   test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces ${library_name})
 
-  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
+#  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
 
-  ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag2 ${library_name})
+#  ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag2 ${library_name})
 
-  ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ekf_localization_node_bag3 ${library_name})
+#  ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag3 ${library_name})
 
   #### UKF TESTS #####
   ament_add_gtest(test_ukf test/test_ukf.cpp)
@@ -167,18 +167,15 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf_localization_node_interfaces test/test_ukf_localization_node_interfaces.cpp)
   target_link_libraries(test_ukf_localization_node_interfaces ${library_name})
 
-  ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
+#  ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
 
-  ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag2 ${library_name})
+#  ament_add_gtest(test_ukf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ukf_localization_node_bag2 ${library_name})
 
-  ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
-  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
+#  ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
-  # This forces cppcheck to consider all files in this project to be C++,
-  # including the headers which end with .h, which cppcheck would normally
-  # consider to be C instead.
   ament_cppcheck(LANGUAGE "c++")
   ament_cpplint()
   ament_lint_cmake()

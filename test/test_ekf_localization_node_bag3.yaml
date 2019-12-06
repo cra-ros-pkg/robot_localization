@@ -49,6 +49,6 @@ test_ekf_localization_node_bag3_pose:
         final_x: -0.4859
         final_y: -0.2412
         final_z: 2.9883
-        tolerance: "0.1290"
+        tolerance: 0.1290
         output_final_position: true
         output_location: ekf3.txt  

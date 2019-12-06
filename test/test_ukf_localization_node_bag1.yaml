@@ -78,6 +78,6 @@ test_ukf_localization_node_bag1_pose:
         final_x: -39.7333
         final_y: -76.9820
         final_z: -2.4427
-        tolerance: "1.2910"
+        tolerance: 1.2910
         output_final_position: true
         output_location: ukf1.txt     

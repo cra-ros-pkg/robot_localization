@@ -98,8 +98,8 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
     deltaZ = filtered_.pose.pose.position.z -
       setPoseRequest->pose.pose.pose.position.z;
     EXPECT_LT(::sqrt(
-      deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ),
-        0.1);
+        deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ),
+      0.1);
   } else {
     EXPECT_TRUE(false);
   }
@@ -747,10 +747,12 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    loopRate.sleep();
     rclcpp::spin_some(node_);
+    loopRate.sleep();
   }
 
+  // 0.44508 when -1.4, so
+  // 0.65 when 12
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);

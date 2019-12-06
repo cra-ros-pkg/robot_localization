@@ -944,9 +944,9 @@ void RosFilter<T>::loadParams()
 
   // Create a service for manually setting/resetting pose
   set_pose_service_ =
-  this->create_service<robot_localization::srv::SetPose>(
-   "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
-   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    this->create_service<robot_localization::srv::SetPose>(
+    "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
+    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
@@ -1989,7 +1989,7 @@ template<typename T>
 bool RosFilter<T>::setPoseSrvCallback(
   const std::shared_ptr<rmw_request_id_t>/*request_header*/,
   const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
-  std::shared_ptr<robot_localization::srv::SetPose::Response> /*response*/)
+  std::shared_ptr<robot_localization::srv::SetPose::Response>/*response*/)
 {
   geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg =
     std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(

@@ -113,9 +113,6 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -164,10 +161,6 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
-
   nav_msgs::msg::Odometry odom;
   odom.twist.twist.linear.x = 5.0;
   odom.twist.twist.linear.y = 0.0;
@@ -313,9 +306,6 @@ TEST(InterfacesTest, PoseBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.pose.pose.position.x = 20.0;
@@ -368,9 +358,6 @@ TEST(InterfacesTest, TwistBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(5), filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   geometry_msgs::msg::TwistWithCovarianceStamped twist;
   twist.twist.twist.linear.x = 5.0;
@@ -516,9 +503,6 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", custom_qos_profile, filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -596,9 +580,6 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", custom_qos_profile, filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   sensor_msgs::msg::Imu imu;
   tf2::Quaternion quat;
@@ -647,7 +628,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
     loopRate.sleep();
   }
   rclcpp::spin_some(node_);
-  
+
   // Now check the values from the callback
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   tf2::Quaternion expected_quat(tf2::Vector3(0., 1., 0.), -M_PI / 3.0);
@@ -721,9 +702,6 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", custom_qos_profile, filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
@@ -803,9 +781,6 @@ TEST(InterfacesTest, OdomDifferentialIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", custom_qos_profile, filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -881,9 +856,6 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(5), filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   geometry_msgs::msg::PoseWithCovarianceStamped pose;
   pose.pose.pose.position.x = 20.0;
@@ -965,9 +937,6 @@ TEST(InterfacesTest, ImuDifferentialIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", custom_qos_profile, filterCallback);
-  // for some insane reason, we're creating a new node per test
-  // need time for network traffic to die down.
-  rclcpp::Rate(1).sleep();
 
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
