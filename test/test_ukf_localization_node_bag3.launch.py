@@ -36,7 +36,7 @@ def generate_launch_description():
 		
 	#*****test_ukf_localization_node_bag3.test***** 
 	launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ukf_localization_node_bag3_ukf',
+            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_bag3_ukf',
 	    output='screen',
 	    parameters=[
                 parameters_file_path,
@@ -54,16 +54,3 @@ def generate_launch_description():
         ],
 	),
 ])
-
-
-
-
-
-
-
-
-
-
-
-
-

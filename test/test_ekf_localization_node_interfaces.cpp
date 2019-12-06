@@ -89,7 +89,7 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
 
   if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
     // timing and spinning has been changed as per ros2
-    rclcpp::Rate(1).sleep();
+    rclcpp::Rate(2).sleep();
     rclcpp::spin_some(node_);
     deltaX = filtered_.pose.pose.position.x -
       setPoseRequest->pose.pose.pose.position.x;
@@ -97,9 +97,12 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
       setPoseRequest->pose.pose.pose.position.y;
     deltaZ = filtered_.pose.pose.position.z -
       setPoseRequest->pose.pose.pose.position.z;
+    EXPECT_LT(::sqrt(
+      deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ),
+        0.1);
+  } else {
+    EXPECT_TRUE(false);
   }
-
-  EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
 }
 
 TEST(InterfacesTest, OdomPoseBasicIO) {
@@ -114,6 +117,7 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
+
 
   nav_msgs::msg::Odometry odom;
   odom.pose.pose.position.x = 20.0;
@@ -185,7 +189,6 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
     0.1);
@@ -202,7 +205,6 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
     0.1);
@@ -624,7 +626,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   resetFilter(node_);
 
   imu.angular_velocity.x = 0.0;
-  imu.angular_velocity.y = -(M_PI / 2.0);
+  imu.angular_velocity.y = -(M_PI / 3.0);
 
   // Make sure the pose reset worked. Test will timeout
   // if this fails.
@@ -640,9 +642,9 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   mat.setRotation(quat);
   mat.getRPY(r, p, y);
-  EXPECT_LT(::fabs(r), 0.1); // STEVE 
-  EXPECT_LT(::fabs(p + M_PI / 2.0), 0.7);
-  EXPECT_LT(::fabs(y), 0.1); // STEVE 
+  EXPECT_LT(::fabs(r), 0.1);
+  EXPECT_LT(::fabs(p + M_PI / 3.0), 0.7);
+  EXPECT_LT(::fabs(y), 0.1);
 
   EXPECT_LT(filtered_.twist.covariance[28], 1e-3);
   EXPECT_LT(filtered_.pose.covariance[28], 0.1);
@@ -660,7 +662,6 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
     rclcpp::spin_some(node_);
     loopRate.sleep();
   }
-  rclcpp::spin_some(node_);
 
   // Now check the values from the callback
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
@@ -671,7 +672,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   EXPECT_LT(::fabs(y - M_PI / 4.0), 0.7);
 
   EXPECT_LT(filtered_.twist.covariance[35], 1e-3);
-  EXPECT_LT(filtered_.pose.covariance[35], 0.1); // STEVE 
+  EXPECT_LT(filtered_.pose.covariance[35], 0.12);
 
   resetFilter(node_);
 
@@ -746,14 +747,13 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   for (size_t i = 0; i < 50; ++i) {
     imu.header.stamp = node_->now();
     imuPub->publish(imu);
-    rclcpp::spin_some(node_);
     loopRate.sleep();
+    rclcpp::spin_some(node_);
   }
-  rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4); // STEVE
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4); // STEVE
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4); // STEVE
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);
 
   resetFilter(node_);
 
@@ -948,7 +948,6 @@ TEST(InterfacesTest, ImuDifferentialIO) {
 
   auto filteredSub = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
-
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
   tf2::Quaternion quat;

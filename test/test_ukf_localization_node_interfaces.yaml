@@ -3,7 +3,7 @@ test_ukf_localization_node_interfaces_ukf:
     ros__parameters:
         frequency: 30.0
 
-        sensor_timeout: 0.1
+        sensor_timeout: 1000.
 
         odom0: /odom_input0
         odom1: /odom_input1

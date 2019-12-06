@@ -30,7 +30,7 @@ def generate_launch_description():
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
     se_node = launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_bag2_ekf',
+            package='robot_localization', node_executable='ekf_node', node_name='test_ekf_localization_node_bag2_ekf',
 	    output='screen',
 	    parameters=[
                 parameters_file_path,

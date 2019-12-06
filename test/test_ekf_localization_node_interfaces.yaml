@@ -6,7 +6,7 @@ test_ekf_localization_node_interfaces_ekf:
 
         frequency: 30.0
 
-        sensor_timeout: 0.1
+        sensor_timeout: 1000.0
 
         odom0: /odom_input0
         odom1: /odom_input1
