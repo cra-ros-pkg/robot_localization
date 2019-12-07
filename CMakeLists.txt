@@ -187,14 +187,14 @@ if(BUILD_TESTING)
     test_filter_base_diagnostics_timestamps
     test_ekf
     test_ekf_localization_node_interfaces
-    test_ekf_localization_node_bag1
-    test_ekf_localization_node_bag2
-    test_ekf_localization_node_bag3
+    #test_ekf_localization_node_bag1
+    #test_ekf_localization_node_bag2
+    #test_ekf_localization_node_bag3
     test_ukf
     test_ukf_localization_node_interfaces
-    test_ukf_localization_node_bag1
-    test_ukf_localization_node_bag2
-    test_ukf_localization_node_bag3
+    #test_ukf_localization_node_bag1
+    #test_ukf_localization_node_bag2
+    #test_ukf_localization_node_bag3
     DESTINATION lib/${PROJECT_NAME}
   )
 

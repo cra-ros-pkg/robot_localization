@@ -751,11 +751,9 @@ TEST(InterfacesTest, ImuAccBasicIO) {
     loopRate.sleep();
   }
 
-  // 0.44508 when -1.4, so
-  // 0.65 when 12
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.8), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.8), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.8), 0.4);
 
   resetFilter(node_);
 
