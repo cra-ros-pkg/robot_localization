@@ -741,9 +741,9 @@ TEST(InterfacesTest, ImuAccBasicIO) {
     rclcpp::spin_some(node_);
   }
 
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.2), 0.4);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.2), 0.4);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.2), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 1.8), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 1.8), 0.4);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 1.8), 0.4);
 
   resetFilter(node_);
 
