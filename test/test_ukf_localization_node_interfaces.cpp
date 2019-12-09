@@ -633,7 +633,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
   tf2::Quaternion expected_quat(tf2::Vector3(0., 1., 0.), -M_PI / 3.0);
   EXPECT_LT(std::abs(tf2Angle(expected_quat.getAxis(), quat.getAxis())), 0.1);
-  EXPECT_LT(std::abs(expected_quat.getAngle() - quat.getAngle()), 0.71);
+  EXPECT_LT(std::abs(expected_quat.getAngle() - quat.getAngle()), 0.7);
   EXPECT_LT(filtered_.twist.covariance[28], 1e-3);
   EXPECT_LT(filtered_.pose.covariance[28], 0.1);
 
@@ -725,9 +725,9 @@ TEST(InterfacesTest, ImuAccBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.41);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.41);
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.41);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - 1.0), 0.40);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y + 1.0), 0.40);
+  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - 1.0), 0.40);
 
   imu.linear_acceleration.x = 0.0;
   imu.linear_acceleration.y = 0.0;
