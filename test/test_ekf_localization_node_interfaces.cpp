@@ -672,7 +672,7 @@ TEST(InterfacesTest, ImuTwistBasicIO) {
   EXPECT_LT(::fabs(y - M_PI / 4.0), 0.7);
 
   EXPECT_LT(filtered_.twist.covariance[35], 1e-3);
-  EXPECT_LT(filtered_.pose.covariance[35], 0.12);
+  EXPECT_LT(filtered_.pose.covariance[35], 0.1);
 
   resetFilter(node_);
 
