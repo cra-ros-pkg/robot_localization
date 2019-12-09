@@ -159,15 +159,6 @@ if(BUILD_TESTING)
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
 
-#  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
-#  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
-
-#  ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
-#  target_link_libraries(test_ekf_localization_node_bag2 ${library_name})
-
-#  ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
-#  target_link_libraries(test_ekf_localization_node_bag3 ${library_name})
-
   #### UKF TESTS #####
   ament_add_gtest(test_ukf test/test_ukf.cpp)
   target_link_libraries(test_ukf ${library_name})
@@ -183,6 +174,16 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_ukf_localization_node_interfaces.launch.py"
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
+
+  #### DATA TESTS #####
+#  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
+
+#  ament_add_gtest(test_ekf_localization_node_bag2 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag2 ${library_name})
+
+#  ament_add_gtest(test_ekf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
+#  target_link_libraries(test_ekf_localization_node_bag3 ${library_name})
 
 #  ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
 #  target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
@@ -204,11 +205,11 @@ if(BUILD_TESTING)
     test_filter_base_diagnostics_timestamps
     test_ekf
     test_ekf_localization_node_interfaces
+    test_ukf
+    test_ukf_localization_node_interfaces
     #test_ekf_localization_node_bag1
     #test_ekf_localization_node_bag2
     #test_ekf_localization_node_bag3
-    test_ukf
-    test_ukf_localization_node_interfaces
     #test_ukf_localization_node_bag1
     #test_ukf_localization_node_bag2
     #test_ukf_localization_node_bag3
