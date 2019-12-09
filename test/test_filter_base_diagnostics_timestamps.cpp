@@ -143,15 +143,15 @@ public:
     // Create a publisher with a custom Quality of Service profile.
     // subscribe to diagnostics and create publishers for the odometry messages.
     odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>(
-      "example/odom", rclcpp::SensorDataQoS());
+      "/example/odom", rclcpp::SensorDataQoS());
     pose_pub_ =
       node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "example/pose", rclcpp::SensorDataQoS());
+      "/example/pose", rclcpp::SensorDataQoS());
     twist_pub_ =
       node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-      "example/twist", rclcpp::SensorDataQoS());
+      "/example/twist", rclcpp::SensorDataQoS());
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
-      "example/imu/data", rclcpp::SensorDataQoS());
+      "/example/imu/data", rclcpp::SensorDataQoS());
 
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(

@@ -132,13 +132,14 @@ if(BUILD_TESTING)
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
   target_link_libraries(filter_base-test ${library_name})
 
-  # This test uses ekf node for convenience.
+  #### DIAGNOSTICS TESTS ####
   ament_add_gtest_executable(test_filter_base_diagnostics_timestamps
                     test/test_filter_base_diagnostics_timestamps.cpp)
   target_link_libraries(test_filter_base_diagnostics_timestamps ${library_name})
   add_dependencies(test_filter_base_diagnostics_timestamps ekf_node)
   ament_add_test(test_filter_base_diagnostics_timestamps
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 300
     COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_filter_base_diagnostics_timestamps.launch.py"
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
@@ -147,9 +148,16 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ekf test/test_ekf.cpp)
   target_link_libraries(test_ekf ${library_name})
 
-  ament_add_gtest(test_ekf_localization_node_interfaces
-  test/test_ekf_localization_node_interfaces.cpp)
+  ament_add_gtest_executable(test_ekf_localization_node_interfaces
+                    test/test_ekf_localization_node_interfaces.cpp)
   target_link_libraries(test_ekf_localization_node_interfaces ${library_name})
+  add_dependencies(test_ekf_localization_node_interfaces ekf_node)
+  ament_add_test(test_ekf_localization_node_interfaces
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 300
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_ekf_localization_node_interfaces.launch.py"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
 #  ament_add_gtest(test_ekf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
 #  target_link_libraries(test_ekf_localization_node_bag1 ${library_name})
@@ -164,8 +172,17 @@ if(BUILD_TESTING)
   ament_add_gtest(test_ukf test/test_ukf.cpp)
   target_link_libraries(test_ukf ${library_name})
 
-  ament_add_gtest(test_ukf_localization_node_interfaces test/test_ukf_localization_node_interfaces.cpp)
+
+  ament_add_gtest_executable(test_ukf_localization_node_interfaces
+                    test/test_ukf_localization_node_interfaces.cpp)
   target_link_libraries(test_ukf_localization_node_interfaces ${library_name})
+  add_dependencies(test_ukf_localization_node_interfaces ekf_node)
+  ament_add_test(test_ukf_localization_node_interfaces
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 300
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_ukf_localization_node_interfaces.launch.py"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
 #  ament_add_gtest(test_ukf_localization_node_bag1 test/test_localization_node_bag_pose_tester.cpp)
 #  target_link_libraries(test_ukf_localization_node_bag1 ${library_name})
@@ -202,6 +219,7 @@ if(BUILD_TESTING)
   install(DIRECTORY
     test
     DESTINATION share/${PROJECT_NAME}
+    USE_SOURCE_PERMISSIONS
   )
 endif()
 
@@ -219,6 +237,7 @@ install(DIRECTORY
   params
   launch
   DESTINATION share/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
 )
 
 ament_export_include_directories(include)

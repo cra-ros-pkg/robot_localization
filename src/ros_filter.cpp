@@ -1933,7 +1933,6 @@ void RosFilter<T>::setPoseCallback(
   RF_DEBUG(
     "------ RosFilter<T>::setPoseCallback ------\nPose message:\n" << msg);
 
-  // std::string topic_name("setPose");
   std::string topic_name("set_pose");
 
   // Get rid of any initial poses (pretend we've never had a measurement)
