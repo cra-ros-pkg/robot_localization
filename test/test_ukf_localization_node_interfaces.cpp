@@ -204,7 +204,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
     0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.2);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.0);
 
   resetFilter(node_);
 
@@ -221,7 +221,7 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - odom.twist.twist.linear.z),
     0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.2);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.0);
 
   resetFilter(node_);
 
@@ -401,7 +401,7 @@ TEST(InterfacesTest, TwistBasicIO) {
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - twist.twist.twist.linear.y),
     0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.2);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.0);
 
   resetFilter(node_);
 
@@ -418,7 +418,7 @@ TEST(InterfacesTest, TwistBasicIO) {
 
   EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - twist.twist.twist.linear.z),
     0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.2);
+  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.0);
 
   resetFilter(node_);
 
