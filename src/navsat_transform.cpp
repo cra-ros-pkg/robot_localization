@@ -690,7 +690,7 @@ namespace RobotLocalization
 
       filtered_gps.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_KNOWN;
       filtered_gps.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
-      filtered_gps.header.frame_id = "gps";
+      filtered_gps.header.frame_id = base_link_frame_id_;
       filtered_gps.header.stamp = odom_update_time_;
 
       // Mark this GPS as used
