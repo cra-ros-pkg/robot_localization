@@ -767,8 +767,8 @@ void NavSatTransform::setTransformOdometry(
   tf2::fromMsg(msg->pose.pose, transform_world_pose_);
   has_transform_odom_ = true;
 
+  // TODO(anyone) add back in Eloquent
   // ROS_INFO_STREAM_ONCE("Initial odometry pose is " << transform_world_pose_);
-  // ROS_DEBUG_STREAM_THROTTLE(1, "Odometry pose is " << transform_world_pose_);
 
   // Users can optionally use the (potentially fused) heading from
   // the odometry source, which may have multiple fused sources of
