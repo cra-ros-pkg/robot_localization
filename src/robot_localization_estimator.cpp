@@ -38,8 +38,8 @@
 
 namespace robot_localization
 {
-// TODO: Port to ROS 2 Ukf where 3 separate parameters are accepted for alpha,
-// kappa, beta, not just a vector, for filter_args
+// TODO: Port to ROS 2 Ukf constructor way, where 3 separate parameters are
+// accepted for alpha, kappa, beta, not just a vector, for filter_args
 RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capacity,
                                                        FilterType filter_type,
                                                        const Eigen::MatrixXd& process_noise_covariance,
@@ -60,7 +60,8 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(unsigned int buffer_capac
     }
     else
     {
-      filter_ = new Ukf(filter_args[0], filter_args[1], filter_args[2]);
+      filter_ = new Ukf();
+      static_cast<Ukf*>(filter_)->setConstants(filter_args[0], filter_args[1], filter_args[2]);
     }
   }
 

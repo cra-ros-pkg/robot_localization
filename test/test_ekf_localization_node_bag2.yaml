@@ -1,9 +1,9 @@
-# <!-- YAML file for test_ukf_localization_node_bag2 -->
-test_ukf_localization_node_bag2_ukf:
+# <!-- YAML file for test_ekf_localization_node_bag2 -->
+test_ekf_localization_node_bag2_ekf:
     ros__parameters:
         use_sim_time: true
         clear_params: true
-        filter_type: "ukf"
+        filter_type: "ekf"
         frequency: 50.0
         sensor_timeout: 0.1
         odom0: /jackal_velocity_controller/odom
@@ -58,17 +58,14 @@ test_ukf_localization_node_bag2_ukf:
                                       0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    1e-9, 0.0,
                                       0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    1e-9]
 
-        alpha: 0.001
-        kappa: 0.0
-        beta: 2.0  
-
-# <!-- YAML file for test_ukf_localization_node_bag2_pose -->
-test_ukf_localization_node_bag2_pose:
+# <!-- YAML file for test_ekf_localization_node_bag2_pose -->
+test_ekf_localization_node_bag2_pose:
     ros__parameters:
         clear_params: true
-        final_x: 1.0438
-        final_y: 3.4940
-        final_z: 0.7260
-        tolerance: "0.2351"
+        final_x: 1.0206
+        final_y: 3.4292
+        final_z: 0.7419
+        tolerance: 0.1383
         output_final_position: true
-        output_location: ukf2.txt            
+        output_location: ekf2.txt
+         

@@ -38,18 +38,23 @@
 
 namespace robot_localization
 {
-Ukf::Ukf(const double alpha, const double kappa, const double beta)
-: FilterBase(),     // Must initialize filter base!
+Ukf::Ukf()
+: FilterBase(),
   uncorrected_(true)
 {
   size_t sigma_count = (STATE_SIZE << 1) + 1;
   sigma_points_.resize(sigma_count, Eigen::VectorXd(STATE_SIZE));
-
-  // Prepare constants
-  lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
-
   state_weights_.resize(sigma_count);
   covar_weights_.resize(sigma_count);
+}
+
+Ukf::~Ukf() {}
+
+void Ukf::setConstants(double alpha, double kappa, double beta)
+{
+  // Prepare constants
+  size_t sigma_count = (STATE_SIZE << 1) + 1;
+  lambda_ = alpha * alpha * (STATE_SIZE + kappa) - STATE_SIZE;
 
   state_weights_[0] = lambda_ / (STATE_SIZE + lambda_);
   covar_weights_[0] = state_weights_[0] + (1 - (alpha * alpha) + beta);
@@ -60,8 +65,6 @@ Ukf::Ukf(const double alpha, const double kappa, const double beta)
     covar_weights_[i] = state_weights_[i];
   }
 }
-
-Ukf::~Ukf() {}
 
 void Ukf::correct(const Measurement & measurement)
 {

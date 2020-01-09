@@ -1,5 +1,5 @@
 ### ekf config file ###
-se_node:
+ekf_filter_node:
     ros__parameters:
 # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
 # computation until it receives at least one message from one of the inputs. It will then run continuously at the
@@ -123,7 +123,7 @@ se_node:
         odom0_twist_rejection_threshold: 1.0
 
 # Further input parameter examples
-        odom1: example/another_odom
+        odom1: example/odom2
         odom1_config: [false, false, true,
                        false, false, false,
                        false, false, false,

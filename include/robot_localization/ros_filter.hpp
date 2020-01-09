@@ -64,6 +64,7 @@
 #include <numeric>
 #include <queue>
 #include <string>
+#include <memory>
 #include <vector>
 
 namespace robot_localization
@@ -94,7 +95,8 @@ using MeasurementQueue =
 using MeasurementHistoryDeque = std::deque<MeasurementPtr>;
 using FilterStateHistoryDeque = std::deque<FilterStatePtr>;
 
-class RosFilter
+template<class T>
+class RosFilter : public rclcpp::Node
 {
 public:
   //! @brief Constructor
@@ -102,9 +104,7 @@ public:
   //! The RosFilter constructor makes sure that anyone using
   //! this template is doing so with the correct object type
   //!
-  RosFilter(
-    rclcpp::Node::SharedPtr node,
-    robot_localization::FilterBase::UniquePtr & filter);
+  explicit RosFilter(const rclcpp::NodeOptions & options);
 
   //! @brief Destructor
   //!
@@ -173,6 +173,14 @@ public:
     Eigen::MatrixXd & measurement_covariance,
     std::vector<bool> & update_vector);
 
+  //! @brief Method to get filter
+  //! @param[out] filter - the underlying templated filter
+  //!
+  T & getFilter()
+  {
+    return filter_;
+  }
+
   //! @brief Retrieves the EKF's output for broadcasting
   //! @param[out] message - The standard ROS odometry message to be filled
   //! @return true if the filter is initialized, false otherwise
@@ -219,6 +227,10 @@ public:
   //!
   void loadParams();
 
+  //! @brief callback function which is called for periodic updates
+  //!
+  void periodicUpdate();
+
   //! @brief Callback method for receiving all odometry messages
   //! @param[in] msg - The ROS odometry message to take in.
   //! @param[in] topic_name - The topic name for the odometry message (only used
@@ -249,9 +261,9 @@ public:
     const CallbackData & callback_data, const std::string & target_frame,
     const bool imu_data);
 
-  //! @brief Main run method
+  //! @brief initialize the filter
   //!
-  void run();
+  void initialize();
 
   //! @brief Callback method for manually setting/resetting the internal pose
   //! estimate
@@ -265,11 +277,10 @@ public:
   //!
   //! @param[in] request - Custom service request with pose information
   //! @return true if successful, false if not
-
-  // Commented as setPoseSrvCallback replaced with lamda function.
-  /* bool setPoseSrvCallback(
-    robot_localization::srv::SetPose::Request& request,
-    robot_localization::srv::SetPose::Response&); */
+  bool setPoseSrvCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
+    std::shared_ptr<robot_localization::srv::SetPose::Response> response);
 
   //! @brief Service callback for manually enable the filter
   //! @param[in] request - N/A
@@ -309,7 +320,7 @@ protected:
   //! older measurements come in.
   //! @param[in] filter - The filter base object whose state we want to save
   //!
-  void saveFilterState(FilterBase::UniquePtr & filter);
+  void saveFilterState(T & filter);
 
   //! @brief Removes measurements and filter states older than the given cutoff
   //! time.
@@ -549,6 +560,10 @@ protected:
   //!
   geometry_msgs::msg::TransformStamped world_base_link_trans_msg_;
 
+  //! @brief last call of periodicUpdate
+  //!
+  rclcpp::Time last_diag_time_;
+
   //! @brief We process measurements by queueing them up in
   //! callbacks and processing them all at once within each
   //! iteration
@@ -674,25 +689,42 @@ protected:
   rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr
     set_pose_service_;
 
-  //! @brief Node handle
-  //!
-  rclcpp::Node::SharedPtr node_;
-
   //! @brief Transform buffer for managing coordinate transforms
   //!
-  tf2_ros::Buffer tf_buffer_;
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
   //! @brief Transform listener for receiving transforms
   //!
-  tf2_ros::TransformListener tf_listener_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  //! @brief broadcaster of worldTransform tfs
+  //!
+  std::shared_ptr<tf2_ros::TransformBroadcaster> world_transform_broadcaster_;
 
   //! @brief Used for updating the diagnostics
   //!
-  diagnostic_updater::Updater diagnostic_updater_;
+  std::unique_ptr<diagnostic_updater::Updater> diagnostic_updater_;
+
+  //! @brief Position publisher
+  //!
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr position_pub_;
+
+  //! Acceleration publisher
+  //!
+  rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr
+    accel_pub_;
 
   //! @brief Our filter (EKF, UKF, etc.)
   //!
-  FilterBase::UniquePtr filter_;
+  T filter_;
+
+  //! @brief Timer for filter updates
+  //!
+  rclcpp::TimerBase::SharedPtr timer_;
+
+  //! @brief optional signaling diagnostic frequency
+  //!
+  std::unique_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freq_diag_;
 };
 
 }  // namespace robot_localization

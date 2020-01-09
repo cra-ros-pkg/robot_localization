@@ -1,10 +1,12 @@
-# <!-- YAML file for test_ukf_localization_node_interfaces_ukf -->
-test_ukf_localization_node_interfaces_ukf:
+# <!-- YAML file for test_ekf_localization_node_interfaces_ekf -->
+test_ekf_localization_node_interfaces_ekf:
     ros__parameters:
-        filter_type: "ukf"
+        debug: false
+        debug_out_file: debug_ekf_localization.txt
+
         frequency: 30.0
 
-        sensor_timeout: 0.1
+        sensor_timeout: 1000.0
 
         odom0: /odom_input0
         odom1: /odom_input1
@@ -79,7 +81,6 @@ test_ukf_localization_node_interfaces_ukf:
                        false, false, false,
                        false, false, false]
 
-###  <!-- Differential setting is off for this test -->
         odom1_differential: true
         pose1_differential: true
         imu3_differential: true
@@ -104,16 +105,3 @@ test_ukf_localization_node_interfaces_ukf:
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.01, 0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.01, 0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01]
-
-
-        alpha: 0.001
-        kappa: 0.0
-        beta: 2.0
-
-
-
-
-
-
-
-

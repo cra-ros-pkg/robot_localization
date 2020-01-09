@@ -1,6 +1,6 @@
 # For parameter descriptions, please refer to the template parameter files for each node.
 
-ekf_se_odom:
+ekf_filter_node_odom:
   frequency: 30
   sensor_timeout: 0.1
   two_d_mode: false
@@ -71,7 +71,7 @@ ekf_se_odom:
                                 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    1.0,  0,
                                 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1.0]
 
-ekf_se_map:
+ekf_filter_node_map:
   frequency: 30
   sensor_timeout: 0.1
   two_d_mode: false

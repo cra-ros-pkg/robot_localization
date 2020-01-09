@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2018 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +20,15 @@ from launch import LaunchDescription
 import launch_ros.actions
 import os
 import yaml
+import sys
 from launch.substitutions import EnvironmentVariable
 import pathlib
 import launch.actions
 from launch.actions import DeclareLaunchArgument
+from launch_testing.legacy import LaunchTestService
+from launch.actions import ExecuteProcess
+from launch import LaunchService
+from ament_index_python.packages import get_package_prefix
 
 def generate_launch_description():
     parameters_file_dir = pathlib.Path(__file__).resolve().parent
@@ -30,33 +36,35 @@ def generate_launch_description():
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
 	 #*****test_ekf_localization_node_interfaces.test***** 
-    se_node = launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_interfaces_ekf',
-	    output='screen',
+    ekf_node = launch_ros.actions.Node(
+            package='robot_localization',
+            node_executable='ekf_node',
+            node_name='test_ekf_localization_node_interfaces_ekf',
+	        output='screen',
             parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
                 [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_interfaces.yaml'],
            ],)
 
-    test_ekf_localization_node_interfaces = launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ekf_localization_node_interfaces',node_name='test_ekf_localization_node_interfaces_int',
-            output='screen',
-        parameters=[
-                parameters_file_path,
-                str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_interfaces.yaml'],
-           ],)
-
     return LaunchDescription([
-        launch.actions.DeclareLaunchArgument(
-            'output_final_position',
-            default_value='false'),
-        se_node,
-        test_ekf_localization_node_interfaces,
-        launch.actions.RegisterEventHandler(
-            event_handler=launch.event_handlers.OnProcessExit(
-                target_action=test_ekf_localization_node_interfaces,
-                on_exit=[launch.actions.EmitEvent(event=launch.events.Shutdown())],
-            )),
-])
+        ekf_node,
+    ])
+
+
+def main(argv=sys.argv[1:]):
+    ld = generate_launch_description()
+
+    test1_action = ExecuteProcess(
+        cmd=[get_package_prefix('robot_localization') + '/lib/robot_localization/test_ekf_localization_node_interfaces'],
+        output='screen',
+    )
+
+    lts = LaunchTestService()
+    lts.add_test_action(ld, test1_action)
+    ls = LaunchService(argv=argv)
+    ls.include_launch_description(ld)
+    return lts.run(ls)
+
+if __name__ == '__main__':
+    sys.exit(main())

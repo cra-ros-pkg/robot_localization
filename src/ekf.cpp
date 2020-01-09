@@ -40,7 +40,7 @@
 namespace robot_localization
 {
 Ekf::Ekf()
-: FilterBase()     // Must initialize filter base!
+: FilterBase()
 {}
 
 Ekf::~Ekf() {}
@@ -304,78 +304,78 @@ void Ekf::predict(
   // Prepare the transfer function Jacobian. This function is analytically
   // derived from the transfer function.
   double x_coeff = 0.0;
-  double yCoeff = 0.0;
+  double y_coeff = 0.0;
   double z_coeff = 0.0;
   double one_half_at_squared = 0.5 * delta_sec * delta_sec;
 
-  yCoeff = cy * sp * cr + sy * sr;
+  y_coeff = cy * sp * cr + sy * sr;
   z_coeff = -cy * sp * sr + sy * cr;
-  double dFx_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFR_dR = 1 + (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFx_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
+  double dFR_dR = 1 + (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = -cy * sp;
-  yCoeff = cy * cp * sr;
+  y_coeff = cy * cp * sr;
   z_coeff = cy * cp * cr;
   double dFx_dP =
-    (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) *
+    (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFR_dP =
-    (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = -sy * cp;
-  yCoeff = -sy * sp * sr - cy * cr;
+  y_coeff = -sy * sp * sr - cy * cr;
   z_coeff = -sy * sp * cr + cy * sr;
   double dFx_dY =
-    (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) *
+    (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFR_dY =
-    (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
-  yCoeff = sy * sp * cr - cy * sr;
+  y_coeff = sy * sp * cr - cy * sr;
   z_coeff = -sy * sp * sr - cy * cr;
-  double dFy_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFP_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFy_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
+  double dFP_dR = (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = -sy * sp;
-  yCoeff = sy * cp * sr;
+  y_coeff = sy * cp * sr;
   z_coeff = sy * cp * cr;
   double dFy_dP =
-    (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) *
+    (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFP_dP =
     1 +
-    (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = cy * cp;
-  yCoeff = cy * sp * sr - sy * cr;
+  y_coeff = cy * sp * sr - sy * cr;
   z_coeff = cy * sp * cr + sy * sr;
   double dFy_dY =
-    (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) *
+    (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFP_dY =
-    (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
-  yCoeff = cp * cr;
+  y_coeff = cp * cr;
   z_coeff = -cp * sr;
-  double dFz_dR = (yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (yCoeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
-  double dFY_dR = (yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+  double dFz_dR = (y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (y_coeff * y_acc + z_coeff * z_acc) * one_half_at_squared;
+  double dFY_dR = (y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   x_coeff = -cp;
-  yCoeff = -sp * sr;
+  y_coeff = -sp * sr;
   z_coeff = -sp * cr;
   double dFz_dP =
-    (x_coeff * x_vel + yCoeff * y_vel + z_coeff * z_vel) * delta_sec +
-    (x_coeff * x_acc + yCoeff * y_acc + z_coeff * z_acc) *
+    (x_coeff * x_vel + y_coeff * y_vel + z_coeff * z_vel) * delta_sec +
+    (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFY_dP =
-    (x_coeff * roll_vel + yCoeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
+    (x_coeff * roll_vel + y_coeff * pitch_vel + z_coeff * yaw_vel) * delta_sec;
 
   // Much of the transfer function Jacobian is identical to the transfer
   // function
