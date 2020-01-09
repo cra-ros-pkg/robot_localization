@@ -22,35 +22,41 @@ import launch.actions
 from launch.actions import DeclareLaunchArgument
 
 
+
 def generate_launch_description():
+
     parameters_file_dir = pathlib.Path(__file__).resolve().parent
-    parameters_file_path = parameters_file_dir / 'test_filter_base_diagnostics_timestamps.yaml'    
+    parameters_file_path = parameters_file_dir / 'test_ekf_localization_node_bag2.yaml'    
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
-    #*****test_filter_base_diagnostics_timestamps.test***** 
-    se_node = launch_ros.actions.Node(
-	    package='robot_localization', node_executable='se_node', node_name='ekf_localization',
+    ekf_node = launch_ros.actions.Node(
+        package='robot_localization', node_executable='ekf_node', node_name='test_ekf_localization_node_bag2_ekf',
 	    output='screen',
 	    parameters=[
-		parameters_file_path,
-		str(parameters_file_path),
-		[EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_filter_base_diagnostics_timestamps.yaml'],
-	   ],)
-
-    test_filter_base_diagnostics_timestamps = launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_filter_base_diagnostics_timestamps',node_name='test_filter_base_diagnostics',
-            output='screen',
-        parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_filter_base_diagnostics_timestamps.yaml'],
-           ],)
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],],)
+
+    test_ekf_localization_node_bag2 =  launch_ros.actions.Node(
+            package='robot_localization', node_executable='test_ekf_localization_node_bag2', node_name='test_ekf_localization_node_bag2_pose',
+            output='screen',
+	parameters=[
+                parameters_file_path,
+                str(parameters_file_path),
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag2.yaml'],],)
+
     return LaunchDescription([
-        se_node,
-        test_filter_base_diagnostics_timestamps,
+        launch.actions.DeclareLaunchArgument(
+            'output_final_position',
+            default_value='False'),
+        launch.actions.DeclareLaunchArgument(
+            'output_location',
+	    default_value='ekf2.txt'),
+	    ekf_node,
+        test_ekf_localization_node_bag2,
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
-                target_action=test_filter_base_diagnostics_timestamps,
+                target_action=test_ekf_localization_node_bag2,
                 on_exit=[launch.actions.EmitEvent(event=launch.events.Shutdown())],
             )),
-])
+    ])

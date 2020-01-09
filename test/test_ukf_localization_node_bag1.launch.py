@@ -24,7 +24,7 @@ from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
     parameters_file_dir = pathlib.Path(__file__).resolve().parent
-    parameters_file_path = parameters_file_dir /'test_ekf_localization_node_bag1.yaml'
+    parameters_file_path = parameters_file_dir / 'test_ukf_localization_node_bag1.yaml'
     os.environ['FILE_PATH'] = str(parameters_file_dir)
     return LaunchDescription([
         launch.actions.DeclareLaunchArgument(
@@ -32,43 +32,30 @@ def generate_launch_description():
             default_value='false'),
         launch.actions.DeclareLaunchArgument(
             'output_location',
-	    default_value='ekf1.txt'),
+	    default_value='ukf1.txt'),
 	
 	#launch_ros.actions.Node(
          #   package='tf2_ros', node_executable='static_transform_publisher',node_name='bl_imu', output='screen',                       
-          #  arguments=['0', '-0.3', '0.52', '-1.570796327', '0', '1.570796327', 'base_link', 'imu_link']            		
-           #),
+          #  arguments=['0', '-0.3', '0.52', '-1.570796327', '0', '1.570796327', 'base_link', 'imu_link']		
+           # ),	
 
 	launch_ros.actions.Node(
-            package='robot_localization', node_executable='se_node', node_name='test_ekf_localization_node_bag1_ekf',
+            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_bag1_ukf',
 	    output='screen',
             parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag1.yaml'],
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ukf_localization_node_bag1.yaml'],
            ],
            ),
         
         launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ekf_localization_node_bag1', node_name='test_ekf_localization_node_bag1_pose',
+            package='robot_localization', node_executable='test_ukf_localization_node_bag1', node_name='test_ukf_localization_node_bag1_pose',
             output='screen',
-	    arguments=['--time-limit','10'],
 	    parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag1.yaml'],
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ukf_localization_node_bag1.yaml'],
            ],
-           ),	
+           ),
 ])
-
-
-
-
-
-
-
-
-
-
-
-

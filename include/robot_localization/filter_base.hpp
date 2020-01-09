@@ -36,11 +36,8 @@
 
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/filter_utilities.hpp>
-
-#include <Eigen/Dense>
-#include <rclcpp/duration.hpp>
-#include <rclcpp/macros.hpp>
-#include <rclcpp/time.hpp>
+#include <robot_localization/measurement.hpp>
+#include <robot_localization/filter_state.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -51,96 +48,6 @@
 
 namespace robot_localization
 {
-
-/**
- * @brief Structure used for storing and comparing measurements
- * (for priority queues)
- *
- * Measurement units are assumed to be in meters and radians. Times are
- * real-valued and measured in seconds.
- */
-struct Measurement
-{
-  // The real-valued time, in seconds, since some epoch (presumably the start of
-  // execution, but any will do)
-  rclcpp::Time time_;
-
-  // The Mahalanobis distance threshold in number of sigmas
-  double mahalanobis_thresh_;
-
-  // The time stamp of the most recent control term (needed for lagged data)
-  rclcpp::Time latest_control_time_;
-
-  // The topic name for this measurement. Needed for capturing previous state
-  // values for new measurements.
-  std::string topic_name_;
-
-  // This defines which variables within this measurement actually get passed
-  // into the filter. std::vector<bool> is generally frowned upon, so we use
-  // ints.
-  std::vector<bool> update_vector_;
-
-  // The most recent control vector (needed for lagged data)
-  Eigen::VectorXd latest_control_;
-
-  // The measurement and its associated covariance
-  Eigen::VectorXd measurement_;
-  Eigen::MatrixXd covariance_;
-
-  // We want earlier times to have greater priority
-  bool operator()(
-    const std::shared_ptr<Measurement> & a,
-    const std::shared_ptr<Measurement> & b)
-  {
-    return (*this)(*(a.get()), *(b.get()));
-  }
-
-  bool operator()(const Measurement & a, const Measurement & b)
-  {
-    return a.time_ > b.time_;
-  }
-
-  Measurement()
-  : time_(0), mahalanobis_thresh_(std::numeric_limits<double>::max()),
-    latest_control_time_(0), topic_name_(""), latest_control_() {}
-};
-using MeasurementPtr = std::shared_ptr<Measurement>;
-
-/**
- * @brief Structure used for storing and comparing filter states
- *
- * This structure is useful when higher-level classes need to remember filter
- * history. Measurement units are assumed to be in meters and radians. Times are
- * real-valued and measured in seconds.
- */
-struct FilterState
-{
-  // The filter state vector
-  Eigen::VectorXd state_;
-
-  // The filter error covariance matrix
-  Eigen::MatrixXd estimate_error_covariance_;
-
-  // The most recent control vector
-  Eigen::VectorXd latest_control_;
-
-  // The time stamp of the most recent measurement for the filter
-  rclcpp::Time last_measurement_time_;
-
-  // The time stamp of the most recent control term
-  rclcpp::Time latest_control_time_;
-
-  // We want the queue to be sorted from latest to earliest timestamps.
-  bool operator()(const FilterState & a, const FilterState & b)
-  {
-    return a.last_measurement_time_ < b.last_measurement_time_;
-  }
-
-  FilterState()
-  : state_(), estimate_error_covariance_(), latest_control_(),
-    last_measurement_time_(0.0), latest_control_time_(0) {}
-};
-using FilterStatePtr = std::shared_ptr<FilterState>;
 
 class FilterBase
 {
@@ -384,43 +291,13 @@ protected:
    * @param[in] deceleration_gain - Gain applied to deceleration control error
    * @return a usable acceleration estimate for the control vector
    */
-  inline double computeControlAcceleration(
+  double computeControlAcceleration(
     const double state,
     const double control,
     const double acceleration_limit,
     const double acceleration_gain,
     const double deceleration_limit,
-    const double deceleration_gain)
-  {
-    FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
-
-    const double error = control - state;
-    const bool same_sign = (::fabs(error) <= ::fabs(control) + 0.01);
-    const double set_point = (same_sign ? control : 0.0);
-    const bool decelerating = ::fabs(set_point) < ::fabs(state);
-    double limit = acceleration_limit;
-    double gain = acceleration_gain;
-
-    if (decelerating) {
-      limit = deceleration_limit;
-      gain = deceleration_gain;
-    }
-
-    const double final_accel = std::min(std::max(gain * error, -limit), limit);
-
-    FB_DEBUG("Control value: " <<
-      control << "\n" <<
-      "State value: " << state << "\n" <<
-      "Error: " << error << "\n" <<
-      "Same sign: " << (same_sign ? "true" : "false") << "\n" <<
-      "Set point: " << set_point << "\n" <<
-      "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
-      "Limit: " << limit << "\n" <<
-      "Gain: " << gain << "\n" <<
-      "Final is " << final_accel << "\n");
-
-    return final_accel;
-  }
+    const double deceleration_gain);
 
   /**
    * @brief Keeps the state Euler angles in the range [-pi, pi]

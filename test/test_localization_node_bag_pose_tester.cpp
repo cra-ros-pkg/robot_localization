@@ -58,27 +58,18 @@ TEST(BagTest, PoseCheck) {
   auto node = rclcpp::Node::make_shared("localization_node_bag_pose_tester");
 
   // getting parameters value from yaml file using get_parameter() API
-  double finalX = node->declare_parameter("final_x", 0);
-  double finalY = node->declare_parameter("final_y", 0);
-  double finalZ = node->declare_parameter("final_z", 0);
-  double tolerance = node->declare_parameter("tolerance", 0);
+  double finalX = node->declare_parameter("final_x", 0.0);
+  double finalY = node->declare_parameter("final_y", 0.0);
+  double finalZ = node->declare_parameter("final_z", 0.0);
+  double tolerance = node->declare_parameter("tolerance", 0.0);
   bool outputFinalPosition = node->declare_parameter("output_final_position", false);
   std::string finalPositionFile = node->declare_parameter("output_location",
       std::string("test.txt"));
 
-  auto parameters_client = std::make_shared<rclcpp::SyncParametersClient>(node);
-  // Get parameters
-  for (auto & parameter : parameters_client->get_parameters(
-      {"final_x", "final_y", "final_z", "tolerance",
-        "output_final_position", "output_location"}))
-  {
-    std::cout << "Parameter name: " << parameter.get_name() << std::endl;
-    std::cout << "Parameter value (" << parameter.get_type_name() <<
-      "): " << parameter.value_to_string() << std::endl;
-  }
   // subscribe call has been changed as per ros2
   auto filteredSub = node->create_subscription<nav_msgs::msg::Odometry>(
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
+
   // changed the spinning and timing as per ros2
   while (rclcpp::ok()) {
     rclcpp::spin_some(node);

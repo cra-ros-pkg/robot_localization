@@ -112,7 +112,7 @@ double getYaw(const tf2::Quaternion quat)
 }
 
 bool lookupTransformSafe(
-  const tf2_ros::Buffer & buffer,
+  const tf2_ros::Buffer * buffer,
   const std::string & target_frame,
   const std::string & source_frame,
   const rclcpp::Time & time,
@@ -126,7 +126,7 @@ bool lookupTransformSafe(
 
   // First try to transform the data at the requested time
   try {
-    geometry_msgs::msg::TransformStamped stamped = buffer.lookupTransform(
+    geometry_msgs::msg::TransformStamped stamped = buffer->lookupTransform(
       target_frame, source_frame, time_tf, duration_tf);
     tf2::fromMsg(stamped.transform, target_frame_trans);
   } catch (tf2::TransformException & ex) {
@@ -135,7 +135,7 @@ bool lookupTransformSafe(
     // transform and warn the user.
     try {
       tf2::fromMsg(buffer
-        .lookupTransform(target_frame, source_frame,
+        ->lookupTransform(target_frame, source_frame,
         tf2::TimePointZero, duration_tf)
         .transform,
         target_frame_trans);
@@ -168,7 +168,7 @@ bool lookupTransformSafe(
 }
 
 bool lookupTransformSafe(
-  const tf2_ros::Buffer & buffer,
+  const tf2_ros::Buffer * buffer,
   const std::string & target_frame,
   const std::string & source_frame,
   const rclcpp::Time & time,
