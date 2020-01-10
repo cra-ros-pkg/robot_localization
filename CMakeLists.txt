@@ -221,9 +221,6 @@ if(BUILD_TESTING)
 #  ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
 #  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
-  ament_add_gtest(test_ros_robot_localization_listener_publisher test/test_ros_robot_localization_listener_publisher.cpp)
-  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
-
   #### RLE/RLL TESTS #####
   ament_add_gtest(test_robot_localization_estimator
                   test/test_robot_localization_estimator.cpp)
@@ -233,6 +230,10 @@ if(BUILD_TESTING)
                   test/test_ros_robot_localization_listener.test
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
+
+  ament_add_gtest(test_ros_robot_localization_listener_publisher
+                  test/test_ros_robot_localization_listener_publisher.cpp)
+  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
 
   # This forces cppcheck to consider all files in this project to be C++,
   # including the headers which end with .h, which cppcheck would normally
@@ -258,6 +259,7 @@ if(BUILD_TESTING)
     #test_ukf_localization_node_bag3
     test_robot_localization_estimator
     test_ros_robot_localization_listener
+    test_ros_robot_localization_listener_publisher
     DESTINATION lib/${PROJECT_NAME}
   )
 
