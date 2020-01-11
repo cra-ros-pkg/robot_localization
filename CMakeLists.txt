@@ -128,14 +128,22 @@ ament_target_dependencies(
 )
 
 target_link_libraries(
-  robot_localization_listener_node
   navsat_transform_node
   ${library_name}
 )
 
 ament_target_dependencies(
-  robot_localization_listener_node
   navsat_transform_node
+  rclcpp
+)
+
+target_link_libraries(
+  robot_localization_listener_node
+  ${library_name}
+)
+
+ament_target_dependencies(
+  robot_localization_listener_node
   rclcpp
 )
 
@@ -219,7 +227,6 @@ if(BUILD_TESTING)
   target_link_libraries(test_robot_localization_estimator ${library_name})
 
   ament_add_gtest(test_ros_robot_localization_listener
-                  test/test_ros_robot_localization_listener.test
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
 
