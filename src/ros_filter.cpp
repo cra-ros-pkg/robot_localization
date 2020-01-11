@@ -2035,6 +2035,7 @@ bool RosFilter<T>::enableFilterSrvCallback(
       this->get_name());
     enabled_ = true;
   }
+
   return true;
 }
 

@@ -128,22 +128,14 @@ ament_target_dependencies(
 )
 
 target_link_libraries(
+  robot_localization_listener_node
   navsat_transform_node
   ${library_name}
 )
 
 ament_target_dependencies(
+  robot_localization_listener_node
   navsat_transform_node
-  rclcpp
-)
-
-target_link_libraries(
-  robot_localization_listener_node
-  ${library_name}
-)
-
-ament_target_dependencies(
-  robot_localization_listener_node
   rclcpp
 )
 
@@ -235,9 +227,6 @@ if(BUILD_TESTING)
                   test/test_ros_robot_localization_listener_publisher.cpp)
   target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
 
-  # This forces cppcheck to consider all files in this project to be C++,
-  # including the headers which end with .h, which cppcheck would normally
-  # consider to be C instead.
   ament_cppcheck(LANGUAGE "c++")
   ament_cpplint()
   ament_lint_cmake()
@@ -254,12 +243,12 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag1
     #test_ekf_localization_node_bag2
     #test_ekf_localization_node_bag3
-    #test_ukf_localization_node_bag1
-    #test_ukf_localization_node_bag2
-    #test_ukf_localization_node_bag3
     test_robot_localization_estimator
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
+    #test_ukf_localization_node_bag1
+    #test_ukf_localization_node_bag2
+    #test_ukf_localization_node_bag3
     DESTINATION lib/${PROJECT_NAME}
   )
 
