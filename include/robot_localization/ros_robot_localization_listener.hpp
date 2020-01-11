@@ -132,7 +132,7 @@ private:
   //! @brief The core state estimator that facilitates inter- and
   //! extrapolation between buffered states.
   //!
-  RobotLocalizationEstimator* estimator_;
+  RobotLocalizationEstimator* estimator_{nullptr};
 
   //! @brief Quality of service definitions
   //!

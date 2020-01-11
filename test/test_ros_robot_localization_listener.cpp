@@ -41,7 +41,7 @@
 #include <gtest/gtest.h>
 
 std::shared_ptr<rclcpp::Node> node;
-robot_localization::RosRobotLocalizationListener* g_listener;
+std::unique_ptr<robot_localization::RosRobotLocalizationListener> g_listener;
 
 TEST(LocalizationListenerTest, testGetStateOfBaseLink)
 {
@@ -121,15 +121,13 @@ TEST(LocalizationListenerTest, GetStateOfRelatedFrame)
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  node = rclcpp::Node::make_shared("test_robot_localization_estimator");
+  node = rclcpp::Node::make_shared("test_ros_robot_localization_listener");
 
-  g_listener = new robot_localization::RosRobotLocalizationListener(node);
+  g_listener = std::make_unique<robot_localization::RosRobotLocalizationListener>(node);
 
   testing::InitGoogleTest(&argc, argv);
 
   int res = RUN_ALL_TESTS();
-
-  delete g_listener;
 
   return res;
 }

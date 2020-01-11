@@ -4,12 +4,33 @@ import ament_index_python.packages
 import launch
 import launch_ros.actions
 
+import os
+
 def generate_launch_description():
 
-  # TODO: Port ROS 1 test launch params: clear_params="true" time-limit="100.0"
+  default_params_yaml = os.path.join(
+    ament_index_python.packages.get_package_share_directory('robot_localization'),
+    'test', 'test_ros_robot_localization_listener.yaml')
+
   return launch.LaunchDescription([
+    # TODO: Port ROS 1 test launch params: clear_params="true" time-limit="100.0"
     launch_ros.actions.Node(
       package='robot_localization',
       node_executable='test_ros_robot_localization_listener',
+      node_name='test_ros_robot_localization_listener',
+      node_namespace='test_ros_robot_localization_listener',
+      remappings=[('test_ros_robot_localization_listener', 'test_estimator')],
+      arguments=['__params:=' + default_params_yaml],
+    ),
+    # TODO: Port ROS 1 test launch params: clear_params="true"
+    launch_ros.actions.Node(
+      package='robot_localization',
+      node_executable='test_ros_robot_localization_listener_publisher',
+      node_name='test_estimator',
+      node_namespace='test_estimator',
+      remappings=[
+        ('/odometry/filtered', '/test_ros_robot_localization_listener/odom/filtered'),
+        ('/accel/filtered', '/test_ros_robot_localization_listener/acceleration/filtered'),
+      ],
     ),
   ])
