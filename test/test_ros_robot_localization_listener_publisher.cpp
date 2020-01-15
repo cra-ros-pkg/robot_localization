@@ -30,15 +30,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string>
-
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/utils.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-int main(int argc, char **argv)
+#include <string>
+#include <memory>
+
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(
@@ -52,13 +53,12 @@ int main(int argc, char **argv)
   tf2_ros::StaticTransformBroadcaster transform_broadcaster(node);
 
   rclcpp::Time end_time = node->now() + rclcpp::Duration(10, 0);
-  while (rclcpp::ok() && node->now() < end_time)
-  {
+  while (rclcpp::ok() && node->now() < end_time) {
     rclcpp::Time time1(1000, 0);
     double x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az;
     x = y = z = roll = pitch = yaw = vy = vz = vroll = vpitch = vyaw = ax = ay = az = 0.0;
     vx = 1.0;
-    vroll = M_PI/4.0;
+    vroll = M_PI / 4.0;
 
     tf2::Quaternion q;
     q.setRPY(0, 0, 0);
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     odom_msg.pose.pose.orientation.y = q.y();
     odom_msg.pose.pose.orientation.z = q.z();
     odom_msg.pose.pose.orientation.w = q.w();
- 
+
     odom_msg.twist.twist.linear.x = vx;
     odom_msg.twist.twist.linear.y = vy;
     odom_msg.twist.twist.linear.z = vz;
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     transformStamped.transform.translation.z = 0.0;
     {
       tf2::Quaternion q;
-      q.setRPY(0, 0, M_PI/2);
+      q.setRPY(0, 0, M_PI / 2);
       transformStamped.transform.rotation.x = q.x();
       transformStamped.transform.rotation.y = q.y();
       transformStamped.transform.rotation.z = q.z();

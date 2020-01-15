@@ -956,8 +956,8 @@ void RosFilter<T>::loadParams()
 
   // Create a service for manually enabling the filter
   enable_filter_srv_ = this->create_service<std_srvs::srv::Empty>("enable",
-    std::bind(&RosFilter::enableFilterSrvCallback, this, std::placeholders::_1,
-    std::placeholders::_2, std::placeholders::_3));
+      std::bind(&RosFilter::enableFilterSrvCallback, this, std::placeholders::_1,
+      std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
@@ -1805,8 +1805,7 @@ template<typename T>
 void RosFilter<T>::periodicUpdate()
 {
   // Wait for the filter to be enabled
-  if (!enabled_)
-  {
+  if (!enabled_) {
     RCLCPP_INFO_ONCE(this->get_logger(),
       "Filter is disabled. To enable it call the %s service",
       enable_filter_srv_->get_service_name());
@@ -2349,8 +2348,7 @@ bool RosFilter<T>::prepareAcceleration(
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
       } else {
         tf2::fromMsg(msg->orientation, curAttitude);
-        if (fabs(curAttitude.length() - 1.0) > 0.01)
-        {
+        if (fabs(curAttitude.length() - 1.0) > 0.01) {
           RCLCPP_WARN_ONCE(this->get_logger(),
             "An input was not normalized, this should NOT happen, but will normalize.");
           curAttitude.normalize();
@@ -2515,8 +2513,7 @@ bool RosFilter<T>::preparePose(
     }
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
-    if (fabs(orientation.length() - 1.0) > 0.01)
-    {
+    if (fabs(orientation.length() - 1.0) > 0.01) {
       RCLCPP_WARN_ONCE(this->get_logger(),
         "An input was not normalized, this should NOT happen, but will normalize.");
       orientation.normalize();
