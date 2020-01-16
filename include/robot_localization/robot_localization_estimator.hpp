@@ -35,8 +35,9 @@
 
 #include <boost/circular_buffer.hpp>
 #include <Eigen/Dense>
-#include <vector>
 #include <iostream>
+#include <memory>
+#include <vector>
 
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
@@ -96,7 +97,6 @@ enum EstimatorResult
   Failed
 };
 }  // namespace EstimatorResults
-typedef EstimatorResults::EstimatorResult EstimatorResult;
 
 namespace FilterTypes
 {
@@ -107,7 +107,6 @@ enum FilterType
   NotDefined
 };
 }  // namespace FilterTypes
-typedef FilterTypes::FilterType FilterType;
 
 //! @brief Robot Localization Listener class
 //!
@@ -125,7 +124,7 @@ public:
   //!
   explicit RobotLocalizationEstimator(
     unsigned int buffer_capacity,
-    FilterType filter_type,
+    FilterTypes::FilterType filter_type,
     const Eigen::MatrixXd & process_noise_covariance,
     const std::vector<double> & filter_args = std::vector<double>());
 
@@ -148,7 +147,9 @@ public:
   //!
   //! @return GetStateResult enum
   //!
-  EstimatorResult getState(const double time, EstimatorState & state) const;
+  EstimatorResults::EstimatorResult getState(
+    const double time,
+    EstimatorState & state) const;
 
   //! @brief Clears the internal state buffer
   //!
@@ -222,7 +223,7 @@ private:
   //!
   //! @brief A pointer to the filter instance that is used for extrapolation
   //!
-  FilterBase * filter_;
+  std::unique_ptr<FilterBase> filter_;
 };
 
 }  // namespace robot_localization

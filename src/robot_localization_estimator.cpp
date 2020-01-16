@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <memory>
 #include <vector>
 
 #include "robot_localization/ekf.hpp"
@@ -42,7 +43,7 @@ namespace robot_localization
 // are accepted for alpha, kappa, beta, not just a vector, for filter_args
 RobotLocalizationEstimator::RobotLocalizationEstimator(
   unsigned int buffer_capacity,
-  FilterType filter_type,
+  FilterTypes::FilterType filter_type,
   const Eigen::MatrixXd & process_noise_covariance,
   const std::vector<double> & filter_args)
 {
@@ -50,13 +51,13 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(
 
   // Set up the filter that is used for predictions
   if (filter_type == FilterTypes::EKF) {
-    filter_ = new Ekf;
+    filter_ = std::make_unique<Ekf>();
   } else if (filter_type == FilterTypes::UKF) {
     if (filter_args.size() < 3) {
-      filter_ = new Ukf();
+      filter_ = std::make_unique<Ukf>();
     } else {
-      filter_ = new Ukf();
-      static_cast<Ukf *>(filter_)->setConstants(filter_args[0], filter_args[1],
+      filter_ = std::make_unique<Ukf>();
+      dynamic_cast<Ukf *>(filter_.get())->setConstants(filter_args[0], filter_args[1],
         filter_args[2]);
     }
   }
@@ -66,7 +67,6 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(
 
 RobotLocalizationEstimator::~RobotLocalizationEstimator()
 {
-  delete filter_;
 }
 
 void RobotLocalizationEstimator::setState(const EstimatorState & state)
@@ -89,7 +89,7 @@ void RobotLocalizationEstimator::setState(const EstimatorState & state)
   }
 }
 
-EstimatorResult RobotLocalizationEstimator::getState(
+EstimatorResults::EstimatorResult RobotLocalizationEstimator::getState(
   const double time,
   EstimatorState & state) const
 {

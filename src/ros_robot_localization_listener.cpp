@@ -62,7 +62,8 @@
 
 namespace robot_localization
 {
-FilterType filterTypeFromString(const std::string & filter_type_str)
+FilterTypes::FilterType filterTypeFromString(
+  const std::string & filter_type_str)
 {
   if (filter_type_str == "ekf") {
     return FilterTypes::EKF;
@@ -74,7 +75,7 @@ FilterType filterTypeFromString(const std::string & filter_type_str)
 }
 
 RosRobotLocalizationListener::RosRobotLocalizationListener(
-  rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("robot_localization"))
+  rclcpp::Node::SharedPtr node)
 : qos1_(1),
   qos10_(10),
   odom_sub_(node, "odom/filtered", qos1_.get_rmw_qos_profile()),
@@ -92,7 +93,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   std::string filter_type_str = node->declare_parameter<std::string>(
     "filter_type", std::string("ekf"));
 
-  FilterType filter_type = filterTypeFromString(filter_type_str);
+  FilterTypes::FilterType filter_type = filterTypeFromString(filter_type_str);
   if (filter_type == FilterTypes::NotDefined) {
     RCLCPP_ERROR(node_logger_->get_logger(),
       "RosRobotLocalizationListener: Parameter filter_type invalid");
@@ -142,8 +143,8 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   std::vector<double> filter_args = node->declare_parameter<
     std::vector<double>>("filter_args", std::vector<double>());
 
-  estimator_ = new RobotLocalizationEstimator(buffer_size, filter_type,
-      process_noise_covariance, filter_args);
+  estimator_ = std::make_unique<RobotLocalizationEstimator>(buffer_size,
+      filter_type, process_noise_covariance, filter_args);
 
   sync_.registerCallback(std::bind(
       &RosRobotLocalizationListener::odomAndAccelCallback,
@@ -168,9 +169,6 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
 
 RosRobotLocalizationListener::~RosRobotLocalizationListener()
 {
-  if (estimator_) {
-    delete estimator_;
-  }
 }
 
 void RosRobotLocalizationListener::odomAndAccelCallback(
