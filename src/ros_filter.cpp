@@ -3007,8 +3007,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
     RF_DEBUG("Insufficient history to revert to time " <<
       filter_utilities::toSec(time) << "\n");
 
-    if (last_history_state.get() != NULL)
-    {
+    if (last_history_state.get() != NULL) {
       RF_DEBUG("Will revert to oldest state at " <<
         filter_utilities::toSec(last_history_state->latest_control_time_) <<
         ".\n");
@@ -3016,8 +3015,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   }
 
   // If we have a valid reversion state, revert
-  if (last_history_state.get() != NULL)
-  {
+  if (last_history_state.get() != NULL) {
     // Reset filter to the latest state from the queue.
     const FilterStatePtr & state = filter_state_history_.back();
     filter_.setState(state->state_);
