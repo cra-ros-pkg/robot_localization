@@ -501,7 +501,8 @@ bool RosRobotLocalizationListener::getState(const double time,
 
   // Rotate the covariance
   covariance.block<POSE_SIZE, POSE_SIZE>(POSITION_OFFSET, POSITION_OFFSET) =
-      rot_6d * estimator_state.covariance.eval() * rot_6d.transpose();
+      rot_6d * estimator_state.covariance.block<POSE_SIZE, POSE_SIZE>(POSITION_OFFSET, POSITION_OFFSET) *
+      rot_6d.transpose();
 
   return true;
 }
