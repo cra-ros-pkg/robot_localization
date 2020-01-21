@@ -146,21 +146,23 @@ void RosFilter<T>::reset()
 template<typename T>
 void RosFilter<T>::toggleFilterProcessingCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<ToggleFilterProcessing::Request> req,
-  const std::shared_ptr<ToggleFilterProcessing::Response> resp);
+  const std::shared_ptr<
+    robot_localization::srv::ToggleFilterProcessing::Request> req,
+  const std::shared_ptr<
+    robot_localization::srv::ToggleFilterProcessing::Response> resp)
 {
-  if (req.on == toggled_on_)
+  if (req->on == toggled_on_)
   {
-    ROS_WARN_STREAM("Service was called to toggle filter processing but state "
-      "was already as requested.");
-    resp.status = false;
+    RCLCPP_WARN(this->get_logger(),
+      "Service was called to toggle filter processing but state was already as "
+      "requested.");
+    resp->status = false;
   }
   else
   {
-    toggled_on_ = req.on;
-    resp.status = true;
+    toggled_on_ = req->on;
+    resp->status = true;
   }
-  return true;
 }
 
 // @todo: Replace with AccelWithCovarianceStamped

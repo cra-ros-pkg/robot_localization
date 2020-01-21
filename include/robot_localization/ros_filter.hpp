@@ -124,8 +124,10 @@ public:
   //!
   void toggleFilterProcessingCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<ToggleFilterProcessing::Request> req,
-    const std::shared_ptr<ToggleFilterProcessing::Response> resp);
+    const std::shared_ptr<
+      robot_localization::srv::ToggleFilterProcessing::Request> req,
+    const std::shared_ptr<
+      robot_localization::srv::ToggleFilterProcessing::Response> resp);
 
   //! @brief Callback method for receiving all acceleration (IMU) messages
   //! @param[in] msg - The ROS IMU message to take in.
@@ -684,7 +686,7 @@ protected:
   //! processing while still publishing.
   //! Uses a robot_localization ToggleFilterProcessing service.
   //!
-  rclcpp::Service<ToggleFilterProcessing>::SharedPtr
+  rclcpp::Service<robot_localization::srv::ToggleFilterProcessing>::SharedPtr
     toggle_filter_processing_srv_;
 
   //! @brief Subscribes to the control input topic
