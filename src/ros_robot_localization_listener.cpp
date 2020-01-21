@@ -102,7 +102,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
-  // TODO(anyone): this code is copied from ros_filter. In a refactor, this
+  // TODO(reinzor): this code is copied from ros_filter. In a refactor, this
   // could be moved to a function in ros_filter_utilities
   Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
   process_noise_covariance.setZero();
@@ -373,7 +373,7 @@ bool RosRobotLocalizationListener::getState(
       world_requested_to_world_transform = tf_buffer_.lookupTransform(world_frame_id,
           world_frame_id_,
           tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
-          tf2::durationFromSec(0.1));  // TODO(anyone): magic number
+          tf2::durationFromSec(0.1));  // TODO(reinzor): magic number
 
       if (findAncestor(tf_buffer_, world_frame_id, base_frame_id_) ) {
         RCLCPP_ERROR(node_logger_->get_logger(),
@@ -402,7 +402,7 @@ bool RosRobotLocalizationListener::getState(
     base_to_target_transform = tf_buffer_.lookupTransform(base_frame_id_,
         frame_id,
         tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
-        tf2::durationFromSec(0.1));  // TODO(anyone): magic number
+        tf2::durationFromSec(0.1));  // TODO(reinzor): magic number
 
     // Check that frame_id is a child of the base frame. If it is not, it does
     // not make sense to request its state.
