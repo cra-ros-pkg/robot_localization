@@ -64,6 +64,8 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   smooth_lagged_data_(false),
   two_d_mode_(false),
   use_control_(false),
+  disabled_at_startup_(false),
+  enabled_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0),
@@ -920,6 +922,10 @@ void RosFilter<T>::loadParams()
     }
   }
 
+  // Check if the filter should start or not
+  disabled_at_startup_ = this->declare_parameter<bool>("disabled_at_startup", false);
+  enabled_ = !disabled_at_startup_;
+
   // Debugging writes to file
   RF_DEBUG("tf_prefix is " <<
     tf_prefix << "\nmap_frame is " << map_frame_id_ <<
@@ -957,6 +963,11 @@ void RosFilter<T>::loadParams()
     this->create_service<robot_localization::srv::SetPose>(
     "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  // Create a service for manually enabling the filter
+  enable_filter_srv_ = this->create_service<std_srvs::srv::Empty>("enable",
+      std::bind(&RosFilter::enableFilterSrvCallback, this, std::placeholders::_1,
+      std::placeholders::_2, std::placeholders::_3));
 
   // Init the last last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
@@ -1803,6 +1814,14 @@ void RosFilter<T>::initialize()
 template<typename T>
 void RosFilter<T>::periodicUpdate()
 {
+  // Wait for the filter to be enabled
+  if (!enabled_) {
+    RCLCPP_INFO_ONCE(this->get_logger(),
+      "Filter is disabled. To enable it call the %s service",
+      enable_filter_srv_->get_service_name());
+    return;
+  }
+
   rclcpp::Time cur_time = this->now();
 
   // Now we'll integrate any measurements we've received
@@ -2007,6 +2026,27 @@ bool RosFilter<T>::setPoseSrvCallback(
     std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(
     request->pose);
   setPoseCallback(msg);
+
+  return true;
+}
+
+template<typename T>
+bool RosFilter<T>::enableFilterSrvCallback(
+  const std::shared_ptr<rmw_request_id_t>,
+  const std::shared_ptr<std_srvs::srv::Empty::Request>,
+  const std::shared_ptr<std_srvs::srv::Empty::Response>)
+{
+  RF_DEBUG("\n[" << this->get_name() << ":]" <<
+    " ------ /RosFilter::enableFilterSrvCallback ------\n");
+  if (enabled_) {
+    RCLCPP_WARN(this->get_logger(), "[%s:] Asking for enabling filter service, "
+      "but the filter was already enabled! Use param disabled_at_startup.",
+      this->get_name());
+  } else {
+    RCLCPP_INFO(this->get_logger(), "[%s:] Enabling filter...",
+      this->get_name());
+    enabled_ = true;
+  }
 
   return true;
 }
@@ -2321,6 +2361,11 @@ bool RosFilter<T>::prepareAcceleration(
         curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
       } else {
         tf2::fromMsg(msg->orientation, curAttitude);
+        if (fabs(curAttitude.length() - 1.0) > 0.01) {
+          RCLCPP_WARN_ONCE(this->get_logger(),
+            "An input was not normalized, this should NOT happen, but will normalize.");
+          curAttitude.normalize();
+        }
       }
       trans.setRotation(curAttitude);
       tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
@@ -2479,9 +2524,13 @@ bool RosFilter<T>::preparePose(
       addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
         topic_name + "_orientation", stream.str(), false);
     }
-
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
+    if (fabs(orientation.length() - 1.0) > 0.01) {
+      RCLCPP_WARN_ONCE(this->get_logger(),
+        "An input was not normalized, this should NOT happen, but will normalize.");
+      orientation.normalize();
+    }
   }
 
   // Fill out the orientation data
