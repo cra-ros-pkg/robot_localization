@@ -395,8 +395,11 @@ void NavSatTransform::getRobotOriginWorldPose(
       transform_timeout_, robot_orientation);
 
     if (can_transform) {
+      // Zero out rotation because we don't care about the orientation of the
+      // GPS receiver relative to base_link
       gps_offset_rotated.setOrigin(tf2::quatRotate(
           robot_orientation.getRotation(), gps_offset_rotated.getOrigin()));
+      gps_offset_rotated.setRotation(tf2::Quaternion::getIdentity());
       robot_odom_pose = gps_offset_rotated.inverse() * gps_odom_pose;
     } else {
       RCLCPP_ERROR(

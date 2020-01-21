@@ -631,6 +631,12 @@ protected:
   //!
   std::map<std::string, Eigen::MatrixXd> previous_measurement_covariances_;
 
+  //! @brief By default, the filter predicts and corrects up to the time of the
+  //! latest measurement. If this is set to true, the filter does the same, but
+  //! then also predicts up to the current time step.
+  //!
+  bool predict_to_current_time_;
+
   //! @brief Store the last time set pose message was received
   //!
   //! If we receive a setPose message to reset the filter, we can get in
