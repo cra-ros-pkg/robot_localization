@@ -125,9 +125,13 @@ int main(int argc, char ** argv)
 
   g_listener = std::make_unique<robot_localization::RosRobotLocalizationListener>(node);
 
-  testing::InitGoogleTest(&argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
 
   int res = RUN_ALL_TESTS();
+
+  rclcpp::shutdown();
+  node = nullptr;
+  g_listener = nullptr;
 
   return res;
 }
