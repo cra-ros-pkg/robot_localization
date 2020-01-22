@@ -46,6 +46,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/empty.hpp>
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
@@ -295,6 +296,15 @@ public:
     const std::shared_ptr<robot_localization::srv::SetPose::Request> request,
     std::shared_ptr<robot_localization::srv::SetPose::Response> response);
 
+  //! @brief Service callback for manually enable the filter
+  //! @param[in] request - N/A
+  //! @param[out] response - N/A
+  //! @return boolean true if successful, false if not
+  bool enableFilterSrvCallback(
+    const std::shared_ptr<rmw_request_id_t>,
+    const std::shared_ptr<std_srvs::srv::Empty::Request>,
+    const std::shared_ptr<std_srvs::srv::Empty::Response>);
+
   //! @brief Callback method for receiving all twist messages
   //! @param[in] msg - The ROS stamped twist with covariance message to take in.
   //! @param[in] callback_data - Relevant static callback data
@@ -505,6 +515,16 @@ protected:
   //!
   bool use_control_;
 
+  //! @brief Start the Filter disabled at startup
+  //!
+  //! If this is true, the filter reads parameters and prepares publishers and subscribes
+  //! but does not integrate new messages into the state vector.
+  //! The filter can be enabled later using a service.
+  bool disabled_at_startup_;
+
+  //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
+  bool enabled_;
+
   //! @brief The max (worst) dynamic diagnostic level.
   //!
   int dynamic_diag_error_level_;
@@ -704,6 +724,11 @@ protected:
   //!
   rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr
     set_pose_service_;
+
+  //! @brief Service that allows another node to enable the filter. Uses a
+  //! standard Empty service.
+  //!
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr enable_filter_srv_;
 
   //! @brief Transform buffer for managing coordinate transforms
   //!

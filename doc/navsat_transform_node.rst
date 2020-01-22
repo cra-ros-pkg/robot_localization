@@ -1,7 +1,7 @@
 navsat_transform_node
 *********************
 
-``navsat_transform_node`` takes as input a `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message (usually the output of ``ekf_localization_node`` or ``ukf_localization_node``), a `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ containing an accurate estimate of your robot's heading, and a `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing GPS data. It produces an odometry message in coordinates that are consistent with your robot's world frame. This value can be directly fused into your state estimate.
+``navsat_transform_node`` takes as input a `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message (usually the output of ``ekf_localization_node`` or ``ukf_localization_node``), a `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ containing an accurate estimate of your robot's heading, and a `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing GPS data. It produces an odometry message in coordinates that are consistent with your robot's world frame. This value can be directly fused into your state estimate.
 
 .. note:: If you fuse the output of this node with any of the state estimation nodes in ``robot_localization``, you should make sure that the ``odomN_differential`` setting is *false* for that input.
 
@@ -10,7 +10,7 @@ Parameters
 
 ~frequency
 ^^^^^^^^^^
-The real-valued frequency, in Hz, at which ``navsat_transform_node`` checks for new `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ messages, and publishes filtered `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ when ``publish_filtered_gps`` is set to *true*.
+The real-valued frequency, in Hz, at which ``navsat_transform_node`` checks for new `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ messages, and publishes filtered `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ when ``publish_filtered_gps`` is set to *true*.
 
 ~delay
 ^^^^^^
@@ -30,7 +30,7 @@ If this is *true*, the `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html
 
 ~publish_filtered_gps
 ^^^^^^^^^^^^^^^^^^^^^
-If *true*, ``navsat_transform_node`` will also transform your robot's world frame (e.g., *map*) position back to GPS coordinates, and publish a `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message on the ``/gps/filtered`` topic.
+If *true*, ``navsat_transform_node`` will also transform your robot's world frame (e.g., *map*) position back to GPS coordinates, and publish a `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message on the ``/gps/filtered`` topic.
 
 ~broadcast_utm_transform
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -49,17 +49,17 @@ If *true*, ``navsat_transform_node`` will wait to get a datum from either:
 
 Subscribed Topics
 =================
-* ``imu/data`` A `sensor_msgs/Imu.html <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ message with orientation data
+* ``imu/data`` A `sensor_msgs/Imu <http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html>`_ message with orientation data
 
 * ``odometry/filtered`` A `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message of your robot's current position. This is needed in the event that your first GPS reading comes after your robot has attained some non-zero pose.
 
-* ``gps/fix`` A `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing your robot's GPS coordinates
+* ``gps/fix`` A `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing your robot's GPS coordinates
 
 Published Topics
 ================
 * ``odometry/gps`` A `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message containing the GPS coordinates of your robot, transformed into its world coordinate frame. This message can be directly fused into ``robot_localization``'s state estimation nodes.
 
-* ``gps/filtered`` (optional) A `sensor_msgs/NavSatFix.html <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing your robot's world frame position, transformed into GPS coordinates
+* ``gps/filtered`` (optional) A `sensor_msgs/NavSatFix <http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html>`_ message containing your robot's world frame position, transformed into GPS coordinates
 
 Published Transforms
 ====================

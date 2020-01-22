@@ -1,0 +1,45 @@
+test_ros_robot_localization_listener:
+  ros__parameters:
+    frequency: 30
+    sensor_timeout: 0.1
+    odom0: /odom_input0
+    odom1: /odom_input1
+    odom2: /odom_input2
+    pose0: /pose_input0
+    pose1: /pose_input1
+    twist0: /twist_input0
+    imu0: /imu_input0
+    imu1: /imu_input1
+    imu2: /imu_input2
+    imu3: /imu_input3
+    odom0_config: [true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]
+    odom1_config: [true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]
+    odom2_config: [false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]
+    pose0_config: [true, false, true, false, false, false, false, false, false, false, false, false, false, false, false]
+    pose1_config: [true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]
+    twist0_config: [false, false, false, false, false, false, true, true, true, true, true, true, false, false, false]
+    imu0_config: [false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]
+    imu1_config: [false, false, false, false, false, false, false, false, false, true, true, true, false, false, false]
+    imu2_config: [false, false, false, false, false, false, false, false, false, false, false, false, true, true, true]
+    imu3_config: [false, false, false, true, true, true, false, false, false, false, false, false, false, false, false]
+    odom1_differential: true
+    pose1_differential: true
+    imu3_differential: true
+    print_diagnostics: false
+    odom_frame: odom
+    base_link_frame: base_link
+    process_noise_covariance: [0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.004, 0.0, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01]

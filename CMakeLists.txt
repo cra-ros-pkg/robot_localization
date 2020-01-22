@@ -15,14 +15,18 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
   "srv/ToggleFilterProcessing.srv"
@@ -47,8 +51,10 @@ add_library(
   src/filter_base.cpp
   src/filter_utilities.cpp
   src/navsat_transform.cpp
+  src/robot_localization_estimator.cpp
   src/ros_filter.cpp
-  src/ros_filter_utilities.cpp)
+  src/ros_filter_utilities.cpp
+  src/ros_robot_localization_listener.cpp)
 
 rosidl_target_interfaces(${library_name}
   ${PROJECT_NAME} "rosidl_typesupport_cpp")
@@ -68,21 +74,32 @@ add_executable(
   src/navsat_transform_node.cpp
 )
 
+add_executable(
+  robot_localization_listener_node
+  src/robot_localization_listener_node.cpp
+)
+
 target_link_libraries(
   ${library_name}
   ${EIGEN3_LIBRARIES}
+  yaml-cpp
 )
 
 ament_target_dependencies(
   ${library_name}
   diagnostic_msgs
   diagnostic_updater
+  eigen_conversions
+  geographic_msgs
   geometry_msgs
   nav_msgs
   rcl
   rclcpp
   sensor_msgs
+  std_msgs
+  std_srvs
   tf2
+  tf2_eigen
   tf2_geometry_msgs
   tf2_ros
 )
@@ -117,13 +134,23 @@ ament_target_dependencies(
   rclcpp
 )
 
+target_link_libraries(
+  robot_localization_listener_node
+  ${library_name}
+)
+
+ament_target_dependencies(
+  robot_localization_listener_node
+  rclcpp
+)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_cmake_cppcheck REQUIRED)
   find_package(ament_cmake_cpplint REQUIRED)
   find_package(ament_cmake_lint_cmake REQUIRED)
   find_package(ament_cmake_uncrustify REQUIRED)
-
+  find_package(launch_testing_ament_cmake)
 
   #### FILTER BASE TESTS ####
   ament_add_gtest(filter_base-test test/test_filter_base.cpp)
@@ -191,6 +218,19 @@ if(BUILD_TESTING)
 #  ament_add_gtest(test_ukf_localization_node_bag3 test/test_localization_node_bag_pose_tester.cpp)
 #  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
+  #### RLE/RLL TESTS #####
+  ament_add_gtest(test_robot_localization_estimator
+                  test/test_robot_localization_estimator.cpp)
+  target_link_libraries(test_robot_localization_estimator ${library_name})
+
+  ament_add_gtest(test_ros_robot_localization_listener
+                  test/test_ros_robot_localization_listener.cpp)
+  target_link_libraries(test_ros_robot_localization_listener ${library_name})
+
+  ament_add_gtest(test_ros_robot_localization_listener_publisher
+                  test/test_ros_robot_localization_listener_publisher.cpp)
+  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
+
   ament_cppcheck(LANGUAGE "c++")
   ament_cpplint()
   ament_lint_cmake()
@@ -207,6 +247,9 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag1
     #test_ekf_localization_node_bag2
     #test_ekf_localization_node_bag3
+    test_robot_localization_estimator
+    test_ros_robot_localization_listener
+    test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1
     #test_ukf_localization_node_bag2
     #test_ukf_localization_node_bag3
@@ -226,6 +269,7 @@ install(
   navsat_transform_node
   ekf_node
   ukf_node
+  robot_localization_listener_node
   ${library_name}
   DESTINATION lib/${PROJECT_NAME}
 )
