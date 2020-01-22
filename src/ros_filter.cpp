@@ -148,7 +148,7 @@ void RosFilter<T>::reset()
 
 template<typename T>
 void RosFilter<T>::toggleFilterProcessingCallback(
-  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<rmw_request_id_t>/*request_header*/,
   const std::shared_ptr<
     robot_localization::srv::ToggleFilterProcessing::Request> req,
   const std::shared_ptr<
@@ -3077,7 +3077,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   RF_DEBUG("\nRequested time was " << std::setprecision(20) <<
     filter_utilities::toSec(time) << "\n")
 
-  size_t history_size = filter_state_history_.size();
+  // size_t history_size = filter_state_history_.size();
 
   // Walk back through the queue until we reach a filter state whose time stamp
   // is less than or equal to the requested time. Since every saved state after
@@ -3140,7 +3140,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 
       measurement_history_.pop_back();
     }
- 
+
     RF_DEBUG("Restored " << restored_measurements << " to measurement queue."
       "\n");
   }

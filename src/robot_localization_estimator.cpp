@@ -190,7 +190,7 @@ void RobotLocalizationEstimator::extrapolate(
 
 void RobotLocalizationEstimator::interpolate(
   const EstimatorState & given_state_1,
-  const EstimatorState & given_state_2,
+  const EstimatorState & /*given_state_2*/,
   const double requested_time,
   EstimatorState & state_at_req_time) const
 {

@@ -124,7 +124,7 @@ public:
   //! @return boolean true if successful, false if not
   //!
   void toggleFilterProcessingCallback(
-    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<rmw_request_id_t>/*request_header*/,
     const std::shared_ptr<
       robot_localization::srv::ToggleFilterProcessing::Request> req,
     const std::shared_ptr<
