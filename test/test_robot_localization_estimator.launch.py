@@ -6,7 +6,7 @@ import launch_ros.actions
 
 def generate_launch_description():
 
-  # TODO: Port ROS 1 test launch params: clear_params="true" time-limit="100.0"
+  # TODO: Port ROS 1 test launch params: clear_params="true"
   return launch.LaunchDescription([
     launch_ros.actions.Node(
       package='robot_localization',
