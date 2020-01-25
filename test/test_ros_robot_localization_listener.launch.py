@@ -13,7 +13,7 @@ def generate_launch_description():
     'test', 'test_ros_robot_localization_listener.yaml')
 
   return launch.LaunchDescription([
-    # TODO: Port ROS 1 test launch params: clear_params="true" time-limit="100.0"
+    # TODO: Port ROS 1 test launch params: clear_params="true"
     launch_ros.actions.Node(
       package='robot_localization',
       node_executable='test_ros_robot_localization_listener',
