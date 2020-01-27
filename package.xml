@@ -19,7 +19,6 @@
 
   <depend>angles</depend>
   <depend>eigen</depend>
-  <depend>eigen_conversions</depend>
   <depend>geographic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>diagnostic_msgs</depend>

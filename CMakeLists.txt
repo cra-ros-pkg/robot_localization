@@ -92,7 +92,6 @@ ament_target_dependencies(
   ${library_name}
   diagnostic_msgs
   diagnostic_updater
-  eigen_conversions
   geographic_msgs
   geometry_msgs
   nav_msgs
