@@ -1832,7 +1832,7 @@ void RosFilter<T>::periodicUpdate()
 
   if (getFilteredOdometryMessage(filtered_position)) {
     world_base_link_trans_msg_.header.stamp =
-      tf_time_offset_ + filtered_position.header.stamp;
+      static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
     world_base_link_trans_msg_.header.frame_id =
       filtered_position.header.frame_id;
     world_base_link_trans_msg_.child_frame_id =
@@ -1895,7 +1895,7 @@ void RosFilter<T>::periodicUpdate()
           geometry_msgs::msg::TransformStamped map_odom_trans_msg;
           map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);
           map_odom_trans_msg.header.stamp =
-            tf_time_offset_ + filtered_position.header.stamp;
+            static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
           map_odom_trans_msg.header.frame_id = map_frame_id_;
           map_odom_trans_msg.child_frame_id = odom_frame_id_;
 
