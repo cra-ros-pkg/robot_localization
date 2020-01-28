@@ -25,7 +25,9 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(yaml-cpp REQUIRED)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML_CPP yaml-cpp)
 
 set(library_name rl_lib)
 
@@ -33,6 +35,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
+  "srv/ToggleFilterProcessing.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
@@ -85,7 +88,7 @@ add_executable(
 target_link_libraries(
   ${library_name}
   ${EIGEN3_LIBRARIES}
-  yaml-cpp
+  ${YAML_CPP_LIBRARIES}
 )
 
 ament_target_dependencies(
@@ -221,17 +224,28 @@ if(BUILD_TESTING)
 #  target_link_libraries(test_ukf_localization_node_bag3 ${library_name})
 
   #### RLE/RLL TESTS #####
-  ament_add_gtest(test_robot_localization_estimator
+  ament_add_gtest_executable(test_robot_localization_estimator
                   test/test_robot_localization_estimator.cpp)
   target_link_libraries(test_robot_localization_estimator ${library_name})
+  ament_add_test(test_robot_localization_estimator
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 100
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_localization_estimator.launch.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
-  ament_add_gtest(test_ros_robot_localization_listener
+  ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
-
-  ament_add_gtest(test_ros_robot_localization_listener_publisher
+  ament_add_gtest_executable(test_ros_robot_localization_listener_publisher
                   test/test_ros_robot_localization_listener_publisher.cpp)
   target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
+  ament_add_test(test_ros_robot_localization_listener
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 100
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_ros_robot_localization_listener.launch.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
   ament_cppcheck(LANGUAGE "c++")
   ament_cpplint()

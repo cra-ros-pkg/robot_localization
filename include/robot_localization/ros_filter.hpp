@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
 #include <robot_localization/srv/set_pose.hpp>
+#include <robot_localization/srv/toggle_filter_processing.hpp>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -115,6 +116,19 @@ public:
   //! @brief Resets the filter to its initial state
   //!
   void reset();
+
+  //! @brief Service callback to toggle processing measurements for a standby
+  //! mode but continuing to publish
+  //! @param[in] request - The state requested, on (True) or off (False)
+  //! @param[out] response - status if upon success
+  //! @return boolean true if successful, false if not
+  //!
+  void toggleFilterProcessingCallback(
+    const std::shared_ptr<rmw_request_id_t>/*request_header*/,
+    const std::shared_ptr<
+      robot_localization::srv::ToggleFilterProcessing::Request> req,
+    const std::shared_ptr<
+      robot_localization::srv::ToggleFilterProcessing::Response> resp);
 
   //! @brief Callback method for receiving all acceleration (IMU) messages
   //! @param[in] msg - The ROS IMU message to take in.
@@ -301,6 +315,12 @@ public:
     const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,
     const CallbackData & callback_data, const std::string & target_frame);
 
+  //! @brief Validates filter outputs for NaNs and Infinite values
+  //! @param[out] message - The standard ROS odometry message to be validated
+  //! @return true if the filter output is valid, false otherwise
+  //!
+  bool validateFilterOutput(const nav_msgs::msg::Odometry & message);
+
 protected:
   //! @brief Finds the latest filter state before the given timestamp and makes
   //! it the current state again.
@@ -328,6 +348,10 @@ protected:
   //! be dropped.
   //!
   void clearExpiredHistory(const rclcpp::Time cutoff_time);
+
+  //! @brief Clears measurement queue
+  //!
+  void clearMeasurementQueue();
 
   //! @brief Adds a diagnostic message to the accumulating map and updates the
   //! error level
@@ -475,10 +499,9 @@ protected:
   //!
   bool smooth_lagged_data_;
 
-  //! @brief Service that allows another node to enable the filter. Uses a
-  //! standard Empty service.
+  //! @brief Whether the filter should process new measurements or not.
   //!
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr enable_filter_srv_;
+  bool toggled_on_;
 
   //! @brief Whether or not we're in 2D mode
   //!
@@ -679,6 +702,13 @@ protected:
   //!
   rclcpp::Duration tf_time_offset_;
 
+  //! @brief Service that allows another node to toggle on/off filter
+  //! processing while still publishing.
+  //! Uses a robot_localization ToggleFilterProcessing service.
+  //!
+  rclcpp::Service<robot_localization::srv::ToggleFilterProcessing>::SharedPtr
+    toggle_filter_processing_srv_;
+
   //! @brief Subscribes to the control input topic
   //!
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr control_sub_;
@@ -694,6 +724,11 @@ protected:
   //!
   rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr
     set_pose_service_;
+
+  //! @brief Service that allows another node to enable the filter. Uses a
+  //! standard Empty service.
+  //!
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr enable_filter_srv_;
 
   //! @brief Transform buffer for managing coordinate transforms
   //!

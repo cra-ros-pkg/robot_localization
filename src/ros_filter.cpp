@@ -61,7 +61,9 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
+  reset_on_time_jump_(false),
   smooth_lagged_data_(false),
+  toggled_on_(true),
   two_d_mode_(false),
   use_control_(false),
   disabled_at_startup_(false),
@@ -122,11 +124,7 @@ void RosFilter<T>::reset()
   previous_measurements_.clear();
   previous_measurement_covariances_.clear();
 
-  // Clear the measurement queue.
-  // This prevents us from immediately undoing our reset.
-  while (!measurement_queue_.empty() && rclcpp::ok()) {
-    measurement_queue_.pop();
-  }
+  clearMeasurementQueue();
 
   filter_state_history_.clear();
   measurement_history_.clear();
@@ -146,6 +144,27 @@ void RosFilter<T>::reset()
 
   // clear all waiting callbacks
   // ros::getGlobalCallbackQueue()->clear();
+}
+
+template<typename T>
+void RosFilter<T>::toggleFilterProcessingCallback(
+  const std::shared_ptr<rmw_request_id_t>/*request_header*/,
+  const std::shared_ptr<
+    robot_localization::srv::ToggleFilterProcessing::Request> req,
+  const std::shared_ptr<
+    robot_localization::srv::ToggleFilterProcessing::Response> resp)
+{
+  if (req->on == toggled_on_) {
+    RCLCPP_WARN(this->get_logger(),
+      "Service was called to toggle filter processing but state was already as "
+      "requested.");
+    resp->status = false;
+  } else {
+    RCLCPP_INFO(this->get_logger(),
+      "Toggling filter measurement filtering to %s.", req->on ? "On" : "Off");
+    toggled_on_ = req->on;
+    resp->status = true;
+  }
 }
 
 // @todo: Replace with AccelWithCovarianceStamped
@@ -558,21 +577,26 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         " seconds in the past. Reverting filter state and "
         "measurement queue...");
 
-      int originalCount = static_cast<int>(measurement_queue_.size());
-      if (!revertTo(first_measurement->time_ - rclcpp::Duration(1))) {
+      int original_count = static_cast<int>(measurement_queue_.size());
+      const rclcpp::Time first_measurement_time = first_measurement->time_;
+      const std::string first_measurement_topic =
+        first_measurement->topic_name_;
+      // revertTo may invalidate first_measurement
+      if (!revertTo(first_measurement_time - rclcpp::Duration(1))) {
         RF_DEBUG("ERROR: history interval is too small to revert to time " <<
-          filter_utilities::toSec(first_measurement->time_) << "\n");
+          filter_utilities::toSec(first_measurement_time) << "\n");
         // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_,
-        // "Received old measurement for topic "
-        //                         << first_measurement->topic_name_ <<
-        //                         ", but history interval is insufficiently
-        //                         sized to " "revert state and measurement
-        //                         queue.");
+        //   "Received old measurement for topic " << first_measurement_topic <<
+        //   ", but history interval is insufficiently sized. "
+        //   "Measurement time is " << std::setprecision(20) <<
+        //   first_measurement_time <<
+        //   ", current time is " << current_time <<
+        //   ", history length is " << history_length_ << ".");
         restored_measurement_count = 0;
       }
 
       restored_measurement_count =
-        static_cast<int>(measurement_queue_.size()) - originalCount;
+        static_cast<int>(measurement_queue_.size()) - original_count;
     }
 
     while (!measurement_queue_.empty() && rclcpp::ok()) {
@@ -965,11 +989,19 @@ void RosFilter<T>::loadParams()
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Create a service for manually enabling the filter
-  enable_filter_srv_ = this->create_service<std_srvs::srv::Empty>("enable",
-      std::bind(&RosFilter::enableFilterSrvCallback, this, std::placeholders::_1,
-      std::placeholders::_2, std::placeholders::_3));
+  enable_filter_srv_ =
+    this->create_service<std_srvs::srv::Empty>(
+    "enable", std::bind(&RosFilter::enableFilterSrvCallback, this,
+    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-  // Init the last last measurement time so we don't get a huge initial delta
+  // Create a service for toggling processing new measurements while still
+  // publishing
+  toggle_filter_processing_srv_ =
+    this->create_service<robot_localization::srv::ToggleFilterProcessing>(
+    "toggle", std::bind(&RosFilter<T>::toggleFilterProcessingCallback, this,
+    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  // Init the last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
 
   // Now pull in each topic to which we want to subscribe.
@@ -1824,8 +1856,18 @@ void RosFilter<T>::periodicUpdate()
 
   rclcpp::Time cur_time = this->now();
 
-  // Now we'll integrate any measurements we've received
-  integrateMeasurements(cur_time);
+  if (toggled_on_) {
+    // Now we'll integrate any measurements we've received
+    integrateMeasurements(cur_time);
+  } else {
+    // Clear out measurements since we're not currently processing new entries
+    clearMeasurementQueue();
+
+    // Reset last measurement time so we don't get a large time delta on toggle
+    if (filter_.getInitializedStatus()) {
+      filter_.setLastMeasurementTime(this->now());
+    }
+  }
 
   // Get latest state and publish it
   nav_msgs::msg::Odometry filtered_position;
@@ -1846,6 +1888,15 @@ void RosFilter<T>::periodicUpdate()
       filtered_position.pose.pose.position.z;
     world_base_link_trans_msg_.transform.rotation =
       filtered_position.pose.pose.orientation;
+
+    // The filteredPosition is the message containing the state and covariances:
+    // nav_msgs Odometry
+    if (!validateFilterOutput(filtered_position)) {
+      RCLCPP_ERROR(this->get_logger(),
+        "Critical Error, NaNs were detected in the output state of the filter. "
+        "This was likely due to poorly coniditioned process, noise, or sensor "
+        "covariances.");
+    }
 
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
@@ -1965,6 +2016,8 @@ void RosFilter<T>::setPoseCallback(
   RF_DEBUG(
     "------ RosFilter<T>::setPoseCallback ------\nPose message:\n" << msg);
 
+  // ROS_INFO_STREAM("Received set_pose request with value\n" << *msg);
+
   std::string topic_name("set_pose");
 
   // Get rid of any initial poses (pretend we've never had a measurement)
@@ -1972,11 +2025,7 @@ void RosFilter<T>::setPoseCallback(
   previous_measurements_.clear();
   previous_measurement_covariances_.clear();
 
-  // Clear out the measurement queue so that we don't immediately undo our
-  // reset.
-  while (!measurement_queue_.empty() && rclcpp::ok()) {
-    measurement_queue_.pop();
-  }
+  clearMeasurementQueue();
 
   filter_state_history_.clear();
   measurement_history_.clear();
@@ -2007,11 +2056,6 @@ void RosFilter<T>::setPoseCallback(
   filter_.setEstimateErrorCovariance(measurement_covariance);
 
   filter_.setLastMeasurementTime(this->now());
-
-  // This method can apparently cancel all callbacks, and may stop the executing
-  // of the very callback that we're currently in. Therefore, nothing of
-  // consequence should come after it.
-  // ros::getGlobalCallbackQueue()->clear();
 
   RF_DEBUG("\n------ /RosFilter<T>::setPoseCallback ------\n");
 }
@@ -3033,6 +3077,8 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   RF_DEBUG("\nRequested time was " << std::setprecision(20) <<
     filter_utilities::toSec(time) << "\n")
 
+  // size_t history_size = filter_state_history_.size();
+
   // Walk back through the queue until we reach a filter state whose time stamp
   // is less than or equal to the requested time. Since every saved state after
   // that time will be overwritten/corrected, we can pop from the queue. If the
@@ -3056,15 +3102,21 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
     RF_DEBUG("Insufficient history to revert to time " <<
       filter_utilities::toSec(time) << "\n");
 
-    if (last_history_state.get() != NULL) {
+    if (last_history_state) {
       RF_DEBUG("Will revert to oldest state at " <<
         filter_utilities::toSec(last_history_state->latest_control_time_) <<
         ".\n");
+
+      // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_, "Could not revert "
+      //   "to state with time " << std::setprecision(20) << time <<
+      //   ". Instead reverted to state with time " <<
+      //   lastHistoryState->lastMeasurementTime_ << ". History size was " <<
+      //   history_size);
     }
   }
 
   // If we have a valid reversion state, revert
-  if (last_history_state.get() != NULL) {
+  if (last_history_state) {
     // Reset filter to the latest state from the queue.
     const FilterStatePtr & state = filter_state_history_.back();
     filter_.setState(state->state_);
@@ -3073,24 +3125,60 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 
     RF_DEBUG("Reverted to state with time " <<
       filter_utilities::toSec(state->last_measurement_time_) << "\n");
-  }
 
-  // Repeat for measurements, but push every measurement onto the measurement
-  // queue as we go
-  int restored_measurements = 0;
-  while (!measurement_history_.empty() &&
-    measurement_history_.back()->time_ > time)
-  {
-    measurement_queue_.push(measurement_history_.back());
-    measurement_history_.pop_back();
-    restored_measurements++;
-  }
+    // Repeat for measurements, but push every measurement onto the measurement
+    // queue as we go
+    int restored_measurements = 0;
+    while (!measurement_history_.empty() &&
+      measurement_history_.back()->time_ > time)
+    {
+      // Don't need to restore measurements that predate our earliest state time
+      if (state->last_measurement_time_ <= measurement_history_.back()->time_) {
+        measurement_queue_.push(measurement_history_.back());
+        restored_measurements++;
+      }
 
-  RF_DEBUG("Restored " << restored_measurements << " to measurement queue.\n");
+      measurement_history_.pop_back();
+    }
+
+    RF_DEBUG("Restored " << restored_measurements << " to measurement queue."
+      "\n");
+  }
 
   RF_DEBUG("\n----- /RosFilter<T>::revertTo\n");
 
   return ret_val;
+}
+
+template<typename T>
+bool RosFilter<T>::validateFilterOutput(const nav_msgs::msg::Odometry & message)
+{
+  return !std::isnan(message.pose.pose.position.x) &&
+         !std::isinf(message.pose.pose.position.x) &&
+         !std::isnan(message.pose.pose.position.y) &&
+         !std::isinf(message.pose.pose.position.y) &&
+         !std::isnan(message.pose.pose.position.z) &&
+         !std::isinf(message.pose.pose.position.z) &&
+         !std::isnan(message.pose.pose.orientation.x) &&
+         !std::isinf(message.pose.pose.orientation.x) &&
+         !std::isnan(message.pose.pose.orientation.y) &&
+         !std::isinf(message.pose.pose.orientation.y) &&
+         !std::isnan(message.pose.pose.orientation.z) &&
+         !std::isinf(message.pose.pose.orientation.z) &&
+         !std::isnan(message.pose.pose.orientation.w) &&
+         !std::isinf(message.pose.pose.orientation.w) &&
+         !std::isnan(message.twist.twist.linear.x) &&
+         !std::isinf(message.twist.twist.linear.x) &&
+         !std::isnan(message.twist.twist.linear.y) &&
+         !std::isinf(message.twist.twist.linear.y) &&
+         !std::isnan(message.twist.twist.linear.z) &&
+         !std::isinf(message.twist.twist.linear.z) &&
+         !std::isnan(message.twist.twist.angular.x) &&
+         !std::isinf(message.twist.twist.angular.x) &&
+         !std::isnan(message.twist.twist.angular.y) &&
+         !std::isinf(message.twist.twist.angular.y) &&
+         !std::isnan(message.twist.twist.angular.z) &&
+         !std::isinf(message.twist.twist.angular.z);
 }
 
 template<typename T>
@@ -3121,6 +3209,16 @@ void RosFilter<T>::clearExpiredHistory(const rclcpp::Time cutoff_time)
     popped_states <<
     " states from their respective queues." <<
     "\n---- /RosFilter<T>::clearExpiredHistory ----\n");
+}
+
+template<typename T>
+void RosFilter<T>::clearMeasurementQueue()
+{
+  // Clear the measurement queue.
+  // This prevents us from immediately undoing our reset.
+  while (!measurement_queue_.empty() && rclcpp::ok()) {
+    measurement_queue_.pop();
+  }
 }
 }  // namespace robot_localization
 
