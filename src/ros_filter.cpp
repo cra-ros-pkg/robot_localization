@@ -1330,7 +1330,7 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       bool differential = this->declare_parameter(imu_topic_name + std::string("_differential"),
-          differential);
+          false);
 
       // Determine if we want to integrate this sensor relatively
       bool relative = this->declare_parameter(imu_topic_name + std::string("_relative"), false);
