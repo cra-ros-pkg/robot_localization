@@ -30,7 +30,9 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(yaml-cpp REQUIRED)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML_CPP yaml-cpp)
 
 set(library_name rl_lib)
 
@@ -38,6 +40,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
+  "srv/ToggleFilterProcessing.srv"
   "srv/FromLL.srv"
   "srv/ToLL.srv"
   DEPENDENCIES
@@ -92,14 +95,13 @@ add_executable(
 target_link_libraries(
   ${library_name}
   ${EIGEN3_LIBRARIES}
-  yaml-cpp
+  ${YAML_CPP_LIBRARIES}
 )
 
 ament_target_dependencies(
   ${library_name}
   diagnostic_msgs
   diagnostic_updater
-  eigen_conversions
   geographic_msgs
   geometry_msgs
   nav_msgs
