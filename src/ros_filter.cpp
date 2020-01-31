@@ -492,7 +492,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           pos_ptr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) +
-          (j + ORIENTATION_SIZE)] =
+            (j + ORIENTATION_SIZE)] =
             msg->orientation_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -524,7 +524,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           twist_ptr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) +
-          (j + ORIENTATION_SIZE)] =
+            (j + ORIENTATION_SIZE)] =
             msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -1594,7 +1594,7 @@ void RosFilter<T>::loadParams()
       if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] > 1) {
         std::stringstream stream;
         stream << abs_pose_var_counts[static_cast<StateMembers>(state_var -
-        POSITION_OFFSET)] << " absolute pose inputs detected for " <<
+          POSITION_OFFSET)] << " absolute pose inputs detected for " <<
           state_variable_names_[state_var] <<
           ". This may result in oscillations. Please ensure that your"
           "variances for each measured variable are set appropriately.";
