@@ -37,11 +37,11 @@ pkg_check_modules(YAML_CPP yaml-cpp)
 set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/FromLL.srv"
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
   "srv/ToggleFilterProcessing.srv"
-  "srv/FromLL.srv"
   "srv/ToLL.srv"
   DEPENDENCIES
     builtin_interfaces
