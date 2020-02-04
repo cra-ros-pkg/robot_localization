@@ -554,6 +554,14 @@ protected:
   //!
   std::string base_link_frame_id_;
 
+  //! @brief tf frame name for the robot's body frame
+  //!
+  //! When the final state is computed, we "override" the output transform and
+  //! message to have this frame for its child_frame_id. This helps to enable
+  //! disconnected TF trees when multiple EKF instances are being run.
+  //!
+  std::string base_link_output_frame_id_;
+
   //! @brief tf frame name for the robot's map (world-fixed) frame
   //!
   std::string map_frame_id_;

@@ -382,7 +382,7 @@ bool RosRobotLocalizationListener::getState(
           ", so this doesn't make sense.", world_frame_id.c_str(), base_frame_id_.c_str());
         return false;
       }
-    } catch (tf2::TransformException e) {
+    } catch (const tf2::TransformException & e) {
       RCLCPP_WARN(node_logger_->get_logger(),
         "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
       return false;
@@ -413,7 +413,7 @@ bool RosRobotLocalizationListener::getState(
         "base frame: .", frame_id.c_str(), base_frame_id_.c_str());
       return false;
     }
-  } catch (tf2::TransformException e) {
+  } catch (const tf2::TransformException & e) {
     RCLCPP_WARN(node_logger_->get_logger(),
       "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
     return false;

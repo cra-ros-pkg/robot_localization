@@ -399,7 +399,7 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
 
     message.header.stamp = filter_.getLastMeasurementTime();
     message.header.frame_id = world_frame_id_;
-    message.child_frame_id = base_link_frame_id_;
+    message.child_frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -433,7 +433,7 @@ bool RosFilter<T>::getFilteredAccelMessage(
 
     // Fill header information
     message.header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
-    message.header.frame_id = base_link_frame_id_;
+    message.header.frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -492,7 +492,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           pos_ptr->pose.covariance[POSE_SIZE * (i + ORIENTATION_SIZE) +
-          (j + ORIENTATION_SIZE)] =
+            (j + ORIENTATION_SIZE)] =
             msg->orientation_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -524,7 +524,7 @@ void RosFilter<T>::imuCallback(
       for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
         for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
           twist_ptr->twist.covariance[TWIST_SIZE * (i + ORIENTATION_SIZE) +
-          (j + ORIENTATION_SIZE)] =
+            (j + ORIENTATION_SIZE)] =
             msg->angular_velocity_covariance[ORIENTATION_SIZE * i + j];
         }
       }
@@ -740,6 +740,8 @@ void RosFilter<T>::loadParams()
   odom_frame_id_ = this->declare_parameter("odom_frame", std::string("odom"));
   base_link_frame_id_ = this->declare_parameter("base_link_frame",
       std::string("base_link"));
+  base_link_output_frame_id_ = this->declare_parameter("base_link_frame_output",
+      base_link_frame_id_);
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -770,11 +772,14 @@ void RosFilter<T>::loadParams()
 
   if (map_frame_id_ == odom_frame_id_ ||
     odom_frame_id_ == base_link_frame_id_ ||
-    map_frame_id_ == base_link_frame_id_)
+    map_frame_id_ == base_link_frame_id_ ||
+    odom_frame_id_ == base_link_output_frame_id_ ||
+    map_frame_id_ == base_link_output_frame_id_)
   {
     std::cerr <<
       "Invalid frame configuration! The values for map_frame, odom_frame, "
-      "and base_link_frame must be unique." <<
+      "and base_link_frame must be unique. If using a base_link_frame_output "
+      "values, it must not match the map_frame or odom_frame."
       "\n";
   }
 
@@ -787,6 +792,7 @@ void RosFilter<T>::loadParams()
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, odom_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, base_link_frame_id_);
+    filter_utilities::appendPrefix(tf_prefix, base_link_output_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, world_frame_id_);
   }
 
@@ -954,7 +960,8 @@ void RosFilter<T>::loadParams()
   RF_DEBUG("tf_prefix is " <<
     tf_prefix << "\nmap_frame is " << map_frame_id_ <<
     "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
-    base_link_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
+    base_link_frame_id_ << "\nbase_link_output_frame is " <<
+    base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
     "\ntransform_time_offset is " <<
     filter_utilities::toSec(tf_time_offset_) <<
     "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
@@ -1356,7 +1363,7 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       bool differential = this->declare_parameter(imu_topic_name + std::string("_differential"),
-          differential);
+          false);
 
       // Determine if we want to integrate this sensor relatively
       bool relative = this->declare_parameter(imu_topic_name + std::string("_relative"), false);
@@ -1400,18 +1407,48 @@ void RosFilter<T>::loadParams()
       // update configuration (as this contains pose information)
       std::vector<bool> update_vec = loadUpdateConfig(imu_topic_name);
 
+      // sanity checks for update config settings
+      std::vector<int> position_update_vec(update_vec.begin() + POSITION_OFFSET,
+        update_vec.begin() + POSITION_OFFSET + POSITION_SIZE);
+      int position_update_sum = std::accumulate(position_update_vec.begin(),
+          position_update_vec.end(), 0);
+      if (position_update_sum > 0) {
+        RCLCPP_WARN(this->get_logger(),
+          "Warning: Some position entries in parameter %s_config are listed "
+          "true, but sensor_msgs/Imu contains no information about position",
+          imu_topic_name);
+      }
+      std::vector<int> linear_velocity_update_vec(
+        update_vec.begin() + POSITION_V_OFFSET,
+        update_vec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE);
+      int linear_velocity_update_sum = std::accumulate(
+        linear_velocity_update_vec.begin(), linear_velocity_update_vec.end(),
+        0);
+      if (linear_velocity_update_sum > 0) {
+        RCLCPP_WARN(this->get_logger(),
+          "Warning: Some linear velocity entries in parameter %s_config are "
+          "listed true, but an sensor_msgs/Imu contains no information about "
+          "linear velocities", imu_topic_name);
+      }
+
       std::vector<bool> pose_update_vec = update_vec;
+      // IMU message contains no information about position, filter everything
+      // except orientation
+      std::fill(pose_update_vec.begin() + POSITION_OFFSET,
+        pose_update_vec.begin() + POSITION_OFFSET + POSITION_SIZE, 0);
       std::fill(pose_update_vec.begin() + POSITION_V_OFFSET,
         pose_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
       std::fill(pose_update_vec.begin() + POSITION_A_OFFSET,
-        pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE,
-        0);
+        pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> twist_update_vec = update_vec;
+      // IMU message contains no information about linear speeds, filter
+      // everything except angular velocity
       std::fill(twist_update_vec.begin() + POSITION_OFFSET,
         twist_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
-      std::fill(
-        twist_update_vec.begin() + POSITION_A_OFFSET,
+      std::fill(twist_update_vec.begin() + POSITION_V_OFFSET,
+        twist_update_vec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE, 0);
+      std::fill(twist_update_vec.begin() + POSITION_A_OFFSET,
         twist_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> accel_update_vec = update_vec;
@@ -1557,7 +1594,7 @@ void RosFilter<T>::loadParams()
       if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] > 1) {
         std::stringstream stream;
         stream << abs_pose_var_counts[static_cast<StateMembers>(state_var -
-        POSITION_OFFSET)] << " absolute pose inputs detected for " <<
+          POSITION_OFFSET)] << " absolute pose inputs detected for " <<
           state_variable_names_[state_var] <<
           ". This may result in oscillations. Please ensure that your"
           "variances for each measured variable are set appropriately.";
@@ -1910,13 +1947,13 @@ void RosFilter<T>::periodicUpdate()
           tf2::fromMsg(world_base_link_trans_msg_.transform,
             world_base_link_trans);
 
-          tf2::Transform odom_base_link_trans;
+          tf2::Transform base_link_odom_trans;
           tf2::fromMsg(tf_buffer_
             ->lookupTransform(base_link_frame_id_,
             odom_frame_id_,
             tf2::TimePointZero)
             .transform,
-            odom_base_link_trans);
+            base_link_odom_trans);
 
           /*
            * First, see these two references:
@@ -1941,7 +1978,7 @@ void RosFilter<T>::periodicUpdate()
            * transform.
            */
           tf2::Transform map_odom_trans;
-          map_odom_trans.mult(world_base_link_trans, odom_base_link_trans);
+          map_odom_trans.mult(world_base_link_trans, base_link_odom_trans);
 
           geometry_msgs::msg::TransformStamped map_odom_trans_msg;
           map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);

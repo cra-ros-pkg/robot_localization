@@ -73,7 +73,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_manual_datum_(false),
   use_odometry_yaw_(false),
   utm_broadcaster_(*this),
-  utm_odom_tf_yaw_(0.0),
+  utm_meridian_convergence_(0.0),
   utm_zone_(""),
   world_frame_id_("odom"),
   yaw_offset_(0.0),
@@ -107,6 +107,11 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
+
+  to_ll_srv_ = this->create_service<robot_localization::srv::ToLL>(
+    "toLL", std::bind(&NavSatTransform::toLLCallback, this, _1, _2));
+  from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
+    "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
 
   std::vector<double> datum_vals;
   if (use_manual_datum_ && this->get_parameter("datum", datum_vals)) {
@@ -218,27 +223,31 @@ void NavSatTransform::computeTransform()
      * However, all the nodes in robot_localization assume that orientation
      * data, including that reported by IMUs, is reported in an ENU frame, with
      * a 0 yaw value being reported when facing east and increasing
-     * counter-clockwise (i.e., towards north). Conveniently, this aligns with
-     * the UTM grid, where X is east and Y is north. However, we have two
-     * additional considerations:
+     * counter-clockwise (i.e., towards north). To make the world frame ENU
+     * aligned, where X is east and Y is north, we have to take into account
+     * three additional considerations:
      *   1. The IMU may have its non-ENU frame data transformed to ENU, but
-     * there's a possibility that its data has not been corrected for magnetic
-     *      declination. We need to account for this. A positive magnetic
-     *      declination is counter-clockwise in an ENU frame. Therefore, if
-     *      we have a magnetic declination of N radians, then when the sensor
-     *      is facing a heading of N, it reports 0. Therefore, we need to add
-     *      the declination angle.
+     *      there's a possibility that its data has not been corrected for
+     *      magnetic declination. We need to account for this. A positive
+     *      magnetic declination is counter-clockwise in an ENU frame.
+     *      Therefore, if we have a magnetic declination of N radians, then when
+     *      the sensor is facing a heading of N, it reports 0. Therefore, we
+     *      need to add the declination angle.
      *   2. To account for any other offsets that may not be accounted for by
-     * the IMU driver or any interim processing node, we expose a yaw offset
-     * that lets users work with navsat_transform_node.
+     *      the IMU driver or any interim processing node, we expose a yaw
+     *      offset that lets users work with navsat_transform_node.
+     *   3. UTM grid isn't aligned with True East\North. To account for the
+     *      difference we need to add meridian convergence angle.
      */
-    imu_yaw += (magnetic_declination_ + yaw_offset_);
+    imu_yaw += (magnetic_declination_ + yaw_offset_ +
+      utm_meridian_convergence_);
 
     RCLCPP_INFO(
       this->get_logger(),
-      "Corrected for magnetic declination of %d"
-      "and user-specified offset of %d Transform heading factor is now %d",
-      magnetic_declination_, yaw_offset_, imu_yaw);
+      "Corrected for magnetic declination of %g, "
+      "user-specified offset of %g and meridian convergence of %g. "
+      "Transform heading factor is now %g",
+      magnetic_declination_, yaw_offset_, utm_meridian_convergence_, imu_yaw);
 
     // Convert to tf-friendly structures
     tf2::Quaternion imu_quat;
@@ -329,6 +338,98 @@ bool NavSatTransform::datumCallback(
   return true;
 }
 
+bool NavSatTransform::toLLCallback(
+  const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
+  std::shared_ptr<robot_localization::srv::ToLL::Response> response)
+{
+  if (!transform_good_) {
+    return false;
+  }
+  // tf2::Vector3 point;
+  // tf2::fromMsg(request.map_point, point);
+  tf2::Vector3 point(request->map_point.x, request->map_point.y,
+    request->map_point.z);
+  mapToLL(point, response->ll_point.latitude, response->ll_point.longitude,
+    response->ll_point.altitude);
+
+  return true;
+}
+
+bool NavSatTransform::fromLLCallback(
+  const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
+  std::shared_ptr<robot_localization::srv::FromLL::Response> response)
+{
+  double altitude = request->ll_point.altitude;
+  double longitude = request->ll_point.longitude;
+  double latitude = request->ll_point.latitude;
+
+  tf2::Transform utm_pose;
+
+  double utmY, utmX;
+
+  std::string utm_zone_tmp;
+  navsat_conversions::LLtoUTM(latitude, longitude, utmY, utmX, utm_zone_tmp);
+
+  utm_pose.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+
+  nav_msgs::msg::Odometry gps_odom;
+
+  if (!transform_good_) {
+    return false;
+  }
+
+  response->map_point = utmToMap(utm_pose).pose.pose.position;
+
+  return true;
+}
+
+nav_msgs::msg::Odometry NavSatTransform::utmToMap(
+  const tf2::Transform & utm_pose) const
+{
+  nav_msgs::msg::Odometry gps_odom{};
+
+  tf2::Transform transformed_utm_gps{};
+
+  transformed_utm_gps.mult(utm_world_transform_, utm_pose);
+  transformed_utm_gps.setRotation(tf2::Quaternion::getIdentity());
+
+  // Set header information stamp because we would like to know the robot's
+  // position at that timestamp
+  gps_odom.header.frame_id = world_frame_id_;
+  gps_odom.header.stamp = gps_update_time_;
+
+  // Now fill out the message. Set the orientation to the identity.
+  tf2::toMsg(transformed_utm_gps, gps_odom.pose.pose);
+  gps_odom.pose.pose.position.z = (zero_altitude_ ? 0.0 :
+    gps_odom.pose.pose.position.z);
+
+  return gps_odom;
+}
+
+void NavSatTransform::mapToLL(
+  const tf2::Vector3 & point,
+  double & latitude,
+  double & longitude,
+  double & altitude) const
+{
+  tf2::Transform odom_as_utm{};
+
+  tf2::Transform pose{};
+  pose.setOrigin(point);
+  pose.setRotation(tf2::Quaternion::getIdentity());
+
+  odom_as_utm.mult(utm_world_trans_inverse_, pose);
+  odom_as_utm.setRotation(tf2::Quaternion::getIdentity());
+
+  // Now convert the data back to lat/long and place into the message
+  navsat_conversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
+    odom_as_utm.getOrigin().getX(),
+    utm_zone_,
+    latitude,
+    longitude);
+  altitude = odom_as_utm.getOrigin().getZ();
+}
+
 void NavSatTransform::getRobotOriginUtmPose(
   const tf2::Transform & gps_utm_pose, tf2::Transform & robot_utm_pose,
   const rclcpp::Time & transform_time)
@@ -351,7 +452,7 @@ void NavSatTransform::getRobotOriginUtmPose(
     double pitch;
     double yaw;
     mat.getRPY(roll, pitch, yaw);
-    yaw += (magnetic_declination_ + yaw_offset_);
+    yaw += (magnetic_declination_ + yaw_offset_ + utm_meridian_convergence_);
     utm_orientation.setRPY(roll, pitch, yaw);
 
     // Rotate the GPS linear offset by the orientation
@@ -541,10 +642,8 @@ bool NavSatTransform::prepareFilteredGps(
   bool new_data = false;
 
   if (transform_good_ && odom_updated_) {
-    tf2::Transform odom_as_utm;
-
-    odom_as_utm.mult(utm_world_trans_inverse_, latest_world_pose_);
-    odom_as_utm.setRotation(tf2::Quaternion::getIdentity());
+    mapToLL(latest_world_pose_.getOrigin(), filtered_gps.latitude,
+      filtered_gps.longitude, filtered_gps.altitude);
 
     // Rotate the covariance as well
     tf2::Matrix3x3 rot(utm_world_trans_inverse_.getRotation());
@@ -564,12 +663,6 @@ bool NavSatTransform::prepareFilteredGps(
     latest_odom_covariance_ =
       rot_6d * latest_odom_covariance_.eval() * rot_6d.transpose();
 
-    // Now convert the data back to lat/long and place into the message
-    navsat_conversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
-      odom_as_utm.getOrigin().getX(), utm_zone_,
-      filtered_gps.latitude, filtered_gps.longitude);
-    filtered_gps.altitude = odom_as_utm.getOrigin().getZ();
-
     // Copy the measurement's covariance matrix back
     for (size_t i = 0; i < POSITION_SIZE; i++) {
       for (size_t j = 0; j < POSITION_SIZE; j++) {
@@ -582,7 +675,7 @@ bool NavSatTransform::prepareFilteredGps(
       sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_KNOWN;
     filtered_gps.status.status =
       sensor_msgs::msg::NavSatStatus::STATUS_GBAS_FIX;
-    filtered_gps.header.frame_id = "gps";
+    filtered_gps.header.frame_id = base_link_frame_id_;
     filtered_gps.header.stamp = odom_update_time_;
 
     // Mark this GPS as used
@@ -598,15 +691,10 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry & gps_odom)
   bool new_data = false;
 
   if (transform_good_ && gps_updated_ && odom_updated_) {
+    gps_odom = utmToMap(latest_utm_pose_);
+
     tf2::Transform transformed_utm_gps;
-
-    transformed_utm_gps.mult(utm_world_transform_, latest_utm_pose_);
-    transformed_utm_gps.setRotation(tf2::Quaternion::getIdentity());
-
-    // Set header information stamp because we would like to know the robot's
-    // position at that timestamp
-    gps_odom.header.frame_id = world_frame_id_;
-    gps_odom.header.stamp = gps_update_time_;
+    tf2::fromMsg(gps_odom.pose.pose, transformed_utm_gps);
 
     // Want the pose of the vehicle origin, not the GPS
     tf2::Transform transformed_utm_robot;
@@ -660,7 +748,8 @@ void NavSatTransform::setTransformGps(
   double utm_x = 0;
   double utm_y = 0;
   navsat_conversions::LLtoUTM(msg->latitude, msg->longitude, utm_y, utm_x,
-    utm_zone_);
+    utm_zone_, utm_meridian_convergence_);
+  utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
 
   RCLCPP_INFO(
     this->get_logger(), "Datum (latitude, longitude, altitude) is (%d, %d, %d)",
@@ -677,6 +766,9 @@ void NavSatTransform::setTransformOdometry(
 {
   tf2::fromMsg(msg->pose.pose, transform_world_pose_);
   has_transform_odom_ = true;
+
+  // TODO(anyone) add back in Eloquent
+  // ROS_INFO_STREAM_ONCE("Initial odometry pose is " << transform_world_pose_);
 
   // Users can optionally use the (potentially fused) heading from
   // the odometry source, which may have multiple fused sources of

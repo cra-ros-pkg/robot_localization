@@ -9,12 +9,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  message("${PROJECT_NAME}: You did not request a specific build type: selecting 'RelWithDebInfo'.")
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
 find_package(ament_cmake REQUIRED)
 find_package(rcl REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(geographic_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
+find_package(geographic_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -32,10 +37,12 @@ pkg_check_modules(YAML_CPP yaml-cpp)
 set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/FromLL.srv"
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
   "srv/ToggleFilterProcessing.srv"
+  "srv/ToLL.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs

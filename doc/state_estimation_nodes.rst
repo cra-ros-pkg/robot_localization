@@ -43,6 +43,7 @@ Specific parameters:
 * ``~map_frame``
 * ``~odom_frame``
 * ``~base_link_frame``
+* ``~base_link_output_frame``
 * ``~world_frame``
 
 These parameters define the operating "mode" for ``robot_localization``. `REP-105 <http://www.ros.org/reps/rep-0105.html>`_ specifies three principal coordinate frames: *map*, *odom*, and *base_link*. *base_link* is the coordinate frame that is affixed to the robot. The robot's position in the *odom* frame will drift over time, but is accurate in the short term and should be continuous. The *map* frame, like the *odom* frame, is a world-fixed coordinate frame, and while it contains the most globally accurate position estimate for your robot, it is subject to discrete jumps, e.g., due to the fusion of GPS data. Here is how to use these parameters:
@@ -50,6 +51,7 @@ These parameters define the operating "mode" for ``robot_localization``. `REP-10
 1. Set the ``map_frame``, ``odom_frame``, and ``base_link_frame`` parameters to the appropriate frame names for your system.
 
  .. note:: If your system does not have a ``map_frame``, just remove it, and make sure ``world_frame`` is set to the value of ``odom_frame``.
+ .. note:: If you are running multiple EKF instances and would like to "override" the output transform and message to have this frame for its ``child_frame_id``, you may set this.  The ``base_link_output_frame`` is optional and will default to the ``base_link_frame``. This helps to enable disconnected TF trees when multiple EKF instances are being run. When the final state is computed, we "override" the output transform and message to have this frame for its ``child_frame_id``.
 
 2. If you are only fusing continuous position data such as wheel encoder odometry, visual odometry, or IMU data, set ``world_frame`` to your ``odom_frame`` value. This is the default behavior for the state estimation nodes in ``robot_localization``, and the most common use for it.
 3. If you are fusing global absolute position data that is subject to discrete jumps (e.g., GPS or position updates from landmark observations) then:
@@ -57,7 +59,7 @@ These parameters define the operating "mode" for ``robot_localization``. `REP-10
  i. Set your ``world_frame`` to your ``map_frame`` value
  ii. **Make sure** something else is generating the *odom->base_link* transform. This can even be another instance of a ``robot_localization`` state estimation node. However, that instance should *not* fuse the global data.
 
-The default values for ``map_frame``, ``odom_frame``, and ``base_link_frame`` are *map*, *odom,* and *base_link,* respectively. The ``world_frame`` parameter defaults to the value of ``odom_frame``.
+The default values for ``map_frame``, ``odom_frame``, and ``base_link_frame`` are *map*, *odom,* and *base_link,* respectively. The ``base_link_output_frame`` parameter defaults to the value of ``base_link_frame``. The ``world_frame`` parameter defaults to the value of ``odom_frame``.
 
 ~transform_time_offset
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -286,6 +288,14 @@ The estimate covariance, commonly denoted *P*, defines the error in the current 
 ^^^^^^^^^^^^^^^^^^^
 If set to *true* and ``ros::Time::isSimTime()`` is *true*, the filter will reset to its uninitialized state when a jump back in time is detected on a topic. This is useful when working with bag data, in that the bag can be restarted without restarting the node.
 
+~predict_to_current_time
+^^^^^^^^^^^^^^^^^^^^^^^^
+If set to *true*, the filter predicts and corrects up to the time of the latest measurement (by default) but will now also predict up to the current time step.
+
+~disabled_at_startup
+^^^^^^^^^^^^^^^^^^^^
+If set to *true* will not run the filter on start.
+
 Node-specific Parameters
 ------------------------
 The standard and advanced parameters are common to all state estimation nodes in ``robot_localization``. This section details parameters that are unique to their respective state estimation nodes.
@@ -319,4 +329,4 @@ Published Transforms
 Services
 ========
 
-* ``set_pose`` - By issuing a `geometry_msgs/PoseWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html>`_ message to the ``set_pose`` topic, users can manually set the state of the filter. This is useful for resetting the filter during testing, and allows for interaction with ``rviz``. Alternatively, the state estimation nodes advertise a ``SetPose`` service, whose type is `robot_localization/SetPose <http://docs.ros.org/api/robot_localization/html/srv/SetPose.html>`_.rejection
+* ``set_pose`` - By issuing a `geometry_msgs/PoseWithCovarianceStamped <http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html>`_ message to the ``set_pose`` topic, users can manually set the state of the filter. This is useful for resetting the filter during testing, and allows for interaction with ``rviz``. Alternatively, the state estimation nodes advertise a ``SetPose`` service, whose type is `robot_localization/SetPose <http://docs.ros.org/api/robot_localization/html/srv/SetPose.html>`_.
