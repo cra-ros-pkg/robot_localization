@@ -45,6 +45,7 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
   
   <member_of_group>rosidl_interface_packages</member_of_group>
 
