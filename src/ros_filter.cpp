@@ -1873,12 +1873,11 @@ void RosFilter<T>::initialize()
       "accel/filtered", rclcpp::QoS(10));
   }
 
-  double timespan = 1.0 / frequency_;
-  update_timespan_ = rclcpp::Duration(
-    static_cast<rcl_duration_value_t>(std::floor(timespan * 1e9)));
-  timer_ = this->create_wall_timer(
-    update_timespan_.to_chrono<std::chrono::milliseconds>(),  // assumes RTF >= 1
-    std::bind(&RosFilter<T>::periodicUpdate, this));
+  const std::chrono::duration<double> timespan{1.0 / frequency_};
+  timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
+    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
+    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
+  this->get_node_timers_interface()->add_timer(timer_, nullptr);
 }
 
 template<typename T>
@@ -1893,13 +1892,6 @@ void RosFilter<T>::periodicUpdate()
   }
 
   rclcpp::Time cur_time = this->now();
-
-  const rclcpp::Duration update_timespan_lower_bound = update_timespan_ * 0.999;
-  if (update_timespan_lower_bound > cur_time - last_update_time_) {
-    // Not enough time has passed by
-    return;
-  }
-  last_update_time_ = cur_time;
 
   if (toggled_on_) {
     // Now we'll integrate any measurements we've received

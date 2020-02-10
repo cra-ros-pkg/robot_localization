@@ -771,16 +771,6 @@ protected:
   //!
   rclcpp::TimerBase::SharedPtr timer_;
 
-  //! @brief Time bookkeeping for periodic filter updates
-  //!
-  //! @details This is necessary to properly operate in simulation
-  //!
-  rclcpp::Time last_update_time_{0, 0, RCL_ROS_TIME};
-
-  //! @brief Filter updates timespan
-  //!
-  rclcpp::Duration update_timespan_{0};
-
   //! @brief optional signaling diagnostic frequency
   //!
   std::unique_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freq_diag_;
