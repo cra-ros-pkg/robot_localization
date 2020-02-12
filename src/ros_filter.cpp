@@ -1873,11 +1873,11 @@ void RosFilter<T>::initialize()
       "accel/filtered", rclcpp::QoS(10));
   }
 
-  double timespan = 1.0 / frequency_;
-  int timespan_ms = static_cast<int>(timespan * 1000);
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(timespan_ms),
-    std::bind(&RosFilter<T>::periodicUpdate, this));
+  const std::chrono::duration<double> timespan{1.0 / frequency_};
+  timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
+    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
+    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
+  this->get_node_timers_interface()->add_timer(timer_, nullptr);
 }
 
 template<typename T>
