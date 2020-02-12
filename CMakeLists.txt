@@ -15,7 +15,6 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(rcl REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
@@ -105,7 +104,6 @@ ament_target_dependencies(
   geographic_msgs
   geometry_msgs
   nav_msgs
-  rcl
   rclcpp
   sensor_msgs
   std_msgs
