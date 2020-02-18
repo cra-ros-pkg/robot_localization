@@ -222,11 +222,17 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   msg.nanosec = empty_sec;
   rclcpp::Time empty = msg;
 
-  dh_.publishMessages(empty);
-  rclcpp::spin_some(dh_.node_);
+  // dh_.publishMessages(empty);
+  // rclcpp::spin_some(dh_.node_);
+  // Try publishing more messages to see if buildfarm passes
+  for (size_t i = 0; i < 10; ++i) {
+    dh_.publishMessages(empty);
+    rclcpp::spin_some(dh_.node_);
+    loopRate.sleep();
+  }
+
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
-
   for (size_t i = 0; i < 20; ++i) {
     rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
