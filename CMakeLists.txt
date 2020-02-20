@@ -10,7 +10,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-  message("${PROJECT_NAME}: You did not request a specific build type: selecting 'RelWithDebInfo'.")
+  message(STATUS "${PROJECT_NAME}: You did not request a specific build type: selecting 'RelWithDebInfo'.")
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
