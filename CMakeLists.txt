@@ -30,9 +30,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(YAML_CPP yaml-cpp)
+find_package(yaml-cpp REQUIRED)
 
 set(library_name rl_lib)
 
