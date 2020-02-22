@@ -153,9 +153,10 @@ public:
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
       "/example/imu/data", rclcpp::SensorDataQoS());
 
+    rclcpp::SystemDefaultsQoS qos = rclcpp::SystemDefaultsQoS();
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", rclcpp::SystemDefaultsQoS(),
+      "/diagnostics", qos.keep_all(), 
       [&](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
@@ -222,14 +223,8 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   msg.nanosec = empty_sec;
   rclcpp::Time empty = msg;
 
-  // dh_.publishMessages(empty);
-  // rclcpp::spin_some(dh_.node_);
-  // Try publishing more messages to see if buildfarm passes
-  for (size_t i = 0; i < 10; ++i) {
-    dh_.publishMessages(empty);
-    rclcpp::spin_some(dh_.node_);
-    loopRate.sleep();
-  }
+  dh_.publishMessages(empty);
+  rclcpp::spin_some(dh_.node_);
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
@@ -242,15 +237,19 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
     Now the diagnostic messages have to be investigated to see whether they
     contain our warning.
   */
+  fprintf(stderr, "dh_.diagnostics.size(): %ld\n", dh_.diagnostics.size());
   for (size_t i = 0; i < dh_.diagnostics.size(); i++) {
+    fprintf(stderr, "dh_.diagnostics[%ld].status.size(): %ld\n", i, dh_.diagnostics[i].status.size());
     for (size_t status_index = 0;
       status_index < dh_.diagnostics[i].status.size(); status_index++)
     {
+      fprintf(stderr, "dh_.diagnostics[%ld].status[%ld].values.size(): %ld\n", i, status_index, dh_.diagnostics[i].status[status_index].values.size());
       for (size_t key = 0;
         key < dh_.diagnostics[i].status[status_index].values.size(); key++)
       {
         diagnostic_msgs::msg::KeyValue kv =
           dh_.diagnostics[i].status[status_index].values[key];
+        fprintf(stderr, "kv.key: %s\n", kv.key.c_str());
         // Now the keys can be checked to see whether we found our warning.
         if (kv.key == "imu0_timestamp") {
           received_warning_imu = true;
