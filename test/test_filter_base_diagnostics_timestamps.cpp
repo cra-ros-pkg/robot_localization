@@ -237,19 +237,15 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
     Now the diagnostic messages have to be investigated to see whether they
     contain our warning.
   */
-  fprintf(stderr, "dh_.diagnostics.size(): %ld\n", dh_.diagnostics.size());
   for (size_t i = 0; i < dh_.diagnostics.size(); i++) {
-    fprintf(stderr, "dh_.diagnostics[%ld].status.size(): %ld\n", i, dh_.diagnostics[i].status.size());
     for (size_t status_index = 0;
       status_index < dh_.diagnostics[i].status.size(); status_index++)
     {
-      fprintf(stderr, "dh_.diagnostics[%ld].status[%ld].values.size(): %ld\n", i, status_index, dh_.diagnostics[i].status[status_index].values.size());
       for (size_t key = 0;
         key < dh_.diagnostics[i].status[status_index].values.size(); key++)
       {
         diagnostic_msgs::msg::KeyValue kv =
           dh_.diagnostics[i].status[status_index].values[key];
-        fprintf(stderr, "kv.key: %s\n", kv.key.c_str());
         // Now the keys can be checked to see whether we found our warning.
         if (kv.key == "imu0_timestamp") {
           received_warning_imu = true;
