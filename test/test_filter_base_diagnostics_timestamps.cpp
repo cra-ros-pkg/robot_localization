@@ -156,7 +156,7 @@ public:
     rclcpp::SystemDefaultsQoS qos = rclcpp::SystemDefaultsQoS();
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", qos.keep_all(), 
+      "/diagnostics", qos.keep_all(),
       [&](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
