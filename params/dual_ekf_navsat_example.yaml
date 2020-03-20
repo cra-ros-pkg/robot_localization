@@ -1,7 +1,7 @@
 # For parameter descriptions, please refer to the template parameter files for each node.
 
 ekf_filter_node_odom:
-  frequency: 30
+  frequency: 30.0
   sensor_timeout: 0.1
   two_d_mode: false
   transform_time_offset: 0.0
@@ -72,7 +72,7 @@ ekf_filter_node_odom:
                                 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1.0]
 
 ekf_filter_node_map:
-  frequency: 30
+  frequency: 30.0
   sensor_timeout: 0.1
   two_d_mode: false
   transform_time_offset: 0.0
@@ -154,7 +154,7 @@ ekf_filter_node_map:
                                 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1.0]
 
 navsat_transform:
-  frequency: 30
+  frequency: 30.0
   delay: 3.0
   magnetic_declination_radians: 0.0429351  # For lat/long 55.944831, -3.186998
   yaw_offset: 1.570796327  # IMU reads 0 facing magnetic north, not east

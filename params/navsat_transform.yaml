@@ -1,7 +1,7 @@
 navsat_transform_node:
     ros__parameters:
 # Frequency of the main run loop
-        frequency: 30
+        frequency: 30.0
 
 # Delay time, in seconds, before we calculate the transform from the UTM frame to your world frame. This is especially
 # important if you have use_odometry_yaw set to true. Defaults to 0.
