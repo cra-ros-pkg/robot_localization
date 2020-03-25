@@ -113,8 +113,10 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
 
-  std::vector<double> datum_vals;
-  if (use_manual_datum_ && this->get_parameter("datum", datum_vals)) {
+  if (use_manual_datum_) {
+    std::vector<double> datum_vals(3, 0);
+    datum_vals = this->declare_parameter("datum", datum_vals);
+
     double datum_lat = 0.0;
     double datum_lon = 0.0;
     double datum_yaw = 0.0;
