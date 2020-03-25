@@ -114,7 +114,9 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
 
   std::vector<double> datum_vals;
-  if (use_manual_datum_ && this->get_parameter("datum", datum_vals)) {
+  if (use_manual_datum_) {
+    datum_vals = this->declare_parameter("datum", datum_vals);
+
     double datum_lat = 0.0;
     double datum_lon = 0.0;
     double datum_yaw = 0.0;
