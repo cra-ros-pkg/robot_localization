@@ -938,7 +938,7 @@ void RosFilter<T>::loadParams()
   filter_.setUseDynamicProcessNoiseCovariance(
     dynamic_process_noise_covariance);
 
-  std::vector<double> initial_state(STATE_SIZE, 0.0);
+  std::vector<double> initial_state;
   this->declare_parameter("initial_state");
   if (this->get_parameter("initial_state", initial_state)) {
     if (initial_state.size() != STATE_SIZE) {
