@@ -844,11 +844,11 @@ void RosFilter<T>::loadParams()
 
   // Determine if we're using a control term
   double control_timeout = sensor_timeout;
-  std::vector<bool> control_update_vector(TWIST_SIZE, 0);
-  std::vector<double> acceleration_limits(TWIST_SIZE, 1.0);
-  std::vector<double> acceleration_gains(TWIST_SIZE, 1.0);
-  std::vector<double> deceleration_limits(TWIST_SIZE, 1.0);
-  std::vector<double> deceleration_gains(TWIST_SIZE, 1.0);
+  std::vector<bool> control_update_vector;
+  std::vector<double> acceleration_limits;
+  std::vector<double> acceleration_gains;
+  std::vector<double> deceleration_limits;
+  std::vector<double> deceleration_gains;
 
   use_control_ = this->declare_parameter("use_control", false);
   control_timeout = this->declare_parameter("control_timeout", 0.0);
