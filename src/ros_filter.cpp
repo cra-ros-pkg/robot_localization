@@ -2401,12 +2401,14 @@ namespace RobotLocalization
     // It's unlikely that we'll get a velocity measurement in another frame, but
     // we have to handle the situation.
     tf2::Transform targetFrameTrans;
+    bool silentchecktf;
+    nh_.getParam("/silentchecktf",silentchecktf);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
-                                                                targetFrameTrans);
+                                                                targetFrameTrans,silentchecktf);
 
     if (canTransform)
     {
