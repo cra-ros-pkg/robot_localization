@@ -2402,13 +2402,14 @@ namespace RobotLocalization
     // we have to handle the situation.
     tf2::Transform targetFrameTrans;
     bool silentchecktf;
-    nh_.getParam("/silentchecktf",silentchecktf);
+    nh_.getParam("/silent_tf_failure",silentchecktf);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
-                                                                targetFrameTrans,silentchecktf);
+                                                                targetFrameTrans,
+								silentchecktf);
 
     if (canTransform)
     {
