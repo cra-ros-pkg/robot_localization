@@ -883,6 +883,7 @@ void RosFilter<T>::loadParams()
     } else {
       std::cerr << "use_control is set to true, but acceleration_limits is "
         "missing. Will use default values.\n";
+      acceleration_limits.resize(TWIST_SIZE, 1.0);
     }
 
     this->declare_parameter("acceleration_gains");
