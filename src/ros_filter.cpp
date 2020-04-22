@@ -43,7 +43,6 @@
 #include <utility>
 #include <vector>
 #include <limits>
-
 namespace RobotLocalization
 {
   template<typename T>
