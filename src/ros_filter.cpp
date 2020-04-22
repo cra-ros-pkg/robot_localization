@@ -43,6 +43,11 @@
 #include <utility>
 #include <vector>
 #include <limits>
+
+#if defined(_WIN32) && defined(ERROR)
+  #undef ERROR
+#endif
+
 namespace RobotLocalization
 {
   template<typename T>

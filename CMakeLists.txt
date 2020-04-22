@@ -41,7 +41,11 @@ if(NOT EIGEN3_FOUND)
   set(EIGEN_PACKAGE Eigen)
 endif()
 
-set_directory_properties(PROPERTIES COMPILE_OPTIONS "-std=c++14;-Wall;-Werror")
+set(CMAKE_CXX_STANDARD 14)
+
+if(NOT MSVC)
+  set_directory_properties(PROPERTIES COMPILE_OPTIONS "-Wall;-Werror")
+endif()
 add_definitions(-DEIGEN_NO_DEBUG -DEIGEN_MPL2_ONLY)
 
 set(ROSLINT_CPP_OPTS "--filter=-build/c++11,-runtime/references")
@@ -186,6 +190,13 @@ install(TARGETS
   ukf_localization_nodelet
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+
+install(TARGETS
+  ekf_localization_node
+  navsat_transform_node
+  robot_localization_listener_node
+  ukf_localization_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ## Mark cpp header files for installation
