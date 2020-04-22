@@ -173,20 +173,16 @@ target_link_libraries(navsat_transform_nodelet navsat_transform ${catkin_LIBRARI
 ## Mark executables and/or libraries for installation
 install(TARGETS
   ekf
-  ekf_localization_node
   ekf_localization_nodelet
   filter_base
   filter_utilities
   navsat_transform
-  navsat_transform_node
   navsat_transform_nodelet
   ros_filter
   ros_filter_utilities
   robot_localization_estimator
   ros_robot_localization_listener
-  robot_localization_listener_node
   ukf
-  ukf_localization_node
   ukf_localization_nodelet
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
