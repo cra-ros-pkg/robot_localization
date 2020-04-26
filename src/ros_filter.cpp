@@ -1416,7 +1416,7 @@ void RosFilter<T>::loadParams()
         RCLCPP_WARN(this->get_logger(),
           "Warning: Some position entries in parameter %s_config are listed "
           "true, but sensor_msgs/Imu contains no information about position",
-          imu_topic_name);
+          imu_topic_name.c_str());
       }
       std::vector<int> linear_velocity_update_vec(
         update_vec.begin() + POSITION_V_OFFSET,
@@ -1428,7 +1428,7 @@ void RosFilter<T>::loadParams()
         RCLCPP_WARN(this->get_logger(),
           "Warning: Some linear velocity entries in parameter %s_config are "
           "listed true, but an sensor_msgs/Imu contains no information about "
-          "linear velocities", imu_topic_name);
+          "linear velocities", imu_topic_name.c_str());
       }
 
       std::vector<bool> pose_update_vec = update_vec;
