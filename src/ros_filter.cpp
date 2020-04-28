@@ -932,6 +932,12 @@ void RosFilter<T>::loadParams()
         "gains.\n";
       deceleration_gains = acceleration_gains;
     }
+  } else {
+    control_update_vector.resize(TWIST_SIZE, 0);
+    acceleration_limits.resize(TWIST_SIZE, 1.0);
+    acceleration_gains.resize(TWIST_SIZE, 1.0);
+    deceleration_limits.resize(TWIST_SIZE, 1.0);
+    deceleration_gains.resize(TWIST_SIZE, 1.0);
   }
 
   bool dynamic_process_noise_covariance = this->declare_parameter(
