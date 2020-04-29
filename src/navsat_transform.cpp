@@ -755,9 +755,11 @@ void NavSatTransform::setTransformGps(
   utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
 
   RCLCPP_INFO(
-    this->get_logger(), "Datum (latitude, longitude, altitude) is (%d, %d, %d)",
+    this->get_logger(), "Datum (latitude, longitude, altitude) is (%0.2f, %0.2f, %0.2f)",
     msg->latitude, msg->longitude, msg->altitude);
-  RCLCPP_INFO(this->get_logger(), "Datum UTM coordinate is (%d, %d)", utm_x, utm_y);
+  RCLCPP_INFO(
+    this->get_logger(), "Datum UTM coordinate is (%s, %0.2f, %0.2f)",
+    utm_zone_.c_str(), utm_x, utm_y);
 
   transform_utm_pose_.setOrigin(tf2::Vector3(utm_x, utm_y, msg->altitude));
   transform_utm_pose_.setRotation(tf2::Quaternion::getIdentity());
