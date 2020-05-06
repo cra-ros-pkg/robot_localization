@@ -48,6 +48,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <utility>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -178,15 +179,15 @@ void NavSatTransform::transformCallback()
       imu_sub_.reset();
     }
   } else {
-    nav_msgs::msg::Odometry gps_odom;
+    std::unique_ptr<nav_msgs::msg::Odometry> gps_odom;
     if (prepareGpsOdometry(gps_odom)) {
-      gps_odom_pub_->publish(gps_odom);
+      gps_odom_pub_->publish(std::move(gps_odom));
     }
 
     if (publish_gps_) {
-      sensor_msgs::msg::NavSatFix odom_gps;
+      std::unique_ptr<sensor_msgs::msg::NavSatFix> odom_gps;
       if (prepareFilteredGps(odom_gps)) {
-        filtered_gps_pub_->publish(odom_gps);
+        filtered_gps_pub_->publish(std::move(odom_gps));
       }
     }
   }
@@ -637,13 +638,13 @@ void NavSatTransform::odomCallback(
 }
 
 bool NavSatTransform::prepareFilteredGps(
-  sensor_msgs::msg::NavSatFix & filtered_gps)
+  std::unique_ptr<sensor_msgs::msg::NavSatFix> & filtered_gps)
 {
   bool new_data = false;
 
   if (transform_good_ && odom_updated_) {
-    mapToLL(latest_world_pose_.getOrigin(), filtered_gps.latitude,
-      filtered_gps.longitude, filtered_gps.altitude);
+    mapToLL(latest_world_pose_.getOrigin(), filtered_gps->latitude,
+      filtered_gps->longitude, filtered_gps->altitude);
 
     // Rotate the covariance as well
     tf2::Matrix3x3 rot(utm_world_trans_inverse_.getRotation());
@@ -666,17 +667,17 @@ bool NavSatTransform::prepareFilteredGps(
     // Copy the measurement's covariance matrix back
     for (size_t i = 0; i < POSITION_SIZE; i++) {
       for (size_t j = 0; j < POSITION_SIZE; j++) {
-        filtered_gps.position_covariance[POSITION_SIZE * i + j] =
+        filtered_gps->position_covariance[POSITION_SIZE * i + j] =
           latest_odom_covariance_(i, j);
       }
     }
 
-    filtered_gps.position_covariance_type =
+    filtered_gps->position_covariance_type =
       sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_KNOWN;
-    filtered_gps.status.status =
+    filtered_gps->status.status =
       sensor_msgs::msg::NavSatStatus::STATUS_GBAS_FIX;
-    filtered_gps.header.frame_id = base_link_frame_id_;
-    filtered_gps.header.stamp = odom_update_time_;
+    filtered_gps->header.frame_id = base_link_frame_id_;
+    filtered_gps->header.stamp = odom_update_time_;
 
     // Mark this GPS as used
     odom_updated_ = false;
@@ -686,20 +687,20 @@ bool NavSatTransform::prepareFilteredGps(
   return new_data;
 }
 
-bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry & gps_odom)
+bool NavSatTransform::prepareGpsOdometry(std::unique_ptr<nav_msgs::msg::Odometry> & gps_odom)
 {
   bool new_data = false;
 
   if (transform_good_ && gps_updated_ && odom_updated_) {
-    gps_odom = utmToMap(latest_utm_pose_);
+    gps_odom = std::make_unique<nav_msgs::msg::Odometry>(std::move(utmToMap(latest_utm_pose_)));
 
     tf2::Transform transformed_utm_gps;
-    tf2::fromMsg(gps_odom.pose.pose, transformed_utm_gps);
+    tf2::fromMsg(gps_odom->pose.pose, transformed_utm_gps);
 
     // Want the pose of the vehicle origin, not the GPS
     tf2::Transform transformed_utm_robot;
-    rclcpp::Time time(static_cast<double>(gps_odom.header.stamp.sec) +
-      static_cast<double>(gps_odom.header.stamp.nanosec) /
+    rclcpp::Time time(static_cast<double>(gps_odom->header.stamp.sec) +
+      static_cast<double>(gps_odom->header.stamp.nanosec) /
       1000000000.0);
     getRobotOriginWorldPose(transformed_utm_gps, transformed_utm_robot, time);
 
@@ -722,14 +723,14 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry & gps_odom)
       rot_6d * latest_utm_covariance_.eval() * rot_6d.transpose();
 
     // Now fill out the message. Set the orientation to the identity.
-    tf2::toMsg(transformed_utm_robot, gps_odom.pose.pose);
-    gps_odom.pose.pose.position.z =
-      (zero_altitude_ ? 0.0 : gps_odom.pose.pose.position.z);
+    tf2::toMsg(transformed_utm_robot, gps_odom->pose.pose);
+    gps_odom->pose.pose.position.z =
+      (zero_altitude_ ? 0.0 : gps_odom->pose.pose.position.z);
 
     // Copy the measurement's covariance matrix so that we can rotate it later
     for (size_t i = 0; i < POSE_SIZE; i++) {
       for (size_t j = 0; j < POSE_SIZE; j++) {
-        gps_odom.pose.covariance[POSE_SIZE * i + j] =
+        gps_odom->pose.covariance[POSE_SIZE * i + j] =
           latest_utm_covariance_(i, j);
       }
     }
