@@ -348,7 +348,7 @@ void RosFilter<T>::forceTwoD(
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredOdometryMessage(std::unique_ptr<nav_msgs::msg::Odometry> & message)
+bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
@@ -407,7 +407,7 @@ bool RosFilter<T>::getFilteredOdometryMessage(std::unique_ptr<nav_msgs::msg::Odo
 
 template<typename T>
 bool RosFilter<T>::getFilteredAccelMessage(
-  std::unique_ptr<geometry_msgs::msg::AccelWithCovarianceStamped> & message)
+  geometry_msgs::msg::AccelWithCovarianceStamped * message)
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
@@ -1909,7 +1909,7 @@ void RosFilter<T>::periodicUpdate()
   // Get latest state and publish it
   auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
 
-  if (getFilteredOdometryMessage(filtered_position)) {
+  if (getFilteredOdometryMessage(filtered_position.get())) {
     world_base_link_trans_msg_.header.stamp =
       static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
     world_base_link_trans_msg_.header.frame_id =
@@ -1928,7 +1928,7 @@ void RosFilter<T>::periodicUpdate()
 
     // The filteredPosition is the message containing the state and covariances:
     // nav_msgs Odometry
-    if (!validateFilterOutput(filtered_position)) {
+    if (!validateFilterOutput(filtered_position.get())) {
       RCLCPP_ERROR(this->get_logger(),
         "Critical Error, NaNs were detected in the output state of the filter. "
         "This was likely due to poorly coniditioned process, noise, or sensor "
@@ -2010,9 +2010,9 @@ void RosFilter<T>::periodicUpdate()
   }
 
   // Publish the acceleration if desired and filter is initialized
-  std::unique_ptr<geometry_msgs::msg::AccelWithCovarianceStamped> filtered_acceleration;
+  auto filtered_acceleration = std::unique_ptr<geometry_msgs::msg::AccelWithCovarianceStamped>();
   if (publish_acceleration_ &&
-    getFilteredAccelMessage(filtered_acceleration))
+    getFilteredAccelMessage(filtered_acceleration.get()))
   {
     accel_pub_->publish(std::move(filtered_acceleration));
   }
@@ -3188,7 +3188,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 }
 
 template<typename T>
-bool RosFilter<T>::validateFilterOutput(std::unique_ptr<nav_msgs::msg::Odometry> & message)
+bool RosFilter<T>::validateFilterOutput(nav_msgs::msg::Odometry * message)
 {
   return !std::isnan(message->pose.pose.position.x) &&
          !std::isinf(message->pose.pose.position.x) &&
