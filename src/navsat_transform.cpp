@@ -179,13 +179,13 @@ void NavSatTransform::transformCallback()
       imu_sub_.reset();
     }
   } else {
-    auto gps_odom = std::unique_ptr<nav_msgs::msg::Odometry>();
+    auto gps_odom = std::make_unique<nav_msgs::msg::Odometry>();
     if (prepareGpsOdometry(gps_odom.get())) {
       gps_odom_pub_->publish(std::move(gps_odom));
     }
 
     if (publish_gps_) {
-      auto odom_gps = std::unique_ptr<sensor_msgs::msg::NavSatFix>();
+      auto odom_gps = std::make_unique<sensor_msgs::msg::NavSatFix>();
       if (prepareFilteredGps(odom_gps.get())) {
         filtered_gps_pub_->publish(std::move(odom_gps));
       }
@@ -692,7 +692,7 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom)
   bool new_data = false;
 
   if (transform_good_ && gps_updated_ && odom_updated_) {
-    *gps_odom = std::move(utmToMap(latest_utm_pose_));
+    *gps_odom = utmToMap(latest_utm_pose_);
 
     tf2::Transform transformed_utm_gps;
     tf2::fromMsg(gps_odom->pose.pose, transformed_utm_gps);

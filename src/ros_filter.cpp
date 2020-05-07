@@ -2010,7 +2010,7 @@ void RosFilter<T>::periodicUpdate()
   }
 
   // Publish the acceleration if desired and filter is initialized
-  auto filtered_acceleration = std::unique_ptr<geometry_msgs::msg::AccelWithCovarianceStamped>();
+  auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
   if (publish_acceleration_ &&
     getFilteredAccelMessage(filtered_acceleration.get()))
   {
