@@ -348,7 +348,7 @@ void RosFilter<T>::forceTwoD(
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
+bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
@@ -364,24 +364,24 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
       state(StateMemberYaw));
 
     // Fill out the message
-    message.pose.pose.position.x = state(StateMemberX);
-    message.pose.pose.position.y = state(StateMemberY);
-    message.pose.pose.position.z = state(StateMemberZ);
-    message.pose.pose.orientation.x = quat.x();
-    message.pose.pose.orientation.y = quat.y();
-    message.pose.pose.orientation.z = quat.z();
-    message.pose.pose.orientation.w = quat.w();
-    message.twist.twist.linear.x = state(StateMemberVx);
-    message.twist.twist.linear.y = state(StateMemberVy);
-    message.twist.twist.linear.z = state(StateMemberVz);
-    message.twist.twist.angular.x = state(StateMemberVroll);
-    message.twist.twist.angular.y = state(StateMemberVpitch);
-    message.twist.twist.angular.z = state(StateMemberVyaw);
+    message->pose.pose.position.x = state(StateMemberX);
+    message->pose.pose.position.y = state(StateMemberY);
+    message->pose.pose.position.z = state(StateMemberZ);
+    message->pose.pose.orientation.x = quat.x();
+    message->pose.pose.orientation.y = quat.y();
+    message->pose.pose.orientation.z = quat.z();
+    message->pose.pose.orientation.w = quat.w();
+    message->twist.twist.linear.x = state(StateMemberVx);
+    message->twist.twist.linear.y = state(StateMemberVy);
+    message->twist.twist.linear.z = state(StateMemberVz);
+    message->twist.twist.angular.x = state(StateMemberVroll);
+    message->twist.twist.angular.y = state(StateMemberVpitch);
+    message->twist.twist.angular.z = state(StateMemberVyaw);
 
     // Our covariance matrix layout doesn't quite match
     for (size_t i = 0; i < POSE_SIZE; i++) {
       for (size_t j = 0; j < POSE_SIZE; j++) {
-        message.pose.covariance[POSE_SIZE * i + j] =
+        message->pose.covariance[POSE_SIZE * i + j] =
           estimate_error_covariance(i, j);
       }
     }
@@ -391,15 +391,15 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
     // size of a pose covariance array
     for (size_t i = 0; i < TWIST_SIZE; i++) {
       for (size_t j = 0; j < TWIST_SIZE; j++) {
-        message.twist.covariance[TWIST_SIZE * i + j] =
+        message->twist.covariance[TWIST_SIZE * i + j] =
           estimate_error_covariance(i + POSITION_V_OFFSET,
             j + POSITION_V_OFFSET);
       }
     }
 
-    message.header.stamp = filter_.getLastMeasurementTime();
-    message.header.frame_id = world_frame_id_;
-    message.child_frame_id = base_link_output_frame_id_;
+    message->header.stamp = filter_.getLastMeasurementTime();
+    message->header.frame_id = world_frame_id_;
+    message->child_frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -407,7 +407,7 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
 
 template<typename T>
 bool RosFilter<T>::getFilteredAccelMessage(
-  geometry_msgs::msg::AccelWithCovarianceStamped & message)
+  geometry_msgs::msg::AccelWithCovarianceStamped * message)
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
@@ -417,23 +417,23 @@ bool RosFilter<T>::getFilteredAccelMessage(
       filter_.getEstimateErrorCovariance();
 
     //! Fill out the accel_msg
-    message.accel.accel.linear.x = state(StateMemberAx);
-    message.accel.accel.linear.y = state(StateMemberAy);
-    message.accel.accel.linear.z = state(StateMemberAz);
+    message->accel.accel.linear.x = state(StateMemberAx);
+    message->accel.accel.linear.y = state(StateMemberAy);
+    message->accel.accel.linear.z = state(StateMemberAz);
 
     // Fill the covariance (only the left-upper matrix since we are not
     // estimating the rotational accelerations arround the axes
     for (size_t i = 0; i < ACCELERATION_SIZE; i++) {
       for (size_t j = 0; j < ACCELERATION_SIZE; j++) {
         // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
-        message.accel.covariance[POSE_SIZE * i + j] = estimate_error_covariance(
+        message->accel.covariance[POSE_SIZE * i + j] = estimate_error_covariance(
           i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
       }
     }
 
     // Fill header information
-    message.header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
-    message.header.frame_id = base_link_output_frame_id_;
+    message->header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
+    message->header.frame_id = base_link_output_frame_id_;
   }
 
   return filter_.getInitializedStatus();
@@ -1914,28 +1914,28 @@ void RosFilter<T>::periodicUpdate()
   }
 
   // Get latest state and publish it
-  nav_msgs::msg::Odometry filtered_position;
+  auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
 
-  if (getFilteredOdometryMessage(filtered_position)) {
+  if (getFilteredOdometryMessage(filtered_position.get())) {
     world_base_link_trans_msg_.header.stamp =
-      static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
+      static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
     world_base_link_trans_msg_.header.frame_id =
-      filtered_position.header.frame_id;
+      filtered_position->header.frame_id;
     world_base_link_trans_msg_.child_frame_id =
-      filtered_position.child_frame_id;
+      filtered_position->child_frame_id;
 
     world_base_link_trans_msg_.transform.translation.x =
-      filtered_position.pose.pose.position.x;
+      filtered_position->pose.pose.position.x;
     world_base_link_trans_msg_.transform.translation.y =
-      filtered_position.pose.pose.position.y;
+      filtered_position->pose.pose.position.y;
     world_base_link_trans_msg_.transform.translation.z =
-      filtered_position.pose.pose.position.z;
+      filtered_position->pose.pose.position.z;
     world_base_link_trans_msg_.transform.rotation =
-      filtered_position.pose.pose.orientation;
+      filtered_position->pose.pose.orientation;
 
     // The filteredPosition is the message containing the state and covariances:
     // nav_msgs Odometry
-    if (!validateFilterOutput(filtered_position)) {
+    if (!validateFilterOutput(filtered_position.get())) {
       RCLCPP_ERROR(this->get_logger(),
         "Critical Error, NaNs were detected in the output state of the filter. "
         "This was likely due to poorly coniditioned process, noise, or sensor "
@@ -1946,9 +1946,9 @@ void RosFilter<T>::periodicUpdate()
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
     // we'll have some work to do.
     if (publish_transform_) {
-      if (filtered_position.header.frame_id == odom_frame_id_) {
+      if (filtered_position->header.frame_id == odom_frame_id_) {
         world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
-      } else if (filtered_position.header.frame_id == map_frame_id_) {
+      } else if (filtered_position->header.frame_id == map_frame_id_) {
         try {
           tf2::Transform world_base_link_trans;
           tf2::fromMsg(world_base_link_trans_msg_.transform,
@@ -1990,7 +1990,7 @@ void RosFilter<T>::periodicUpdate()
           geometry_msgs::msg::TransformStamped map_odom_trans_msg;
           map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);
           map_odom_trans_msg.header.stamp =
-            static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
+            static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
           map_odom_trans_msg.header.frame_id = map_frame_id_;
           map_odom_trans_msg.child_frame_id = odom_frame_id_;
 
@@ -2003,13 +2003,13 @@ void RosFilter<T>::periodicUpdate()
         }
       } else {
         std::cerr << "Odometry message frame_id was " <<
-          filtered_position.header.frame_id << ", expected " <<
+          filtered_position->header.frame_id << ", expected " <<
           map_frame_id_ << " or " << odom_frame_id_ << "\n";
       }
     }
 
     // Fire off the position and the transform
-    position_pub_->publish(filtered_position);
+    position_pub_->publish(std::move(filtered_position));
 
     if (print_diagnostics_) {
       freq_diag_->tick();
@@ -2017,11 +2017,11 @@ void RosFilter<T>::periodicUpdate()
   }
 
   // Publish the acceleration if desired and filter is initialized
-  geometry_msgs::msg::AccelWithCovarianceStamped filtered_acceleration;
+  auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
   if (publish_acceleration_ &&
-    getFilteredAccelMessage(filtered_acceleration))
+    getFilteredAccelMessage(filtered_acceleration.get()))
   {
-    accel_pub_->publish(filtered_acceleration);
+    accel_pub_->publish(std::move(filtered_acceleration));
   }
 
   /* Diagnostics can behave strangely when playing back from bag
@@ -3195,34 +3195,34 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 }
 
 template<typename T>
-bool RosFilter<T>::validateFilterOutput(const nav_msgs::msg::Odometry & message)
+bool RosFilter<T>::validateFilterOutput(nav_msgs::msg::Odometry * message)
 {
-  return !std::isnan(message.pose.pose.position.x) &&
-         !std::isinf(message.pose.pose.position.x) &&
-         !std::isnan(message.pose.pose.position.y) &&
-         !std::isinf(message.pose.pose.position.y) &&
-         !std::isnan(message.pose.pose.position.z) &&
-         !std::isinf(message.pose.pose.position.z) &&
-         !std::isnan(message.pose.pose.orientation.x) &&
-         !std::isinf(message.pose.pose.orientation.x) &&
-         !std::isnan(message.pose.pose.orientation.y) &&
-         !std::isinf(message.pose.pose.orientation.y) &&
-         !std::isnan(message.pose.pose.orientation.z) &&
-         !std::isinf(message.pose.pose.orientation.z) &&
-         !std::isnan(message.pose.pose.orientation.w) &&
-         !std::isinf(message.pose.pose.orientation.w) &&
-         !std::isnan(message.twist.twist.linear.x) &&
-         !std::isinf(message.twist.twist.linear.x) &&
-         !std::isnan(message.twist.twist.linear.y) &&
-         !std::isinf(message.twist.twist.linear.y) &&
-         !std::isnan(message.twist.twist.linear.z) &&
-         !std::isinf(message.twist.twist.linear.z) &&
-         !std::isnan(message.twist.twist.angular.x) &&
-         !std::isinf(message.twist.twist.angular.x) &&
-         !std::isnan(message.twist.twist.angular.y) &&
-         !std::isinf(message.twist.twist.angular.y) &&
-         !std::isnan(message.twist.twist.angular.z) &&
-         !std::isinf(message.twist.twist.angular.z);
+  return !std::isnan(message->pose.pose.position.x) &&
+         !std::isinf(message->pose.pose.position.x) &&
+         !std::isnan(message->pose.pose.position.y) &&
+         !std::isinf(message->pose.pose.position.y) &&
+         !std::isnan(message->pose.pose.position.z) &&
+         !std::isinf(message->pose.pose.position.z) &&
+         !std::isnan(message->pose.pose.orientation.x) &&
+         !std::isinf(message->pose.pose.orientation.x) &&
+         !std::isnan(message->pose.pose.orientation.y) &&
+         !std::isinf(message->pose.pose.orientation.y) &&
+         !std::isnan(message->pose.pose.orientation.z) &&
+         !std::isinf(message->pose.pose.orientation.z) &&
+         !std::isnan(message->pose.pose.orientation.w) &&
+         !std::isinf(message->pose.pose.orientation.w) &&
+         !std::isnan(message->twist.twist.linear.x) &&
+         !std::isinf(message->twist.twist.linear.x) &&
+         !std::isnan(message->twist.twist.linear.y) &&
+         !std::isinf(message->twist.twist.linear.y) &&
+         !std::isnan(message->twist.twist.linear.z) &&
+         !std::isinf(message->twist.twist.linear.z) &&
+         !std::isnan(message->twist.twist.angular.x) &&
+         !std::isinf(message->twist.twist.angular.x) &&
+         !std::isnan(message->twist.twist.angular.y) &&
+         !std::isinf(message->twist.twist.angular.y) &&
+         !std::isnan(message->twist.twist.angular.z) &&
+         !std::isinf(message->twist.twist.angular.z);
 }
 
 template<typename T>
