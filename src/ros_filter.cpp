@@ -844,11 +844,11 @@ void RosFilter<T>::loadParams()
 
   // Determine if we're using a control term
   double control_timeout = sensor_timeout;
-  std::vector<bool> control_update_vector(TWIST_SIZE, 0);
-  std::vector<double> acceleration_limits(TWIST_SIZE, 1.0);
-  std::vector<double> acceleration_gains(TWIST_SIZE, 1.0);
-  std::vector<double> deceleration_limits(TWIST_SIZE, 1.0);
-  std::vector<double> deceleration_gains(TWIST_SIZE, 1.0);
+  std::vector<bool> control_update_vector;
+  std::vector<double> acceleration_limits;
+  std::vector<double> acceleration_gains;
+  std::vector<double> deceleration_limits;
+  std::vector<double> deceleration_gains;
 
   use_control_ = this->declare_parameter("use_control", false);
   control_timeout = this->declare_parameter("control_timeout", 0.0);
@@ -883,6 +883,7 @@ void RosFilter<T>::loadParams()
     } else {
       std::cerr << "use_control is set to true, but acceleration_limits is "
         "missing. Will use default values.\n";
+      acceleration_limits.resize(TWIST_SIZE, 1.0);
     }
 
     this->declare_parameter("acceleration_gains");
@@ -931,6 +932,12 @@ void RosFilter<T>::loadParams()
         "gains.\n";
       deceleration_gains = acceleration_gains;
     }
+  } else {
+    control_update_vector.resize(TWIST_SIZE, 0);
+    acceleration_limits.resize(TWIST_SIZE, 1.0);
+    acceleration_gains.resize(TWIST_SIZE, 1.0);
+    deceleration_limits.resize(TWIST_SIZE, 1.0);
+    deceleration_gains.resize(TWIST_SIZE, 1.0);
   }
 
   bool dynamic_process_noise_covariance = this->declare_parameter(
@@ -938,7 +945,7 @@ void RosFilter<T>::loadParams()
   filter_.setUseDynamicProcessNoiseCovariance(
     dynamic_process_noise_covariance);
 
-  std::vector<double> initial_state(STATE_SIZE, 0.0);
+  std::vector<double> initial_state;
   this->declare_parameter("initial_state");
   if (this->get_parameter("initial_state", initial_state)) {
     if (initial_state.size() != STATE_SIZE) {
@@ -1873,11 +1880,11 @@ void RosFilter<T>::initialize()
       "accel/filtered", rclcpp::QoS(10));
   }
 
-  double timespan = 1.0 / frequency_;
-  int timespan_ms = static_cast<int>(timespan * 1000);
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(timespan_ms),
-    std::bind(&RosFilter<T>::periodicUpdate, this));
+  const std::chrono::duration<double> timespan{1.0 / frequency_};
+  timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
+    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
+    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
+  this->get_node_timers_interface()->add_timer(timer_, nullptr);
 }
 
 template<typename T>

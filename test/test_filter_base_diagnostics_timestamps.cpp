@@ -153,9 +153,10 @@ public:
     imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
       "/example/imu/data", rclcpp::SensorDataQoS());
 
+    rclcpp::SystemDefaultsQoS qos = rclcpp::SystemDefaultsQoS();
     diagnostic_sub_ =
       node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", rclcpp::SystemDefaultsQoS(),
+      "/diagnostics", qos.keep_all(),
       [&](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
@@ -224,9 +225,9 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
 
   dh_.publishMessages(empty);
   rclcpp::spin_some(dh_.node_);
+
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
-
   for (size_t i = 0; i < 20; ++i) {
     rclcpp::spin_some(dh_.node_);
     loopRate.sleep();

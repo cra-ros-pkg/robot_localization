@@ -17,14 +17,12 @@
   <buildtool_depend>builtin_interfaces</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
-  <depend>angles</depend>
   <depend>eigen</depend>
   <depend>geographic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>nav_msgs</depend>
-  <build_depend>rcl</build_depend>
   <build_depend>rclcpp</build_depend>
   <build_depend>rmw_implementation</build_depend>
   <depend>sensor_msgs</depend>
@@ -45,6 +43,8 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  <test_depend>launch_ros</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
   
   <member_of_group>rosidl_interface_packages</member_of_group>
 
