@@ -2404,12 +2404,12 @@ namespace RobotLocalization
     bool silent_tf_failure;
     nh_.getParam("/silent_tf_failure", silent_tf_failure);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                 targetFrame,
-                                                                 msgFrame,
-                                                                 msg->header.stamp,
-                                                                 tfTimeout_,
-                                                                  targetFrameTrans,
-                                                                  silent_tf_failure);
+                                                                targetFrame,
+                                                                msgFrame,
+                                                                msg->header.stamp,
+                                                                tfTimeout_,
+                                                                targetFrameTrans,
+                                                                silent_tf_failure);
 
     if (canTransform)
     {
