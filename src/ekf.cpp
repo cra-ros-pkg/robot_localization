@@ -40,6 +40,7 @@
 #include <sstream>
 #include <vector>
 
+
 namespace RobotLocalization
 {
   Ekf::Ekf(std::vector<double>) :

@@ -3,6 +3,7 @@
 # frequency specified here, regardless of whether it receives more measurements. Defaults to 30 if unspecified.
 frequency: 30
 
+silent_tf_failure: false
 # The period, in seconds, after which we consider a sensor to have timed out. In this event, we carry out a predict
 # cycle on the EKF without correcting it. This parameter can be thought of as the minimum frequency with which the
 # filter will generate new output. Defaults to 1 / frequency if not specified.
