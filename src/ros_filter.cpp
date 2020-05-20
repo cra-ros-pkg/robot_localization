@@ -47,9 +47,9 @@ namespace RobotLocalization
 {
   template<typename T>
   RosFilter<T>::RosFilter(ros::NodeHandle nh,
-                          ros::NodeHandle nh_priv,
-                          std::string node_name,
-                          std::vector<double> args) :
+                           ros::NodeHandle nh_priv,
+                           std::string node_name,
+                           std::vector<double> args) :
       disabledAtStartup_(false),
       enabled_(false),
       predictToCurrentTime_(false),
@@ -2404,13 +2404,12 @@ namespace RobotLocalization
     bool silent_tf_failure;
     nh_.getParam("/silent_tf_failure",silent_tf_failure);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                targetFrame,
-                                                                msgFrame,
-                                                                msg->header.stamp,
-                                                                tfTimeout_,
-                                                                targetFrameTrans,
-                                                                silent_tf_failure);
-
+                                                                 targetFrame,
+                                                                 msgFrame,
+                                                                 msg->header.stamp,
+                                                                 tfTimeout_,
+                                                                 targetFrameTrans,
+                                                                 silent_tf_failure);
     if (canTransform)
     {
       // We don't know if the user has already handled the removal
@@ -2986,11 +2985,11 @@ namespace RobotLocalization
     // 4. We need to transform this into the target frame (probably base_link)
     tf2::Transform targetFrameTrans;
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                targetFrame,
-                                                                msgFrame,
-                                                                msg->header.stamp,
-                                                                tfTimeout_,
-                                                                targetFrameTrans);
+                                                                 targetFrame,
+                                                                 msgFrame,
+                                                                 msg->header.stamp,
+                                                                 tfTimeout_,
+                                                                 targetFrameTrans);
 
     if (canTransform)
     {
