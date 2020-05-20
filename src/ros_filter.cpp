@@ -2410,6 +2410,7 @@ namespace RobotLocalization
                                                                  tfTimeout_, 
                                                                   targetFrameTrans, 
                                                                   silent_tf_failure);
+
     if (canTransform)
     {
       // We don't know if the user has already handled the removal
