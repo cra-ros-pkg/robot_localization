@@ -437,13 +437,13 @@ namespace RobotLocalization
 
     if (use_local_cartesian_)
     {
-      double altitude = 0.0;
-      gps_local_cartesian_.Reverse(odom_as_cartesian.getOrigin().getY(),
-                                   odom_as_cartesian.getOrigin().getX(),
+      double altitude_tmp = 0.0;
+      gps_local_cartesian_.Reverse(odom_as_cartesian.getOrigin().getX(),
+                                   odom_as_cartesian.getOrigin().getY(),
                                    0.0,
                                    latitude,
                                    longitude,
-                                   altitude);
+                                   altitude_tmp);
       altitude = odom_as_cartesian.getOrigin().getZ();
     }
     else
