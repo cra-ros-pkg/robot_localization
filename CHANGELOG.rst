@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.7 (2020-06-01)
+------------------
 * Parameterizing transform failure warnings
 * [melodic] Fix Windows build break. (`#557 <https://github.com/cra-ros-pkg/robot_localization/issues/557>`_)
 * Contributors: Sean Yen, Tom Moore, florianspy
