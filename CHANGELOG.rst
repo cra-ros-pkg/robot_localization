@@ -2,6 +2,12 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Parameterizing transform failure warnings
+* [melodic] Fix Windows build break. (`#557 <https://github.com/cra-ros-pkg/robot_localization/issues/557>`_)
+* Contributors: Sean Yen, Tom Moore, florianspy
+
 2.6.5 (2019-08-08)
 ------------------
 * fix: wall time used when `use_sim_time` is true
