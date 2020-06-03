@@ -35,8 +35,8 @@
   <depend>yaml-cpp</depend>
 
   <build_depend>message_generation</build_depend>
-  <build_depend condition="$ROS_DISTRO != noetic">python-catkin-pkg</build_depend>
-  <build_depend condition="$ROS_DISTRO == noetic">python3-catkin-pkg</build_depend>
+  <build_depend condition="$ROS_PYTHON_VERSION == 2">python-catkin-pkg</build_depend>
+  <build_depend condition="$ROS_PYTHON_VERSION == 3">python3-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
 
   <exec_depend>message_runtime</exec_depend>
