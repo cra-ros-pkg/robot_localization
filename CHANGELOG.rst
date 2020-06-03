@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Adding conditional build dependencies (`#572 <https://github.com/cra-ros-pkg/robot_localization/issues/572>`_)
+* Contributors: Tom Moore
+
 2.6.7 (2020-06-01)
 ------------------
 * Parameterizing transform failure warnings
