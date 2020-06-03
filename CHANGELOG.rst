@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.8 (2020-06-03)
+------------------
 * Adding conditional build dependencies (`#572 <https://github.com/cra-ros-pkg/robot_localization/issues/572>`_)
 * Contributors: Tom Moore
 
