@@ -298,10 +298,13 @@ namespace RobotLocalization
         geometry_msgs::TransformStamped cartesian_transform_stamped;
         cartesian_transform_stamped.header.stamp = ros::Time::now();
         std::string cartesian_frame_id = (use_local_cartesian_)? "local_enu" : "utm";
-        cartesian_transform_stamped.header.frame_id = (broadcast_cartesian_transform_as_parent_frame_ ? cartesian_frame_id : world_frame_id_);
-        cartesian_transform_stamped.child_frame_id = (broadcast_cartesian_transform_as_parent_frame_ ? world_frame_id_ : cartesian_frame_id);
+        cartesian_transform_stamped.header.frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
+                                                       cartesian_frame_id : world_frame_id_);
+        cartesian_transform_stamped.child_frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
+                                                      world_frame_id_ : cartesian_frame_id);
         cartesian_transform_stamped.transform = (broadcast_cartesian_transform_as_parent_frame_ ?
-                                             tf2::toMsg(cartesian_world_trans_inverse_) : tf2::toMsg(cartesian_world_transform_));
+                                             tf2::toMsg(cartesian_world_trans_inverse_) :
+                                             tf2::toMsg(cartesian_world_transform_));
         cartesian_transform_stamped.transform.translation.z = (zero_altitude_ ?
                                                            0.0 : cartesian_transform_stamped.transform.translation.z);
         cartesian_broadcaster_.sendTransform(cartesian_transform_stamped);
@@ -583,7 +586,8 @@ namespace RobotLocalization
       double cartesian_z = 0.0;
       if (use_local_cartesian_)
       {
-        gps_local_cartesian_.Forward(msg->latitude, msg->longitude, msg->altitude, cartesian_x, cartesian_y, cartesian_z);
+        gps_local_cartesian_.Forward(msg->latitude, msg->longitude, msg->altitude,
+                                     cartesian_x, cartesian_y, cartesian_z);
       }
       else
       {
@@ -805,7 +809,8 @@ namespace RobotLocalization
     }
     else
     {
-      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, cartesian_y, cartesian_x, utm_zone_, utm_meridian_convergence_);
+      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, cartesian_y, cartesian_x, utm_zone_,
+                                 utm_meridian_convergence_);
       utm_meridian_convergence_ *= NavsatConversions::RADIANS_PER_DEGREE;
     }
 

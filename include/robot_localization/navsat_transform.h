@@ -90,8 +90,8 @@ class NavSatTransform
     //!
     bool fromLLCallback(robot_localization::FromLL::Request& request, robot_localization::FromLL::Response& response);
 
-    //! @brief Given the pose of the navsat sensor in the cartesian frame, removes the offset from the vehicle's centroid
-    //! and returns the cartesian-frame pose of said centroid.
+    //! @brief Given the pose of the navsat sensor in the cartesian frame, removes the offset from the vehicle's
+    //! centroid and returns the cartesian-frame pose of said centroid.
     //!
     void getRobotOriginCartesianPose(const tf2::Transform &gps_cartesian_pose,
                                tf2::Transform &robot_cartesian_pose,
