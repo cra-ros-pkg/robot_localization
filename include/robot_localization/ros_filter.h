@@ -65,6 +65,7 @@
 
 #include <fstream>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <queue>
 #include <string>
