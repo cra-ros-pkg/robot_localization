@@ -18,6 +18,14 @@ This is just a suggestion, however, and users are free to fuse the GPS data into
 Using navsat_transform_node
 ***************************
 
+The diagram below illustrates an example setup:
+
+.. image:: images/navsat_transform_workflow.png
+  :width: 800px
+  :align: center
+  :alt: navsat_transform workflow
+
+
 Required Inputs
 ===============
 
@@ -129,22 +137,22 @@ You should have no need to modify the ``_differential`` setting within the state
 Details
 =======
 
-We'll start with a picture. Consider a robot that starts at some latitude and longitude and with some heading. We assume in this tutorial that the heading comes from an IMU that reads 0 when facing east, and increases according to the ROS spec (i.e., counter-clockwise). The remainder of this tutorial will refer to Figure 1:
+We'll start with a picture. Consider a robot that starts at some latitude and longitude and with some heading. We assume in this tutorial that the heading comes from an IMU that reads 0 when facing east, and increases according to the ROS spec (i.e., counter-clockwise). The remainder of this tutorial will refer to Figure 2:
 
-.. image:: images/figure1.png
+.. image:: images/figure2.png
   :width: 800px
   :align: center
-  :alt: Figure 1
+  :alt: Figure 2
 
 
-`REP-105 <http://www.ros.org/reps/rep-0105.html>`_ suggests four coordinate frames: *base_link*, *odom*, *map*, and *earth*. *base_link* is the coordinate frame that is rigidly attached to the vehicle. The *odom* and *map* frames are world-fixed frames and generally have their origins at the vehicle's start position and orientation. The *earth* frame is used as a common reference frame for multiple map frames, and is not yet supported by ``navsat_transform_node``. Note that in Figure 1, the robot has just started (``t = 0``), and so its *base_link*, *odom*, and *map* frames are aligned. We can also define a coordinate frame for the UTM grid, which we will call *utm*. For the purposes of this tutorial, we will refer to the UTM grid coordinate frame as *utm*. Therefore, what we want to do is create a *utm*->*map* transform.
+`REP-105 <http://www.ros.org/reps/rep-0105.html>`_ suggests four coordinate frames: *base_link*, *odom*, *map*, and *earth*. *base_link* is the coordinate frame that is rigidly attached to the vehicle. The *odom* and *map* frames are world-fixed frames and generally have their origins at the vehicle's start position and orientation. The *earth* frame is used as a common reference frame for multiple map frames, and is not yet supported by ``navsat_transform_node``. Note that in Figure 2, the robot has just started (``t = 0``), and so its *base_link*, *odom*, and *map* frames are aligned. We can also define a coordinate frame for the UTM grid, which we will call *utm*. For the purposes of this tutorial, we will refer to the UTM grid coordinate frame as *utm*. Therefore, what we want to do is create a *utm*->*map* transform.
 
-Referring to Figure 1, these ideas are (hopefully) made clear. The UTM origin is the :math:`(0_{UTM}, 0_{UTM})` point of the UTM zone that is associated with the robot's GPS location. The robot begins somewhere within the UTM zone at location :math:`(x_{UTM}, y_{UTM})`. The robot's initial orientation is some angle :math:`\theta` above the UTM grid's :math:`X`-axis. Our transform will therefore require that we know :math:`x_{UTM}, y_{UTM}` and :math:`\theta`.
+Referring to Figure 2, these ideas are (hopefully) made clear. The UTM origin is the :math:`(0_{UTM}, 0_{UTM})` point of the UTM zone that is associated with the robot's GPS location. The robot begins somewhere within the UTM zone at location :math:`(x_{UTM}, y_{UTM})`. The robot's initial orientation is some angle :math:`\theta` above the UTM grid's :math:`X`-axis. Our transform will therefore require that we know :math:`x_{UTM}, y_{UTM}` and :math:`\theta`.
 
 We now need to convert our latitude and longitude to UTM coordinates. The UTM grid assumes that the :math:`X`-axis faces east, the :math:`Y`-axis faces (true) north, and the :math:`Z`-axis points up out of the ground. This complies with the right-handed coordinate frame as dictated by `REP-105 <http://www.ros.org/reps/rep-0105.html>`_. The REP also states that a yaw angle of :math:`0` means that we are facing straight down the :math:`X`-axis, and that the yaw increases counter-clockwise. ``navsat_transform_node`` assumes your heading data conforms to this standard. However, there are two factors that need to be considered: 
 
 1. The IMU driver may not allow the user to apply the magnetic declination correction factor
-2. The IMU driver may incorrectly report :math:`0` when facing north, and not when facing east (even though its headings increase and decrease correctly). Fortunately, ``navsat_transform_node`` exposes two parameters to adddress these possible shortcomings in IMU data: ``magnetic_declination_radians`` and ``yaw_offset``. Referring to Figure 1, for an IMU that is currently measuring a yaw value of ``imu_yaw``, 
+2. The IMU driver may incorrectly report :math:`0` when facing north, and not when facing east (even though its headings increase and decrease correctly). Fortunately, ``navsat_transform_node`` exposes two parameters to adddress these possible shortcomings in IMU data: ``magnetic_declination_radians`` and ``yaw_offset``. Referring to Figure 2, for an IMU that is currently measuring a yaw value of ``imu_yaw``, 
 
  :math:`yaw_{imu} = -\omega - offset_{yaw} + \theta`
 
