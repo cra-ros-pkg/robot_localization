@@ -224,8 +224,8 @@ namespace RobotLocalization
         has_transform_gps_ &&
         has_transform_imu_)
     {
-      // The cartesian pose we have is given at the location of the GPS sensor on the robot. We need to get the cartesian pose of
-      // the robot's origin.
+      // The cartesian pose we have is given at the location of the GPS sensor on the robot. We need to get the
+      // cartesian pose of the robot's origin.
       tf2::Transform transform_cartesian_pose_corrected;
       if (!use_manual_datum_)
       {
