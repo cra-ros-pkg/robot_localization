@@ -1,0 +1,49 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+
+\begin{document}
+
+\sffamily
+
+\begin{tikzpicture}[>=stealth,
+  node distance = 3cm,
+  box/.style={shape=rectangle,draw,rounded corners},]
+    % Nodes
+    \node (wheel) [box] {Wheel Odometry};
+    \node (imu) [box, right =of wheel]{IMU};
+    \node (ekfLocal) [box, below =of wheel]{EKF Local};
+    \node (ekfGlobal) [box, below =of imu]{EKF Global};
+    \node (navsat) [box, right =7cm of ekfGlobal]{navsat\_transform};
+    \node (gps) [box, above =of navsat]{GPS};
+    % Coordinates for edges pointing to empty space
+    \node (gpsF) [right =of navsat]{};
+    \node (tfLocal) [below =of ekfLocal]{};
+    \node (odomLocal) [left =of ekfLocal]{};
+    \node (tfGlobal) [below =of ekfGlobal]{};
+    % Edges
+    \draw[->] (wheel.270) -- (ekfLocal.90);
+    \draw[->] (wheel.315) -- (ekfGlobal.135)
+      node [fill=white, pos=0.2, align=center] {\ttfamily"/wheel/odometry"\\nav\_msgs/Odometry};
+    \draw[->] (imu.225) -- (ekfLocal.45);
+    \draw[->] (imu.315) -- (navsat.135);
+    \draw[->] (imu.270) -- (ekfGlobal.90)
+      node [fill=white, pos=0.2, align=center] {\ttfamily"/imu/data"\\sensor\_msgs/Imu};
+    \draw[->] (gps.270) -- (navsat.90)
+      node [fill=white, pos=0.2, align=center] {\ttfamily"/gps/fix"\\sensor\_msgs/NavSatFix};
+    \draw[->, transform canvas={yshift=1mm}] (ekfGlobal) -- (navsat)
+      node [fill=white, above=1mm, pos=0.5, align=center] {\ttfamily"/odometry/filtered/global"\\nav\_msgs/Odometry};
+    \draw[->, transform canvas={yshift=-1mm}] (navsat) -- (ekfGlobal)
+      node [fill=white, below=1mm, pos=0.5, align=center] {\ttfamily"/odometry/gps"\\nav\_msgs/Odometry};
+    % Outputs not cycled back into the graph
+    \draw[->, dashed] (navsat) -- (gpsF)
+      node [fill=white, above=1mm, pos=1.0, align=center] {\ttfamily"/gps/filtered"\\sensor\_msgs/NavSatFix};
+    \draw[->, dashed] (ekfLocal) -- (tfLocal)
+      node [fill=white, pos=0.7, align=center] {\ttfamily"/tf" odom -> base\\tf2\_msgs/TFMessage};
+    \draw[->, dashed] (ekfLocal) -- (odomLocal)
+      node [fill=white, above=1mm, pos=1.0, align=center] {\ttfamily"/odometry/filtered/local"\\nav\_msgs/Odometry};
+    \draw[->, dashed] (ekfGlobal) -- (tfGlobal)
+      node [fill=white, pos=0.7, align=center] {\ttfamily"/tf" map -> odom\\tf2\_msgs/TFMessage};
+\end{tikzpicture}
+
+\end{document}
