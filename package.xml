@@ -34,10 +34,10 @@
   <depend>xmlrpcpp</depend>
   <depend>yaml-cpp</depend>
 
+  <build_depend>geographiclib</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>python-catkin-pkg</build_depend>
   <build_depend>roslint</build_depend>
-  <build_depend>geographiclib</build_depend>
 
   <exec_depend>message_runtime</exec_depend>
 

@@ -76,12 +76,14 @@ namespace RobotLocalization
     double frequency;
     double delay = 0.0;
     double transform_timeout = 0.0;
+    bool unused;
 
     // Load the parameters we need
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
     nh_priv.param("yaw_offset", yaw_offset_, 0.0);
-    nh_priv.param("broadcast_utm_transform", broadcast_cartesian_transform_, false);
-    nh_priv.param("broadcast_utm_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_, false);
+    nh_priv.param("broadcast_cartesian_transform", broadcast_cartesian_transform_, false);
+    nh_priv.param("broadcast_cartesian_transform_as_parent_frame",
+                  broadcast_cartesian_transform_as_parent_frame_, false);
     nh_priv.param("zero_altitude", zero_altitude_, false);
     nh_priv.param("publish_filtered_gps", publish_gps_, false);
     nh_priv.param("use_odometry_yaw", use_odometry_yaw_, false);
@@ -91,6 +93,18 @@ namespace RobotLocalization
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
     transform_timeout_.fromSec(transform_timeout);
+
+    // Check for deprecated parameters
+    if (nh_priv.param("broadcast_utm_transform", unused, false))
+    {
+      ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform' has been deprecated. Please use"
+               "'broadcast_cartesian_transform' instead.");
+    }
+    if (nh_priv.param("broadcast_utm_transform_as_parent_frame", unused, false))
+    {
+      ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. Please use"
+               "'broadcast_cartesian_transform_as_parent_frame' instead.");
+    }
 
     // Subscribe to the messages and services we need
     datum_srv_ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
@@ -297,7 +311,7 @@ namespace RobotLocalization
       {
         geometry_msgs::TransformStamped cartesian_transform_stamped;
         cartesian_transform_stamped.header.stamp = ros::Time::now();
-        std::string cartesian_frame_id = (use_local_cartesian_)? "local_enu" : "utm";
+        std::string cartesian_frame_id = (use_local_cartesian_ ? "local_enu" : "utm");
         cartesian_transform_stamped.header.frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
                                                        cartesian_frame_id : world_frame_id_);
         cartesian_transform_stamped.child_frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
@@ -461,8 +475,8 @@ namespace RobotLocalization
   }
 
   void NavSatTransform::getRobotOriginCartesianPose(const tf2::Transform &gps_cartesian_pose,
-                                              tf2::Transform &robot_cartesian_pose,
-                                              const ros::Time &transform_time)
+                                                    tf2::Transform &robot_cartesian_pose,
+                                                    const ros::Time &transform_time)
   {
     robot_cartesian_pose.setIdentity();
 
@@ -491,7 +505,7 @@ namespace RobotLocalization
 
       // Rotate the GPS linear offset by the orientation
       // Zero out the orientation, because the GPS orientation is meaningless, and if it's non-zero, it will make the
-      // the computation of robot_c_pose erroneous.
+      // the computation of robot_cartesian_pose erroneous.
       offset.setOrigin(tf2::quatRotate(cartesian_orientation, offset.getOrigin()));
       offset.setRotation(tf2::Quaternion::getIdentity());
 

@@ -50,10 +50,10 @@
 
 #include <Eigen/Dense>
 
-#include <string>
-
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
+
+#include <string>
 
 namespace RobotLocalization
 {
@@ -94,8 +94,8 @@ class NavSatTransform
     //! centroid and returns the cartesian-frame pose of said centroid.
     //!
     void getRobotOriginCartesianPose(const tf2::Transform &gps_cartesian_pose,
-                               tf2::Transform &robot_cartesian_pose,
-                               const ros::Time &transform_time);
+                                     tf2::Transform &robot_cartesian_pose,
+                                     const ros::Time &transform_time);
 
     //! @brief Given the pose of the navsat sensor in the world frame, removes the offset from the vehicle's centroid
     //! and returns the world-frame pose of said centroid.
