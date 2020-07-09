@@ -2577,7 +2577,7 @@ namespace RobotLocalization
     {
       // Otherwise, we should use our target frame
       finalTargetFrame = targetFrame;
-      poseTmp.frame_id_ = (differential ? finalTargetFrame : msg->header.frame_id);
+      poseTmp.frame_id_ = (differential && !imuData ? finalTargetFrame : msg->header.frame_id);
     }
 
     RF_DEBUG("Final target frame for " << topicName << " is " << finalTargetFrame << "\n");
