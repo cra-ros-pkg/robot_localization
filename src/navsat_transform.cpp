@@ -76,7 +76,6 @@ namespace RobotLocalization
     double frequency;
     double delay = 0.0;
     double transform_timeout = 0.0;
-    bool unused;
 
     // Load the parameters we need
     nh_priv.getParam("magnetic_declination_radians", magnetic_declination_);
@@ -95,12 +94,12 @@ namespace RobotLocalization
     transform_timeout_.fromSec(transform_timeout);
 
     // Check for deprecated parameters
-    if (nh_priv.param("broadcast_utm_transform", unused, false))
+    if (nh_priv.param("broadcast_utm_transform", broadcast_cartesian_transform_, false))
     {
       ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform' has been deprecated. Please use"
                "'broadcast_cartesian_transform' instead.");
     }
-    if (nh_priv.param("broadcast_utm_transform_as_parent_frame", unused, false))
+    if (nh_priv.param("broadcast_utm_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_, false))
     {
       ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. Please use"
                "'broadcast_cartesian_transform_as_parent_frame' instead.");
