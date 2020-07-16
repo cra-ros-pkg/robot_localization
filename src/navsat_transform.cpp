@@ -94,12 +94,12 @@ namespace RobotLocalization
     transform_timeout_.fromSec(transform_timeout);
 
     // Check for deprecated parameters
-    if (nh_priv.param("broadcast_utm_transform", broadcast_cartesian_transform_, false))
+    if (nh_priv.getParam("broadcast_utm_transform", broadcast_cartesian_transform_))
     {
       ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform' has been deprecated. Please use"
                "'broadcast_cartesian_transform' instead.");
     }
-    if (nh_priv.param("broadcast_utm_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_, false))
+    if (nh_priv.getParam("broadcast_utm_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_))
     {
       ROS_WARN("navsat_transform, Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. Please use"
                "'broadcast_cartesian_transform_as_parent_frame' instead.");
