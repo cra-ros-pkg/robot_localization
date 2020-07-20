@@ -35,12 +35,12 @@ def generate_launch_description():
 	    default_value='ukf1.txt'),
 	
 	#launch_ros.actions.Node(
-         #   package='tf2_ros', node_executable='static_transform_publisher',node_name='bl_imu', output='screen',                       
+         #   package='tf2_ros', executable='static_transform_publisher',node_name='bl_imu', output='screen',                       
           #  arguments=['0', '-0.3', '0.52', '-1.570796327', '0', '1.570796327', 'base_link', 'imu_link']		
            # ),	
 
 	launch_ros.actions.Node(
-            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_bag1_ukf',
+            package='robot_localization', executable='ukf_node', name='test_ukf_localization_node_bag1_ukf',
 	    output='screen',
             parameters=[
                 parameters_file_path,
@@ -50,7 +50,7 @@ def generate_launch_description():
            ),
         
         launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ukf_localization_node_bag1', node_name='test_ukf_localization_node_bag1_pose',
+            package='robot_localization', executable='test_ukf_localization_node_bag1', name='test_ukf_localization_node_bag1_pose',
             output='screen',
 	    parameters=[
                 parameters_file_path,

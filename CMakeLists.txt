@@ -29,6 +29,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
@@ -211,7 +212,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_ukf_localization_node_interfaces ${library_name})
   rosidl_target_interfaces(test_ukf_localization_node_interfaces
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
-  add_dependencies(test_ukf_localization_node_interfaces ekf_node)
+  add_dependencies(test_ukf_localization_node_interfaces ukf_node)
   ament_add_test(test_ukf_localization_node_interfaces
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
     TIMEOUT 300
@@ -307,8 +308,13 @@ install(
   ekf_node
   ukf_node
   robot_localization_listener_node
-  ${library_name}
-  DESTINATION lib/${PROJECT_NAME}
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS ${library_name}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 # Install params config files.

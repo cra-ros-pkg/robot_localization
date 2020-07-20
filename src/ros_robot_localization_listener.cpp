@@ -95,7 +95,8 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
 
   FilterTypes::FilterType filter_type = filterTypeFromString(filter_type_str);
   if (filter_type == FilterTypes::NotDefined) {
-    RCLCPP_ERROR(node_logger_->get_logger(),
+    RCLCPP_ERROR(
+      node_logger_->get_logger(),
       "RosRobotLocalizationListener: Parameter filter_type invalid");
     return;
   }
@@ -111,7 +112,8 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
     process_noise_covar_config = node->declare_parameter<std::vector<double>>(
       "process_noise_covariance", std::vector<double>());
     if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE) {
-      RCLCPP_ERROR(node_logger_->get_logger(),
+      RCLCPP_ERROR(
+        node_logger_->get_logger(),
         "ERROR unexpected process noise covariance matrix size (%d)",
         process_noise_covar_config.size());
     }
@@ -132,10 +134,12 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
 
     std::stringstream pnc_ss;
     pnc_ss << process_noise_covariance;
-    RCLCPP_DEBUG(node_logger_->get_logger(),
+    RCLCPP_DEBUG(
+      node_logger_->get_logger(),
       "Process noise covariance is:\n%s\n", pnc_ss.str().c_str());
   } catch (std::exception & e) {
-    RCLCPP_ERROR(node_logger_->get_logger(),
+    RCLCPP_ERROR(
+      node_logger_->get_logger(),
       "ERROR reading robot localization listener config: %s"
       " for process_noise_covariance", e.what());
   }
@@ -143,14 +147,17 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   std::vector<double> filter_args = node->declare_parameter<
     std::vector<double>>("filter_args", std::vector<double>());
 
-  estimator_ = std::make_unique<RobotLocalizationEstimator>(buffer_size,
-      filter_type, process_noise_covariance, filter_args);
+  estimator_ = std::make_unique<RobotLocalizationEstimator>(
+    buffer_size,
+    filter_type, process_noise_covariance, filter_args);
 
-  sync_.registerCallback(std::bind(
+  sync_.registerCallback(
+    std::bind(
       &RosRobotLocalizationListener::odomAndAccelCallback,
       this, std::placeholders::_1, std::placeholders::_2));
 
-  RCLCPP_INFO(node_logger_->get_logger(),
+  RCLCPP_INFO(
+    node_logger_->get_logger(),
     "Ros Robot Localization Listener: Listening to topics %s and %s",
     odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str());
 
@@ -158,11 +165,13 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
   while (rclcpp::ok() && base_frame_id_.empty()) {
     rclcpp::spin_some(node);
     // TODO(ros2/rclcpp#879) RCLCPP_THROTTLE_INFO() when released
-    THROTTLE(node->get_clock(), std::chrono::seconds(1),
-      RCLCPP_INFO(node_logger_->get_logger(),
-      "Ros Robot Localization Listener: Waiting for incoming messages on "
-      "topics %s and %s",
-      odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str()));
+    THROTTLE(
+      node->get_clock(), std::chrono::seconds(1),
+      RCLCPP_INFO(
+        node_logger_->get_logger(),
+        "Ros Robot Localization Listener: Waiting for incoming messages on "
+        "topics %s and %s",
+        odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str()));
     rclcpp::Rate(10).sleep();
   }
 }
@@ -208,7 +217,8 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   // Pose: Covariance
   for (unsigned int i = 0; i < POSE_SIZE; i++) {
     for (unsigned int j = 0; j < POSE_SIZE; j++) {
-      state.covariance(POSITION_OFFSET + i,
+      state.covariance(
+        POSITION_OFFSET + i,
         POSITION_OFFSET + j) = odom->pose.covariance[i * POSE_SIZE + j];
     }
   }
@@ -226,7 +236,8 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   // Velocity: Covariance
   for (unsigned int i = 0; i < TWIST_SIZE; i++) {
     for (unsigned int j = 0; j < TWIST_SIZE; j++) {
-      state.covariance(POSITION_V_OFFSET + i,
+      state.covariance(
+        POSITION_V_OFFSET + i,
         POSITION_V_OFFSET + j) = odom->twist.covariance[i * TWIST_SIZE + j];
     }
   }
@@ -241,7 +252,8 @@ void RosRobotLocalizationListener::odomAndAccelCallback(
   // Acceleration: Covariance
   for (unsigned int i = 0; i < ACCELERATION_SIZE; i++) {
     for (unsigned int j = 0; j < ACCELERATION_SIZE; j++) {
-      state.covariance(POSITION_A_OFFSET + i,
+      state.covariance(
+        POSITION_A_OFFSET + i,
         POSITION_A_OFFSET + j) = accel->accel.covariance[i * TWIST_SIZE + j];
     }
   }
@@ -289,8 +301,9 @@ bool findAncestor(
 
   bool target_frame_is_ancestor =
     findAncestorRecursiveYAML(frames_yaml, source_frame, target_frame);
-  bool target_frame_is_descendant = findAncestorRecursiveYAML(frames_yaml, target_frame,
-      source_frame);
+  bool target_frame_is_descendant = findAncestorRecursiveYAML(
+    frames_yaml, target_frame,
+    source_frame);
 
   // Caching
   if (target_frame_is_ancestor) {
@@ -319,11 +332,13 @@ bool RosRobotLocalizationListener::getState(
 
   if (base_frame_id_.empty() || world_frame_id_.empty()  ) {
     if (estimator_->getSize() == 0) {
-      RCLCPP_WARN(node_logger_->get_logger(),
+      RCLCPP_WARN(
+        node_logger_->get_logger(),
         "Ros Robot Localization Listener: The base or world frame id is not "
         "set. No odom/accel messages have come in.");
     } else {
-      RCLCPP_ERROR(node_logger_->get_logger(),
+      RCLCPP_ERROR(
+        node_logger_->get_logger(),
         "Ros Robot Localization Listener: The base or world frame id is not "
         "set. Are the child_frame_id and the header.frame_id in the odom "
         "messages set?");
@@ -370,20 +385,23 @@ bool RosRobotLocalizationListener::getState(
   } else {
     geometry_msgs::msg::TransformStamped world_requested_to_world_transform;
     try {
-      world_requested_to_world_transform = tf_buffer_.lookupTransform(world_frame_id,
-          world_frame_id_,
-          tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
-          tf2::durationFromSec(0.1));  // TODO(reinzor): magic number
+      world_requested_to_world_transform = tf_buffer_.lookupTransform(
+        world_frame_id,
+        world_frame_id_,
+        tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
+        tf2::durationFromSec(0.1));    // TODO(reinzor): magic number
 
       if (findAncestor(tf_buffer_, world_frame_id, base_frame_id_) ) {
-        RCLCPP_ERROR(node_logger_->get_logger(),
+        RCLCPP_ERROR(
+          node_logger_->get_logger(),
           "You are trying to get the state with respect to world frame %s"
           ", but this frame is a child of robot base frame %s"
           ", so this doesn't make sense.", world_frame_id.c_str(), base_frame_id_.c_str());
         return false;
       }
     } catch (const tf2::TransformException & e) {
-      RCLCPP_WARN(node_logger_->get_logger(),
+      RCLCPP_WARN(
+        node_logger_->get_logger(),
         "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
       return false;
     }
@@ -399,22 +417,25 @@ bool RosRobotLocalizationListener::getState(
   // First get the transform from base to target
   geometry_msgs::msg::TransformStamped base_to_target_transform;
   try {
-    base_to_target_transform = tf_buffer_.lookupTransform(base_frame_id_,
-        frame_id,
-        tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
-        tf2::durationFromSec(0.1));  // TODO(reinzor): magic number
+    base_to_target_transform = tf_buffer_.lookupTransform(
+      base_frame_id_,
+      frame_id,
+      tf2::TimePoint(std::chrono::nanoseconds(static_cast<int>(time * 1000000000))),
+      tf2::durationFromSec(0.1));    // TODO(reinzor): magic number
 
     // Check that frame_id is a child of the base frame. If it is not, it does
     // not make sense to request its state.
     // Do this after tf lookup, so we know that there is a connection.
     if (!findAncestor(tf_buffer_, frame_id, base_frame_id_) ) {
-      RCLCPP_ERROR(node_logger_->get_logger(),
+      RCLCPP_ERROR(
+        node_logger_->get_logger(),
         "You are trying to get the state of , but this frame is not a child of the "
         "base frame: .", frame_id.c_str(), base_frame_id_.c_str());
       return false;
     }
   } catch (const tf2::TransformException & e) {
-    RCLCPP_WARN(node_logger_->get_logger(),
+    RCLCPP_WARN(
+      node_logger_->get_logger(),
       "Ros Robot Localization Listener: Could not look up transform: %s", e.what());
     return false;
   }
@@ -453,12 +474,14 @@ bool RosRobotLocalizationListener::getState(
   // First get the base's twist
   Twist base_velocity;
   Twist target_velocity_base;
-  base_velocity.linear = Eigen::Vector3d(estimator_state.state(StateMemberVx),
-      estimator_state.state(StateMemberVy),
-      estimator_state.state(StateMemberVz));
-  base_velocity.angular = Eigen::Vector3d(estimator_state.state(StateMemberVroll),
-      estimator_state.state(StateMemberVpitch),
-      estimator_state.state(StateMemberVyaw));
+  base_velocity.linear = Eigen::Vector3d(
+    estimator_state.state(StateMemberVx),
+    estimator_state.state(StateMemberVy),
+    estimator_state.state(StateMemberVz));
+  base_velocity.angular = Eigen::Vector3d(
+    estimator_state.state(StateMemberVroll),
+    estimator_state.state(StateMemberVpitch),
+    estimator_state.state(StateMemberVyaw));
 
   // Then calculate the target frame's twist as a result of the base's twist.
   /*
@@ -487,9 +510,11 @@ bool RosRobotLocalizationListener::getState(
   Eigen::MatrixXd rot_6d(POSE_SIZE, POSE_SIZE);
   rot_6d.setIdentity();
 
-  rot_6d.block<POSITION_SIZE, POSITION_SIZE>(POSITION_OFFSET,
+  rot_6d.block<POSITION_SIZE, POSITION_SIZE>(
+    POSITION_OFFSET,
     POSITION_OFFSET) = target_pose_base.rotation();
-  rot_6d.block<ORIENTATION_SIZE, ORIENTATION_SIZE>(ORIENTATION_OFFSET,
+  rot_6d.block<ORIENTATION_SIZE, ORIENTATION_SIZE>(
+    ORIENTATION_OFFSET,
     ORIENTATION_OFFSET) = target_pose_base.rotation();
 
   // Rotate the covariance

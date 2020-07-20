@@ -109,7 +109,8 @@ TEST(RLETest, StateBuffer)
   robot_localization::EstimatorState state_2 = states[0];
   state_2.state(robot_localization::StateMemberY) = 12;
   estimator.setState(state_2);
-  EXPECT_EQ(robot_localization::EstimatorResults::Exact,
+  EXPECT_EQ(
+    robot_localization::EstimatorResults::Exact,
     estimator.getState(states[0].time_stamp, state));
 
   // Check if the state is correctly added
@@ -120,21 +121,24 @@ TEST(RLETest, StateBuffer)
   for (int i = 5; i < 8; i++) {
     estimator.setState(states[i]);
   }
-  EXPECT_EQ(robot_localization::EstimatorResults::ExtrapolationIntoPast,
+  EXPECT_EQ(
+    robot_localization::EstimatorResults::ExtrapolationIntoPast,
     estimator.getState(states[0].time_stamp, state));
   EXPECT_EQ(states[0].state, state.state);
 
   // Estimate a state that is not in the buffer, but can be determined by
   // interpolation. The predicted state vector should be equal to the designed
   // state at the requested time.
-  EXPECT_EQ(robot_localization::EstimatorResults::Interpolation,
+  EXPECT_EQ(
+    robot_localization::EstimatorResults::Interpolation,
     estimator.getState(states[4].time_stamp, state));
   EXPECT_EQ(states[4].state, state.state);
 
   // Estimate a state that is not in the buffer, but can be determined by
   // extrapolation into the future. The predicted state vector should be equal
   // to the designed state at the requested time.
-  EXPECT_EQ(robot_localization::EstimatorResults::ExtrapolationIntoFuture,
+  EXPECT_EQ(
+    robot_localization::EstimatorResults::ExtrapolationIntoFuture,
     estimator.getState(states[8].time_stamp, state));
   EXPECT_EQ(states[8].state, state.state);
 
@@ -146,7 +150,8 @@ TEST(RLETest, StateBuffer)
   state_2 = states[3];
   state_2.state(robot_localization::StateMemberVy) = -1.0;
   estimator.setState(state_2);
-  EXPECT_EQ(robot_localization::EstimatorResults::Exact,
+  EXPECT_EQ(
+    robot_localization::EstimatorResults::Exact,
     estimator.getState(states[3].time_stamp, state));
   EXPECT_EQ(state_2.state, state.state);
 
@@ -154,7 +159,8 @@ TEST(RLETest, StateBuffer)
   estimator.setState(states[0]);
 
   // Check if getState needed to do extrapolation into the past
-  EXPECT_EQ(estimator.getState(states[0].time_stamp, state),
+  EXPECT_EQ(
+    estimator.getState(states[0].time_stamp, state),
     robot_localization::EstimatorResults::ExtrapolationIntoPast);
 
   // Check state at t=0. This can only work correctly if the state at t=3 is

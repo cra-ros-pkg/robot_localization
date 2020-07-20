@@ -144,9 +144,11 @@ bool lookupTransformSafe(
     // enough temporally to be used. In that case, just use the latest available
     // transform and warn the user.
     try {
-      tf2::fromMsg(buffer
-        ->lookupTransform(target_frame, source_frame,
-        tf2::TimePointZero, duration_tf)
+      tf2::fromMsg(
+        buffer
+        ->lookupTransform(
+          target_frame, source_frame,
+          tf2::TimePointZero, duration_tf)
         .transform,
         target_frame_trans);
 
@@ -189,8 +191,9 @@ bool lookupTransformSafe(
   tf2::Transform & target_frame_trans,
   const bool silent)
 {
-  return lookupTransformSafe(buffer, target_frame, source_frame, time,
-           rclcpp::Duration(0), target_frame_trans, silent);
+  return lookupTransformSafe(
+    buffer, target_frame, source_frame, time,
+    rclcpp::Duration(0), target_frame_trans, silent);
 }
 
 void quatToRPY(
@@ -203,10 +206,13 @@ void quatToRPY(
 
 void stateToTF(const Eigen::VectorXd & state, tf2::Transform & state_tf)
 {
-  state_tf.setOrigin(tf2::Vector3(state(StateMemberX), state(StateMemberY),
-    state(StateMemberZ)));
+  state_tf.setOrigin(
+    tf2::Vector3(
+      state(StateMemberX), state(StateMemberY),
+      state(StateMemberZ)));
   tf2::Quaternion quat;
-  quat.setRPY(state(StateMemberRoll), state(StateMemberPitch),
+  quat.setRPY(
+    state(StateMemberRoll), state(StateMemberPitch),
     state(StateMemberYaw));
 
   state_tf.setRotation(quat);
@@ -217,7 +223,8 @@ void TFtoState(const tf2::Transform & state_tf, Eigen::VectorXd & state)
   state(StateMemberX) = state_tf.getOrigin().getX();
   state(StateMemberY) = state_tf.getOrigin().getY();
   state(StateMemberZ) = state_tf.getOrigin().getZ();
-  quatToRPY(state_tf.getRotation(), state(StateMemberRoll),
+  quatToRPY(
+    state_tf.getRotation(), state(StateMemberRoll),
     state(StateMemberPitch), state(StateMemberYaw));
 }
 

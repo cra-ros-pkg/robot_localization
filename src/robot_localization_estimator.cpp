@@ -57,7 +57,8 @@ RobotLocalizationEstimator::RobotLocalizationEstimator(
       filter_ = std::make_unique<Ukf>();
     } else {
       filter_ = std::make_unique<Ukf>();
-      dynamic_cast<Ukf *>(filter_.get())->setConstants(filter_args[0], filter_args[1],
+      dynamic_cast<Ukf *>(filter_.get())->setConstants(
+        filter_args[0], filter_args[1],
         filter_args[2]);
     }
   }
@@ -178,8 +179,9 @@ void RobotLocalizationEstimator::extrapolate(
   double delta = requested_time - boundary_state.time_stamp;
 
   // Use the filter to predict
-  rclcpp::Time time_stamp = rclcpp::Time(boundary_state.time_stamp *
-      1000000000);
+  rclcpp::Time time_stamp = rclcpp::Time(
+    boundary_state.time_stamp *
+    1000000000);
   rclcpp::Duration delta_duration = rclcpp::Duration(delta * 1000000000);
   filter_->predict(time_stamp, delta_duration);
 

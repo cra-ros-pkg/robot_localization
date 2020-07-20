@@ -52,8 +52,9 @@ public:
   {
     service_ = this->create_service<robot_localization::srv::GetState>(
       "get_state",
-      std::bind(&RobotLocalizationListenerNode::getStateCallback, this,
-      std::placeholders::_1, std::placeholders::_2));
+      std::bind(
+        &RobotLocalizationListenerNode::getStateCallback, this,
+        std::placeholders::_1, std::placeholders::_2));
   }
 
   std::string getService()
@@ -79,7 +80,8 @@ private:
     Eigen::MatrixXd covariance(STATE_SIZE, STATE_SIZE);
 
     if (!rll_->getState(req->time_stamp, req->frame_id, state, covariance)) {
-      RCLCPP_ERROR(this->get_logger(),
+      RCLCPP_ERROR(
+        this->get_logger(),
         "Robot Localization Listener Node: Listener instance returned false at "
         "getState call.");
       return false;
@@ -93,7 +95,8 @@ private:
       res->covariance[i] = (*(covariance.data() + i));
     }
 
-    RCLCPP_DEBUG(this->get_logger(),
+    RCLCPP_DEBUG(
+      this->get_logger(),
       "Robot Localization Listener Node: Listener responded with state and "
       "covariance at the requested time.");
     return true;
@@ -112,7 +115,8 @@ int main(int argc, char ** argv)
     robot_localization::RosRobotLocalizationListener>(rlln);
   rlln->setRosRobotLocalizationListener(rll);
 
-  RCLCPP_INFO(rlln->get_logger(),
+  RCLCPP_INFO(
+    rlln->get_logger(),
     "Robot Localization Listener Node: Ready to handle GetState requests at %s",
     rlln->getService().c_str());
 

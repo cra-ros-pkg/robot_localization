@@ -16,7 +16,7 @@ def generate_launch_description():
     # TODO: Port ROS 1 test launch params: clear_params="true"
     launch_ros.actions.Node(
       package='robot_localization',
-      node_executable='test_ros_robot_localization_listener',
+      executable='test_ros_robot_localization_listener',
       remappings=[('test_ros_robot_localization_listener', 'test_estimator')],
       arguments=['__params:=' + default_params_yaml],
       output='screen',
@@ -24,8 +24,8 @@ def generate_launch_description():
     # TODO: Port ROS 1 test launch params: clear_params="true"
     launch_ros.actions.Node(
       package='robot_localization',
-      node_executable='test_ros_robot_localization_listener_publisher',
-      node_name='test_estimator',
+      executable='test_ros_robot_localization_listener_publisher',
+      name='test_estimator',
       remappings=[
         ('/odometry/filtered', 'odom/filtered'),
         ('/accel/filtered', 'acceleration/filtered'),

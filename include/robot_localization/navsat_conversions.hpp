@@ -259,7 +259,8 @@ static inline void LLtoUTM(
   char zone_buf[] = {0, 0, 0, 0};
   // We &0x3fU to let GCC know the size of ZoneNumber. In this case, it's under
   // 63 (6bits)
-  snprintf(zone_buf, sizeof(zone_buf), "%d%c", ZoneNumber & 0x3fU,
+  snprintf(
+    zone_buf, sizeof(zone_buf), "%d%c", ZoneNumber & 0x3fU,
     UTMLetterDesignator(Lat));
   UTMZone = std::string(zone_buf);
 

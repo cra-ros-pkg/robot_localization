@@ -162,8 +162,10 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
-  rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::duration<double>(
-      delay)));
+  rclcpp::sleep_for(
+    std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::duration<double>(
+        delay)));
 
   auto interval = std::chrono::duration<double>(1.0 / frequency);
   timer_ = this->create_wall_timer(interval, std::bind(&NavSatTransform::transformCallback, this));
@@ -207,7 +209,8 @@ void NavSatTransform::computeTransform()
     // robot. We need to get the UTM pose of the robot's origin.
     tf2::Transform transform_utm_pose_corrected;
     if (!use_manual_datum_) {
-      getRobotOriginUtmPose(transform_utm_pose_, transform_utm_pose_corrected,
+      getRobotOriginUtmPose(
+        transform_utm_pose_, transform_utm_pose_corrected,
         rclcpp::Time(0));
     } else {
       transform_utm_pose_corrected = transform_utm_pose_;
@@ -264,7 +267,8 @@ void NavSatTransform::computeTransform()
       transform_utm_pose_corrected.getOrigin());
     utm_pose_with_orientation.setRotation(imu_quat);
 
-    utm_world_transform_.mult(transform_world_pose_,
+    utm_world_transform_.mult(
+      transform_world_pose_,
       utm_pose_with_orientation.inverse());
 
     utm_world_trans_inverse_ = utm_world_transform_.inverse();
@@ -352,7 +356,8 @@ bool NavSatTransform::toLLCallback(
   // tf2::fromMsg(request.map_point, point);
   tf2::Vector3 point(request->map_point.x, request->map_point.y,
     request->map_point.z);
-  mapToLL(point, response->ll_point.latitude, response->ll_point.longitude,
+  mapToLL(
+    point, response->ll_point.latitude, response->ll_point.longitude,
     response->ll_point.altitude);
 
   return true;
@@ -425,7 +430,8 @@ void NavSatTransform::mapToLL(
   odom_as_utm.setRotation(tf2::Quaternion::getIdentity());
 
   // Now convert the data back to lat/long and place into the message
-  navsat_conversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
+  navsat_conversions::UTMtoLL(
+    odom_as_utm.getOrigin().getY(),
     odom_as_utm.getOrigin().getX(),
     utm_zone_,
     latitude,
@@ -501,7 +507,8 @@ void NavSatTransform::getRobotOriginWorldPose(
     if (can_transform) {
       // Zero out rotation because we don't care about the orientation of the
       // GPS receiver relative to base_link
-      gps_offset_rotated.setOrigin(tf2::quatRotate(
+      gps_offset_rotated.setOrigin(
+        tf2::quatRotate(
           robot_orientation.getRotation(), gps_offset_rotated.getOrigin()));
       gps_offset_rotated.setRotation(tf2::Quaternion::getIdentity());
       robot_odom_pose = gps_offset_rotated.inverse() * gps_odom_pose;
@@ -549,7 +556,8 @@ void NavSatTransform::gpsFixCallback(
     double utmX = 0;
     double utmY = 0;
     std::string utm_zone_tmp;
-    navsat_conversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX,
+    navsat_conversions::LLtoUTM(
+      msg->latitude, msg->longitude, utmY, utmX,
       utm_zone_tmp);
     latest_utm_pose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
     latest_utm_covariance_.setZero();
@@ -591,7 +599,8 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
       double roll = 0;
       double pitch = 0;
       double yaw = 0;
-      ros_filter_utilities::quatToRPY(target_frame_trans.getRotation(),
+      ros_filter_utilities::quatToRPY(
+        target_frame_trans.getRotation(),
         roll_offset, pitch_offset, yaw_offset);
       ros_filter_utilities::quatToRPY(transform_orientation_, roll, pitch, yaw);
 
@@ -608,7 +617,8 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
       tf2::Matrix3x3 mat;
       mat.setRPY(0.0, 0.0, yaw_offset);
       rpy_angles = mat * rpy_angles;
-      transform_orientation_.setRPY(rpy_angles.getX(), rpy_angles.getY(),
+      transform_orientation_.setRPY(
+        rpy_angles.getX(), rpy_angles.getY(),
         rpy_angles.getZ());
 
       has_transform_imu_ = true;
@@ -645,7 +655,8 @@ bool NavSatTransform::prepareFilteredGps(
   bool new_data = false;
 
   if (transform_good_ && odom_updated_) {
-    mapToLL(latest_world_pose_.getOrigin(), filtered_gps->latitude,
+    mapToLL(
+      latest_world_pose_.getOrigin(), filtered_gps->latitude,
       filtered_gps->longitude, filtered_gps->altitude);
 
     // Rotate the covariance as well
@@ -750,7 +761,8 @@ void NavSatTransform::setTransformGps(
 {
   double utm_x = 0;
   double utm_y = 0;
-  navsat_conversions::LLtoUTM(msg->latitude, msg->longitude, utm_y, utm_x,
+  navsat_conversions::LLtoUTM(
+    msg->latitude, msg->longitude, utm_y, utm_x,
     utm_zone_, utm_meridian_convergence_);
   utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
 

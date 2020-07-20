@@ -26,8 +26,8 @@ def generate_launch_description():
     return LaunchDescription([
         launch_ros.actions.Node(
             package='robot_localization',
-            node_executable='navsat_transform_node',
-            node_name='navsat_transform_node',
+            executable='navsat_transform_node',
+            name='navsat_transform_node',
             output='screen',
             parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'navsat_transform.yaml')],
            ),
