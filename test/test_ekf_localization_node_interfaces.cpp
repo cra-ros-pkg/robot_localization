@@ -80,8 +80,9 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
   }
 
   auto result = client->async_send_request(setPoseRequest);
-  auto ret = rclcpp::spin_until_future_complete(node_, result,
-      5s);                                            // Wait for the result.
+  auto ret = rclcpp::spin_until_future_complete(
+    node_, result,
+    5s);                                              // Wait for the result.
 
   double deltaX = 0.0;
   double deltaY = 0.0;
@@ -97,7 +98,8 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
       setPoseRequest->pose.pose.pose.position.y;
     deltaZ = filtered_.pose.pose.position.z -
       setPoseRequest->pose.pose.pose.position.z;
-    EXPECT_LT(::sqrt(
+    EXPECT_LT(
+      ::sqrt(
         deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ),
       0.1);
   } else {
@@ -140,15 +142,19 @@ TEST(InterfacesTest, OdomPoseBasicIO) {
   }
 
   // Now check the values from the callback
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.x - odom.pose.pose.position.x),
     0.01);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.y),
     0.01);          // Configuration for this variable for this sensor is false
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.z - odom.pose.pose.position.z),
     0.01);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
-  EXPECT_LT(filtered_.pose.covariance[7],
+  EXPECT_LT(
+    filtered_.pose.covariance[7],
     0.25);          // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
@@ -190,7 +196,8 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     loopRate.sleep();
   }
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
@@ -206,7 +213,8 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
     loopRate.sleep();
   }
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.y - odom.twist.twist.linear.y),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.0);
 
@@ -223,7 +231,8 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - odom.twist.twist.linear.z),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.z - odom.twist.twist.linear.z),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.0);
 
@@ -241,7 +250,8 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
     0.1);
   EXPECT_LT(
     ::fabs(filtered_.twist.twist.angular.z - odom.twist.twist.angular.z),
@@ -292,7 +302,8 @@ TEST(InterfacesTest, OdomTwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - odom.twist.twist.linear.x),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 15), 1.0);
 
@@ -337,15 +348,19 @@ TEST(InterfacesTest, PoseBasicIO) {
   rclcpp::spin_some(node_);
 
   // Now check the values from the callback
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.x - pose.pose.pose.position.x),
     0.1);
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.y),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.y),
     0.1);          // Configuration for this variable for this sensor is false
-  EXPECT_LT(::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z),
+  EXPECT_LT(
+    ::fabs(filtered_.pose.pose.position.z - pose.pose.pose.position.z),
     0.1);
 
   EXPECT_LT(filtered_.pose.covariance[0], 0.5);
-  EXPECT_LT(filtered_.pose.covariance[7],
+  EXPECT_LT(
+    filtered_.pose.covariance[7],
     0.25);          // Configuration for this variable for this sensor is false
   EXPECT_LT(filtered_.pose.covariance[14], 0.5);
 
@@ -388,7 +403,8 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.x - 100.0), 2.0);
 
@@ -406,7 +422,8 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.y - twist.twist.twist.linear.y),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.y - twist.twist.twist.linear.y),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y - 100.0), 2.0);
 
@@ -423,7 +440,8 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.z - twist.twist.twist.linear.z),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.z - twist.twist.twist.linear.z),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.z - 100.0), 2.0);
 
@@ -440,7 +458,8 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
     0.1);
   EXPECT_LT(
     ::fabs(filtered_.twist.twist.angular.z - twist.twist.twist.angular.z),
@@ -492,7 +511,8 @@ TEST(InterfacesTest, TwistBasicIO) {
   }
   rclcpp::spin_some(node_);
 
-  EXPECT_LT(::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
+  EXPECT_LT(
+    ::fabs(filtered_.twist.twist.linear.x - twist.twist.twist.linear.x),
     0.1);
   EXPECT_LT(::fabs(filtered_.pose.pose.position.y + 15), 1.0);
 

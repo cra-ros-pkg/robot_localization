@@ -155,12 +155,14 @@ void RosFilter<T>::toggleFilterProcessingCallback(
     robot_localization::srv::ToggleFilterProcessing::Response> resp)
 {
   if (req->on == toggled_on_) {
-    RCLCPP_WARN(this->get_logger(),
+    RCLCPP_WARN(
+      this->get_logger(),
       "Service was called to toggle filter processing but state was already as "
       "requested.");
     resp->status = false;
   } else {
-    RCLCPP_INFO(this->get_logger(),
+    RCLCPP_INFO(
+      this->get_logger(),
       "Toggling filter measurement filtering to %s.", req->on ? "On" : "Off");
     toggled_on_ = req->on;
     resp->status = true;
@@ -182,8 +184,9 @@ void RosFilter<T>::accelerationCallback(
 
   const std::string & topic_name = callback_data.topic_name_;
 
-  RF_DEBUG("------ RosFilter<T>::accelerationCallback (" << topic_name <<
-    ") ------\n")
+  RF_DEBUG(
+    "------ RosFilter<T>::accelerationCallback (" << topic_name <<
+      ") ------\n")
   // "Twist message:\n" << *msg);
 
   if (last_message_times_.count(topic_name) == 0) {
@@ -205,30 +208,35 @@ void RosFilter<T>::accelerationCallback(
     std::vector<bool> update_vector_corrected = callback_data.update_vector_;
 
     // Prepare the twist data for inclusion in the filter
-    if (prepareAcceleration(msg, topic_name, target_frame,
-      update_vector_corrected, measurement,
-      measurement_covariance))
+    if (prepareAcceleration(
+        msg, topic_name, target_frame,
+        update_vector_corrected, measurement,
+        measurement_covariance))
     {
       // Store the measurement. Add an "acceleration" suffix so we know what
       // kind of measurement we're dealing with when we debug the core filter
       // logic.
-      enqueueMeasurement(topic_name, measurement, measurement_covariance,
+      enqueueMeasurement(
+        topic_name, measurement, measurement_covariance,
         update_vector_corrected,
         callback_data.rejection_threshold_, msg->header.stamp);
 
-      RF_DEBUG("Enqueued new measurement for " << topic_name <<
-        "_acceleration\n");
+      RF_DEBUG(
+        "Enqueued new measurement for " << topic_name <<
+          "_acceleration\n");
     } else {
-      RF_DEBUG("Did *not* enqueue measurement for " << topic_name <<
-        "_acceleration\n");
+      RF_DEBUG(
+        "Did *not* enqueue measurement for " << topic_name <<
+          "_acceleration\n");
     }
 
     last_message_times_[topic_name] = msg->header.stamp;
 
-    RF_DEBUG("Last message time for " <<
-      topic_name << " is now " <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      "\n");
+    RF_DEBUG(
+      "Last message time for " <<
+        topic_name << " is now " <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        "\n");
   } else {
     // else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
     //{
@@ -241,19 +249,22 @@ void RosFilter<T>::accelerationCallback(
       " indicate a bad timestamp. (message time: " << msg->header.stamp.nanosec <<
       ")";
 
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN, topic_name +
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, topic_name +
       "_timestamp", stream.str(), false);
 
 
-    RF_DEBUG("Message is too old. Last message time for " <<
-      topic_name << " is " <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      ", current message time is " <<
-      filter_utilities::toSec(msg->header.stamp) << ".\n");
+    RF_DEBUG(
+      "Message is too old. Last message time for " <<
+        topic_name << " is " <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        ", current message time is " <<
+        filter_utilities::toSec(msg->header.stamp) << ".\n");
   }
 
-  RF_DEBUG("\n----- /RosFilter<T>::accelerationCallback (" << topic_name <<
-    ") ------\n");
+  RF_DEBUG(
+    "\n----- /RosFilter<T>::accelerationCallback (" << topic_name <<
+      ") ------\n");
 }
 
 template<typename T>
@@ -360,7 +371,8 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
     // Convert from roll, pitch, and yaw back to quaternion for
     // orientation values
     tf2::Quaternion quat;
-    quat.setRPY(state(StateMemberRoll), state(StateMemberPitch),
+    quat.setRPY(
+      state(StateMemberRoll), state(StateMemberPitch),
       state(StateMemberYaw));
 
     // Fill out the message
@@ -392,8 +404,9 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
     for (size_t i = 0; i < TWIST_SIZE; i++) {
       for (size_t j = 0; j < TWIST_SIZE; j++) {
         message->twist.covariance[TWIST_SIZE * i + j] =
-          estimate_error_covariance(i + POSITION_V_OFFSET,
-            j + POSITION_V_OFFSET);
+          estimate_error_covariance(
+          i + POSITION_V_OFFSET,
+          j + POSITION_V_OFFSET);
       }
     }
 
@@ -447,8 +460,9 @@ void RosFilter<T>::imuCallback(
   const CallbackData & twist_callback_data,
   const CallbackData & accel_callback_data)
 {
-  RF_DEBUG("------ RosFilter<T>::imuCallback (" <<
-    topic_name << ") ------\n")           // << "IMU message:\n" << *msg);
+  RF_DEBUG(
+    "------ RosFilter<T>::imuCallback (" <<
+      topic_name << ") ------\n")         // << "IMU message:\n" << *msg);
 
   // If we've just reset the filter, then we want to ignore any messages
   // that arrive with an older timestamp
@@ -458,11 +472,13 @@ void RosFilter<T>::imuCallback(
       " before the last filter reset, " << "this message will be ignored. This may"
       "indicate an empty or bad timestamp. (message time: " << msg->header.stamp.nanosec <<
       ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
 
 
-    RF_DEBUG("Received message that preceded the most recent pose reset. "
+    RF_DEBUG(
+      "Received message that preceded the most recent pose reset. "
       "Ignoring...");
 
     return;
@@ -478,7 +494,8 @@ void RosFilter<T>::imuCallback(
     // users to explicitly ignore data using its parameters, but we should also
     // be compliant with message specs.
     if (::fabs(msg->orientation_covariance[0] + 1) < 1e-9) {
-      RF_DEBUG("Received IMU message with -1 as its first covariance value for "
+      RF_DEBUG(
+        "Received IMU message with -1 as its first covariance value for "
         "orientation. "
         "Ignoring orientation...");
     } else {
@@ -510,7 +527,8 @@ void RosFilter<T>::imuCallback(
   if (twist_callback_data.update_sum_ > 0) {
     // Ignore rotational velocity if the first covariance value is -1
     if (::fabs(msg->angular_velocity_covariance[0] + 1) < 1e-9) {
-      RF_DEBUG("Received IMU message with -1 as its first covariance value for "
+      RF_DEBUG(
+        "Received IMU message with -1 as its first covariance value for "
         "angular "
         "velocity. Ignoring angular velocity...");
     } else {
@@ -536,7 +554,8 @@ void RosFilter<T>::imuCallback(
   if (accel_callback_data.update_sum_ > 0) {
     // Ignore linear acceleration if the first covariance value is -1
     if (::fabs(msg->linear_acceleration_covariance[0] + 1) < 1e-9) {
-      RF_DEBUG("Received IMU message with -1 as its first covariance value for "
+      RF_DEBUG(
+        "Received IMU message with -1 as its first covariance value for "
         "linear "
         "acceleration. Ignoring linear acceleration...");
     } else {
@@ -551,11 +570,12 @@ void RosFilter<T>::imuCallback(
 template<typename T>
 void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
 {
-  RF_DEBUG("------ RosFilter<T>::integrateMeasurements ------\n\n"
+  RF_DEBUG(
+    "------ RosFilter<T>::integrateMeasurements ------\n\n"
     "Integration time is " <<
-    std::setprecision(20) << filter_utilities::toSec(current_time) <<
-    "\n" <<
-    measurement_queue_.size() << " measurements in queue.\n");
+      std::setprecision(20) << filter_utilities::toSec(current_time) <<
+      "\n" <<
+      measurement_queue_.size() << " measurements in queue.\n");
 
   bool predict_to_current_time = predict_to_current_time_;
 
@@ -571,11 +591,13 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     if (smooth_lagged_data_ &&
       first_measurement->time_ < filter_.getLastMeasurementTime())
     {
-      RF_DEBUG("Received a measurement that was " <<
-        filter_utilities::toSec(filter_.getLastMeasurementTime() -
-        first_measurement->time_) <<
-        " seconds in the past. Reverting filter state and "
-        "measurement queue...");
+      RF_DEBUG(
+        "Received a measurement that was " <<
+          filter_utilities::toSec(
+          filter_.getLastMeasurementTime() -
+          first_measurement->time_) <<
+          " seconds in the past. Reverting filter state and "
+          "measurement queue...");
 
       int original_count = static_cast<int>(measurement_queue_.size());
       const rclcpp::Time first_measurement_time = first_measurement->time_;
@@ -583,8 +605,9 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         first_measurement->topic_name_;
       // revertTo may invalidate first_measurement
       if (!revertTo(first_measurement_time - rclcpp::Duration(1))) {
-        RF_DEBUG("ERROR: history interval is too small to revert to time " <<
-          filter_utilities::toSec(first_measurement_time) << "\n");
+        RF_DEBUG(
+          "ERROR: history interval is too small to revert to time " <<
+            filter_utilities::toSec(first_measurement_time) << "\n");
         // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_,
         //   "Received old measurement for topic " << first_measurement_topic <<
         //   ", but history interval is insufficiently sized. "
@@ -621,7 +644,8 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       // overwrite that value with this one (i.e., with the "old" control we
       // associated with the measurement).
       if (use_control_ && restored_measurement_count > 0) {
-        filter_.setControl(measurement->latest_control_,
+        filter_.setControl(
+          measurement->latest_control_,
           measurement->latest_control_time_);
         restored_measurement_count--;
       }
@@ -655,11 +679,12 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     if (last_update_delta >= filter_.getSensorTimeout()) {
       predict_to_current_time = true;
 
-      RF_DEBUG("Sensor timeout! Last measurement time was " <<
-        filter_utilities::toSec(filter_.getLastMeasurementTime()) <<
-        ", current time is " << filter_utilities::toSec(current_time) <<
-        ", delta is " << filter_utilities::toSec(last_update_delta) <<
-        "\n");
+      RF_DEBUG(
+        "Sensor timeout! Last measurement time was " <<
+          filter_utilities::toSec(filter_.getLastMeasurementTime()) <<
+          ", current time is " << filter_utilities::toSec(current_time) <<
+          ", delta is " << filter_utilities::toSec(last_update_delta) <<
+          "\n");
     }
   } else {
     RF_DEBUG("Filter not yet initialized.\n");
@@ -673,7 +698,8 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     filter_.predict(current_time, last_update_delta);
 
     // Update the last measurement time and last update time
-    filter_.setLastMeasurementTime(filter_.getLastMeasurementTime() +
+    filter_.setLastMeasurementTime(
+      filter_.getLastMeasurementTime() +
       last_update_delta);
   }
 
@@ -708,8 +734,9 @@ void RosFilter<T>::loadParams()
   print_diagnostics_ = this->declare_parameter("print_diagnostics", false);
 
   // Check for custom gravitational acceleration value
-  gravitational_acceleration_ = this->declare_parameter("gravitational_acceleration",
-      gravitational_acceleration_);
+  gravitational_acceleration_ = this->declare_parameter(
+    "gravitational_acceleration",
+    gravitational_acceleration_);
 
   // Grab the debug param. If true, the node will produce a LOT of output.
   bool debug = this->declare_parameter("debug", false);
@@ -738,10 +765,12 @@ void RosFilter<T>::loadParams()
   // base_link) and odometry frame (typically odom)
   map_frame_id_ = this->declare_parameter("map_frame", std::string("map"));
   odom_frame_id_ = this->declare_parameter("odom_frame", std::string("odom"));
-  base_link_frame_id_ = this->declare_parameter("base_link_frame",
-      std::string("base_link"));
-  base_link_output_frame_id_ = this->declare_parameter("base_link_frame_output",
-      base_link_frame_id_);
+  base_link_frame_id_ = this->declare_parameter(
+    "base_link_frame",
+    std::string("base_link"));
+  base_link_output_frame_id_ = this->declare_parameter(
+    "base_link_frame_output",
+    base_link_frame_id_);
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -893,7 +922,8 @@ void RosFilter<T>::loadParams()
         std::cerr << "Acceleration gain configuration must be of size " <<
           TWIST_SIZE << ". Provided config was of size " << size <<
           ". All gains will be assumed to be 1.\n";
-        std::fill_n(acceleration_gains.begin(), std::min(size, TWIST_SIZE),
+        std::fill_n(
+          acceleration_gains.begin(), std::min(size, TWIST_SIZE),
           1.0);
         acceleration_gains.resize(TWIST_SIZE, 1.0);
       }
@@ -922,7 +952,8 @@ void RosFilter<T>::loadParams()
         std::cerr << "Deceleration gain configuration must be of size " <<
           TWIST_SIZE << ". Provided config was of size " << size <<
           ". All gains will be assumed to be 1.\n";
-        std::fill_n(deceleration_gains.begin(), std::min(size, TWIST_SIZE),
+        std::fill_n(
+          deceleration_gains.begin(), std::min(size, TWIST_SIZE),
           1.0);
         deceleration_gains.resize(TWIST_SIZE, 1.0);
       }
@@ -964,30 +995,31 @@ void RosFilter<T>::loadParams()
   enabled_ = !disabled_at_startup_;
 
   // Debugging writes to file
-  RF_DEBUG("tf_prefix is " <<
-    tf_prefix << "\nmap_frame is " << map_frame_id_ <<
-    "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
-    base_link_frame_id_ << "\nbase_link_output_frame is " <<
-    base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
-    "\ntransform_time_offset is " <<
-    filter_utilities::toSec(tf_time_offset_) <<
-    "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
-    "\nfrequency is " << frequency_ << "\nsensor_timeout is " <<
-    filter_utilities::toSec(filter_.getSensorTimeout()) <<
-    "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
-    "\nsmooth_lagged_data is " <<
+  RF_DEBUG(
+    "tf_prefix is " <<
+      tf_prefix << "\nmap_frame is " << map_frame_id_ <<
+      "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
+      base_link_frame_id_ << "\nbase_link_output_frame is " <<
+      base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
+      "\ntransform_time_offset is " <<
+      filter_utilities::toSec(tf_time_offset_) <<
+      "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
+      "\nfrequency is " << frequency_ << "\nsensor_timeout is " <<
+      filter_utilities::toSec(filter_.getSensorTimeout()) <<
+      "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
+      "\nsmooth_lagged_data is " <<
     (smooth_lagged_data_ ? "true" : "false") << "\nhistory_length is " <<
-    filter_utilities::toSec(history_length_) << "\nuse_control is " <<
+      filter_utilities::toSec(history_length_) << "\nuse_control is " <<
     (use_control_ ? "true" : "false") << "\ncontrol_config is " <<
-    control_update_vector << "\ncontrol_timeout is " <<
-    control_timeout << "\nacceleration_limits are " <<
-    acceleration_limits << "\nacceleration_gains are " <<
-    acceleration_gains << "\ndeceleration_limits are " <<
-    deceleration_limits << "\ndeceleration_gains are " <<
-    deceleration_gains << "\ninitial state is " << filter_.getState() <<
-    "\ndynamic_process_noise_covariance is " <<
+      control_update_vector << "\ncontrol_timeout is " <<
+      control_timeout << "\nacceleration_limits are " <<
+      acceleration_limits << "\nacceleration_gains are " <<
+      acceleration_gains << "\ndeceleration_limits are " <<
+      deceleration_limits << "\ndeceleration_gains are " <<
+      deceleration_gains << "\ninitial state is " << filter_.getState() <<
+      "\ndynamic_process_noise_covariance is " <<
     (dynamic_process_noise_covariance ? "true" : "false") <<
-    "\nprint_diagnostics is " <<
+      "\nprint_diagnostics is " <<
     (print_diagnostics_ ? "true" : "false") << "\n");
 
   // Create a subscriber for manually setting/resetting pose
@@ -999,21 +1031,24 @@ void RosFilter<T>::loadParams()
   // Create a service for manually setting/resetting pose
   set_pose_service_ =
     this->create_service<robot_localization::srv::SetPose>(
-    "set_pose", std::bind(&RosFilter<T>::setPoseSrvCallback, this,
-    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    "set_pose", std::bind(
+      &RosFilter<T>::setPoseSrvCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Create a service for manually enabling the filter
   enable_filter_srv_ =
     this->create_service<std_srvs::srv::Empty>(
-    "enable", std::bind(&RosFilter::enableFilterSrvCallback, this,
-    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    "enable", std::bind(
+      &RosFilter::enableFilterSrvCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Create a service for toggling processing new measurements while still
   // publishing
   toggle_filter_processing_srv_ =
     this->create_service<robot_localization::srv::ToggleFilterProcessing>(
-    "toggle", std::bind(&RosFilter<T>::toggleFilterProcessingCallback, this,
-    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    "toggle", std::bind(
+      &RosFilter<T>::toggleFilterProcessingCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Init the last measurement time so we don't get a huge initial delta
   filter_.setLastMeasurementTime(this->now());
@@ -1044,8 +1079,9 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       // Determine if we want to integrate this sensor differentially
-      bool differential = this->declare_parameter(odom_topic_name + std::string("_differential"),
-          false);
+      bool differential = this->declare_parameter(
+        odom_topic_name + std::string("_differential"),
+        false);
 
       // Determine if we want to integrate this sensor relatively
       bool relative = this->declare_parameter(odom_topic_name + std::string("_relative"), false);
@@ -1059,18 +1095,21 @@ void RosFilter<T>::loadParams()
       }
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = this->declare_parameter(odom_topic_name +
-          std::string("_pose_rejection_threshold"),
-          std::numeric_limits<double>::max());
+      double pose_mahalanobis_thresh = this->declare_parameter(
+        odom_topic_name +
+        std::string("_pose_rejection_threshold"),
+        std::numeric_limits<double>::max());
 
       // Check for twist rejection threshold
-      double twist_mahalanobis_thresh = this->declare_parameter(odom_topic_name +
-          std::string("_twist_rejection_threshold"),
-          std::numeric_limits<double>::max());
+      double twist_mahalanobis_thresh = this->declare_parameter(
+        odom_topic_name +
+        std::string("_twist_rejection_threshold"),
+        std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = this->declare_parameter(odom_topic_name +
-          std::string("_queue_size"), 10);
+      int queue_size = this->declare_parameter(
+        odom_topic_name +
+        std::string("_queue_size"), 10);
 
       // Now pull in its boolean update vector configuration. Create separate
       // vectors for pose and twist data, and then zero out the opposite values
@@ -1078,10 +1117,12 @@ void RosFilter<T>::loadParams()
       // vice-versa).
       std::vector<bool> update_vec = loadUpdateConfig(odom_topic_name);
       std::vector<bool> pose_update_vec = update_vec;
-      std::fill(pose_update_vec.begin() + POSITION_V_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_V_OFFSET,
         pose_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
       std::vector<bool> twist_update_vec = update_vec;
-      std::fill(twist_update_vec.begin() + POSITION_OFFSET,
+      std::fill(
+        twist_update_vec.begin() + POSITION_OFFSET,
         twist_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
 
       int pose_update_sum =
@@ -1100,20 +1141,23 @@ void RosFilter<T>::loadParams()
       // Store the odometry topic subscribers so they don't go out of scope.
       if (pose_update_sum + twist_update_sum > 0) {
         std::function<void(const std::shared_ptr<nav_msgs::msg::Odometry>)>
-        odom_callback = std::bind(&RosFilter<T>::odometryCallback, this,
-            std::placeholders::_1, odom_topic_name,
-            pose_callback_data, twist_callback_data);
+        odom_callback = std::bind(
+          &RosFilter<T>::odometryCallback, this,
+          std::placeholders::_1, odom_topic_name,
+          pose_callback_data, twist_callback_data);
 
         auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(queue_size));
         topic_subs_.push_back(
-          this->create_subscription<nav_msgs::msg::Odometry>(odom_topic, custom_qos,
-          odom_callback));
+          this->create_subscription<nav_msgs::msg::Odometry>(
+            odom_topic, custom_qos,
+            odom_callback));
       } else {
         std::stringstream stream;
         stream << odom_topic << " is listed as an input topic, but all update "
           "variables are false";
 
-        addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+        addDiagnostic(
+          diagnostic_msgs::msg::DiagnosticStatus::WARN,
           odom_topic + "_configuration", stream.str(), true);
       }
 
@@ -1151,16 +1195,17 @@ void RosFilter<T>::loadParams()
         twist_var_counts[StateMemberVyaw] += twist_update_vec[StateMemberVyaw];
       }
 
-      RF_DEBUG("Subscribed to " <<
-        odom_topic << " (" << odom_topic_name << ")\n\t" <<
-        odom_topic_name << "_differential is " <<
+      RF_DEBUG(
+        "Subscribed to " <<
+          odom_topic << " (" << odom_topic_name << ")\n\t" <<
+          odom_topic_name << "_differential is " <<
         (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
-        "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
-        " pose update vector is " << pose_update_vec << "\t" <<
-        odom_topic_name << " twist update vector is " <<
-        twist_update_vec);
+          "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
+          "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
+          twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
+          " pose update vector is " << pose_update_vec << "\t" <<
+          odom_topic_name << " twist update vector is " <<
+          twist_update_vec);
     }
   } while (more_params);
 
@@ -1184,12 +1229,14 @@ void RosFilter<T>::loadParams()
     }
 
     if (more_params) {
-      bool differential = this->declare_parameter(pose_topic_name + std::string("_differential"),
-          false);
+      bool differential = this->declare_parameter(
+        pose_topic_name + std::string("_differential"),
+        false);
 
       // Determine if we want to integrate this sensor relatively
-      bool relative = this->declare_parameter(pose_topic_name + std::string("_relative"),
-          false);
+      bool relative = this->declare_parameter(
+        pose_topic_name + std::string("_relative"),
+        false);
 
       if (relative && differential) {
         std::cerr << "Both " << pose_topic_name << "_differential" <<
@@ -1200,20 +1247,24 @@ void RosFilter<T>::loadParams()
       }
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = this->declare_parameter(pose_topic_name +
-          std::string("_rejection_threshold"),
-          std::numeric_limits<double>::max());
+      double pose_mahalanobis_thresh = this->declare_parameter(
+        pose_topic_name +
+        std::string("_rejection_threshold"),
+        std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = this->declare_parameter(pose_topic_name +
-          std::string("_queue_size"), 10);
+      int queue_size = this->declare_parameter(
+        pose_topic_name +
+        std::string("_queue_size"), 10);
 
       // Pull in the sensor's config, zero out values that are invalid for the
       // pose type
       std::vector<bool> pose_update_vec = loadUpdateConfig(pose_topic_name);
-      std::fill(pose_update_vec.begin() + POSITION_V_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_V_OFFSET,
         pose_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
-      std::fill(pose_update_vec.begin() + POSITION_A_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_A_OFFSET,
         pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE,
         0);
 
@@ -1228,12 +1279,14 @@ void RosFilter<T>::loadParams()
         std::function<void(const std::shared_ptr<
             geometry_msgs::msg::PoseWithCovarianceStamped>)>
         pose_callback =
-          std::bind(&RosFilter<T>::poseCallback, this, std::placeholders::_1,
-            callback_data, world_frame_id_, false);
+          std::bind(
+          &RosFilter<T>::poseCallback, this, std::placeholders::_1,
+          callback_data, world_frame_id_, false);
 
         auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(queue_size));
 
-        topic_subs_.push_back(this->create_subscription<
+        topic_subs_.push_back(
+          this->create_subscription<
             geometry_msgs::msg::PoseWithCovarianceStamped>(
             pose_topic, custom_qos, pose_callback));
 
@@ -1263,13 +1316,14 @@ void RosFilter<T>::loadParams()
           "but all pose update variables are false\n";
       }
 
-      RF_DEBUG("Subscribed to " <<
-        pose_topic << " (" << pose_topic_name << ")\n\t" <<
-        pose_topic_name << "_differential is " <<
+      RF_DEBUG(
+        "Subscribed to " <<
+          pose_topic << " (" << pose_topic_name << ")\n\t" <<
+          pose_topic_name << "_differential is " <<
         (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
-        "_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << pose_topic_name << " update vector is " <<
-        pose_update_vec);
+          "_rejection_threshold is " << pose_mahalanobis_thresh <<
+          "\n\t" << pose_topic_name << " update vector is " <<
+          pose_update_vec);
     }
   } while (more_params);
 
@@ -1294,18 +1348,21 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       // Check for twist rejection threshold
-      double twist_mahalanobis_thresh = this->declare_parameter(twist_topic_name +
-          std::string("_rejection_threshold"),
-          std::numeric_limits<double>::max());
+      double twist_mahalanobis_thresh = this->declare_parameter(
+        twist_topic_name +
+        std::string("_rejection_threshold"),
+        std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = this->declare_parameter(twist_topic_name +
-          std::string("_queue_size"), 10);
+      int queue_size = this->declare_parameter(
+        twist_topic_name +
+        std::string("_queue_size"), 10);
 
       // Pull in the sensor's config, zero out values that are invalid for the
       // twist type
       std::vector<bool> twist_update_vec = loadUpdateConfig(twist_topic_name);
-      std::fill(twist_update_vec.begin() + POSITION_OFFSET,
+      std::fill(
+        twist_update_vec.begin() + POSITION_OFFSET,
         twist_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
 
       int twist_update_sum =
@@ -1318,12 +1375,14 @@ void RosFilter<T>::loadParams()
 
         std::function<void(const std::shared_ptr<
             geometry_msgs::msg::TwistWithCovarianceStamped>)>
-        twist_callback = std::bind(&RosFilter<T>::twistCallback, this,
-            std::placeholders::_1, callback_data,
-            base_link_frame_id_);
+        twist_callback = std::bind(
+          &RosFilter<T>::twistCallback, this,
+          std::placeholders::_1, callback_data,
+          base_link_frame_id_);
 
         auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(queue_size));
-        topic_subs_.push_back(this->create_subscription<
+        topic_subs_.push_back(
+          this->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
             twist_topic, custom_qos, twist_callback));
 
@@ -1341,11 +1400,12 @@ void RosFilter<T>::loadParams()
           "but all twist update variables are false\n";
       }
 
-      RF_DEBUG("Subscribed to " <<
-        twist_topic << " (" << twist_topic_name << ")\n\t" <<
-        twist_topic_name << "_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << twist_topic_name <<
-        " update vector is " << twist_update_vec);
+      RF_DEBUG(
+        "Subscribed to " <<
+          twist_topic << " (" << twist_topic_name << ")\n\t" <<
+          twist_topic_name << "_rejection_threshold is " <<
+          twist_mahalanobis_thresh << "\n\t" << twist_topic_name <<
+          " update vector is " << twist_update_vec);
     }
   } while (more_params);
 
@@ -1369,8 +1429,9 @@ void RosFilter<T>::loadParams()
     }
 
     if (more_params) {
-      bool differential = this->declare_parameter(imu_topic_name + std::string("_differential"),
-          false);
+      bool differential = this->declare_parameter(
+        imu_topic_name + std::string("_differential"),
+        false);
 
       // Determine if we want to integrate this sensor relatively
       bool relative = this->declare_parameter(imu_topic_name + std::string("_relative"), false);
@@ -1384,15 +1445,17 @@ void RosFilter<T>::loadParams()
       }
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = this->declare_parameter(imu_topic_name +
-          std::string("_pose_rejection_threshold"),
-          std::numeric_limits<double>::max());
+      double pose_mahalanobis_thresh = this->declare_parameter(
+        imu_topic_name +
+        std::string("_pose_rejection_threshold"),
+        std::numeric_limits<double>::max());
 
       // Check for angular velocity rejection threshold
       std::string imu_twist_rejection_name =
         imu_topic_name + std::string("_twist_rejection_threshold");
-      double twist_mahalanobis_thresh = this->declare_parameter(imu_twist_rejection_name,
-          std::numeric_limits<double>::max());
+      double twist_mahalanobis_thresh = this->declare_parameter(
+        imu_twist_rejection_name,
+        std::numeric_limits<double>::max());
 
       // Check for acceleration rejection threshold
       double accel_mahalanobis_thresh = this->declare_parameter(
@@ -1400,15 +1463,17 @@ void RosFilter<T>::loadParams()
         std::string("_linear_acceleration_rejection_threshold"),
         std::numeric_limits<double>::max());
 
-      bool remove_grav_acc = this->declare_parameter(imu_topic_name +
-          "_remove_gravitational_acceleration",
-          false);
+      bool remove_grav_acc = this->declare_parameter(
+        imu_topic_name +
+        "_remove_gravitational_acceleration",
+        false);
       remove_gravitational_acceleration_[imu_topic_name + "_acceleration"] =
         remove_grav_acc;
 
       // Set optional custom queue size
-      int queue_size = this->declare_parameter(imu_topic_name +
-          std::string("_queue_size"), 10);
+      int queue_size = this->declare_parameter(
+        imu_topic_name +
+        std::string("_queue_size"), 10);
 
       // Now pull in its boolean update vector configuration and differential
       // update configuration (as this contains pose information)
@@ -1417,10 +1482,12 @@ void RosFilter<T>::loadParams()
       // sanity checks for update config settings
       std::vector<int> position_update_vec(update_vec.begin() + POSITION_OFFSET,
         update_vec.begin() + POSITION_OFFSET + POSITION_SIZE);
-      int position_update_sum = std::accumulate(position_update_vec.begin(),
-          position_update_vec.end(), 0);
+      int position_update_sum = std::accumulate(
+        position_update_vec.begin(),
+        position_update_vec.end(), 0);
       if (position_update_sum > 0) {
-        RCLCPP_WARN(this->get_logger(),
+        RCLCPP_WARN(
+          this->get_logger(),
           "Warning: Some position entries in parameter %s_config are listed "
           "true, but sensor_msgs/Imu contains no information about position",
           imu_topic_name.c_str());
@@ -1432,7 +1499,8 @@ void RosFilter<T>::loadParams()
         linear_velocity_update_vec.begin(), linear_velocity_update_vec.end(),
         0);
       if (linear_velocity_update_sum > 0) {
-        RCLCPP_WARN(this->get_logger(),
+        RCLCPP_WARN(
+          this->get_logger(),
           "Warning: Some linear velocity entries in parameter %s_config are "
           "listed true, but an sensor_msgs/Imu contains no information about "
           "linear velocities", imu_topic_name.c_str());
@@ -1441,27 +1509,35 @@ void RosFilter<T>::loadParams()
       std::vector<bool> pose_update_vec = update_vec;
       // IMU message contains no information about position, filter everything
       // except orientation
-      std::fill(pose_update_vec.begin() + POSITION_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_OFFSET,
         pose_update_vec.begin() + POSITION_OFFSET + POSITION_SIZE, 0);
-      std::fill(pose_update_vec.begin() + POSITION_V_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_V_OFFSET,
         pose_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
-      std::fill(pose_update_vec.begin() + POSITION_A_OFFSET,
+      std::fill(
+        pose_update_vec.begin() + POSITION_A_OFFSET,
         pose_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> twist_update_vec = update_vec;
       // IMU message contains no information about linear speeds, filter
       // everything except angular velocity
-      std::fill(twist_update_vec.begin() + POSITION_OFFSET,
+      std::fill(
+        twist_update_vec.begin() + POSITION_OFFSET,
         twist_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
-      std::fill(twist_update_vec.begin() + POSITION_V_OFFSET,
+      std::fill(
+        twist_update_vec.begin() + POSITION_V_OFFSET,
         twist_update_vec.begin() + POSITION_V_OFFSET + LINEAR_VELOCITY_SIZE, 0);
-      std::fill(twist_update_vec.begin() + POSITION_A_OFFSET,
+      std::fill(
+        twist_update_vec.begin() + POSITION_A_OFFSET,
         twist_update_vec.begin() + POSITION_A_OFFSET + ACCELERATION_SIZE, 0);
 
       std::vector<bool> accel_update_vec = update_vec;
-      std::fill(accel_update_vec.begin() + POSITION_OFFSET,
+      std::fill(
+        accel_update_vec.begin() + POSITION_OFFSET,
         accel_update_vec.begin() + POSITION_OFFSET + POSE_SIZE, 0);
-      std::fill(accel_update_vec.begin() + POSITION_V_OFFSET,
+      std::fill(
+        accel_update_vec.begin() + POSITION_V_OFFSET,
         accel_update_vec.begin() + POSITION_V_OFFSET + TWIST_SIZE, 0);
 
       int pose_update_sum =
@@ -1508,12 +1584,14 @@ void RosFilter<T>::loadParams()
 
         std::function<void(const std::shared_ptr<sensor_msgs::msg::Imu>)>
         imu_callback =
-          std::bind(&RosFilter<T>::imuCallback, this, std::placeholders::_1,
-            imu_topic_name, pose_callback_data,
-            twist_callback_data, accel_callback_data);
+          std::bind(
+          &RosFilter<T>::imuCallback, this, std::placeholders::_1,
+          imu_topic_name, pose_callback_data,
+          twist_callback_data, accel_callback_data);
 
         auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(queue_size));
-        topic_subs_.push_back(this->create_subscription<sensor_msgs::msg::Imu>(
+        topic_subs_.push_back(
+          this->create_subscription<sensor_msgs::msg::Imu>(
             imu_topic, custom_qos, imu_callback));
       } else {
         std::cerr << "Warning: " << imu_topic <<
@@ -1546,28 +1624,30 @@ void RosFilter<T>::loadParams()
         twist_var_counts[StateMemberVyaw] += twist_update_vec[StateMemberVyaw];
       }
 
-      RF_DEBUG("Subscribed to " <<
-        imu_topic << " (" << imu_topic_name << ")\n\t" <<
-        imu_topic_name << "_differential is " <<
+      RF_DEBUG(
+        "Subscribed to " <<
+          imu_topic << " (" << imu_topic_name << ")\n\t" <<
+          imu_topic_name << "_differential is " <<
         (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
-        "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
-        "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
-        twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
-        "_linear_acceleration_rejection_threshold is " <<
-        accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
-        "_remove_gravitational_acceleration is " <<
+          "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
+          "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
+          twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
+          "_linear_acceleration_rejection_threshold is " <<
+          accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
+          "_remove_gravitational_acceleration is " <<
         (remove_grav_acc ? "true" : "false") << "\n\t" <<
-        imu_topic_name << " pose update vector is " << pose_update_vec <<
-        "\t" << imu_topic_name << " twist update vector is " <<
-        twist_update_vec << "\t" << imu_topic_name <<
-        " acceleration update vector is " << accel_update_vec);
+          imu_topic_name << " pose update vector is " << pose_update_vec <<
+          "\t" << imu_topic_name << " twist update vector is " <<
+          twist_update_vec << "\t" << imu_topic_name <<
+          " acceleration update vector is " << accel_update_vec);
     }
   } while (more_params);
 
   // Now that we've checked if IMU linear acceleration is being used, we can
   // determine our final control parameters
-  if (use_control_ && std::accumulate(control_update_vector.begin(),
-    control_update_vector.end(), 0) == 0)
+  if (use_control_ && std::accumulate(
+      control_update_vector.begin(),
+      control_update_vector.end(), 0) == 0)
   {
     std::cerr << "use_control is set to true, but control_config has only "
       "false values. No control term "
@@ -1606,7 +1686,8 @@ void RosFilter<T>::loadParams()
           ". This may result in oscillations. Please ensure that your"
           "variances for each measured variable are set appropriately.";
 
-        addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+        addDiagnostic(
+          diagnostic_msgs::msg::DiagnosticStatus::WARN,
           state_variable_names_[state_var] + "_configuration",
           stream.str(), true);
       } else if (abs_pose_var_counts[static_cast<StateMembers>(state_var)] == 0) {
@@ -1631,7 +1712,8 @@ void RosFilter<T>::loadParams()
             "velocity is being measured. This will result in unbounded"
             "error growth and erratic filter behavior.";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+          addDiagnostic(
+            diagnostic_msgs::msg::DiagnosticStatus::ERROR,
             state_variable_names_[state_var] + "_configuration",
             stream.str(), true);
         }
@@ -1646,8 +1728,9 @@ void RosFilter<T>::loadParams()
   std::vector<double> process_noise_covar_flat;
 
   this->declare_parameter("process_noise_covariance");
-  if (this->get_parameter("process_noise_covariance",
-    process_noise_covar_flat))
+  if (this->get_parameter(
+      "process_noise_covariance",
+      process_noise_covar_flat))
   {
     assert(process_noise_covar_flat.size() == STATE_SIZE * STATE_SIZE);
 
@@ -1658,8 +1741,9 @@ void RosFilter<T>::loadParams()
       }
     }
 
-    RF_DEBUG("Process noise covariance is:\n" <<
-      process_noise_covariance << "\n");
+    RF_DEBUG(
+      "Process noise covariance is:\n" <<
+        process_noise_covariance << "\n");
 
     filter_.setProcessNoiseCovariance(process_noise_covariance);
   }
@@ -1671,8 +1755,9 @@ void RosFilter<T>::loadParams()
   std::vector<double> estimate_error_covar_flat;
 
   this->declare_parameter("initial_estimate_covariance");
-  if (this->get_parameter("initial_estimate_covariance",
-    estimate_error_covar_flat))
+  if (this->get_parameter(
+      "initial_estimate_covariance",
+      estimate_error_covar_flat))
   {
     assert(estimate_error_covar_flat.size() == STATE_SIZE * STATE_SIZE);
 
@@ -1683,8 +1768,9 @@ void RosFilter<T>::loadParams()
       }
     }
 
-    RF_DEBUG("Initial estimate error covariance is:\n" <<
-      estimate_error_covar_flat << "\n");
+    RF_DEBUG(
+      "Initial estimate error covariance is:\n" <<
+        estimate_error_covar_flat << "\n");
 
     filter_.setEstimateErrorCovariance(initial_estimate_error_covariance);
   }
@@ -1707,16 +1793,19 @@ void RosFilter<T>::odometryCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
-    RF_DEBUG("Received message that preceded the most recent pose reset. "
+    RF_DEBUG(
+      "Received message that preceded the most recent pose reset. "
       "Ignoring...");
 
     return;
   }
 
-  RF_DEBUG("------ RosFilter<T>::odometryCallback (" <<
-    topic_name << ") ------\n")           // << "Odometry message:\n" << *msg);
+  RF_DEBUG(
+    "------ RosFilter<T>::odometryCallback (" <<
+      topic_name << ") ------\n")         // << "Odometry message:\n" << *msg);
 
   if (pose_callback_data.update_sum_ > 0) {
     // Grab the pose portion of the message and pass it to the poseCallback
@@ -1740,8 +1829,9 @@ void RosFilter<T>::odometryCallback(
     twistCallback(twist_ptr, twist_callback_data, base_link_frame_id_);
   }
 
-  RF_DEBUG("\n----- /RosFilter<T>::odometryCallback (" << topic_name <<
-    ") ------\n");
+  RF_DEBUG(
+    "\n----- /RosFilter<T>::odometryCallback (" << topic_name <<
+      ") ------\n");
 }
 
 template<typename T>
@@ -1762,13 +1852,15 @@ void RosFilter<T>::poseCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
     return;
   }
 
-  RF_DEBUG("------ RosFilter<T>::poseCallback (" << topic_name << ") ------\n"
-    "Pose message:\n" << msg);
+  RF_DEBUG(
+    "------ RosFilter<T>::poseCallback (" << topic_name << ") ------\n"
+      "Pose message:\n" << msg);
 
   //  Put the initial value in the lastMessagTimes_ for this variable if it's
   //  empty
@@ -1779,8 +1871,9 @@ void RosFilter<T>::poseCallback(
 
   // Make sure this message is newer than the last one
   if (last_message_times_[topic_name] <= msg->header.stamp) {
-    RF_DEBUG("Update vector for " << topic_name << " is:\n" <<
-      callback_data.update_vector_);
+    RF_DEBUG(
+      "Update vector for " << topic_name << " is:\n" <<
+        callback_data.update_vector_);
 
     Eigen::VectorXd measurement(STATE_SIZE);
     Eigen::MatrixXd measurement_covariance(STATE_SIZE, STATE_SIZE);
@@ -1792,13 +1885,15 @@ void RosFilter<T>::poseCallback(
     std::vector<bool> update_vector_corrected = callback_data.update_vector_;
 
     // Prepare the pose data for inclusion in the filter
-    if (preparePose(msg, topic_name, target_frame, callback_data.differential_,
-      callback_data.relative_, imu_data, update_vector_corrected,
-      measurement, measurement_covariance))
+    if (preparePose(
+        msg, topic_name, target_frame, callback_data.differential_,
+        callback_data.relative_, imu_data, update_vector_corrected,
+        measurement, measurement_covariance))
     {
       // Store the measurement. Add a "pose" suffix so we know what kind of
       // measurement we're dealing with when we debug the core filter logic.
-      enqueueMeasurement(topic_name, measurement, measurement_covariance,
+      enqueueMeasurement(
+        topic_name, measurement, measurement_covariance,
         update_vector_corrected,
         callback_data.rejection_threshold_, msg->header.stamp);
 
@@ -1809,10 +1904,11 @@ void RosFilter<T>::poseCallback(
 
     last_message_times_[topic_name] = msg->header.stamp;
 
-    RF_DEBUG("Last message time for " <<
-      topic_name << " is now " <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      "\n");
+    RF_DEBUG(
+      "Last message time for " <<
+        topic_name << " is now " <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        "\n");
   } else {
     // else if (reset_on_time_jump_ && rclcpp::Time::isSimTime())
     //{
@@ -1824,13 +1920,15 @@ void RosFilter<T>::poseCallback(
       "the previous message received," << " this message will be ignored. This may "
       "indicate a bad timestamp. (message time: " << msg->header.stamp.nanosec <<
       ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
 
-    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is " <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      ", current message time is " << filter_utilities::toSec(msg->header.stamp) <<
-      ".\n");
+    RF_DEBUG(
+      "Message is too old. Last message time for " << topic_name << " is " <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        ", current message time is " << filter_utilities::toSec(msg->header.stamp) <<
+        ".\n");
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::poseCallback (" << topic_name << ") ------\n");
@@ -1849,7 +1947,8 @@ void RosFilter<T>::initialize()
   loadParams();
 
   if (print_diagnostics_) {
-    diagnostic_updater_->add("Filter diagnostic updater", this,
+    diagnostic_updater_->add(
+      "Filter diagnostic updater", this,
       &RosFilter<T>::aggregateDiagnostics);
   }
 
@@ -1860,8 +1959,9 @@ void RosFilter<T>::initialize()
     std::make_unique<diagnostic_updater::HeaderlessTopicDiagnostic>(
     "odometry/filtered",
     *diagnostic_updater_,
-    diagnostic_updater::FrequencyStatusParam(&minFrequency,
-    &maxFrequency, 0.1, 10));
+    diagnostic_updater::FrequencyStatusParam(
+      &minFrequency,
+      &maxFrequency, 0.1, 10));
 
   last_diag_time_ = this->now();
 
@@ -1892,7 +1992,8 @@ void RosFilter<T>::periodicUpdate()
 {
   // Wait for the filter to be enabled
   if (!enabled_) {
-    RCLCPP_INFO_ONCE(this->get_logger(),
+    RCLCPP_INFO_ONCE(
+      this->get_logger(),
       "Filter is disabled. To enable it call the %s service",
       enable_filter_srv_->get_service_name());
     return;
@@ -1936,7 +2037,8 @@ void RosFilter<T>::periodicUpdate()
     // The filteredPosition is the message containing the state and covariances:
     // nav_msgs Odometry
     if (!validateFilterOutput(filtered_position.get())) {
-      RCLCPP_ERROR(this->get_logger(),
+      RCLCPP_ERROR(
+        this->get_logger(),
         "Critical Error, NaNs were detected in the output state of the filter. "
         "This was likely due to poorly coniditioned process, noise, or sensor "
         "covariances.");
@@ -1951,14 +2053,17 @@ void RosFilter<T>::periodicUpdate()
       } else if (filtered_position->header.frame_id == map_frame_id_) {
         try {
           tf2::Transform world_base_link_trans;
-          tf2::fromMsg(world_base_link_trans_msg_.transform,
+          tf2::fromMsg(
+            world_base_link_trans_msg_.transform,
             world_base_link_trans);
 
           tf2::Transform base_link_odom_trans;
-          tf2::fromMsg(tf_buffer_
-            ->lookupTransform(base_link_frame_id_,
-            odom_frame_id_,
-            tf2::TimePointZero)
+          tf2::fromMsg(
+            tf_buffer_
+            ->lookupTransform(
+              base_link_frame_id_,
+              odom_frame_id_,
+              tf2::TimePointZero)
             .transform,
             base_link_odom_trans);
 
@@ -2092,7 +2197,8 @@ void RosFilter<T>::setPoseCallback(
 
   // Prepare the pose data (really just using this to transform it into the
   // target frame). Twist data is going to get zeroed out.
-  preparePose(msg, topic_name, world_frame_id_, false, false, false,
+  preparePose(
+    msg, topic_name, world_frame_id_, false, false, false,
     update_vector, measurement, measurement_covariance);
 
   // For the state
@@ -2124,14 +2230,17 @@ bool RosFilter<T>::enableFilterSrvCallback(
   const std::shared_ptr<std_srvs::srv::Empty::Request>,
   const std::shared_ptr<std_srvs::srv::Empty::Response>)
 {
-  RF_DEBUG("\n[" << this->get_name() << ":]" <<
-    " ------ /RosFilter::enableFilterSrvCallback ------\n");
+  RF_DEBUG(
+    "\n[" << this->get_name() << ":]" <<
+      " ------ /RosFilter::enableFilterSrvCallback ------\n");
   if (enabled_) {
-    RCLCPP_WARN(this->get_logger(), "[%s:] Asking for enabling filter service, "
+    RCLCPP_WARN(
+      this->get_logger(), "[%s:] Asking for enabling filter service, "
       "but the filter was already enabled! Use param disabled_at_startup.",
       this->get_name());
   } else {
-    RCLCPP_INFO(this->get_logger(), "[%s:] Enabling filter...",
+    RCLCPP_INFO(
+      this->get_logger(), "[%s:] Enabling filter...",
       this->get_name());
     enabled_ = true;
   }
@@ -2156,13 +2265,15 @@ void RosFilter<T>::twistCallback(
       "this message will be ignored. This may indicate an empty or bad "
       "timestamp. (message time: " <<
       filter_utilities::toSec(msg->header.stamp) << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
     return;
   }
 
-  RF_DEBUG("------ RosFilter<T>::twistCallback (" << topic_name << ") ------\n"
-    "Twist message:\n" << msg);
+  RF_DEBUG(
+    "------ RosFilter<T>::twistCallback (" << topic_name << ") ------\n"
+      "Twist message:\n" << msg);
 
   if (last_message_times_.count(topic_name) == 0) {
     last_message_times_.insert(
@@ -2171,8 +2282,9 @@ void RosFilter<T>::twistCallback(
 
   // Make sure this message is newer than the last one
   if (last_message_times_[topic_name] <= msg->header.stamp) {
-    RF_DEBUG("Update vector for " << topic_name << " is:\n" <<
-      callback_data.update_vector_);
+    RF_DEBUG(
+      "Update vector for " << topic_name << " is:\n" <<
+        callback_data.update_vector_);
 
     Eigen::VectorXd measurement(STATE_SIZE);
     Eigen::MatrixXd measurement_covariance(STATE_SIZE, STATE_SIZE);
@@ -2184,39 +2296,45 @@ void RosFilter<T>::twistCallback(
     std::vector<bool> update_vector_corrected = callback_data.update_vector_;
 
     // Prepare the twist data for inclusion in the filter
-    if (prepareTwist(msg, topic_name, target_frame, update_vector_corrected,
-      measurement, measurement_covariance))
+    if (prepareTwist(
+        msg, topic_name, target_frame, update_vector_corrected,
+        measurement, measurement_covariance))
     {
       // Store the measurement. Add a "twist" suffix so we know what kind of
       // measurement we're dealing with when we debug the core filter logic.
-      enqueueMeasurement(topic_name, measurement, measurement_covariance,
+      enqueueMeasurement(
+        topic_name, measurement, measurement_covariance,
         update_vector_corrected,
         callback_data.rejection_threshold_, msg->header.stamp);
 
       RF_DEBUG("Enqueued new measurement for " << topic_name << "_twist\n");
     } else {
-      RF_DEBUG("Did *not* enqueue measurement for " << topic_name <<
-        "_twist\n");
+      RF_DEBUG(
+        "Did *not* enqueue measurement for " << topic_name <<
+          "_twist\n");
     }
 
     last_message_times_[topic_name] = msg->header.stamp;
 
-    RF_DEBUG("Last message time for " <<
-      topic_name << " is now " <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      "\n");
+    RF_DEBUG(
+      "Last message time for " <<
+        topic_name << " is now " <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        "\n");
   } else {
     std::stringstream stream;
     stream << "The " << topic_name << " message has a timestamp before that of "
       "the previous message received," << " this message will be ignored. This may "
       "indicate a bad timestamp. (message time: " << msg->header.stamp.nanosec << ")";
-    addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    addDiagnostic(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
       topic_name + "_timestamp", stream.str(), false);
 
-    RF_DEBUG("Message is too old. Last message time for " << topic_name << " is" <<
-      filter_utilities::toSec(last_message_times_[topic_name]) <<
-      ", current message time is " << filter_utilities::toSec(msg->header.stamp) <<
-      ".\n");
+    RF_DEBUG(
+      "Message is too old. Last message time for " << topic_name << " is" <<
+        filter_utilities::toSec(last_message_times_[topic_name]) <<
+        ", current message time is " << filter_utilities::toSec(msg->header.stamp) <<
+        ".\n");
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::twistCallback (" << topic_name << ") ------\n");
@@ -2250,22 +2368,26 @@ void RosFilter<T>::aggregateDiagnostics(
   // Report the overall status
   switch (maxErrLevel) {
     case diagnostic_msgs::msg::DiagnosticStatus::ERROR:
-      wrapper.summary(maxErrLevel,
+      wrapper.summary(
+        maxErrLevel,
         "Erroneous data or settings detected for a "
         "robot_localization state estimation this->");
       break;
     case
-      diagnostic_msgs::msg::DiagnosticStatus::WARN: wrapper.summary(maxErrLevel,
+      diagnostic_msgs::msg::DiagnosticStatus::WARN: wrapper.summary(
+        maxErrLevel,
         "Potentially erroneous data or settings detected for "
         "a robot_localization state estimation this->");
       break;
     case diagnostic_msgs::msg::DiagnosticStatus::STALE:
-      wrapper.summary(maxErrLevel,
+      wrapper.summary(
+        maxErrLevel,
         "The state of the robot_localization state estimation "
         "node is stale.");
       break;
     case diagnostic_msgs::msg::DiagnosticStatus::OK:
-      wrapper.summary(maxErrLevel,
+      wrapper.summary(
+        maxErrLevel,
         "The robot_localization state estimation node appears to "
         "be functioning properly.");
       break;
@@ -2321,7 +2443,8 @@ void RosFilter<T>::copyCovariance(
             "the update vector for " << (i == j ? iVar : iVar + " and/or " + jVar) <<
             "is set to true. This may produce undesirable results.";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+          addDiagnostic(
+            diagnostic_msgs::msg::DiagnosticStatus::WARN,
             topic_name + "_covariance", stream.str(), false);
         } else if (update_vector[i] && i == j && covariance(i, j) == 0) {
           std::stringstream stream;
@@ -2330,7 +2453,8 @@ void RosFilter<T>::copyCovariance(
             "will be replaced with a small value to maintain filter stability, "
             "but should be corrected at the message origin this->";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+          addDiagnostic(
+            diagnostic_msgs::msg::DiagnosticStatus::WARN,
             topic_name + "_covariance", stream.str(), false);
         } else if (update_vector[i] && i == j && covariance(i, j) < 0) {
           std::stringstream stream;
@@ -2339,7 +2463,8 @@ void RosFilter<T>::copyCovariance(
             "negative. This will be replaced with a small positive value to maintain"
             "filter stability, but should be corrected at the message origin this->";
 
-          addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+          addDiagnostic(
+            diagnostic_msgs::msg::DiagnosticStatus::WARN,
             topic_name + "_covariance", stream.str(), false);
         }
       }
@@ -2379,8 +2504,9 @@ bool RosFilter<T>::prepareAcceleration(
   Eigen::VectorXd & measurement,
   Eigen::MatrixXd & measurement_covariance)
 {
-  RF_DEBUG("------ RosFilter<T>::prepareAcceleration (" << topic_name <<
-    ") ------\n");
+  RF_DEBUG(
+    "------ RosFilter<T>::prepareAcceleration (" << topic_name <<
+      ") ------\n");
 
   // 1. Get the measurement into a vector
   tf2::Vector3 acc_tmp(msg->linear_acceleration.x, msg->linear_acceleration.y,
@@ -2409,14 +2535,16 @@ bool RosFilter<T>::prepareAcceleration(
   Eigen::MatrixXd covariance_rotated(ACCELERATION_SIZE, ACCELERATION_SIZE);
   covariance_rotated.setZero();
 
-  this->copyCovariance(&(msg->linear_acceleration_covariance[0]),
+  this->copyCovariance(
+    &(msg->linear_acceleration_covariance[0]),
     covariance_rotated, topic_name, update_vector,
     POSITION_A_OFFSET, ACCELERATION_SIZE);
 
-  RF_DEBUG("Original measurement as tf object: " <<
-    acc_tmp << "\nOriginal update vector:\n" <<
-    update_vector << "\nOriginal covariance matrix:\n" <<
-    covariance_rotated << "\n");
+  RF_DEBUG(
+    "Original measurement as tf object: " <<
+      acc_tmp << "\nOriginal update vector:\n" <<
+      update_vector << "\nOriginal covariance matrix:\n" <<
+      covariance_rotated << "\n");
 
   // 4. We need to transform this into the target frame (probably base_link)
   // It's unlikely that we'll get a velocity measurement in another frame, but
@@ -2450,7 +2578,8 @@ bool RosFilter<T>::prepareAcceleration(
       } else {
         tf2::fromMsg(msg->orientation, curAttitude);
         if (fabs(curAttitude.length() - 1.0) > 0.01) {
-          RCLCPP_WARN_ONCE(this->get_logger(),
+          RCLCPP_WARN_ONCE(
+            this->get_logger(),
             "An input was not normalized, this should NOT happen, but will normalize.");
           curAttitude.normalize();
         }
@@ -2461,10 +2590,11 @@ bool RosFilter<T>::prepareAcceleration(
       acc_tmp.setY(acc_tmp.getY() - rotNorm.getY());
       acc_tmp.setZ(acc_tmp.getZ() - rotNorm.getZ());
 
-      RF_DEBUG("Orientation is " <<
-        curAttitude << "Acceleration due to gravity is " << rotNorm <<
-        "After removing acceleration due to gravity, acceleration is " <<
-        acc_tmp << "\n");
+      RF_DEBUG(
+        "Orientation is " <<
+          curAttitude << "Acceleration due to gravity is " << rotNorm <<
+          "After removing acceleration due to gravity, acceleration is " <<
+          acc_tmp << "\n");
     }
 
     // Transform to correct frame
@@ -2487,13 +2617,14 @@ bool RosFilter<T>::prepareAcceleration(
     update_vector[StateMemberAz] = static_cast<int>(
       maskAcc.getRow(StateMemberAz - POSITION_A_OFFSET).length() >= 1e-6);
 
-    RF_DEBUG(msg->header.frame_id <<
-      "->" << target_frame << " transform:\n" <<
-      target_frame_trans << "\nAfter applying transform to " <<
-      target_frame << ", update vector is:\n" <<
-      update_vector << "\nAfter applying transform to " <<
-      target_frame << ", measurement is:\n" <<
-      acc_tmp << "\n");
+    RF_DEBUG(
+      msg->header.frame_id <<
+        "->" << target_frame << " transform:\n" <<
+        target_frame_trans << "\nAfter applying transform to " <<
+        target_frame << ", update vector is:\n" <<
+        update_vector << "\nAfter applying transform to " <<
+        target_frame << ", measurement is:\n" <<
+        acc_tmp << "\n");
 
     // 5. Now rotate the covariance: create an augmented
     // matrix that contains a 3D rotation matrix in the
@@ -2520,7 +2651,8 @@ bool RosFilter<T>::prepareAcceleration(
     measurement(StateMemberAz) = acc_tmp.getZ();
 
     // Copy the covariances
-    measurement_covariance.block(POSITION_A_OFFSET, POSITION_A_OFFSET,
+    measurement_covariance.block(
+      POSITION_A_OFFSET, POSITION_A_OFFSET,
       ACCELERATION_SIZE, ACCELERATION_SIZE) =
       covariance_rotated.block(0, 0, ACCELERATION_SIZE, ACCELERATION_SIZE);
 
@@ -2529,12 +2661,14 @@ bool RosFilter<T>::prepareAcceleration(
       forceTwoD(measurement, measurement_covariance, update_vector);
     }
   } else {
-    RF_DEBUG("Could not transform measurement into " << target_frame <<
-      ". Ignoring...\n");
+    RF_DEBUG(
+      "Could not transform measurement into " << target_frame <<
+        ". Ignoring...\n");
   }
 
-  RF_DEBUG("\n----- /RosFilter<T>::prepareAcceleration(" << topic_name <<
-    ") ------\n");
+  RF_DEBUG(
+    "\n----- /RosFilter<T>::prepareAcceleration(" << topic_name <<
+      ") ------\n");
 
   return can_transform;
 }
@@ -2579,17 +2713,20 @@ bool RosFilter<T>::preparePose(
       (differential ? final_target_frame : msg->header.frame_id);
   }
 
-  RF_DEBUG("Final target frame for " << topic_name << " is " <<
-    final_target_frame << "\n");
+  RF_DEBUG(
+    "Final target frame for " << topic_name << " is " <<
+      final_target_frame << "\n");
 
   pose_tmp.stamp_ = tf2::timeFromSec(
     static_cast<double>(msg->header.stamp.sec) +
     static_cast<double>(msg->header.stamp.sec) / 1000000000.0);
 
   // Fill out the position data
-  pose_tmp.setOrigin(tf2::Vector3(msg->pose.pose.position.x,
-    msg->pose.pose.position.y,
-    msg->pose.pose.position.z));
+  pose_tmp.setOrigin(
+    tf2::Vector3(
+      msg->pose.pose.position.x,
+      msg->pose.pose.position.y,
+      msg->pose.pose.position.z));
 
   tf2::Quaternion orientation;
 
@@ -2609,13 +2746,15 @@ bool RosFilter<T>::preparePose(
         "but its configuration is such that orientation data is being used."
         " Correcting...";
 
-      addDiagnostic(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      addDiagnostic(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN,
         topic_name + "_orientation", stream.str(), false);
     }
   } else {
     tf2::fromMsg(msg->pose.pose.orientation, orientation);
     if (fabs(orientation.length() - 1.0) > 0.01) {
-      RCLCPP_WARN_ONCE(this->get_logger(),
+      RCLCPP_WARN_ONCE(
+        this->get_logger(),
         "An input was not normalized, this should NOT happen, but will normalize.");
       orientation.normalize();
     }
@@ -2700,7 +2839,8 @@ bool RosFilter<T>::preparePose(
     // copy over the covariance data
     Eigen::MatrixXd covariance(POSE_SIZE, POSE_SIZE);
     covariance.setZero();
-    copyCovariance(&(msg->pose.covariance[0]), covariance, topic_name,
+    copyCovariance(
+      &(msg->pose.covariance[0]), covariance, topic_name,
       update_vector, POSITION_OFFSET, POSE_SIZE);
 
     // 5b. Now rotate the covariance: create an augmented matrix that
@@ -2732,9 +2872,10 @@ bool RosFilter<T>::preparePose(
     // Now carry out the rotation
     covariance_rotated = rot6d * covariance * rot6d.transpose();
 
-    RF_DEBUG("After rotating into the " << final_target_frame <<
-      " frame, covariance is \n" <<
-      covariance_rotated << "\n");
+    RF_DEBUG(
+      "After rotating into the " << final_target_frame <<
+        " frame, covariance is \n" <<
+        covariance_rotated << "\n");
 
     /* 6a. For IMU data, the transform that we get is the transform from the
      * body frame of the robot (e.g., base_link) to the mounting frame of the
@@ -2754,7 +2895,8 @@ bool RosFilter<T>::preparePose(
       double roll = 0;
       double pitch = 0;
       double yaw = 0;
-      ros_filter_utilities::quatToRPY(target_frame_trans.getRotation(),
+      ros_filter_utilities::quatToRPY(
+        target_frame_trans.getRotation(),
         rollOffset, pitchOffset, yaw_offset);
       ros_filter_utilities::quatToRPY(pose_tmp.getRotation(), roll, pitch, yaw);
 
@@ -2771,7 +2913,8 @@ bool RosFilter<T>::preparePose(
       tf2::Matrix3x3 mat;
       mat.setRPY(0.0, 0.0, yaw_offset);
       rpy_angles = mat * rpy_angles;
-      pose_tmp.getBasis().setRPY(rpy_angles.getX(), rpy_angles.getY(),
+      pose_tmp.getBasis().setRPY(
+        rpy_angles.getX(), rpy_angles.getY(),
         rpy_angles.getZ());
 
       // We will use this target transformation later on, but
@@ -2817,8 +2960,9 @@ bool RosFilter<T>::preparePose(
         target_frame_trans.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
         pose_tmp.mult(target_frame_trans, pose_tmp);
 
-        RF_DEBUG("After rotating to the target frame, measurement delta is:\n" <<
-          pose_tmp << "\n");
+        RF_DEBUG(
+          "After rotating to the target frame, measurement delta is:\n" <<
+            pose_tmp << "\n");
 
         // 7c. Now use the time difference from the last message to compute
         // translational and rotational velocities
@@ -2832,20 +2976,22 @@ bool RosFilter<T>::preparePose(
         double pitchVel = 0;
         double yawVel = 0;
 
-        ros_filter_utilities::quatToRPY(pose_tmp.getRotation(), rollVel,
+        ros_filter_utilities::quatToRPY(
+          pose_tmp.getRotation(), rollVel,
           pitchVel, yawVel);
         rollVel /= dt;
         pitchVel /= dt;
         yawVel /= dt;
 
-        RF_DEBUG("Previous message time was " <<
-          filter_utilities::toSec(last_message_times_[topic_name]) <<
-          ", current message time is " <<
-          filter_utilities::toSec(msg->header.stamp) << ", delta is " <<
-          dt << ", velocity is (vX, vY, vZ): (" << xVel << ", " <<
-          yVel << ", " << zVel << ")\n" <<
-          "(vRoll, vPitch, vYaw): (" << rollVel << ", " << pitchVel <<
-          ", " << yawVel << ")\n");
+        RF_DEBUG(
+          "Previous message time was " <<
+            filter_utilities::toSec(last_message_times_[topic_name]) <<
+            ", current message time is " <<
+            filter_utilities::toSec(msg->header.stamp) << ", delta is " <<
+            dt << ", velocity is (vX, vY, vZ): (" << xVel << ", " <<
+            yVel << ", " << zVel << ")\n" <<
+            "(vRoll, vPitch, vYaw): (" << rollVel << ", " << pitchVel <<
+            ", " << yawVel << ")\n");
 
         // 7d. Fill out the velocity data in the message
         geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr twist_ptr =
@@ -2859,10 +3005,12 @@ bool RosFilter<T>::preparePose(
         twist_ptr->twist.twist.angular.y = pitchVel;
         twist_ptr->twist.twist.angular.z = yawVel;
         std::vector<bool> twist_update_vec(STATE_SIZE, false);
-        std::copy(update_vector.begin() + POSITION_OFFSET,
+        std::copy(
+          update_vector.begin() + POSITION_OFFSET,
           update_vector.begin() + POSE_SIZE,
           twist_update_vec.begin() + POSITION_V_OFFSET);
-        std::copy(twist_update_vec.begin(), twist_update_vec.end(),
+        std::copy(
+          twist_update_vec.begin(), twist_update_vec.end(),
           update_vector.begin());
 
         // 7e. Now rotate the previous covariance for this measurement to get it
@@ -2874,20 +3022,23 @@ bool RosFilter<T>::preparePose(
           rot6d.transpose();
         covariance_rotated =
           (covariance_rotated.eval() + prev_covar_rotated) * dt;
-        copyCovariance(covariance_rotated, &(twist_ptr->twist.covariance[0]),
+        copyCovariance(
+          covariance_rotated, &(twist_ptr->twist.covariance[0]),
           POSE_SIZE);
 
-        RF_DEBUG("Previous measurement covariance:\n" <<
-          previous_measurement_covariances_[topic_name] <<
-          "\nPrevious measurement covariance rotated:\n" <<
-          prev_covar_rotated << "\nFinal twist covariance:\n" <<
-          covariance_rotated << "\n");
+        RF_DEBUG(
+          "Previous measurement covariance:\n" <<
+            previous_measurement_covariances_[topic_name] <<
+            "\nPrevious measurement covariance rotated:\n" <<
+            prev_covar_rotated << "\nFinal twist covariance:\n" <<
+            covariance_rotated << "\n");
 
         // Now pass this on to prepareTwist, which will convert it to the
         // required frame
-        success = prepareTwist(twist_ptr, topic_name + "_twist",
-            twist_ptr->header.frame_id, update_vector,
-            measurement, measurement_covariance);
+        success = prepareTwist(
+          twist_ptr, topic_name + "_twist",
+          twist_ptr->header.frame_id, update_vector,
+          measurement, measurement_covariance);
       }
 
       // 7f. Update the previous measurement and measurement covariance
@@ -2937,8 +3088,9 @@ bool RosFilter<T>::preparePose(
   } else {
     retVal = false;
 
-    RF_DEBUG("Could not transform measurement into " << final_target_frame <<
-      ". Ignoring...");
+    RF_DEBUG(
+      "Could not transform measurement into " << final_target_frame <<
+        ". Ignoring...");
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::preparePose (" << topic_name << ") ------\n");
@@ -2997,14 +3149,16 @@ bool RosFilter<T>::prepareTwist(
   Eigen::MatrixXd covariance_rotated(TWIST_SIZE, TWIST_SIZE);
   covariance_rotated.setZero();
 
-  copyCovariance(&(msg->twist.covariance[0]), covariance_rotated, topic_name,
+  copyCovariance(
+    &(msg->twist.covariance[0]), covariance_rotated, topic_name,
     update_vector, POSITION_V_OFFSET, TWIST_SIZE);
 
-  RF_DEBUG("Original measurement as tf object:\nLinear: " <<
-    twist_lin << "Rotational: " << meas_twist_rot <<
-    "\nOriginal update vector:\n" <<
-    update_vector << "\nOriginal covariance matrix:\n" <<
-    covariance_rotated << "\n");
+  RF_DEBUG(
+    "Original measurement as tf object:\nLinear: " <<
+      twist_lin << "Rotational: " << meas_twist_rot <<
+      "\nOriginal update vector:\n" <<
+      update_vector << "\nOriginal covariance matrix:\n" <<
+      covariance_rotated << "\n");
 
   // 4. We need to transform this into the target frame (probably base_link)
   tf2::Transform target_frame_trans;
@@ -3038,14 +3192,15 @@ bool RosFilter<T>::prepareTwist(
       maskRot.getRow(StateMemberVyaw - ORIENTATION_V_OFFSET).length() >=
       1e-6);
 
-    RF_DEBUG(msg->header.frame_id <<
-      "->" << target_frame << " transform:\n" <<
-      target_frame_trans << "\nAfter applying transform to " <<
-      target_frame << ", update vector is:\n" <<
-      update_vector << "\nAfter applying transform to " <<
-      target_frame << ", measurement is:\n" <<
-      "Linear: " << twist_lin << "Rotational: " << meas_twist_rot <<
-      "\n");
+    RF_DEBUG(
+      msg->header.frame_id <<
+        "->" << target_frame << " transform:\n" <<
+        target_frame_trans << "\nAfter applying transform to " <<
+        target_frame << ", update vector is:\n" <<
+        update_vector << "\nAfter applying transform to " <<
+        target_frame << ", measurement is:\n" <<
+        "Linear: " << twist_lin << "Rotational: " << meas_twist_rot <<
+        "\n");
 
     // 5. Now rotate the covariance: create an augmented
     // matrix that contains a 3D rotation matrix in the
@@ -3078,7 +3233,8 @@ bool RosFilter<T>::prepareTwist(
     measurement(StateMemberVyaw) = meas_twist_rot.getZ();
 
     // Copy the covariances
-    measurement_covariance.block(POSITION_V_OFFSET, POSITION_V_OFFSET,
+    measurement_covariance.block(
+      POSITION_V_OFFSET, POSITION_V_OFFSET,
       TWIST_SIZE, TWIST_SIZE) =
       covariance_rotated.block(0, 0, TWIST_SIZE, TWIST_SIZE);
 
@@ -3087,8 +3243,9 @@ bool RosFilter<T>::prepareTwist(
       forceTwoD(measurement, measurement_covariance, update_vector);
     }
   } else {
-    RF_DEBUG("Could not transform measurement into " << target_frame <<
-      ". Ignoring...");
+    RF_DEBUG(
+      "Could not transform measurement into " << target_frame <<
+        ". Ignoring...");
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::prepareTwist (" << topic_name << ") ------\n");
@@ -3107,19 +3264,21 @@ void RosFilter<T>::saveFilterState(T & filter)
   state->latest_control_ = Eigen::VectorXd(filter.getControl());
   state->latest_control_time_ = filter.getControlTime();
   filter_state_history_.push_back(state);
-  RF_DEBUG("Saved state with timestamp " <<
-    std::setprecision(20) <<
-    filter_utilities::toSec(state->last_measurement_time_) <<
-    " to history. " << filter_state_history_.size() <<
-    " measurements are in the queue.\n");
+  RF_DEBUG(
+    "Saved state with timestamp " <<
+      std::setprecision(20) <<
+      filter_utilities::toSec(state->last_measurement_time_) <<
+      " to history. " << filter_state_history_.size() <<
+      " measurements are in the queue.\n");
 }
 
 template<typename T>
 bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 {
   RF_DEBUG("\n----- RosFilter<T>::revertTo -----\n");
-  RF_DEBUG("\nRequested time was " << std::setprecision(20) <<
-    filter_utilities::toSec(time) << "\n")
+  RF_DEBUG(
+    "\nRequested time was " << std::setprecision(20) <<
+      filter_utilities::toSec(time) << "\n")
 
   // size_t history_size = filter_state_history_.size();
 
@@ -3143,13 +3302,15 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
     ret_val = true;
     last_history_state = filter_state_history_.back();
   } else {
-    RF_DEBUG("Insufficient history to revert to time " <<
-      filter_utilities::toSec(time) << "\n");
+    RF_DEBUG(
+      "Insufficient history to revert to time " <<
+        filter_utilities::toSec(time) << "\n");
 
     if (last_history_state) {
-      RF_DEBUG("Will revert to oldest state at " <<
-        filter_utilities::toSec(last_history_state->latest_control_time_) <<
-        ".\n");
+      RF_DEBUG(
+        "Will revert to oldest state at " <<
+          filter_utilities::toSec(last_history_state->latest_control_time_) <<
+          ".\n");
 
       // ROS_WARN_STREAM_DELAYED_THROTTLE(history_length_, "Could not revert "
       //   "to state with time " << std::setprecision(20) << time <<
@@ -3167,8 +3328,9 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
     filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
     filter_.setLastMeasurementTime(state->last_measurement_time_);
 
-    RF_DEBUG("Reverted to state with time " <<
-      filter_utilities::toSec(state->last_measurement_time_) << "\n");
+    RF_DEBUG(
+      "Reverted to state with time " <<
+        filter_utilities::toSec(state->last_measurement_time_) << "\n");
 
     // Repeat for measurements, but push every measurement onto the measurement
     // queue as we go
@@ -3185,8 +3347,9 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
       measurement_history_.pop_back();
     }
 
-    RF_DEBUG("Restored " << restored_measurements << " to measurement queue."
-      "\n");
+    RF_DEBUG(
+      "Restored " << restored_measurements << " to measurement queue."
+        "\n");
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::revertTo\n");
@@ -3228,9 +3391,10 @@ bool RosFilter<T>::validateFilterOutput(nav_msgs::msg::Odometry * message)
 template<typename T>
 void RosFilter<T>::clearExpiredHistory(const rclcpp::Time cutoff_time)
 {
-  RF_DEBUG("\n----- RosFilter<T>::clearExpiredHistory -----" <<
-    "\nCutoff time is " << filter_utilities::toSec(cutoff_time) <<
-    "\n");
+  RF_DEBUG(
+    "\n----- RosFilter<T>::clearExpiredHistory -----" <<
+      "\nCutoff time is " << filter_utilities::toSec(cutoff_time) <<
+      "\n");
 
   int popped_measurements = 0;
   int popped_states = 0;
@@ -3249,10 +3413,11 @@ void RosFilter<T>::clearExpiredHistory(const rclcpp::Time cutoff_time)
     popped_states++;
   }
 
-  RF_DEBUG("\nPopped " << popped_measurements << " measurements and " <<
-    popped_states <<
-    " states from their respective queues." <<
-    "\n---- /RosFilter<T>::clearExpiredHistory ----\n");
+  RF_DEBUG(
+    "\nPopped " << popped_measurements << " measurements and " <<
+      popped_states <<
+      " states from their respective queues." <<
+      "\n---- /RosFilter<T>::clearExpiredHistory ----\n");
 }
 
 template<typename T>

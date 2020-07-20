@@ -147,8 +147,9 @@ void FilterBase::computeDynamicProcessNoiseCovariance(
   dynamic_process_noise_covariance_.block<TWIST_SIZE, TWIST_SIZE>(
     POSITION_OFFSET, POSITION_OFFSET) =
     velocity_matrix *
-    process_noise_covariance_.block<TWIST_SIZE, TWIST_SIZE>(POSITION_OFFSET,
-      POSITION_OFFSET) *
+    process_noise_covariance_.block<TWIST_SIZE, TWIST_SIZE>(
+    POSITION_OFFSET,
+    POSITION_OFFSET) *
     velocity_matrix.transpose();
 }
 
@@ -192,8 +193,9 @@ const Eigen::VectorXd & FilterBase::getState() {return state_;}
 
 void FilterBase::processMeasurement(const Measurement & measurement)
 {
-  FB_DEBUG("------ FilterBase::processMeasurement (" << measurement.topic_name_ <<
-    ") ------\n");
+  FB_DEBUG(
+    "------ FilterBase::processMeasurement (" << measurement.topic_name_ <<
+      ") ------\n");
 
   rclcpp::Duration delta(0);
 
@@ -256,8 +258,9 @@ void FilterBase::processMeasurement(const Measurement & measurement)
     last_measurement_time_ = measurement.time_;
   }
 
-  FB_DEBUG("------ /FilterBase::processMeasurement (" << measurement.topic_name_ <<
-    ") ------\n");
+  FB_DEBUG(
+    "------ /FilterBase::processMeasurement (" << measurement.topic_name_ <<
+      ") ------\n");
 }
 
 void FilterBase::setControl(
@@ -357,10 +360,11 @@ void FilterBase::prepareControl(
       (reference_time - latest_control_time_ >= control_timeout_);
 
     if (timed_out) {
-      FB_DEBUG("Control timed out. Reference time was " <<
-        reference_time.nanoseconds() << ", latest control time was " <<
-        latest_control_time_.nanoseconds() << ", control timeout was " <<
-        control_timeout_.nanoseconds() << "\n");
+      FB_DEBUG(
+        "Control timed out. Reference time was " <<
+          reference_time.nanoseconds() << ", latest control time was " <<
+          latest_control_time_.nanoseconds() << ", control timeout was " <<
+          control_timeout_.nanoseconds() << "\n");
     }
 
     for (size_t controlInd = 0; controlInd < TWIST_SIZE; ++controlInd) {
@@ -399,16 +403,17 @@ inline double FilterBase::computeControlAcceleration(
 
   const double final_accel = std::min(std::max(gain * error, -limit), limit);
 
-  FB_DEBUG("Control value: " <<
-    control << "\n" <<
-    "State value: " << state << "\n" <<
-    "Error: " << error << "\n" <<
-    "Same sign: " << (same_sign ? "true" : "false") << "\n" <<
-    "Set point: " << set_point << "\n" <<
-    "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
-    "Limit: " << limit << "\n" <<
-    "Gain: " << gain << "\n" <<
-    "Final is " << final_accel << "\n");
+  FB_DEBUG(
+    "Control value: " <<
+      control << "\n" <<
+      "State value: " << state << "\n" <<
+      "Error: " << error << "\n" <<
+      "Same sign: " << (same_sign ? "true" : "false") << "\n" <<
+      "Set point: " << set_point << "\n" <<
+      "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
+      "Limit: " << limit << "\n" <<
+      "Gain: " << gain << "\n" <<
+      "Final is " << final_accel << "\n");
 
   return final_accel;
 }

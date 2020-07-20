@@ -68,11 +68,12 @@ void Ukf::setConstants(double alpha, double kappa, double beta)
 
 void Ukf::correct(const Measurement & measurement)
 {
-  FB_DEBUG("---------------------- Ukf::correct ----------------------\n" <<
-    "State is:\n" <<
-    state_ << "\nMeasurement is:\n" <<
-    measurement.measurement_ << "\nMeasurement covariance is:\n" <<
-    measurement.covariance_ << "\n");
+  FB_DEBUG(
+    "---------------------- Ukf::correct ----------------------\n" <<
+      "State is:\n" <<
+      state_ << "\nMeasurement is:\n" <<
+      measurement.measurement_ << "\nMeasurement covariance is:\n" <<
+      measurement.covariance_ << "\n");
 
   // In our implementation, it may be that after we call predict once, we call
   // correct several times in succession (multiple measurements with different
@@ -110,11 +111,13 @@ void Ukf::correct(const Measurement & measurement)
     if (measurement.update_vector_[i]) {
       // Handle nan and inf values in measurements
       if (std::isnan(measurement.measurement_(i))) {
-        FB_DEBUG("Value at index " << i <<
-          " was nan. Excluding from update.\n");
+        FB_DEBUG(
+          "Value at index " << i <<
+            " was nan. Excluding from update.\n");
       } else if (std::isinf(measurement.measurement_(i))) {
-        FB_DEBUG("Value at index " << i <<
-          " was inf. Excluding from update.\n");
+        FB_DEBUG(
+          "Value at index " << i <<
+            " was inf. Excluding from update.\n");
       } else {
         update_indices.push_back(i);
       }
@@ -164,10 +167,11 @@ void Ukf::correct(const Measurement & measurement)
     // than exclude the measurement or make up a covariance, just take
     // the absolute value.
     if (measurement_covariance_subset(i, i) < 0) {
-      FB_DEBUG("WARNING: Negative covariance for index " <<
-        i << " of measurement (value is" <<
-        measurement_covariance_subset(i, i) <<
-        "). Using absolute value...\n");
+      FB_DEBUG(
+        "WARNING: Negative covariance for index " <<
+          i << " of measurement (value is" <<
+          measurement_covariance_subset(i, i) <<
+          "). Using absolute value...\n");
 
       measurement_covariance_subset(i, i) =
         ::fabs(measurement_covariance_subset(i, i));
@@ -182,9 +186,10 @@ void Ukf::correct(const Measurement & measurement)
     if (measurement_covariance_subset(i, i) < 1e-9) {
       measurement_covariance_subset(i, i) = 1e-9;
 
-      FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
-        update_indices[i] <<
-        ". Adding some noise to maintain filter stability.\n");
+      FB_DEBUG(
+        "WARNING: measurement had very small error covariance for index " <<
+          update_indices[i] <<
+          ". Adding some noise to maintain filter stability.\n");
     }
   }
 
@@ -195,12 +200,13 @@ void Ukf::correct(const Measurement & measurement)
     state_to_measurement_subset(i, update_indices[i]) = 1;
   }
 
-  FB_DEBUG("Current state subset is:\n" <<
-    state_subset << "\nMeasurement subset is:\n" <<
-    measurement_subset << "\nMeasurement covariance subset is:\n" <<
-    measurement_covariance_subset <<
-    "\nState-to-measurement subset is:\n" <<
-    state_to_measurement_subset << "\n");
+  FB_DEBUG(
+    "Current state subset is:\n" <<
+      state_subset << "\nMeasurement subset is:\n" <<
+      measurement_subset << "\nMeasurement covariance subset is:\n" <<
+      measurement_covariance_subset <<
+      "\nState-to-measurement subset is:\n" <<
+      state_to_measurement_subset << "\n");
 
   // (1) Generate sigma points, use them to generate a predicted measurement
   for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
@@ -249,8 +255,9 @@ void Ukf::correct(const Measurement & measurement)
   }
 
   // (5) Check Mahalanobis distance of innovation
-  if (checkMahalanobisThreshold(innovation_subset, inv_innov_cov,
-    measurement.mahalanobis_thresh_))
+  if (checkMahalanobisThreshold(
+      innovation_subset, inv_innov_cov,
+      measurement.mahalanobis_thresh_))
   {
     state_.noalias() += kalman_gain_subset * innovation_subset;
 
@@ -282,8 +289,9 @@ void Ukf::predict(
 {
   const double delta_sec = filter_utilities::toSec(delta);
 
-  FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
-    "delta is " << delta_sec << "\nstate is " << state_ << "\n");
+  FB_DEBUG(
+    "---------------------- Ukf::predict ----------------------\n" <<
+      "delta is " << delta_sec << "\nstate is " << state_ << "\n");
 
   double roll = state_(StateMemberRoll);
   double pitch = state_(StateMemberPitch);

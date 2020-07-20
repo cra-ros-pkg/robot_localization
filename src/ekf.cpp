@@ -47,21 +47,22 @@ Ekf::~Ekf() {}
 
 void Ekf::correct(const Measurement & measurement)
 {
-  FB_DEBUG("---------------------- Ekf::correct ----------------------\n" <<
-    "State is:\n" <<
-    state_ <<
-    "\n"
-    "Topic is:\n" <<
-    measurement.topic_name_ <<
-    "\n"
-    "Measurement is:\n" <<
-    measurement.measurement_ <<
-    "\n"
-    "Measurement topic name is:\n" <<
-    measurement.topic_name_ <<
-    "\n\n"
-    "Measurement covariance is:\n" <<
-    measurement.covariance_ << "\n");
+  FB_DEBUG(
+    "---------------------- Ekf::correct ----------------------\n" <<
+      "State is:\n" <<
+      state_ <<
+      "\n"
+      "Topic is:\n" <<
+      measurement.topic_name_ <<
+      "\n"
+      "Measurement is:\n" <<
+      measurement.measurement_ <<
+      "\n"
+      "Measurement topic name is:\n" <<
+      measurement.topic_name_ <<
+      "\n\n"
+      "Measurement covariance is:\n" <<
+      measurement.covariance_ << "\n");
 
   // We don't want to update everything, so we need to build matrices that only
   // update the measured parts of our state vector. Throughout prediction and
@@ -73,11 +74,13 @@ void Ekf::correct(const Measurement & measurement)
     if (measurement.update_vector_[i]) {
       // Handle nan and inf values in measurements
       if (std::isnan(measurement.measurement_(i))) {
-        FB_DEBUG("Value at index " << i <<
-          " was nan. Excluding from update.\n");
+        FB_DEBUG(
+          "Value at index " << i <<
+            " was nan. Excluding from update.\n");
       } else if (std::isinf(measurement.measurement_(i))) {
-        FB_DEBUG("Value at index " << i <<
-          " was inf. Excluding from update.\n");
+        FB_DEBUG(
+          "Value at index " << i <<
+            " was inf. Excluding from update.\n");
       } else {
         update_indices.push_back(i);
       }
@@ -117,10 +120,11 @@ void Ekf::correct(const Measurement & measurement)
     // than exclude the measurement or make up a covariance, just take
     // the absolute value.
     if (measurement_covariance_subset(i, i) < 0) {
-      FB_DEBUG("WARNING: Negative covariance for index " <<
-        i << " of measurement (value is" <<
-        measurement_covariance_subset(i, i) <<
-        "). Using absolute value...\n");
+      FB_DEBUG(
+        "WARNING: Negative covariance for index " <<
+          i << " of measurement (value is" <<
+          measurement_covariance_subset(i, i) <<
+          "). Using absolute value...\n");
 
       measurement_covariance_subset(i, i) =
         ::fabs(measurement_covariance_subset(i, i));
@@ -133,9 +137,10 @@ void Ekf::correct(const Measurement & measurement)
     // measurement can be completely without error, so add a small
     // amount in that case.
     if (measurement_covariance_subset(i, i) < 1e-9) {
-      FB_DEBUG("WARNING: measurement had very small error covariance for index " <<
-        update_indices[i] <<
-        ". Adding some noise to maintain filter stability.\n");
+      FB_DEBUG(
+        "WARNING: measurement had very small error covariance for index " <<
+          update_indices[i] <<
+          ". Adding some noise to maintain filter stability.\n");
 
       measurement_covariance_subset(i, i) = 1e-9;
     }
@@ -148,12 +153,13 @@ void Ekf::correct(const Measurement & measurement)
     state_to_measurement_subset(i, update_indices[i]) = 1;
   }
 
-  FB_DEBUG("Current state subset is:\n" <<
-    state_subset << "\nMeasurement subset is:\n" <<
-    measurement_subset << "\nMeasurement covariance subset is:\n" <<
-    measurement_covariance_subset <<
-    "\nState-to-measurement subset is:\n" <<
-    state_to_measurement_subset << "\n");
+  FB_DEBUG(
+    "Current state subset is:\n" <<
+      state_subset << "\nMeasurement subset is:\n" <<
+      measurement_subset << "\nMeasurement covariance subset is:\n" <<
+      measurement_covariance_subset <<
+      "\nState-to-measurement subset is:\n" <<
+      state_to_measurement_subset << "\n");
 
   // (1) Compute the Kalman gain: K = (PH') / (HPH' + R)
   Eigen::MatrixXd pht =
@@ -182,8 +188,9 @@ void Ekf::correct(const Measurement & measurement)
   }
 
   // (2) Check Mahalanobis distance between mapped measurement and state.
-  if (checkMahalanobisThreshold(innovation_subset, hphr_inverse,
-    measurement.mahalanobis_thresh_))
+  if (checkMahalanobisThreshold(
+      innovation_subset, hphr_inverse,
+      measurement.mahalanobis_thresh_))
   {
     // (3) Apply the gain to the difference between the state and measurement: x
     // = x + K(z - Hx)
@@ -218,9 +225,10 @@ void Ekf::predict(
 {
   const double delta_sec = filter_utilities::toSec(delta);
 
-  FB_DEBUG("---------------------- Ekf::predict ----------------------\n" <<
-    "delta is " << filter_utilities::toSec(delta) << "\n" <<
-    "state is " << state_ << "\n");
+  FB_DEBUG(
+    "---------------------- Ekf::predict ----------------------\n" <<
+      "delta is " << filter_utilities::toSec(delta) << "\n" <<
+      "state is " << state_ << "\n");
 
   double roll = state_(StateMemberRoll);
   double pitch = state_(StateMemberPitch);
@@ -377,11 +385,12 @@ void Ekf::predict(
   transfer_function_jacobian_(StateMemberYaw, StateMemberRoll) = dFY_dR;
   transfer_function_jacobian_(StateMemberYaw, StateMemberPitch) = dFY_dP;
 
-  FB_DEBUG("Transfer function is:\n" <<
-    transfer_function_ << "\nTransfer function Jacobian is:\n" <<
-    transfer_function_jacobian_ << "\nProcess noise covariance is:\n" <<
-    process_noise_covariance_ << "\nCurrent state is:\n" <<
-    state_ << "\n");
+  FB_DEBUG(
+    "Transfer function is:\n" <<
+      transfer_function_ << "\nTransfer function Jacobian is:\n" <<
+      transfer_function_jacobian_ << "\nProcess noise covariance is:\n" <<
+      process_noise_covariance_ << "\nCurrent state is:\n" <<
+      state_ << "\n");
 
   Eigen::MatrixXd * process_noise_covariance = &process_noise_covariance_;
 
@@ -414,9 +423,10 @@ void Ekf::predict(
   // Handle wrapping
   wrapStateAngles();
 
-  FB_DEBUG("Predicted state is:\n" <<
-    state_ << "\nCurrent estimate error covariance is:\n" <<
-    estimate_error_covariance_ << "\n");
+  FB_DEBUG(
+    "Predicted state is:\n" <<
+      state_ << "\nCurrent estimate error covariance is:\n" <<
+      estimate_error_covariance_ << "\n");
 
   // (3) Project the error forward: P = J * P * J' + Q
   estimate_error_covariance_ =

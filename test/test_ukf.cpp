@@ -87,7 +87,8 @@ TEST(UkfTest, Measurements) {
   filter->robot_localization::RosUkf::integrateMeasurements(rclcpp::Time(1001));
 
   EXPECT_EQ(filter->getFilter().getState(), measurement);
-  EXPECT_EQ(filter->getFilter().getEstimateErrorCovariance(),
+  EXPECT_EQ(
+    filter->getFilter().getEstimateErrorCovariance(),
     measurementCovariance);
 
   filter->getFilter().setEstimateErrorCovariance(initialCovar);

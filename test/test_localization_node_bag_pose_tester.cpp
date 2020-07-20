@@ -63,8 +63,9 @@ TEST(BagTest, PoseCheck) {
   double finalZ = node->declare_parameter("final_z", 0.0);
   double tolerance = node->declare_parameter("tolerance", 0.0);
   bool outputFinalPosition = node->declare_parameter("output_final_position", false);
-  std::string finalPositionFile = node->declare_parameter("output_location",
-      std::string("test.txt"));
+  std::string finalPositionFile = node->declare_parameter(
+    "output_location",
+    std::string("test.txt"));
 
   // subscribe call has been changed as per ros2
   auto filteredSub = node->create_subscription<nav_msgs::msg::Odometry>(
