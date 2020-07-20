@@ -46,6 +46,8 @@
 #include <vector>
 #include <limits>
 
+#include "rclcpp/macros.hpp"
+
 namespace robot_localization
 {
 
