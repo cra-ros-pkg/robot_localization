@@ -10,7 +10,7 @@ def generate_launch_description():
   return launch.LaunchDescription([
     launch_ros.actions.Node(
       package='robot_localization',
-      node_executable='test_robot_localization_estimator',
-      node_name='test_rle',
+      executable='test_robot_localization_estimator',
+      name='test_rle',
     ),
   ])

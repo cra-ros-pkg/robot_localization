@@ -35,7 +35,7 @@ def generate_launch_description():
 	    default_value='ukf2.txt'),
 	
 	launch_ros.actions.Node(
-            package='robot_localization', node_executable='ukf_node', node_name='test_ukf_localization_node_bag2_ukf',
+            package='robot_localization', executable='ukf_node', name='test_ukf_localization_node_bag2_ukf',
 	    output='screen',
 	    parameters=[
                 parameters_file_path,
@@ -44,7 +44,7 @@ def generate_launch_description():
            ],
            ),
         launch_ros.actions.Node(
-            package='robot_localization', node_executable='test_ekf_localization_node_bag1', node_name='test_ukf_localization_node_bag2_pose',
+            package='robot_localization', executable='test_ekf_localization_node_bag1', name='test_ukf_localization_node_bag2_pose',
             output='screen',
 	    parameters=[
                 parameters_file_path,

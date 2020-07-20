@@ -38,8 +38,8 @@ def generate_launch_description():
      #*****test_ukf_localization_node_interfaces.test***** 
     ukf_node = launch_ros.actions.Node(
             package='robot_localization',
-            node_executable='ukf_node',
-            node_name='test_ukf_localization_node_interfaces_ukf',
+            executable='ukf_node',
+            name='test_ukf_localization_node_interfaces_ukf',
             output='screen',
             parameters=[
                 parameters_file_path,

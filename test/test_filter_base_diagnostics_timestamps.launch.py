@@ -35,8 +35,8 @@ def generate_launch_description():
 
     ekf_node = launch_ros.actions.Node(
         package='robot_localization',
-        node_executable='ekf_node',
-        node_name='test_filter_base_diagnostics_timestamps',
+        executable='ekf_node',
+        name='test_filter_base_diagnostics_timestamps',
         output='screen',
         parameters=[
         parameters_file_path,

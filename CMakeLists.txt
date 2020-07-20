@@ -170,7 +170,7 @@ if(BUILD_TESTING)
   #### DIAGNOSTICS TESTS ####
   ament_add_gtest_executable(test_filter_base_diagnostics_timestamps
                     test/test_filter_base_diagnostics_timestamps.cpp)
-  target_link_libraries(test_filter_base_diagnostics_timestamps ${library_name})
+  target_link_libraries(test_filter_base_diagnostics_timestamps ${library_name} ekf_node)
   rosidl_target_interfaces(test_filter_base_diagnostics_timestamps
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
   add_dependencies(test_filter_base_diagnostics_timestamps ekf_node)
@@ -189,7 +189,7 @@ if(BUILD_TESTING)
 
   ament_add_gtest_executable(test_ekf_localization_node_interfaces
                     test/test_ekf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ekf_localization_node_interfaces ${library_name})
+  target_link_libraries(test_ekf_localization_node_interfaces ${library_name} ekf_node)
   rosidl_target_interfaces(test_ekf_localization_node_interfaces
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
   add_dependencies(test_ekf_localization_node_interfaces ekf_node)
@@ -209,10 +209,10 @@ if(BUILD_TESTING)
 
   ament_add_gtest_executable(test_ukf_localization_node_interfaces
                     test/test_ukf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ukf_localization_node_interfaces ${library_name})
+  target_link_libraries(test_ukf_localization_node_interfaces ${library_name} ukf_node)
   rosidl_target_interfaces(test_ukf_localization_node_interfaces
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
-  add_dependencies(test_ukf_localization_node_interfaces ekf_node)
+  add_dependencies(test_ukf_localization_node_interfaces ukf_node)
   ament_add_test(test_ukf_localization_node_interfaces
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
     TIMEOUT 300
@@ -242,7 +242,7 @@ if(BUILD_TESTING)
   #### RLE/RLL TESTS #####
   ament_add_gtest_executable(test_robot_localization_estimator
                   test/test_robot_localization_estimator.cpp)
-  target_link_libraries(test_robot_localization_estimator ${library_name})
+  target_link_libraries(test_robot_localization_estimator ${library_name} ekf_node ukf_node)
   rosidl_target_interfaces(test_robot_localization_estimator
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
   ament_add_test(test_robot_localization_estimator
@@ -254,12 +254,12 @@ if(BUILD_TESTING)
 
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
-  target_link_libraries(test_ros_robot_localization_listener ${library_name})
+  target_link_libraries(test_ros_robot_localization_listener ${library_name} ekf_node ukf_node)
   rosidl_target_interfaces(test_ros_robot_localization_listener
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
   ament_add_gtest_executable(test_ros_robot_localization_listener_publisher
                   test/test_ros_robot_localization_listener_publisher.cpp)
-  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name})
+  target_link_libraries(test_ros_robot_localization_listener_publisher ${library_name} ekf_node ukf_node)
   rosidl_target_interfaces(test_ros_robot_localization_listener_publisher
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
   ament_add_test(test_ros_robot_localization_listener
