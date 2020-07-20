@@ -308,11 +308,14 @@ install(
   ekf_node
   ukf_node
   robot_localization_listener_node
-  ${library_name}
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS ${library_name}
   ARCHIVE DESTINATION lib/${PROJECT_NAME}
   LIBRARY DESTINATION lib/${PROJECT_NAME}
   RUNTIME DESTINATION bin/${PROJECT_NAME}
-  )
+)
 
 # Install params config files.
 install(DIRECTORY
