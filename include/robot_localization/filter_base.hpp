@@ -46,16 +46,12 @@
 #include <vector>
 #include <limits>
 
-#include "rclcpp/macros.hpp"
-
 namespace robot_localization
 {
 
 class FilterBase
 {
 public:
-  RCLCPP_SMART_PTR_DEFINITIONS_NOT_COPYABLE(FilterBase)
-
   /**
    * @brief Constructor for the FilterBase class
    */
