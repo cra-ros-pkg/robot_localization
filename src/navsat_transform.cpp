@@ -108,12 +108,12 @@ namespace RobotLocalization
     {
       if (nh_priv.hasParam("world_frame"))
       {
-        nh_priv.param("world_frame", world_frame_id_);
+        nh_priv.param("world_frame", world_frame_id_, std::string("odom"));
         world_frame_param_loaded_ = true;
       }
       if (nh_priv.hasParam("base_link_frame"))
       {
-        nh_priv.param("base_link_frame", base_link_frame_id_);
+        nh_priv.param("base_link_frame", base_link_frame_id_, std::string("base_link"));
         base_link_frame_param_loaded_ = true;
       }
     }
