@@ -17,6 +17,9 @@
   <buildtool_depend>builtin_interfaces</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
+  <build_depend>libboost-dev</build_depend>
+  <build_export_depend>libboost-dev</build_export_depend>
+
   <depend>eigen</depend>
   <depend>geographic_msgs</depend>
   <depend>geometry_msgs</depend>
@@ -33,7 +36,6 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>yaml-cpp</depend>
-  <depend>boost</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>builtin_interfaces</test_depend>

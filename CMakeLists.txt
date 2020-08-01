@@ -55,6 +55,7 @@ include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 add_library(
