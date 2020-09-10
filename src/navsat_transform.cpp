@@ -60,6 +60,8 @@ namespace RobotLocalization
     publish_gps_(false),
     use_odometry_yaw_(false),
     use_manual_datum_(false),
+    world_frame_param_loaded_(false),
+    base_link_frame_param_loaded_(false),
     zero_altitude_(false),
     world_frame_id_("odom"),
     base_link_frame_id_("base_link"),
@@ -100,6 +102,34 @@ namespace RobotLocalization
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
     transform_timeout_.fromSec(transform_timeout);
+
+    // Set frames if wait_for_datum = false
+    if (use_manual_datum_)
+    {
+      if (nh_priv.hasParam("world_frame"))
+      {
+        nh_priv.param("world_frame", world_frame_id_, std::string("odom"));
+        world_frame_param_loaded_ = true;
+      }
+      if (nh_priv.hasParam("base_link_frame"))
+      {
+        nh_priv.param("base_link_frame", base_link_frame_id_, std::string("base_link"));
+        base_link_frame_param_loaded_ = true;
+      }
+    }
+    else
+    {
+      if (nh_priv.hasParam("world_frame"))
+      {
+        ROS_WARN_STREAM("Parameter 'world_frame' is set and will be unused." 
+                        "This parameter is only used if parameter 'wait_for_datum' is true.");
+      }
+      if (nh_priv.hasParam("base_link_frame"))
+      {
+        ROS_WARN_STREAM("Parameter 'base_link_frame' is set and will be unused."
+                        "This parameter is only used if parameter 'wait_for_datum' is true.");
+      }
+    }
 
     // Subscribe to the messages and services we need
     ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
@@ -556,6 +586,18 @@ namespace RobotLocalization
 
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
+    if (world_frame_param_loaded_ && (world_frame_id_ != msg->header.frame_id))
+    {
+      ROS_WARN_STREAM_ONCE("World frame from odometry message (" << msg->header.frame_id << ")"
+        " does not match world frame loaded from parameter (" << world_frame_id_ << ")."
+        " World frame updating to " << msg->header.frame_id);
+    }
+    if (base_link_frame_param_loaded_ && (base_link_frame_id_ != msg->child_frame_id))
+    {
+      ROS_WARN_STREAM_ONCE("Base link frame from odometry message (" << msg->child_frame_id << ")"
+        " does not match base link frame loaded from parameter (" << base_link_frame_id_ << ")."
+        " Base link frame updating to " << msg->child_frame_id);
+    }
     world_frame_id_ = msg->header.frame_id;
     base_link_frame_id_ = msg->child_frame_id;
 
