@@ -586,13 +586,13 @@ namespace RobotLocalization
 
   void NavSatTransform::odomCallback(const nav_msgs::OdometryConstPtr& msg)
   {
-    if (world_frame_param_loaded_ && (world_frame_id_.compare(msg->header.frame_id) != 0))
+    if (world_frame_param_loaded_ && (world_frame_id_ != msg->header.frame_id))
     {
       ROS_WARN_STREAM_ONCE("World frame from odometry message (" << msg->header.frame_id << ")"
         " does not match world frame loaded from parameter (" << world_frame_id_ << ")."
         " World frame updating to " << msg->header.frame_id);
     }
-    if (base_link_frame_param_loaded_ && (base_link_frame_id_.compare(msg->child_frame_id) != 0))
+    if (base_link_frame_param_loaded_ && (base_link_frame_id_ != msg->child_frame_id))
     {
       ROS_WARN_STREAM_ONCE("Base link frame from odometry message (" << msg->child_frame_id << ")"
         " does not match base link frame loaded from parameter (" << base_link_frame_id_ << ")."
