@@ -324,7 +324,7 @@ namespace RobotLocalization
     zCoeff = -sp * cr;
     double dFz_dP = (xCoeff * xVel + yCoeff * yVel + zCoeff * zVel) * delta +
                     (xCoeff * xAcc + yCoeff * yAcc + zCoeff * zAcc) * oneHalfATSquared;
-    double dFY_dP = (sr * tp * cpi * pitchVel - cr * tp * cpi * yawVel) * delta;
+    double dFY_dP = (sr * tp * cpi * pitchVel + cr * tp * cpi * yawVel) * delta;
 
     // Much of the transfer function Jacobian is identical to the transfer function
     transferFunctionJacobian_ = transferFunction_;
