@@ -774,6 +774,16 @@ protected:
   //! @brief optional signaling diagnostic frequency
   //!
   std::unique_ptr<diagnostic_updater::HeaderlessTopicDiagnostic> freq_diag_;
+
+  //! @brief minimum frequency threshold for frequency diagnostic
+  //! Must be on heap since pointer is passed to diagnostic_updater::FrequencyStatusParam
+  //!
+  double min_frequency_;
+
+  //! @brief maximum frequency threshold for frequency diagnostic
+  //! Must be on heap since pointer is passed to diagnostic_updater::FrequencyStatusParam
+  //!
+  double max_frequency_;
 };
 
 }  // namespace robot_localization
