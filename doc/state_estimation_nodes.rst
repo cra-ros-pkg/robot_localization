@@ -174,6 +174,10 @@ If *true*, the state estimation node will publish the transform from the frame s
 ^^^^^^^^^^^^^^^^^^^^^
 If *true*, the state estimation node will publish the linear acceleration state. Defaults to *false*.
 
+~permit_corrected_publication
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When the state estimation nodes publish the state at time `t`, but then receive a measurement with a timestamp < `t`, they re-publish the corrected state, with the same time stamp as the previous publication. Setting this parameter to *false* disables that behavior. Defaults to *false*.
+
 ~print_diagnostics
 ^^^^^^^^^^^^^^^^^^
 If true, the state estimation node will publish diagnostic messages to the ``/diagnostics`` topic. This is useful for debugging your configuration and sensor data.
