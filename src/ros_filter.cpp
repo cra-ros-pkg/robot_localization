@@ -1922,7 +1922,9 @@ namespace RobotLocalization
       // If we're trying to publish with the same time stamp, it means that we had a measurement get inserted into the
       // filter history, and our state estimate was updated after it was already published. As of ROS Noetic, TF2 will
       // issue warnings whenever this occurs, so we make this behavior optional.
-      corrected_data = (!permitCorrectedPublication_ && lastPublishedStamp_ == filteredPosition.header.stamp);
+      // Just for safety, we also check for the condition where the last published stamp is *later* than this stamp.
+      // This should never happen, but we should handle the case anyway.
+      corrected_data = (!permitCorrectedPublication_ && lastPublishedStamp_ >= filteredPosition.header.stamp);
 
       // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
       // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
