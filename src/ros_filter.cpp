@@ -67,6 +67,7 @@ namespace RobotLocalization
       toggledOn_(true),
       twoDMode_(false),
       useControl_(false),
+      silent_tf_failure_(false),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       frequency_(30.0),
@@ -842,6 +843,10 @@ namespace RobotLocalization
     // Determine if we're in 2D mode
     nhLocal_.param("two_d_mode", twoDMode_, false);
 
+    // Whether or not to print warning for tf lookup failure
+    // Note: accesses the root of the parameter tree, not the local parameters
+    nh_.param("/silent_tf_failure", silent_tf_failure_, false);
+
     // Smoothing window size
     nhLocal_.param("smooth_lagged_data", smoothLaggedData_, false);
     nhLocal_.param("history_length", historyLength_, 0.0);
@@ -992,6 +997,7 @@ namespace RobotLocalization
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
+             "\nsilent_tf_failure is " << (silent_tf_failure_ ? "true" : "false") <<
              "\nsmooth_lagged_data is " << (smoothLaggedData_ ? "true" : "false") <<
              "\nhistory_length is " << historyLength_ <<
              "\nuse_control is " << (useControl_ ? "true" : "false") <<
@@ -2407,15 +2413,13 @@ namespace RobotLocalization
     // It's unlikely that we'll get a velocity measurement in another frame, but
     // we have to handle the situation.
     tf2::Transform targetFrameTrans;
-    bool silent_tf_failure;
-    nh_.getParam("/silent_tf_failure", silent_tf_failure);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
                                                                 targetFrameTrans,
-                                                                silent_tf_failure);
+                                                                silent_tf_failure_);
 
     if (canTransform)
     {
