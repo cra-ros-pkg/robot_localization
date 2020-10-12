@@ -67,7 +67,7 @@ namespace RobotLocalization
       toggledOn_(true),
       twoDMode_(false),
       useControl_(false),
-      silent_tf_failure_(false),
+      silentTfFailure_(false),
       dynamicDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       staticDiagErrorLevel_(diagnostic_msgs::DiagnosticStatus::OK),
       frequency_(30.0),
@@ -845,7 +845,7 @@ namespace RobotLocalization
 
     // Whether or not to print warning for tf lookup failure
     // Note: accesses the root of the parameter tree, not the local parameters
-    nh_.param("/silent_tf_failure", silent_tf_failure_, false);
+    nh_.param("/silent_tf_failure", silentTfFailure_, false);
 
     // Smoothing window size
     nhLocal_.param("smooth_lagged_data", smoothLaggedData_, false);
@@ -997,7 +997,7 @@ namespace RobotLocalization
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
              "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
-             "\nsilent_tf_failure is " << (silent_tf_failure_ ? "true" : "false") <<
+             "\nsilent_tf_failure is " << (silentTfFailure_ ? "true" : "false") <<
              "\nsmooth_lagged_data is " << (smoothLaggedData_ ? "true" : "false") <<
              "\nhistory_length is " << historyLength_ <<
              "\nuse_control is " << (useControl_ ? "true" : "false") <<
@@ -2419,7 +2419,7 @@ namespace RobotLocalization
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
                                                                 targetFrameTrans,
-                                                                silent_tf_failure_);
+                                                                silentTfFailure_);
 
     if (canTransform)
     {
