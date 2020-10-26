@@ -88,7 +88,7 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
   double deltaY = 0.0;
   double deltaZ = 0.0;
   // Timing and spinning is updated as per ros2
-  if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
+  if (ret == rclcpp::FutureReturnCode::SUCCESS) {
     rclcpp::Rate(2).sleep();
     rclcpp::spin_some(node_);
     deltaX = filtered_.pose.pose.position.x -

@@ -88,7 +88,7 @@ void resetFilter(rclcpp::Node::SharedPtr node_)
   double deltaY = 0.0;
   double deltaZ = 0.0;
 
-  if (ret == rclcpp::executor::FutureReturnCode::SUCCESS) {
+  if (ret == rclcpp::FutureReturnCode::SUCCESS) {
     // timing and spinning has been changed as per ros2
     rclcpp::Rate(2).sleep();
     rclcpp::spin_some(node_);
