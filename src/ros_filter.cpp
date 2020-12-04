@@ -2710,7 +2710,7 @@ bool RosFilter<T>::preparePose(
     // Otherwise, we should use our target frame
     final_target_frame = target_frame;
     pose_tmp.frame_id_ =
-      (differential ? final_target_frame : msg->header.frame_id);
+      (differential && !imu_data ? final_target_frame : msg->header.frame_id);
   }
 
   RF_DEBUG(
