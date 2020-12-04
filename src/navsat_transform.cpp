@@ -300,9 +300,18 @@ void NavSatTransform::computeTransform()
       transform_cartesian_pose_corrected.getOrigin());
     cartesian_pose_with_orientation.setRotation(imu_quat);
 
-    cartesian_world_transform_.mult(
-      transform_world_pose_,
-      cartesian_pose_with_orientation.inverse());
+    // Remove roll and pitch from odometry pose
+    // Must be done because roll and pitch is removed from cartesian_pose_with_orientation
+    double odom_roll {};
+    double odom_pitch {};
+    double odom_yaw {};
+    tf2::Matrix3x3(transform_world_pose_.getRotation()).getRPY(odom_roll, odom_pitch, odom_yaw);
+    tf2::Quaternion odom_quat;
+    odom_quat.setRPY(0.0, 0.0, odom_yaw);
+    tf2::Transform transform_world_pose_yaw_only(transform_world_pose_);
+    transform_world_pose_yaw_only.setRotation(odom_quat);
+
+    cartesian_world_transform_.mult(transform_world_pose_yaw_only, cartesian_pose_with_orientation.inverse());
 
     cartesian_world_trans_inverse_ = cartesian_world_transform_.inverse();
 
