@@ -44,6 +44,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <string>
@@ -996,31 +997,31 @@ void RosFilter<T>::loadParams()
 
   // Debugging writes to file
   RF_DEBUG(
-    "tf_prefix is " <<
-      tf_prefix << "\nmap_frame is " << map_frame_id_ <<
-      "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
-      base_link_frame_id_ << "\nbase_link_output_frame is " <<
-      base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
-      "\ntransform_time_offset is " <<
-      filter_utilities::toSec(tf_time_offset_) <<
-      "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
-      "\nfrequency is " << frequency_ << "\nsensor_timeout is " <<
-      filter_utilities::toSec(filter_.getSensorTimeout()) <<
-      "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
-      "\nsmooth_lagged_data is " <<
-    (smooth_lagged_data_ ? "true" : "false") << "\nhistory_length is " <<
-      filter_utilities::toSec(history_length_) << "\nuse_control is " <<
-    (use_control_ ? "true" : "false") << "\ncontrol_config is " <<
-      control_update_vector << "\ncontrol_timeout is " <<
-      control_timeout << "\nacceleration_limits are " <<
-      acceleration_limits << "\nacceleration_gains are " <<
-      acceleration_gains << "\ndeceleration_limits are " <<
-      deceleration_limits << "\ndeceleration_gains are " <<
-      deceleration_gains << "\ninitial state is " << filter_.getState() <<
-      "\ndynamic_process_noise_covariance is " <<
-    (dynamic_process_noise_covariance ? "true" : "false") <<
-      "\nprint_diagnostics is " <<
-    (print_diagnostics_ ? "true" : "false") << "\n");
+    std::boolalpha <<
+    "tf_prefix is " << tf_prefix <<
+    "\nmap_frame is " << map_frame_id_ <<
+    "\nodom_frame is " << odom_frame_id_ <<
+    "\nbase_link_frame is " << base_link_frame_id_ <<
+    "\nbase_link_output_frame is " << base_link_output_frame_id_ <<
+    "\nworld_frame is " << world_frame_id_ <<
+    "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
+    "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
+    "\nfrequency is " << frequency_ <<
+    "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
+    "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
+    "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
+    "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
+    "\nuse_control is " << use_control_ <<
+    "\ncontrol_config is " << control_update_vector <<
+    "\ncontrol_timeout is " << control_timeout <<
+    "\nacceleration_limits are " << acceleration_limits <<
+    "\nacceleration_gains are " << acceleration_gains <<
+    "\ndeceleration_limits are " << deceleration_limits <<
+    "\ndeceleration_gains are " << deceleration_gains <<
+    "\ninitial state is " << filter_.getState() <<
+    "\ndynamic_process_noise_covariance is " << dynamic_process_noise_covariance <<
+    "\npermit_corrected_publication is " << permit_corrected_publication_ <<
+    "\nprint_diagnostics is " << print_diagnostics_ << "\n");
 
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
@@ -2017,6 +2018,8 @@ void RosFilter<T>::periodicUpdate()
   // Get latest state and publish it
   auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
 
+  bool corrected_data = false;
+
   if (getFilteredOdometryMessage(filtered_position.get())) {
     world_base_link_trans_msg_.header.stamp =
       static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
@@ -2044,10 +2047,19 @@ void RosFilter<T>::periodicUpdate()
         "covariances.");
     }
 
+    // If we're trying to publish with the same time stamp, it means that we had a measurement get
+    // inserted into the filter history, and our state estimate was updated after it was already
+    // published. As of ROS Noetic, TF2 will issue warnings whenever this occurs, so we make this
+    // behavior optional. Just for safety, we also check for the condition where the last published
+    // stamp is *later* than this stamp. This should never happen, but we should handle the case
+    //anyway.
+    corrected_data = (!permit_corrected_publication_ &&
+      last_published_stamp_ >= filteredPosition.header.stamp);
+
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
     // we'll have some work to do.
-    if (publish_transform_) {
+    if (publish_transform_ && !corrected_data) {
       if (filtered_position->header.frame_id == odom_frame_id_) {
         world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
       } else if (filtered_position->header.frame_id == map_frame_id_) {
@@ -2114,7 +2126,13 @@ void RosFilter<T>::periodicUpdate()
     }
 
     // Fire off the position and the transform
-    position_pub_->publish(std::move(filtered_position));
+    if (!corrected_data)
+    {
+      position_pub_->publish(std::move(filtered_position));
+    }
+
+    // Retain the last published stamp so we can detect repeated transforms in future cycles
+    last_published_stamp_ = filteredPosition.header.stamp;
 
     if (print_diagnostics_) {
       freq_diag_->tick();
@@ -2123,8 +2141,8 @@ void RosFilter<T>::periodicUpdate()
 
   // Publish the acceleration if desired and filter is initialized
   auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
-  if (publish_acceleration_ &&
-    getFilteredAccelMessage(filtered_acceleration.get()))
+  if (!corrected_data && publish_acceleration_ &&
+      getFilteredAccelMessage(filtered_acceleration.get()))
   {
     accel_pub_->publish(std::move(filtered_acceleration));
   }
