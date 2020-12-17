@@ -59,6 +59,7 @@ using namespace std::chrono_literals;
 template<typename T>
 RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
 : Node(options.arguments()[0], options),
+  permit_corrected_publication_(false),
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
@@ -831,6 +832,9 @@ void RosFilter<T>::loadParams()
 
   // Whether we're publishing the acceleration state transform
   publish_acceleration_ = this->declare_parameter("publish_acceleration", false);
+
+  // Whether we'll allow old measurements to cause a re-publication of the updated state
+  permit_corrected_publication_ = this->declare_parameter("permit_corrected_publication", false);
 
   // Transform future dating
   double offset_tmp = this->declare_parameter("transform_time_offset", 0.0);
