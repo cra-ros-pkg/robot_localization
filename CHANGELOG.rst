@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.9 (2020-12-17)
+------------------
 * Fix warning "Failed to meet update rate!" (`#602 <https://github.com/cra-ros-pkg/robot_localization/issues/602>`_)
 * Fix sign error in dFY_dP part of transferFunctionJacobian\_ (`#592 <https://github.com/cra-ros-pkg/robot_localization/issues/592>`_)
 * Fix typo in navsat_transform_node.rst (`#588 <https://github.com/cra-ros-pkg/robot_localization/issues/588>`_)
