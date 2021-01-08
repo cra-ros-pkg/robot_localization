@@ -37,6 +37,9 @@
 #include <robot_localization/srv/to_ll.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 
+#include <Eigen/Dense>
+#include <GeographicLib/Geocentric.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -46,7 +49,6 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <Eigen/Dense>
 #include <memory>
 #include <string>
 
@@ -363,6 +365,10 @@ private:
    */
   bool use_local_cartesian_;
 
+  //! @brief Local Cartesian projection around gps origin
+  //!
+  GeographicLib::LocalCartesian gps_local_cartesian_;
+
   /**
    * @brief Whether we get our datum from the first GPS message or from the
    * set_datum service/parameter
@@ -380,14 +386,14 @@ private:
   tf2_ros::StaticTransformBroadcaster cartesian_broadcaster_;
 
   /**
-   * @brief Cartesian's meridian convergence
+   * @brief UTM's meridian convergence
    *
    * Angle between projected meridian (True North) and Cartesian's grid Y-axis.
    * For Cartesian projection (Ellipsoidal Transverse Mercator) it is zero on the
    * equator and non-zero everywhere else. It increases as the poles are
    * approached or as we're getting farther from central meridian.
    */
-  double cartesian_meridian_convergence_;
+  double utm_meridian_convergence_;
 
   /**
    * @brief Holds the cartesian->odom transform
@@ -402,7 +408,7 @@ private:
   /**
    * @brief Cartesian zone as determined after transforming GPS message
    */
-  std::string cartesian_zone_;
+  std::string utm_zone_;
 
   /**
    * @brief Frame ID of the GPS odometry output

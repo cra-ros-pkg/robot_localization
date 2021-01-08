@@ -59,7 +59,6 @@ using namespace std::chrono_literals;
 template<typename T>
 RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
 : Node(options.arguments()[0], options),
-  permit_corrected_publication_(false),
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
@@ -70,6 +69,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   use_control_(false),
   disabled_at_startup_(false),
   enabled_(false),
+  permit_corrected_publication_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0),
@@ -2041,7 +2041,7 @@ void RosFilter<T>::periodicUpdate()
     world_base_link_trans_msg_.transform.rotation =
       filtered_position->pose.pose.orientation;
 
-    // The filteredPosition is the message containing the state and covariances:
+    // The filtered_position is the message containing the state and covariances:
     // nav_msgs Odometry
     if (!validateFilterOutput(filtered_position.get())) {
       RCLCPP_ERROR(
@@ -2058,7 +2058,7 @@ void RosFilter<T>::periodicUpdate()
     // stamp is *later* than this stamp. This should never happen, but we should handle the case
     //anyway.
     corrected_data = (!permit_corrected_publication_ &&
-      last_published_stamp_ >= filteredPosition.header.stamp);
+      last_published_stamp_ >= filtered_position->header.stamp);
 
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
@@ -2136,7 +2136,7 @@ void RosFilter<T>::periodicUpdate()
     }
 
     // Retain the last published stamp so we can detect repeated transforms in future cycles
-    last_published_stamp_ = filteredPosition.header.stamp;
+    last_published_stamp_ = filtered_position->header.stamp;
 
     if (print_diagnostics_) {
       freq_diag_->tick();
