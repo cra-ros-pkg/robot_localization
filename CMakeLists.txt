@@ -28,6 +28,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
+if(NOT YAML_CPP_FOUND)
+  find_package(yaml-cpp REQUIRED)
+endif()
 
 
 # Geographiclib installs FindGeographicLib.cmake to this non-standard location
