@@ -412,7 +412,7 @@ namespace RobotLocalization
     else
     {
       std::string utm_zone_tmp;
-      NavsatConversions::LLtoUTM(latitude, longitude, cartesian_x, cartesian_y, utm_zone_tmp);
+      NavsatConversions::LLtoUTM(latitude, longitude, cartesian_y, cartesian_x, utm_zone_tmp);
     }
 
     cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
