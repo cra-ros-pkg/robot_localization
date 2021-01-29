@@ -22,8 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_srvs
   tf2
   tf2_geometry_msgs
-  tf2_ros
-  xmlrpcpp)
+  tf2_ros)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
@@ -92,7 +91,6 @@ catkin_package(
     tf2
     tf2_geometry_msgs
     tf2_ros
-    xmlrpcpp
   DEPENDS
     ${EIGEN_PACKAGE}
     YAML_CPP
