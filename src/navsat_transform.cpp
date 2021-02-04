@@ -614,13 +614,16 @@ void NavSatTransform::gpsFixCallback(
       setTransformGps(msg);
     }
 
-    double cartesianX = 0;
-    double cartesianY = 0;
+    double cartesian_x = 0;
+    double cartesian_y = 0;
     std::string cartesian_zone_tmp;
     navsat_conversions::LLtoUTM(
-      msg->latitude, msg->longitude, cartesianY, cartesianX,
+      msg->latitude,
+      msg->longitude,
+      cartesian_y,
+      cartesian_x,
       cartesian_zone_tmp);
-    latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesianX, cartesianY, msg->altitude));
+    latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
     latest_cartesian_covariance_.setZero();
 
     // Copy the measurement's covariance matrix so that we can rotate it later

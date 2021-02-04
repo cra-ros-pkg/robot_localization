@@ -76,6 +76,8 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   gravitational_acceleration_(9.80665),
   history_length_(0),
   latest_control_(),
+  last_diag_time_(0, 0, RCL_ROS_TIME),
+  last_published_stamp_(0, 0, RCL_ROS_TIME),
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0),
@@ -133,7 +135,10 @@ void RosFilter<T>::reset()
 
   // Also set the last set pose time, so we ignore all messages
   // that occur before it
-  last_set_pose_time_ = rclcpp::Time(0);
+  last_set_pose_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_diag_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  latest_control_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_published_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
   // clear tf buffer to avoid TF_OLD_DATA errors
   tf_buffer_->clear();
@@ -143,9 +148,6 @@ void RosFilter<T>::reset()
 
   // reset filter to uninitialized state
   filter_.reset();
-
-  // clear all waiting callbacks
-  // ros::getGlobalCallbackQueue()->clear();
 }
 
 template<typename T>
@@ -2129,14 +2131,14 @@ void RosFilter<T>::periodicUpdate()
       }
     }
 
+    // Retain the last published stamp so we can detect repeated transforms in future cycles
+    last_published_stamp_ = filtered_position->header.stamp;
+
     // Fire off the position and the transform
     if (!corrected_data)
     {
       position_pub_->publish(std::move(filtered_position));
     }
-
-    // Retain the last published stamp so we can detect repeated transforms in future cycles
-    last_published_stamp_ = filtered_position->header.stamp;
 
     if (print_diagnostics_) {
       freq_diag_->tick();
