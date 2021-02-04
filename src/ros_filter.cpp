@@ -1004,30 +1004,30 @@ void RosFilter<T>::loadParams()
   // Debugging writes to file
   RF_DEBUG(
     std::boolalpha <<
-    "tf_prefix is " << tf_prefix <<
-    "\nmap_frame is " << map_frame_id_ <<
-    "\nodom_frame is " << odom_frame_id_ <<
-    "\nbase_link_frame is " << base_link_frame_id_ <<
-    "\nbase_link_output_frame is " << base_link_output_frame_id_ <<
-    "\nworld_frame is " << world_frame_id_ <<
-    "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
-    "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
-    "\nfrequency is " << frequency_ <<
-    "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
-    "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
-    "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
-    "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
-    "\nuse_control is " << use_control_ <<
-    "\ncontrol_config is " << control_update_vector <<
-    "\ncontrol_timeout is " << control_timeout <<
-    "\nacceleration_limits are " << acceleration_limits <<
-    "\nacceleration_gains are " << acceleration_gains <<
-    "\ndeceleration_limits are " << deceleration_limits <<
-    "\ndeceleration_gains are " << deceleration_gains <<
-    "\ninitial state is " << filter_.getState() <<
-    "\ndynamic_process_noise_covariance is " << dynamic_process_noise_covariance <<
-    "\npermit_corrected_publication is " << permit_corrected_publication_ <<
-    "\nprint_diagnostics is " << print_diagnostics_ << "\n");
+      "tf_prefix is " << tf_prefix <<
+      "\nmap_frame is " << map_frame_id_ <<
+      "\nodom_frame is " << odom_frame_id_ <<
+      "\nbase_link_frame is " << base_link_frame_id_ <<
+      "\nbase_link_output_frame is " << base_link_output_frame_id_ <<
+      "\nworld_frame is " << world_frame_id_ <<
+      "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
+      "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
+      "\nfrequency is " << frequency_ <<
+      "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
+      "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
+      "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
+      "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
+      "\nuse_control is " << use_control_ <<
+      "\ncontrol_config is " << control_update_vector <<
+      "\ncontrol_timeout is " << control_timeout <<
+      "\nacceleration_limits are " << acceleration_limits <<
+      "\nacceleration_gains are " << acceleration_gains <<
+      "\ndeceleration_limits are " << deceleration_limits <<
+      "\ndeceleration_gains are " << deceleration_gains <<
+      "\ninitial state is " << filter_.getState() <<
+      "\ndynamic_process_noise_covariance is " << dynamic_process_noise_covariance <<
+      "\npermit_corrected_publication is " << permit_corrected_publication_ <<
+      "\nprint_diagnostics is " << print_diagnostics_ << "\n");
 
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
@@ -2058,7 +2058,7 @@ void RosFilter<T>::periodicUpdate()
     // published. As of ROS Noetic, TF2 will issue warnings whenever this occurs, so we make this
     // behavior optional. Just for safety, we also check for the condition where the last published
     // stamp is *later* than this stamp. This should never happen, but we should handle the case
-    //anyway.
+    // anyway.
     corrected_data = (!permit_corrected_publication_ &&
       last_published_stamp_ >= filtered_position->header.stamp);
 
@@ -2135,8 +2135,7 @@ void RosFilter<T>::periodicUpdate()
     last_published_stamp_ = filtered_position->header.stamp;
 
     // Fire off the position and the transform
-    if (!corrected_data)
-    {
+    if (!corrected_data) {
       position_pub_->publish(std::move(filtered_position));
     }
 
@@ -2148,7 +2147,7 @@ void RosFilter<T>::periodicUpdate()
   // Publish the acceleration if desired and filter is initialized
   auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
   if (!corrected_data && publish_acceleration_ &&
-      getFilteredAccelMessage(filtered_acceleration.get()))
+    getFilteredAccelMessage(filtered_acceleration.get()))
   {
     accel_pub_->publish(std::move(filtered_acceleration));
   }

@@ -107,35 +107,32 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
 
-  broadcast_cartesian_transform_ = this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
+  broadcast_cartesian_transform_ =
+    this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
 
-  if (broadcast_cartesian_transform_)
-  {
-    RCLCPP_WARN(this->get_logger(), "Parameter 'broadcast_utm_transform' has been deprecated. Please use "
-      "'broadcast_cartesian_transform' instead.");
-  }
-  else
-  {
+  if (broadcast_cartesian_transform_) {
+    RCLCPP_WARN(
+      this->get_logger(), "Parameter 'broadcast_utm_transform' has been deprecated. "
+      "Please use 'broadcast_cartesian_transform' instead.");
+  } else {
     broadcast_cartesian_transform_ =
       this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
   }
 
   broadcast_cartesian_transform_as_parent_frame_ =
-  this->declare_parameter(
+    this->declare_parameter(
     "broadcast_utm_transform_as_parent_frame_",
     broadcast_cartesian_transform_as_parent_frame_);
 
-  if (broadcast_cartesian_transform_as_parent_frame_)
-  {
-    RCLCPP_WARN(this->get_logger(), "Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. Please "
-      "use 'broadcast_cartesian_transform_as_parent_frame' instead.");
-  }
-  else
-  {
+  if (broadcast_cartesian_transform_as_parent_frame_) {
+    RCLCPP_WARN(
+      this->get_logger(), "Parameter 'broadcast_utm_transform_as_parent_frame' has been "
+      "deprecated. Please use 'broadcast_cartesian_transform_as_parent_frame' instead.");
+  } else {
     broadcast_cartesian_transform_as_parent_frame_ =
       this->declare_parameter(
-        "broadcast_cartesian_transform_as_parent_frame",
-        broadcast_cartesian_transform_as_parent_frame_);
+      "broadcast_cartesian_transform_as_parent_frame",
+      broadcast_cartesian_transform_as_parent_frame_);
   }
 
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
@@ -311,7 +308,9 @@ void NavSatTransform::computeTransform()
     tf2::Transform transform_world_pose_yaw_only(transform_world_pose_);
     transform_world_pose_yaw_only.setRotation(odom_quat);
 
-    cartesian_world_transform_.mult(transform_world_pose_yaw_only, cartesian_pose_with_orientation.inverse());
+    cartesian_world_transform_.mult(
+      transform_world_pose_yaw_only,
+      cartesian_pose_with_orientation.inverse());
 
     cartesian_world_trans_inverse_ = cartesian_world_transform_.inverse();
 
@@ -418,8 +417,7 @@ bool NavSatTransform::fromLLCallback(
   double cartesian_y {};
   double cartesian_z {};
 
-  if (use_local_cartesian_)
-  {
+  if (use_local_cartesian_) {
     gps_local_cartesian_.Forward(
       latitude,
       longitude,
@@ -427,9 +425,7 @@ bool NavSatTransform::fromLLCallback(
       cartesian_x,
       cartesian_y,
       cartesian_z);
-  }
-  else
-  {
+  } else {
     std::string utm_zone_tmp;
     navsat_conversions::LLtoUTM(
       latitude,
@@ -826,17 +822,20 @@ void NavSatTransform::setTransformGps(
   double cartesian_x {};
   double cartesian_y {};
   double cartesian_z {};
-  if (use_local_cartesian_)
-  {
+  if (use_local_cartesian_) {
     const double hae_altitude {};
     gps_local_cartesian_.Reset(msg->latitude, msg->longitude, hae_altitude);
-    gps_local_cartesian_.Forward(msg->latitude, msg->longitude, msg->altitude, cartesian_x, cartesian_y, cartesian_z);
+    gps_local_cartesian_.Forward(
+      msg->latitude,
+      msg->longitude,
+      msg->altitude,
+      cartesian_x,
+      cartesian_y,
+      cartesian_z);
 
     // UTM meridian convergence is not meaningful when using local cartesian, so set it to 0.0
     utm_meridian_convergence_ = 0.0;
-  }
-  else
-  {
+  } else {
     navsat_conversions::LLtoUTM(
       msg->latitude,
       msg->longitude,
@@ -852,7 +851,8 @@ void NavSatTransform::setTransformGps(
     msg->latitude, msg->longitude, msg->altitude);
   RCLCPP_INFO(
     this->get_logger(), "Datum %s coordinate is (%s, %0.2f, %0.2f)",
-    ((use_local_cartesian_)? "Local Cartesian" : "UTM"), utm_zone_.c_str(), cartesian_x, cartesian_y);
+    ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), utm_zone_.c_str(), cartesian_x,
+    cartesian_y);
 
   transform_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
   transform_cartesian_pose_.setRotation(tf2::Quaternion::getIdentity());
