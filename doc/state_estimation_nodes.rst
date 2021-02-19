@@ -168,7 +168,7 @@ Starts the filter with the specified state. The state is given as a 15-D vector 
 
 ~publish_tf
 ^^^^^^^^^^^
-If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to the frame specified by the ``base_link_frame`` parameter. Defaults to *true*.
+If *true*, the state estimation node will publish the transform from the frame specified by the ``world_frame`` parameter to its child. If the ``world_frame`` is the same as the ``map_frame`` it will publish the transform from the ``map_frame`` to the ``odom_frame`` and if the ``world_frame`` is the same as the ``odom_frame`` it will publish the transform from the ``odom_frame`` to the ``base_link_frame``. Defaults to *true*.
 
 ~publish_acceleration
 ^^^^^^^^^^^^^^^^^^^^^
