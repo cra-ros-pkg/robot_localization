@@ -52,6 +52,7 @@
 
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
+#include <GeographicLib/UTMUPS.hpp>
 
 #include <string>
 
@@ -241,9 +242,13 @@ class NavSatTransform
     //!
     std::string gps_frame_id_;
 
-    //! @brief UTM zone as determined after transforming GPS message
+    //! @brief the UTM zone (zero means UPS)
     //!
-    std::string utm_zone_;
+    int utm_zone_;
+
+    //! @brief hemisphere (true means north, false means south)
+    //!
+    bool northp_;
 
     //! @brief Frame ID of the GPS odometry output
     //!
