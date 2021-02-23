@@ -36,23 +36,27 @@
 
 #include <string>
 
-TEST(NavsatConversionsTest, UtmTest)
+void NavsatConversionsTest(const double lat, const double lon,
+                           const double UTMNorthing, const double UTMEasting, const std::string UTMZone)
 {
-    const double lat = 51.423964;
-    const double lon = 5.494271;
-
-    double UTMNorthing;
-    double UTMEasting;
-    std::string UTMZone;
-    RobotLocalization::NavsatConversions::LLtoUTM(lat, lon, UTMNorthing, UTMEasting, UTMZone);
-    EXPECT_NEAR(UTMNorthing, 5699924.709, 1e-2);
-    EXPECT_NEAR(UTMEasting, 673409.989, 1e-2);
-    EXPECT_EQ(UTMZone, "31U");
+    double UTMNorthing_new;
+    double UTMEasting_new;
+    std::string UTMZone_new;
+    RobotLocalization::NavsatConversions::LLtoUTM(lat, lon, UTMNorthing_new, UTMEasting_new, UTMZone_new);
+    EXPECT_NEAR(UTMNorthing, UTMNorthing_new, 1e-2);
+    EXPECT_NEAR(UTMEasting, UTMEasting_new, 1e-2);
+    EXPECT_EQ(UTMZone, UTMZone_new);
     double lat_new;
     double lon_new;
     RobotLocalization::NavsatConversions::UTMtoLL(UTMNorthing, UTMEasting, UTMZone, lat_new, lon_new);
-    EXPECT_NEAR(lat, lat, 1e-5);
-    EXPECT_NEAR(lon, lon, 1e-5);
+    EXPECT_NEAR(lat_new, lat, 1e-5);
+    EXPECT_NEAR(lon_new, lon, 1e-5);
+}
+
+TEST(NavsatConversionsTest, UtmTest)
+{
+    NavsatConversionsTest(51.423964, 5.494271, 5699924.709, 673409.989, "31U");
+    NavsatConversionsTest(-43.530955, 172.636645, 5178919.718, 632246.802, "59G");
 }
 
 int main(int argc, char **argv)
