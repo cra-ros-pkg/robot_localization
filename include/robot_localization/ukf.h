@@ -89,6 +89,17 @@ class Ukf: public FilterBase
     void predict(const double referenceTime, const double delta);
 
   protected:
+    //! @brief Carries out the predict step for the posteriori state of a sigma
+    //! point.
+    //!
+    //! Projects the state and error matrices forward using a model of
+    //! the vehicle's motion.
+    //!
+    //! @param[in] posterioriState - State of teh sigma point.
+    //! @param[in] delta - The time step over which to predict.
+    //!
+    Eigen::VectorXd predict(Eigen::VectorXd const& posterioriState, double delta);
+
     //! @brief The UKF sigma points
     //!
     //! Used to sample possible next states during prediction.
