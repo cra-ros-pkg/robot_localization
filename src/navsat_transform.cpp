@@ -384,6 +384,7 @@ namespace RobotLocalization
   {
     if (!transform_good_)
     {
+      ROS_ERROR("No transform available (yet)");
       return false;
     }
     tf2::Vector3 point;
@@ -423,6 +424,7 @@ namespace RobotLocalization
 
     if (!transform_good_)
     {
+      ROS_ERROR("No transform available (yet)");
       return false;
     }
 
