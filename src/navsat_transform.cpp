@@ -110,6 +110,7 @@ namespace RobotLocalization
 
     to_ll_srv_ = nh.advertiseService("toLL", &NavSatTransform::toLLCallback, this);
     from_ll_srv_ = nh.advertiseService("fromLL", &NavSatTransform::fromLLCallback, this);
+    set_utm_zone_srv_ = nh.advertiseService("setUTMZone", &NavSatTransform::setUTMZoneCallback, this);
 
     if (use_manual_datum_ && nh_priv.hasParam("datum"))
     {
@@ -427,6 +428,17 @@ namespace RobotLocalization
 
     response.map_point = cartesianToMap(cartesian_pose).pose.pose.position;
 
+    return true;
+  }
+
+  bool NavSatTransform::setUTMZoneCallback(robot_localization::SetUTMZone::Request& request,
+                                           robot_localization::SetUTMZone::Response& response)
+  {
+    double x_unused;
+    double y_unused;
+    int prec_unused;
+    GeographicLib::MGRS::Reverse(request.utm_zone, utm_zone_, northp_, x_unused, y_unused, prec_unused, true);
+    ROS_INFO("UTM zone set to %d %s", utm_zone_, northp_ ? "north" : "south");
     return true;
   }
 

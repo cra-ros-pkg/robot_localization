@@ -66,6 +66,7 @@ add_service_files(
     GetState.srv
     SetDatum.srv
     SetPose.srv
+    SetUTMZone.srv
     ToggleFilterProcessing.srv
     FromLL.srv
     ToLL.srv
