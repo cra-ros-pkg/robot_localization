@@ -833,19 +833,17 @@ void RosFilter<T>::loadParams()
 
   // Transform future dating
   double offset_tmp = this->declare_parameter("transform_time_offset", 0.0);
-  tf_time_offset_ =
-    rclcpp::Duration::from_nanoseconds(filter_utilities::secToNanosec(offset_tmp));
+  tf_time_offset_ = rclcpp::Duration::from_seconds(offset_tmp);
 
   // Transform timeout
   double timeout_tmp = this->declare_parameter("transform_timeout", 0.0);
-  tf_timeout_ = rclcpp::Duration::from_nanoseconds(filter_utilities::secToNanosec(timeout_tmp));
+  tf_timeout_ = rclcpp::Duration::from_seconds(timeout_tmp);
 
   // Update frequency and sensor timeout
   frequency_ = this->declare_parameter("frequency", 30.0);
 
   double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
-  filter_.setSensorTimeout(
-    rclcpp::Duration::from_nanoseconds(filter_utilities::secToNanosec(sensor_timeout)));
+  filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
 
   // Determine if we're in 2D mode
   two_d_mode_ = this->declare_parameter("two_d_mode", false);
@@ -865,8 +863,7 @@ void RosFilter<T>::loadParams()
       " specified. Absolute value will be assumed.";
   }
 
-  history_length_ = rclcpp::Duration::from_nanoseconds(
-    filter_utilities::secToNanosec(std::abs(history_length_double)));
+  history_length_ = rclcpp::Duration::from_seconds(std::abs(history_length_double));
 
   // Whether we reset filter on jump back in time
   reset_on_time_jump_ = this->declare_parameter("reset_on_time_jump", false);
@@ -1663,7 +1660,7 @@ void RosFilter<T>::loadParams()
 
     filter_.setControlParams(
       control_update_vector,
-      rclcpp::Duration::from_nanoseconds(filter_utilities::secToNanosec(control_timeout)),
+      rclcpp::Duration::from_seconds(control_timeout),
       acceleration_limits, acceleration_gains, deceleration_limits,
       deceleration_gains);
 
