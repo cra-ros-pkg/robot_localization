@@ -138,8 +138,8 @@ TEST(FilterBaseTest, DerivedFilterGetSet) {
 
   // Simple get/set checks
   double timeout = 7.4;
-  derived.setSensorTimeout(rclcpp::Duration(timeout));
-  EXPECT_EQ(derived.getSensorTimeout(), rclcpp::Duration(timeout));
+  derived.setSensorTimeout(rclcpp::Duration::from_seconds(timeout));
+  EXPECT_EQ(derived.getSensorTimeout(), rclcpp::Duration::from_seconds(timeout));
 
   double lastMeasTime = 3.83;
   derived.setLastMeasurementTime(rclcpp::Time(lastMeasTime));
