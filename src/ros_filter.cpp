@@ -815,7 +815,7 @@ void RosFilter<T>::loadParams()
   // Try to resolve tf_prefix
   std::string tf_prefix = "";
   std::string tf_prefix_path = "";
-  this->declare_parameter("tf_prefix");
+  this->declare_parameter<std::string>("tf_prefix");
   if (this->get_parameter("tf_prefix", tf_prefix_path)) {
     // Append the tf prefix in a tf2-friendly manner
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
@@ -883,7 +883,7 @@ void RosFilter<T>::loadParams()
   control_timeout = this->declare_parameter("control_timeout", 0.0);
 
   if (use_control_) {
-    this->declare_parameter("control_config");
+    this->declare_parameter<std::vector<bool>>("control_config");
     if (this->get_parameter("control_config", control_update_vector)) {
       if (control_update_vector.size() != TWIST_SIZE) {
         std::cerr << "Control configuration must be of size " << TWIST_SIZE <<
@@ -899,7 +899,7 @@ void RosFilter<T>::loadParams()
       use_control_ = false;
     }
 
-    this->declare_parameter("acceleration_limits");
+    this->declare_parameter<std::vector<double>>("acceleration_limits");
     if (this->get_parameter("acceleration_limits", acceleration_limits)) {
       if (acceleration_limits.size() != TWIST_SIZE) {
         std::cerr << "Acceleration configuration must be of size " << TWIST_SIZE <<
@@ -915,7 +915,7 @@ void RosFilter<T>::loadParams()
       acceleration_limits.resize(TWIST_SIZE, 1.0);
     }
 
-    this->declare_parameter("acceleration_gains");
+    this->declare_parameter<std::vector<double>>("acceleration_gains");
     if (this->get_parameter("acceleration_gains", acceleration_gains)) {
       const int size = acceleration_gains.size();
       if (size != TWIST_SIZE) {
@@ -929,7 +929,7 @@ void RosFilter<T>::loadParams()
       }
     }
 
-    this->declare_parameter("deceleration_limits");
+    this->declare_parameter<std::vector<double>>("deceleration_limits");
     if (this->get_parameter("deceleration_limits", deceleration_limits)) {
       if (deceleration_limits.size() != TWIST_SIZE) {
         std::cerr << "Deceleration configuration must be of size " << TWIST_SIZE <<
@@ -945,7 +945,7 @@ void RosFilter<T>::loadParams()
       deceleration_limits = acceleration_limits;
     }
 
-    this->declare_parameter("deceleration_gains");
+    this->declare_parameter<std::vector<double>>("deceleration_gains");
     if (this->get_parameter("deceleration_gains", deceleration_gains)) {
       const int size = deceleration_gains.size();
       if (size != TWIST_SIZE) {
@@ -977,7 +977,7 @@ void RosFilter<T>::loadParams()
     dynamic_process_noise_covariance);
 
   std::vector<double> initial_state;
-  this->declare_parameter("initial_state");
+  this->declare_parameter<std::vector<double>>("initial_state");
   if (this->get_parameter("initial_state", initial_state)) {
     if (initial_state.size() != STATE_SIZE) {
       std::cerr << "Initial state must be of size " << STATE_SIZE <<
@@ -1066,7 +1066,7 @@ void RosFilter<T>::loadParams()
     ss << "odom" << topic_ind++;
     std::string odom_topic_name = ss.str();
     std::string odom_topic;
-    this->declare_parameter(odom_topic_name);
+    this->declare_parameter<std::string>(odom_topic_name);
 
     rclcpp::Parameter parameter;
     if (rclcpp::PARAMETER_NOT_SET != this->get_parameter(odom_topic_name, parameter)) {
@@ -1217,7 +1217,7 @@ void RosFilter<T>::loadParams()
     ss << "pose" << topic_ind++;
     std::string pose_topic_name = ss.str();
     std::string pose_topic;
-    this->declare_parameter(pose_topic_name);
+    this->declare_parameter<std::string>(pose_topic_name);
 
     rclcpp::Parameter parameter;
     if (rclcpp::PARAMETER_NOT_SET != this->get_parameter(pose_topic_name, parameter)) {
@@ -1335,7 +1335,7 @@ void RosFilter<T>::loadParams()
     ss << "twist" << topic_ind++;
     std::string twist_topic_name = ss.str();
     std::string twist_topic;
-    this->declare_parameter(twist_topic_name);
+    this->declare_parameter<std::string>(twist_topic_name);
 
     rclcpp::Parameter parameter;
     if (rclcpp::PARAMETER_NOT_SET != this->get_parameter(twist_topic_name, parameter)) {
@@ -1417,7 +1417,7 @@ void RosFilter<T>::loadParams()
     ss << "imu" << topic_ind++;
     std::string imu_topic_name = ss.str();
     std::string imu_topic;
-    this->declare_parameter(imu_topic_name);
+    this->declare_parameter<std::string>(imu_topic_name);
 
     rclcpp::Parameter parameter;
     if (rclcpp::PARAMETER_NOT_SET != this->get_parameter(imu_topic_name, parameter)) {
@@ -1727,7 +1727,7 @@ void RosFilter<T>::loadParams()
   process_noise_covariance.setZero();
   std::vector<double> process_noise_covar_flat;
 
-  this->declare_parameter("process_noise_covariance");
+  this->declare_parameter<std::vector<double>>("process_noise_covariance");
   if (this->get_parameter(
       "process_noise_covariance",
       process_noise_covar_flat))
@@ -1754,7 +1754,7 @@ void RosFilter<T>::loadParams()
   initial_estimate_error_covariance.setZero();
   std::vector<double> estimate_error_covar_flat;
 
-  this->declare_parameter("initial_estimate_covariance");
+  this->declare_parameter<std::vector<double>>("initial_estimate_covariance");
   if (this->get_parameter(
       "initial_estimate_covariance",
       estimate_error_covar_flat))
