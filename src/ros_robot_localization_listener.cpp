@@ -114,7 +114,7 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
     if (process_noise_covar_config.size() != STATE_SIZE * STATE_SIZE) {
       RCLCPP_ERROR(
         node_logger_->get_logger(),
-        "ERROR unexpected process noise covariance matrix size (%d)",
+        "ERROR unexpected process noise covariance matrix size (%ld)",
         process_noise_covar_config.size());
     }
 
@@ -429,8 +429,8 @@ bool RosRobotLocalizationListener::getState(
     if (!findAncestor(tf_buffer_, frame_id, base_frame_id_) ) {
       RCLCPP_ERROR(
         node_logger_->get_logger(),
-        "You are trying to get the state of , but this frame is not a child of the "
-        "base frame: .", frame_id.c_str(), base_frame_id_.c_str());
+        "You are trying to get the state of %s, but this frame is not a child of the "
+        "base frame: %s.", frame_id.c_str(), base_frame_id_.c_str());
       return false;
     }
   } catch (const tf2::TransformException & e) {
