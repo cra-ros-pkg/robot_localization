@@ -18,7 +18,7 @@ The time, in seconds, to wait before calculating the transform from GPS coordina
 
 ~magnetic_declination_radians
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Enter the magnetic declination for your location. If you don't know it, see `http://www.ngdc.noaa.gov/geomag-web <http://www.ngdc.noaa.gov/geomag-web>`_ (make sure to convert the value to radians). This parameter is needed if your IMU prodives its orientation with respect to the magnetic north.
+Enter the magnetic declination for your location. If you don't know it, see `http://www.ngdc.noaa.gov/geomag-web <http://www.ngdc.noaa.gov/geomag-web>`_ (make sure to convert the value to radians). This parameter is needed if your IMU provides its orientation with respect to the magnetic north.
 
 ~yaw_offset
 ^^^^^^^^^^^

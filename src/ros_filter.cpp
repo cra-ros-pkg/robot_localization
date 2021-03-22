@@ -44,6 +44,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <string>
@@ -68,12 +69,15 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   use_control_(false),
   disabled_at_startup_(false),
   enabled_(false),
+  permit_corrected_publication_(false),
   dynamic_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   static_diag_error_level_(diagnostic_msgs::msg::DiagnosticStatus::OK),
   frequency_(30.0),
   gravitational_acceleration_(9.80665),
   history_length_(0),
   latest_control_(),
+  last_diag_time_(0, 0, RCL_ROS_TIME),
+  last_published_stamp_(0, 0, RCL_ROS_TIME),
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0),
@@ -131,7 +135,10 @@ void RosFilter<T>::reset()
 
   // Also set the last set pose time, so we ignore all messages
   // that occur before it
-  last_set_pose_time_ = rclcpp::Time(0);
+  last_set_pose_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_diag_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  latest_control_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_published_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
   // clear tf buffer to avoid TF_OLD_DATA errors
   tf_buffer_->clear();
@@ -141,9 +148,6 @@ void RosFilter<T>::reset()
 
   // reset filter to uninitialized state
   filter_.reset();
-
-  // clear all waiting callbacks
-  // ros::getGlobalCallbackQueue()->clear();
 }
 
 template<typename T>
@@ -831,6 +835,9 @@ void RosFilter<T>::loadParams()
   // Whether we're publishing the acceleration state transform
   publish_acceleration_ = this->declare_parameter("publish_acceleration", false);
 
+  // Whether we'll allow old measurements to cause a re-publication of the updated state
+  permit_corrected_publication_ = this->declare_parameter("permit_corrected_publication", false);
+
   // Transform future dating
   double offset_tmp = this->declare_parameter("transform_time_offset", 0.0);
   tf_time_offset_ =
@@ -996,31 +1003,31 @@ void RosFilter<T>::loadParams()
 
   // Debugging writes to file
   RF_DEBUG(
-    "tf_prefix is " <<
-      tf_prefix << "\nmap_frame is " << map_frame_id_ <<
-      "\nodom_frame is " << odom_frame_id_ << "\nbase_link_frame is " <<
-      base_link_frame_id_ << "\nbase_link_output_frame is " <<
-      base_link_output_frame_id_ << "\nworld_frame is " << world_frame_id_ <<
-      "\ntransform_time_offset is " <<
-      filter_utilities::toSec(tf_time_offset_) <<
+    std::boolalpha <<
+      "tf_prefix is " << tf_prefix <<
+      "\nmap_frame is " << map_frame_id_ <<
+      "\nodom_frame is " << odom_frame_id_ <<
+      "\nbase_link_frame is " << base_link_frame_id_ <<
+      "\nbase_link_output_frame is " << base_link_output_frame_id_ <<
+      "\nworld_frame is " << world_frame_id_ <<
+      "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
       "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
-      "\nfrequency is " << frequency_ << "\nsensor_timeout is " <<
-      filter_utilities::toSec(filter_.getSensorTimeout()) <<
+      "\nfrequency is " << frequency_ <<
+      "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
       "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
-      "\nsmooth_lagged_data is " <<
-    (smooth_lagged_data_ ? "true" : "false") << "\nhistory_length is " <<
-      filter_utilities::toSec(history_length_) << "\nuse_control is " <<
-    (use_control_ ? "true" : "false") << "\ncontrol_config is " <<
-      control_update_vector << "\ncontrol_timeout is " <<
-      control_timeout << "\nacceleration_limits are " <<
-      acceleration_limits << "\nacceleration_gains are " <<
-      acceleration_gains << "\ndeceleration_limits are " <<
-      deceleration_limits << "\ndeceleration_gains are " <<
-      deceleration_gains << "\ninitial state is " << filter_.getState() <<
-      "\ndynamic_process_noise_covariance is " <<
-    (dynamic_process_noise_covariance ? "true" : "false") <<
-      "\nprint_diagnostics is " <<
-    (print_diagnostics_ ? "true" : "false") << "\n");
+      "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
+      "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
+      "\nuse_control is " << use_control_ <<
+      "\ncontrol_config is " << control_update_vector <<
+      "\ncontrol_timeout is " << control_timeout <<
+      "\nacceleration_limits are " << acceleration_limits <<
+      "\nacceleration_gains are " << acceleration_gains <<
+      "\ndeceleration_limits are " << deceleration_limits <<
+      "\ndeceleration_gains are " << deceleration_gains <<
+      "\ninitial state is " << filter_.getState() <<
+      "\ndynamic_process_noise_covariance is " << dynamic_process_noise_covariance <<
+      "\npermit_corrected_publication is " << permit_corrected_publication_ <<
+      "\nprint_diagnostics is " << print_diagnostics_ << "\n");
 
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
@@ -2017,6 +2024,8 @@ void RosFilter<T>::periodicUpdate()
   // Get latest state and publish it
   auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
 
+  bool corrected_data = false;
+
   if (getFilteredOdometryMessage(filtered_position.get())) {
     world_base_link_trans_msg_.header.stamp =
       static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
@@ -2034,7 +2043,7 @@ void RosFilter<T>::periodicUpdate()
     world_base_link_trans_msg_.transform.rotation =
       filtered_position->pose.pose.orientation;
 
-    // The filteredPosition is the message containing the state and covariances:
+    // The filtered_position is the message containing the state and covariances:
     // nav_msgs Odometry
     if (!validateFilterOutput(filtered_position.get())) {
       RCLCPP_ERROR(
@@ -2044,10 +2053,19 @@ void RosFilter<T>::periodicUpdate()
         "covariances.");
     }
 
+    // If we're trying to publish with the same time stamp, it means that we had a measurement get
+    // inserted into the filter history, and our state estimate was updated after it was already
+    // published. As of ROS Noetic, TF2 will issue warnings whenever this occurs, so we make this
+    // behavior optional. Just for safety, we also check for the condition where the last published
+    // stamp is *later* than this stamp. This should never happen, but we should handle the case
+    // anyway.
+    corrected_data = (!permit_corrected_publication_ &&
+      last_published_stamp_ >= filtered_position->header.stamp);
+
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
     // we'll have some work to do.
-    if (publish_transform_) {
+    if (publish_transform_ && !corrected_data) {
       if (filtered_position->header.frame_id == odom_frame_id_) {
         world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
       } else if (filtered_position->header.frame_id == map_frame_id_) {
@@ -2113,8 +2131,13 @@ void RosFilter<T>::periodicUpdate()
       }
     }
 
+    // Retain the last published stamp so we can detect repeated transforms in future cycles
+    last_published_stamp_ = filtered_position->header.stamp;
+
     // Fire off the position and the transform
-    position_pub_->publish(std::move(filtered_position));
+    if (!corrected_data) {
+      position_pub_->publish(std::move(filtered_position));
+    }
 
     if (print_diagnostics_) {
       freq_diag_->tick();
@@ -2123,7 +2146,7 @@ void RosFilter<T>::periodicUpdate()
 
   // Publish the acceleration if desired and filter is initialized
   auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
-  if (publish_acceleration_ &&
+  if (!corrected_data && publish_acceleration_ &&
     getFilteredAccelMessage(filtered_acceleration.get()))
   {
     accel_pub_->publish(std::move(filtered_acceleration));
@@ -2710,7 +2733,7 @@ bool RosFilter<T>::preparePose(
     // Otherwise, we should use our target frame
     final_target_frame = target_frame;
     pose_tmp.frame_id_ =
-      (differential ? final_target_frame : msg->header.frame_id);
+      (differential && !imu_data ? final_target_frame : msg->header.frame_id);
   }
 
   RF_DEBUG(

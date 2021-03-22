@@ -31,6 +31,10 @@ find_package(tf2_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 
+# Geographiclib installs FindGeographicLib.cmake to this non-standard location
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+find_package(GeographicLib REQUIRED COMPONENTS STATIC)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
 
@@ -95,6 +99,7 @@ add_executable(
 
 target_link_libraries(
   ${library_name}
+  ${GeographicLib_LIBRARIES}
   ${EIGEN3_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
