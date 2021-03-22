@@ -35,7 +35,7 @@ find_package(yaml_cpp_vendor REQUIRED)
 
 # Geographiclib installs FindGeographicLib.cmake to this non-standard location
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
-find_package(GeographicLib REQUIRED COMPONENTS STATIC)
+find_package(GeographicLib REQUIRED)
 
 set(library_name rl_lib)
 
