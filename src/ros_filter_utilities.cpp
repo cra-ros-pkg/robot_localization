@@ -193,7 +193,7 @@ bool lookupTransformSafe(
 {
   return lookupTransformSafe(
     buffer, target_frame, source_frame, time,
-    rclcpp::Duration(0), target_frame_trans, silent);
+    rclcpp::Duration(0, 0u), target_frame_trans, silent);
 }
 
 void quatToRPY(
