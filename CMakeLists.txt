@@ -32,6 +32,10 @@ find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 
+# Geographiclib installs FindGeographicLib.cmake to this non-standard location
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+find_package(GeographicLib REQUIRED COMPONENTS STATIC)
+
 set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -93,6 +97,7 @@ add_executable(
 
 target_link_libraries(
   ${library_name}
+  ${GeographicLib_LIBRARIES}
   ${EIGEN3_LIBRARIES}
 )
 

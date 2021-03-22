@@ -525,6 +525,9 @@ protected:
   //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
   bool enabled_;
 
+  //! @brief Whether we'll allow old measurements to cause a re-publication of the updated state
+  bool permit_corrected_publication_;
+
   //! @brief The max (worst) dynamic diagnostic level.
   //!
   int dynamic_diag_error_level_;
@@ -594,6 +597,10 @@ protected:
   //! @brief last call of periodicUpdate
   //!
   rclcpp::Time last_diag_time_;
+
+  //! @brief The time of the most recent published state
+  //!
+  rclcpp::Time last_published_stamp_;
 
   //! @brief We process measurements by queueing them up in
   //! callbacks and processing them all at once within each

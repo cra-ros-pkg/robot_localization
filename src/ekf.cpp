@@ -366,7 +366,7 @@ void Ekf::predict(
     (x_coeff * x_acc + y_coeff * y_acc + z_coeff * z_acc) *
     one_half_at_squared;
   double dFY_dP =
-    (sr * tp * cpi * pitch_vel - cr * tp * cpi * yaw_vel) * delta_sec;
+    (sr * tp * cpi * pitch_vel + cr * tp * cpi * yaw_vel) * delta_sec;
 
   // Much of the transfer function Jacobian is identical to the transfer
   // function

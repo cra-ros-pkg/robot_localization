@@ -25,6 +25,7 @@
   <depend>geometry_msgs</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
+  <depend>geographiclib</depend>
   <depend>nav_msgs</depend>
   <build_depend>rclcpp</build_depend>
   <build_depend>rmw_implementation</build_depend>

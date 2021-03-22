@@ -37,6 +37,9 @@
 #include <robot_localization/srv/to_ll.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 
+#include <Eigen/Dense>
+#include <GeographicLib/Geocentric.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -46,7 +49,6 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <Eigen/Dense>
 #include <memory>
 #include <string>
 
@@ -73,7 +75,7 @@ private:
   void transformCallback();
 
   /**
-   * @brief Computes the transform from the UTM frame to the odom frame
+   * @brief Computes the transform from the Cartesian frame to the odom frame
    */
   void computeTransform();
 
@@ -98,13 +100,13 @@ private:
     std::shared_ptr<robot_localization::srv::FromLL::Response> response);
 
   /**
-   * @brief Given the pose of the navsat sensor in the UTM frame, removes the
-   * offset from the vehicle's centroid and returns the UTM-frame pose of said
+   * @brief Given the pose of the navsat sensor in the Cartesian frame, removes the
+   * offset from the vehicle's centroid and returns the Cartesian-frame pose of said
    * centroid.
    */
-  void getRobotOriginUtmPose(
-    const tf2::Transform & gps_utm_pose,
-    tf2::Transform & robot_utm_pose,
+  void getRobotOriginCartesianPose(
+    const tf2::Transform & gps_cartesian_pose,
+    tf2::Transform & robot_cartesian_pose,
     const rclcpp::Time & transform_time);
 
   /**
@@ -162,10 +164,10 @@ private:
   void setTransformOdometry(const nav_msgs::msg::Odometry::SharedPtr & msg);
 
   /**
-   * @brief Transforms the passed in pose from utm to map frame
-   *  @param[in] utm_pose the pose in utm frame to use to transform
+   * @brief Transforms the passed in pose from Cartesian to map frame
+   *  @param[in] cartesian_pose the pose in Cartesian frame to use to transform
    */
-  nav_msgs::msg::Odometry utmToMap(const tf2::Transform & utm_pose) const;
+  nav_msgs::msg::Odometry cartesianToMap(const tf2::Transform & cartesian_pose) const;
 
   /**
    * @brief Transforms the passed in point from map frame to lat/long
@@ -184,15 +186,15 @@ private:
   std::string base_link_frame_id_;
 
   /**
-   * @brief Whether or not we broadcast the UTM transform
+   * @brief Whether or not we broadcast the Cartesian transform
    */
-  bool broadcast_utm_transform_;
+  bool broadcast_cartesian_transform_;
 
   /**
-   * @brief Whether to broadcast the UTM transform as parent frame, default as
+   * @brief Whether to broadcast the Cartesian transform as parent frame, default as
    * child
    */
-  bool broadcast_utm_transform_as_parent_frame_;
+  bool broadcast_cartesian_transform_as_parent_frame_;
 
   /**
    * @brief TimerBase for publish callback
@@ -271,14 +273,14 @@ private:
   Eigen::MatrixXd latest_odom_covariance_;
 
   /**
-   * @brief Covariance for most recent GPS/UTM data
+   * @brief Covariance for most recent GPS/UTM/LocalCartesian data
    */
-  Eigen::MatrixXd latest_utm_covariance_;
+  Eigen::MatrixXd latest_cartesian_covariance_;
 
   /**
-   * @brief Latest GPS data, stored as UTM coords
+   * @brief Latest GPS data, stored as Cartesian coords
    */
-  tf2::Transform latest_utm_pose_;
+  tf2::Transform latest_cartesian_pose_;
 
   /**
    * @brief Latest odometry pose data
@@ -349,14 +351,23 @@ private:
   tf2::Duration transform_timeout_;
 
   /**
-   * @brief Holds the UTM pose that is used to compute the transform
+   * @brief Holds the Cartesian (UTM or local ENU) pose that is used to compute the transform
    */
-  tf2::Transform transform_utm_pose_;
+  tf2::Transform transform_cartesian_pose_;
 
   /**
    * @brief Latest IMU orientation
    */
   tf2::Transform transform_world_pose_;
+
+  /**
+   * @brief Whether we use a Local Cartesian (tangent plane ENU) or the UTM coordinates as our cartesian
+   */
+  bool use_local_cartesian_;
+
+  //! @brief Local Cartesian projection around gps origin
+  //!
+  GeographicLib::LocalCartesian gps_local_cartesian_;
 
   /**
    * @brief Whether we get our datum from the first GPS message or from the
@@ -370,32 +381,32 @@ private:
   bool use_odometry_yaw_;
 
   /**
-   * @brief Used for publishing the static world_frame->utm transform
+   * @brief Used for publishing the static world_frame->cartesian transform
    */
-  tf2_ros::StaticTransformBroadcaster utm_broadcaster_;
+  tf2_ros::StaticTransformBroadcaster cartesian_broadcaster_;
 
   /**
    * @brief UTM's meridian convergence
    *
-   * Angle between projected meridian (True North) and UTM's grid Y-axis.
-   * For UTM projection (Ellipsoidal Transverse Mercator) it is zero on the
+   * Angle between projected meridian (True North) and Cartesian's grid Y-axis.
+   * For Cartesian projection (Ellipsoidal Transverse Mercator) it is zero on the
    * equator and non-zero everywhere else. It increases as the poles are
    * approached or as we're getting farther from central meridian.
    */
   double utm_meridian_convergence_;
 
   /**
-   * @brief Holds the UTM->odom transform
+   * @brief Holds the cartesian->odom transform
    */
-  tf2::Transform utm_world_transform_;
+  tf2::Transform cartesian_world_transform_;
 
   /**
-   * @brief Holds the odom->UTM transform for filtered GPS broadcast
+   * @brief Holds the odom->Cartesian transform for filtered GPS broadcast
    */
-  tf2::Transform utm_world_trans_inverse_;
+  tf2::Transform cartesian_world_trans_inverse_;
 
   /**
-   * @brief UTM zone as determined after transforming GPS message
+   * @brief Cartesian zone as determined after transforming GPS message
    */
   std::string utm_zone_;
 
