@@ -155,8 +155,9 @@ static inline void LLtoUTM(
   int zone;
   bool northp;
   double k_unused;
-  GeographicLib::UTMUPS::Forward(Lat, Long, zone, northp, UTMEasting, UTMNorthing, gamma,
-                                 k_unused, GeographicLib::UTMUPS::zonespec::MATCH);
+  GeographicLib::UTMUPS::Forward(
+    Lat, Long, zone, northp, UTMEasting, UTMNorthing, gamma,
+    k_unused, GeographicLib::UTMUPS::zonespec::MATCH);
   GeographicLib::MGRS::Forward(zone, northp, UTMEasting, UTMNorthing, -1, UTMZone);
 }
 
