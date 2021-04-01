@@ -51,6 +51,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <GeographicLib/MGRS.hpp>
+#include <GeographicLib/UTMUPS.hpp>
+
 #include <cmath>
 #include <string>
 
