@@ -289,7 +289,7 @@ if(BUILD_TESTING)
 
   #### NAVSAT CONVERSION TESTS ####
   ament_add_gtest(navsat_conversions-test test/test_navsat_conversions.cpp)
-  target_link_libraries(navsat_conversions-test navsat_transform ${library_name})
+  target_link_libraries(navsat_conversions-test ${library_name})
 
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
