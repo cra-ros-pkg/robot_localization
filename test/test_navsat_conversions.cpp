@@ -43,15 +43,15 @@ void NavsatConversionsTest(
   double UTMNorthing_new;
   double UTMEasting_new;
   std::string UTMZone_new;
-  RobotLocalization::NavsatConversions::LLtoUTM(
-    lat, lon, UTMNorthing_new, UTMEasting_new,
-    UTMZone_new);
+  robot_localization::navsat_conversions::LLtoUTM(
+    lat, lon, UTMNorthing_new, UTMEasting_new, UTMZone_new);
   EXPECT_NEAR(UTMNorthing, UTMNorthing_new, 1e-2);
   EXPECT_NEAR(UTMEasting, UTMEasting_new, 1e-2);
   EXPECT_EQ(UTMZone, UTMZone_new);
   double lat_new;
   double lon_new;
-  RobotLocalization::NavsatConversions::UTMtoLL(UTMNorthing, UTMEasting, UTMZone, lat_new, lon_new);
+  robot_localization::navsat_conversions::UTMtoLL(
+    UTMNorthing, UTMEasting, UTMZone, lat_new, lon_new);
   EXPECT_NEAR(lat_new, lat, 1e-5);
   EXPECT_NEAR(lon_new, lon, 1e-5);
 }
