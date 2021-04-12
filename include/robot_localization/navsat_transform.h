@@ -36,6 +36,7 @@
 #include <robot_localization/SetDatum.h>
 #include <robot_localization/ToLL.h>
 #include <robot_localization/FromLL.h>
+#include <robot_localization/SetUTMZone.h>
 
 #include <ros/ros.h>
 
@@ -52,6 +53,8 @@
 
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
+#include <GeographicLib/MGRS.hpp>
+#include <GeographicLib/UTMUPS.hpp>
 
 #include <string>
 
@@ -89,6 +92,11 @@ class NavSatTransform
     //! @brief Callback for the from Lat Long service
     //!
     bool fromLLCallback(robot_localization::FromLL::Request& request, robot_localization::FromLL::Response& response);
+
+    //! @brief Callback for the UTM zone service
+    //!
+    bool setUTMZoneCallback(robot_localization::SetUTMZone::Request& request,
+                            robot_localization::SetUTMZone::Response& response);
 
     //! @brief Given the pose of the navsat sensor in the cartesian frame, removes the offset from the vehicle's
     //! centroid and returns the cartesian-frame pose of said centroid.
@@ -241,9 +249,13 @@ class NavSatTransform
     //!
     std::string gps_frame_id_;
 
-    //! @brief UTM zone as determined after transforming GPS message
+    //! @brief the UTM zone (zero means UPS)
     //!
-    std::string utm_zone_;
+    int utm_zone_;
+
+    //! @brief hemisphere (true means north, false means south)
+    //!
+    bool northp_;
 
     //! @brief Frame ID of the GPS odometry output
     //!
@@ -338,6 +350,10 @@ class NavSatTransform
     //! @brief Service for from Lat Long
     //!
     ros::ServiceServer from_ll_srv_;
+
+    //! @brief Service for set UTM zone
+    //!
+    ros::ServiceServer set_utm_zone_srv_;
 
     //! @brief Transform buffer for managing coordinate transforms
     //!
