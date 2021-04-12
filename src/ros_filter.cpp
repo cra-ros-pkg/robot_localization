@@ -1915,7 +1915,7 @@ namespace RobotLocalization
       if (!validateFilterOutput(filteredPosition))
       {
         ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
-              " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+              " This was likely due to poorly conditioned process, noise, or sensor covariances.");
       }
 
       // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
