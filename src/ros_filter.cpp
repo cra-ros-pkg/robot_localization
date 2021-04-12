@@ -1916,7 +1916,7 @@ namespace RobotLocalization
       if (!validateFilterOutput(filteredPosition))
       {
         ROS_ERROR_STREAM("Critical Error, NaNs were detected in the output state of the filter." <<
-              " This was likely due to poorly coniditioned process, noise, or sensor covariances.");
+              " This was likely due to poorly conditioned process, noise, or sensor covariances.");
       }
 
       // If we're trying to publish with the same time stamp, it means that we had a measurement get inserted into the
