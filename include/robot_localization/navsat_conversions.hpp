@@ -199,8 +199,9 @@ static inline void UTMtoLL(
   double x_unused;
   double y_unused;
   int prec_unused;
+  double k_unused;
   GeographicLib::MGRS::Reverse(UTMZone, zone, northp, x_unused, y_unused, prec_unused, true);
-  GeographicLib::UTMUPS::Reverse(zone, northp, UTMEasting, UTMNorthing, Lat, Long);
+  GeographicLib::UTMUPS::Reverse(zone, northp, UTMEasting, UTMNorthing, Lat, Long, gamma, k_unused);
 }
 
 /**
