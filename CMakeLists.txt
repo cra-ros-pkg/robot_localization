@@ -78,7 +78,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS
     include
-  LIBRARIES 
+  LIBRARIES
     ekf
     ekf_localization_nodelet
     filter_base
@@ -327,5 +327,9 @@ if (CATKIN_ENABLE_TESTING)
                         ros_robot_localization_listener
                         ${catkin_LIBRARIES}
                         ${rostest_LIBRARIES})
+
+  #### NAVSAT CONVERSION TESTS ####
+  catkin_add_gtest(navsat_conversions-test test/test_navsat_conversions.cpp)
+  target_link_libraries(navsat_conversions-test navsat_transform ${catkin_LIBRARIES})
 
 endif()
