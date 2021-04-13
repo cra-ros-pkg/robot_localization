@@ -2591,23 +2591,25 @@ bool RosFilter<T>::prepareAcceleration(
     // of normal forces, so we use a parameter
     if (remove_gravitational_acceleration_[topic_name]) {
       tf2::Vector3 normAcc(0, 0, gravitational_acceleration_);
-      tf2::Quaternion curAttitude;
       tf2::Transform trans;
 
       if (::fabs(msg->orientation_covariance[0] + 1) < 1e-9) {
         // Imu message contains no orientation, so we should use orientation
         // from filter state to transform and remove acceleration
         const Eigen::VectorXd & state = filter_.getState();
-        tf2::Vector3 stateTmp(state(StateMemberRoll), state(StateMemberPitch),
-          state(StateMemberYaw));
+        tf2::Matrix3x3 stateTmp;
+        stateTmp.setRPY(state(StateMemberRoll),
+                        state(StateMemberPitch),
+                        state(StateMemberYaw));
+
         // transform state orientation to IMU frame
         tf2::Transform imuFrameTrans;
         ros_filter_utilities::lookupTransformSafe(
-          tf_buffer_.get(), msg_frame, target_frame, msg->header.stamp, tf_timeout_,
+          tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
           imuFrameTrans);
-        stateTmp = imuFrameTrans.getBasis() * stateTmp;
-        curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
+        trans.setBasis(stateTmp * imuFrameTrans.getBasis());
       } else {
+        tf2::Quaternion curAttitude;
         tf2::fromMsg(msg->orientation, curAttitude);
         if (fabs(curAttitude.length() - 1.0) > 0.01) {
           RCLCPP_WARN_ONCE(
@@ -2615,8 +2617,8 @@ bool RosFilter<T>::prepareAcceleration(
             "An input was not normalized, this should NOT happen, but will normalize.");
           curAttitude.normalize();
         }
+        trans.setRotation(curAttitude);
       }
-      trans.setRotation(curAttitude);
       tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
       acc_tmp.setX(acc_tmp.getX() - rotNorm.getX());
       acc_tmp.setY(acc_tmp.getY() - rotNorm.getY());
@@ -2624,7 +2626,7 @@ bool RosFilter<T>::prepareAcceleration(
 
       RF_DEBUG(
         "Orientation is " <<
-          curAttitude << "Acceleration due to gravity is " << rotNorm <<
+          trans.getRotation() << "Acceleration due to gravity is " << rotNorm <<
           "After removing acceleration due to gravity, acceleration is " <<
           acc_tmp << "\n");
     }
