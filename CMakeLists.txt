@@ -260,6 +260,18 @@ if(BUILD_TESTING)
   ament_add_gtest(test_navsat_conversions test/test_navsat_conversions.cpp)
   target_link_libraries(test_navsat_conversions ${library_name})
 
+  #### NAVSAT TRANSFORM TESTS ####
+  ament_add_gtest_executable(test_navsat_transform test/test_navsat_transform.cpp)
+  target_link_libraries(test_navsat_transform ${library_name})
+  rosidl_target_interfaces(test_navsat_transform
+    ${PROJECT_NAME} "rosidl_typesupport_cpp")
+  ament_add_test(test_navsat_transform
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 100
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/test_navsat_transform.launch.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
+
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
@@ -295,6 +307,7 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag3
     test_robot_localization_estimator
     test_navsat_conversions
+    test_navsat_transform
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1
