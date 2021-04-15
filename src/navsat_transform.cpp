@@ -116,7 +116,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       "Please use 'broadcast_cartesian_transform' instead.");
   } else {
     broadcast_cartesian_transform_ =
-      this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
+      this->declare_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
   }
 
   broadcast_cartesian_transform_as_parent_frame_ =
