@@ -142,7 +142,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
     "toLL", std::bind(&NavSatTransform::toLLCallback, this, _1, _2));
   from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
-
+  from_ll_array_srv_ = this->create_service<robot_localization::srv::FromLLArray>(
+    "fromLLArray", std::bind(&NavSatTransform::fromLLArrayCallback, this, _1, _2));
   std::vector<double> datum_vals;
   if (use_manual_datum_) {
     datum_vals = this->declare_parameter("datum", datum_vals);
@@ -444,6 +445,58 @@ bool NavSatTransform::fromLLCallback(
   }
 
   response->map_point = cartesianToMap(cartesian_pose).pose.pose.position;
+
+  return true;
+}
+
+bool NavSatTransform::fromLLArrayCallback(
+  const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
+  std::shared_ptr<robot_localization::srv::FromLLArray::Response> response)
+{
+  double altitude, longitude, latitude;
+  double cartesian_x {};
+  double cartesian_y {};
+  double cartesian_z {};
+  tf2::Transform cartesian_pose;
+  std::string utm_zone_tmp;
+  for (auto it = request->ll_points.begin(); it != request->ll_points.end(); ++it) {
+    //
+    altitude = it->altitude;
+    longitude = it->longitude;
+    latitude = it->latitude;
+    cartesian_x = 0.0;
+    cartesian_y = 0.0;
+    cartesian_z = 0.0;
+    //
+    if (use_local_cartesian_) {
+      gps_local_cartesian_.Forward(
+        latitude,
+        longitude,
+        altitude,
+        cartesian_x,
+        cartesian_y,
+        cartesian_z);
+    } else {
+
+      navsat_conversions::LLtoUTM(
+        latitude,
+        longitude,
+        cartesian_y,
+        cartesian_x,
+        utm_zone_tmp);
+    }
+
+    cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
+
+    // nav_msgs::msg::Odometry gps_odom;  // it's unused?
+
+    if (!transform_good_) {
+      return false;
+    }
+
+    response->map_points.push_back(cartesianToMap(cartesian_pose).pose.pose.position);
+
+  }
 
   return true;
 }
