@@ -141,23 +141,54 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
+  auto subscriber_options = rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>();
+  subscriber_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
+    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
+    rclcpp::QosPolicyKind::Deadline,
+    rclcpp::QosPolicyKind::Depth,
+    rclcpp::QosPolicyKind::Durability,
+    rclcpp::QosPolicyKind::History,
+    rclcpp::QosPolicyKind::Lifespan,
+    rclcpp::QosPolicyKind::Liveliness,
+    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
+    rclcpp::QosPolicyKind::Reliability,
+  }};
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", custom_qos, std::bind(&NavSatTransform::odomCallback, this, _1));
+    "odometry/filtered", custom_qos, std::bind(
+      &NavSatTransform::odomCallback, this,
+      _1), subscriber_options);
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
+    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
+    subscriber_options);
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1));
+      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
   }
 
+  rclcpp::PublisherOptions publisher_options;
+  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
+    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
+    rclcpp::QosPolicyKind::Deadline,
+    rclcpp::QosPolicyKind::Depth,
+    rclcpp::QosPolicyKind::Durability,
+    rclcpp::QosPolicyKind::History,
+    rclcpp::QosPolicyKind::Lifespan,
+    rclcpp::QosPolicyKind::Liveliness,
+    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
+    rclcpp::QosPolicyKind::Reliability,
+  }};
   gps_odom_pub_ =
-    this->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", rclcpp::QoS(10));
+    this->create_publisher<nav_msgs::msg::Odometry>(
+    "odometry/gps", rclcpp::QoS(
+      10), publisher_options);
 
   if (publish_gps_) {
     filtered_gps_pub_ =
-      this->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", rclcpp::QoS(10));
+      this->create_publisher<sensor_msgs::msg::NavSatFix>(
+      "gps/filtered", rclcpp::QoS(
+        10), publisher_options);
   }
 
   // Sleep for the parameterized amount of time, to give

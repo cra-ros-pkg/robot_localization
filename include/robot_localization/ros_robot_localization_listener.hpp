@@ -49,6 +49,27 @@
 namespace robot_localization
 {
 
+namespace detail
+{
+rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>
+get_subscription_options_for_qos_override()
+{
+  auto subscription_options = rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>();
+  subscription_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
+    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
+    rclcpp::QosPolicyKind::Deadline,
+    rclcpp::QosPolicyKind::Depth,
+    rclcpp::QosPolicyKind::Durability,
+    rclcpp::QosPolicyKind::History,
+    rclcpp::QosPolicyKind::Lifespan,
+    rclcpp::QosPolicyKind::Liveliness,
+    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
+    rclcpp::QosPolicyKind::Reliability,
+  }};
+  return subscription_options;
+}
+}  // namespace detail
+
 //! @brief RosRobotLocalizationListener class
 //!
 //! This class wraps the RobotLocalizationEstimator. It listens to topics over
@@ -70,7 +91,10 @@ public:
   //!
   //! @param[in] node - rclcpp node shared pointer
   //!
-  explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node);
+  explicit RosRobotLocalizationListener(
+    rclcpp::Node::SharedPtr node,
+    rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>> options =
+    detail::get_subscription_options_for_qos_override());
 
   //! @brief Destructor
   //!

@@ -75,11 +75,12 @@ FilterTypes::FilterType filterTypeFromString(
 }
 
 RosRobotLocalizationListener::RosRobotLocalizationListener(
-  rclcpp::Node::SharedPtr node)
+  rclcpp::Node::SharedPtr node,
+  rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>> options)
 : qos1_(1),
   qos10_(10),
-  odom_sub_(node, "odom/filtered", qos1_.get_rmw_qos_profile()),
-  accel_sub_(node, "acceleration/filtered", qos1_.get_rmw_qos_profile()),
+  odom_sub_(node, "odom/filtered", qos1_.get_rmw_qos_profile(), options),
+  accel_sub_(node, "acceleration/filtered", qos1_.get_rmw_qos_profile(), options),
   sync_(odom_sub_, accel_sub_, 10u),
   node_clock_(node->get_node_clock_interface()->get_clock()),
   node_logger_(node->get_node_logging_interface()),
