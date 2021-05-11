@@ -2428,7 +2428,6 @@ namespace RobotLocalization
       if (removeGravitationalAcc_[topicName])
       {
         tf2::Vector3 normAcc(0, 0, gravitationalAcc_);
-        tf2::Quaternion curAttitude;
         tf2::Transform trans;
 
         if (::fabs(msg->orientation_covariance[0] + 1) < 1e-9)
@@ -2436,36 +2435,38 @@ namespace RobotLocalization
           // Imu message contains no orientation, so we should use orientation
           // from filter state to transform and remove acceleration
           const Eigen::VectorXd &state = filter_.getState();
-          tf2::Vector3 stateTmp(state(StateMemberRoll),
-                                state(StateMemberPitch),
-                                state(StateMemberYaw));
+          tf2::Matrix3x3 stateTmp;
+          stateTmp.setRPY(state(StateMemberRoll),
+                          state(StateMemberPitch),
+                          state(StateMemberYaw));
+
           // transform state orientation to IMU frame
           tf2::Transform imuFrameTrans;
           RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                  msgFrame,
                                                   targetFrame,
+                                                  msgFrame,
                                                   msg->header.stamp,
                                                   tfTimeout_,
                                                   imuFrameTrans);
-          stateTmp = imuFrameTrans.getBasis() * stateTmp;
-          curAttitude.setRPY(stateTmp.getX(), stateTmp.getY(), stateTmp.getZ());
+          trans.setBasis(stateTmp * imuFrameTrans.getBasis());
         }
         else
         {
+          tf2::Quaternion curAttitude;
           tf2::fromMsg(msg->orientation, curAttitude);
           if (fabs(curAttitude.length() - 1.0) > 0.01)
           {
             ROS_WARN_ONCE("An input was not normalized, this should NOT happen, but will normalize.");
             curAttitude.normalize();
           }
+          trans.setRotation(curAttitude);
         }
-        trans.setRotation(curAttitude);
         tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
         accTmp.setX(accTmp.getX() - rotNorm.getX());
         accTmp.setY(accTmp.getY() - rotNorm.getY());
         accTmp.setZ(accTmp.getZ() - rotNorm.getZ());
 
-        RF_DEBUG("Orientation is " << curAttitude <<
+        RF_DEBUG("Orientation is " << trans.getRotation() <<
                  "Acceleration due to gravity is " << rotNorm <<
                  "After removing acceleration due to gravity, acceleration is " << accTmp << "\n");
       }
