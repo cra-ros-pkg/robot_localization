@@ -51,10 +51,10 @@ namespace robot_localization
 
 namespace detail
 {
-rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>
+rclcpp::SubscriptionOptions
 get_subscription_options_for_qos_override()
 {
-  auto subscription_options = rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>();
+  auto subscription_options = rclcpp::SubscriptionOptions();
   subscription_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
     rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
     rclcpp::QosPolicyKind::Deadline,
@@ -93,8 +93,7 @@ public:
   //!
   explicit RosRobotLocalizationListener(
     rclcpp::Node::SharedPtr node,
-    rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>> options =
-    detail::get_subscription_options_for_qos_override());
+    rclcpp::SubscriptionOptions options = detail::get_subscription_options_for_qos_override());
 
   //! @brief Destructor
   //!

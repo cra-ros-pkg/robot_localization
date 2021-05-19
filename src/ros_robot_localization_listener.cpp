@@ -76,7 +76,7 @@ FilterTypes::FilterType filterTypeFromString(
 
 RosRobotLocalizationListener::RosRobotLocalizationListener(
   rclcpp::Node::SharedPtr node,
-  rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>> options)
+  rclcpp::SubscriptionOptions options)
 : qos1_(1),
   qos10_(10),
   odom_sub_(node, "odom/filtered", qos1_.get_rmw_qos_profile(), options),

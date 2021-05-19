@@ -141,7 +141,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
-  auto subscriber_options = rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>>();
+  auto subscriber_options = rclcpp::SubscriptionOptions();
   subscriber_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
     rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
     rclcpp::QosPolicyKind::Deadline,
