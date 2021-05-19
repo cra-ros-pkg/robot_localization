@@ -52,20 +52,11 @@ namespace robot_localization
 namespace detail
 {
 rclcpp::SubscriptionOptions
-get_subscription_options_for_qos_override()
+get_subscription_options_with_default_qos_override_policies()
 {
   auto subscription_options = rclcpp::SubscriptionOptions();
-  subscription_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
-    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
-    rclcpp::QosPolicyKind::Deadline,
-    rclcpp::QosPolicyKind::Depth,
-    rclcpp::QosPolicyKind::Durability,
-    rclcpp::QosPolicyKind::History,
-    rclcpp::QosPolicyKind::Lifespan,
-    rclcpp::QosPolicyKind::Liveliness,
-    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
-    rclcpp::QosPolicyKind::Reliability,
-  }};
+  subscription_options.qos_overriding_options =
+    rclcpp::QosOverridingOptions::with_default_policies();
   return subscription_options;
 }
 }  // namespace detail
@@ -93,7 +84,8 @@ public:
   //!
   explicit RosRobotLocalizationListener(
     rclcpp::Node::SharedPtr node,
-    rclcpp::SubscriptionOptions options = detail::get_subscription_options_for_qos_override());
+    rclcpp::SubscriptionOptions options =
+    detail::get_subscription_options_with_default_qos_override_policies());
 
   //! @brief Destructor
   //!

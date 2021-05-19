@@ -142,17 +142,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
   auto subscriber_options = rclcpp::SubscriptionOptions();
-  subscriber_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
-    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
-    rclcpp::QosPolicyKind::Deadline,
-    rclcpp::QosPolicyKind::Depth,
-    rclcpp::QosPolicyKind::Durability,
-    rclcpp::QosPolicyKind::History,
-    rclcpp::QosPolicyKind::Lifespan,
-    rclcpp::QosPolicyKind::Liveliness,
-    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
-    rclcpp::QosPolicyKind::Reliability,
-  }};
+  subscriber_options.qos_overriding_options =
+    rclcpp::QosOverridingOptions::with_default_policies();
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/filtered", custom_qos, std::bind(
       &NavSatTransform::odomCallback, this,
@@ -168,17 +159,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   }
 
   rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
-    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
-    rclcpp::QosPolicyKind::Deadline,
-    rclcpp::QosPolicyKind::Depth,
-    rclcpp::QosPolicyKind::Durability,
-    rclcpp::QosPolicyKind::History,
-    rclcpp::QosPolicyKind::Lifespan,
-    rclcpp::QosPolicyKind::Liveliness,
-    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
-    rclcpp::QosPolicyKind::Reliability,
-  }};
+  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
   gps_odom_pub_ =
     this->create_publisher<nav_msgs::msg::Odometry>(
     "odometry/gps", rclcpp::QoS(
