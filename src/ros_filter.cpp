@@ -2003,21 +2003,10 @@ void RosFilter<T>::initialize()
 
   // Position publisher
   rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions {{
-    rclcpp::QosPolicyKind::AvoidRosNamespaceConventions,
-    rclcpp::QosPolicyKind::Deadline,
-    rclcpp::QosPolicyKind::Depth,
-    rclcpp::QosPolicyKind::Durability,
-    rclcpp::QosPolicyKind::History,
-    rclcpp::QosPolicyKind::Lifespan,
-    rclcpp::QosPolicyKind::Liveliness,
-    rclcpp::QosPolicyKind::LivelinessLeaseDuration,
-    rclcpp::QosPolicyKind::Reliability,
-  }};
+  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
   position_pub_ =
     this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/filtered", rclcpp::QoS(
-      10), publisher_options);
+    "odometry/filtered", rclcpp::QoS(10), publisher_options);
 
   // Optional acceleration publisher
   if (publish_acceleration_) {
