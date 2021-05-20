@@ -49,6 +49,18 @@
 namespace robot_localization
 {
 
+namespace detail
+{
+rclcpp::SubscriptionOptions
+get_subscription_options_with_default_qos_override_policies()
+{
+  auto subscription_options = rclcpp::SubscriptionOptions();
+  subscription_options.qos_overriding_options =
+    rclcpp::QosOverridingOptions::with_default_policies();
+  return subscription_options;
+}
+}  // namespace detail
+
 //! @brief RosRobotLocalizationListener class
 //!
 //! This class wraps the RobotLocalizationEstimator. It listens to topics over
@@ -70,7 +82,10 @@ public:
   //!
   //! @param[in] node - rclcpp node shared pointer
   //!
-  explicit RosRobotLocalizationListener(rclcpp::Node::SharedPtr node);
+  explicit RosRobotLocalizationListener(
+    rclcpp::Node::SharedPtr node,
+    rclcpp::SubscriptionOptions options =
+    detail::get_subscription_options_with_default_qos_override_policies());
 
   //! @brief Destructor
   //!
