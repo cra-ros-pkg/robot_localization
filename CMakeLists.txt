@@ -20,6 +20,7 @@ find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(geographic_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -107,6 +108,7 @@ ament_target_dependencies(
   diagnostic_updater
   geographic_msgs
   geometry_msgs
+  message_filters
   nav_msgs
   rclcpp
   sensor_msgs
