@@ -1970,17 +1970,14 @@ void RosFilter<T>::initialize()
     tf2::toMsg(tf2::Transform::getIdentity());
 
   // Position publisher
-  rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
   position_pub_ =
-    this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/filtered", rclcpp::QoS(10), publisher_options);
+    this->create_publisher<nav_msgs::msg::Odometry>("odometry/filtered", rclcpp::QoS(10));
 
   // Optional acceleration publisher
   if (publish_acceleration_) {
     accel_pub_ =
       this->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered", rclcpp::QoS(10), publisher_options);
+      "accel/filtered", rclcpp::QoS(10));
   }
 
   const std::chrono::duration<double> timespan{1.0 / frequency_};

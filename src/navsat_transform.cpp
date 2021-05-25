@@ -170,32 +170,23 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
-  auto subscriber_options = rclcpp::SubscriptionOptions();
-  subscriber_options.qos_overriding_options =
-    rclcpp::QosOverridingOptions::with_default_policies();
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", custom_qos, std::bind(
-      &NavSatTransform::odomCallback, this, _1), subscriber_options);
+    "odometry/filtered", custom_qos, std::bind(&NavSatTransform::odomCallback, this, _1));
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
-    subscriber_options);
+    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
+      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1));
   }
 
-  rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
   gps_odom_pub_ =
-    this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/gps", rclcpp::QoS(10), publisher_options);
+    this->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", rclcpp::QoS(10));
 
   if (publish_gps_) {
     filtered_gps_pub_ =
-      this->create_publisher<sensor_msgs::msg::NavSatFix>(
-      "gps/filtered", rclcpp::QoS(10), publisher_options);
+      this->create_publisher<sensor_msgs::msg::NavSatFix>("gps/filtered", rclcpp::QoS(10));
   }
 
   // Sleep for the parameterized amount of time, to give
