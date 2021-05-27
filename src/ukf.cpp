@@ -95,21 +95,7 @@ namespace RobotLocalization
     // Throughout prediction and correction, we attempt to maximize efficiency in Eigen.
     if (!uncorrected_)
     {
-      // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-      weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
-
-      // Compute sigma points
-
-      // First sigma point is the current state
-      sigmaPoints_[0] = state_;
-
-      // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-      // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-      for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
-      {
-        sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
-        sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
-      }
+      generateSigmaPoints();
     }
 
     // We don't want to update everything, so we need to build matrices that only update
@@ -281,11 +267,81 @@ namespace RobotLocalization
     }
   }
 
-  Eigen::VectorXd Ukf::predict(Eigen::VectorXd const& posterioriState, double delta)
+  void Ukf::predict(const double referenceTime, const double delta)
   {
-    double roll = posterioriState(StateMemberRoll);
-    double pitch = posterioriState(StateMemberPitch);
-    double yaw = posterioriState(StateMemberYaw);
+    FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
+             "delta is " << delta <<
+             "\nstate is " << state_ << "\n");
+
+    prepareControl(referenceTime, delta);
+
+    generateSigmaPoints();
+
+    // Sum the weighted sigma points to generate a new state prediction
+    state_.setZero();
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      // Apply the state transition function to this sigma point
+      projectSigmaPoint(sigmaPoints_[sigmaInd], delta);
+      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
+    }
+
+    // Now use the sigma points and the predicted state to compute a predicted covariance
+    estimateErrorCovariance_.setZero();
+    Eigen::VectorXd sigmaDiff(STATE_SIZE);
+    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
+    {
+      sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
+      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
+    }
+
+    // Not strictly in the theoretical UKF formulation, but necessary here
+    // to ensure that we actually incorporate the processNoiseCovariance_
+    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
+
+    if (useDynamicProcessNoiseCovariance_)
+    {
+      computeDynamicProcessNoiseCovariance(state_, delta);
+      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
+    }
+
+    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
+
+    // Keep the angles bounded
+    wrapStateAngles();
+
+    // Mark that we can keep these sigma points
+    uncorrected_ = true;
+
+    FB_DEBUG("Predicted state is:\n" << state_ <<
+             "\nPredicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
+             "\n\n--------------------- /Ukf::predict ----------------------\n");
+  }
+
+  void Ukf::generateSigmaPoints()
+  {
+    // Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
+    weightedCovarSqrt_ = ((static_cast<double>(STATE_SIZE) + lambda_) * estimateErrorCovariance_).llt().matrixL();
+
+    // Compute sigma points
+
+    // First sigma point is the current state
+    sigmaPoints_[0] = state_;
+
+    // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
+    // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
+    for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
+    {
+      sigmaPoints_[sigmaInd + 1] = state_ + weightedCovarSqrt_.col(sigmaInd);
+      sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = state_ - weightedCovarSqrt_.col(sigmaInd);
+    }
+  }
+
+  void Ukf::projectSigmaPoint(Eigen::VectorXd& sigmaPoint, double delta)
+  {
+    double roll = sigmaPoint(StateMemberRoll);
+    double pitch = sigmaPoint(StateMemberPitch);
+    double yaw = sigmaPoint(StateMemberYaw);
 
     // We'll need these trig calculations a lot.
     double sp = ::sin(pitch);
@@ -329,71 +385,6 @@ namespace RobotLocalization
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
 
-    return transferFunction_ * posterioriState;
+    sigmaPoint.applyOnTheLeft(transferFunction_);
   }
-
-  void Ukf::predict(const double referenceTime, const double delta)
-  {
-    FB_DEBUG("---------------------- Ukf::predict ----------------------\n" <<
-             "delta is " << delta <<
-             "\nstate is " << state_ << "\n");
-
-    prepareControl(referenceTime, delta);
-
-    // (1) Take the square root of a small fraction of the estimateErrorCovariance_ using LL' decomposition
-    weightedCovarSqrt_ = ((STATE_SIZE + lambda_) * estimateErrorCovariance_).llt().matrixL();
-
-    // (2) Compute sigma points *and* pass them through the transfer function to save
-    // the extra loop
-
-    // First sigma point is the current state
-    sigmaPoints_[0] = predict(state_, delta);
-
-    // Next STATE_SIZE sigma points are state + weightedCovarSqrt_[ith column]
-    // STATE_SIZE sigma points after that are state - weightedCovarSqrt_[ith column]
-    for (size_t sigmaInd = 0; sigmaInd < STATE_SIZE; ++sigmaInd)
-    {
-      sigmaPoints_[sigmaInd + 1] = predict(state_ + weightedCovarSqrt_.col(sigmaInd), delta);
-      sigmaPoints_[sigmaInd + 1 + STATE_SIZE] = predict(state_ - weightedCovarSqrt_.col(sigmaInd), delta);
-    }
-
-    // (3) Sum the weighted sigma points to generate a new state prediction
-    state_.setZero();
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
-    }
-
-    // (4) Now us the sigma points and the predicted state to compute a predicted covariance
-    estimateErrorCovariance_.setZero();
-    Eigen::VectorXd sigmaDiff(STATE_SIZE);
-    for (size_t sigmaInd = 0; sigmaInd < sigmaPoints_.size(); ++sigmaInd)
-    {
-      sigmaDiff = (sigmaPoints_[sigmaInd] - state_);
-      estimateErrorCovariance_.noalias() += covarWeights_[sigmaInd] * (sigmaDiff * sigmaDiff.transpose());
-    }
-
-    // (5) Not strictly in the theoretical UKF formulation, but necessary here
-    // to ensure that we actually incorporate the processNoiseCovariance_
-    Eigen::MatrixXd *processNoiseCovariance = &processNoiseCovariance_;
-
-    if (useDynamicProcessNoiseCovariance_)
-    {
-      computeDynamicProcessNoiseCovariance(state_, delta);
-      processNoiseCovariance = &dynamicProcessNoiseCovariance_;
-    }
-
-    estimateErrorCovariance_.noalias() += delta * (*processNoiseCovariance);
-
-    // Keep the angles bounded
-    wrapStateAngles();
-
-    // Mark that we can keep these sigma points
-    uncorrected_ = true;
-
-    FB_DEBUG("Predicted state is:\n" << state_ <<
-             "\nPredicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
-             "\n\n--------------------- /Ukf::predict ----------------------\n");
-  }
-
 }  // namespace RobotLocalization
