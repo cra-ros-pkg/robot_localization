@@ -14,8 +14,8 @@ Changelog for package robot_localization
 * Increasing the minimum CMake version (`#573 <https://github.com/cra-ros-pkg/robot_localization/issues/573>`_)
 * Contributors: Aleksander Bojda, David Jensen, James Baxter, Jeffrey Kane Johnson, Mabel Zhang, Ronald Ensing, Tom Moore
 
-Forthcoming
------------
+2.7.2 (2021-06-03)
+------------------
 * Also test for gamma conversion (`#647 <https://github.com/cra-ros-pkg/robot_localization/issues/647>`_)
 * fix: Transform gravitation vector to IMU frame before removing acceleration (`#639 <https://github.com/cra-ros-pkg/robot_localization/issues/639>`_)
 * Fixed a typo in validate filter output error message. (`#646 <https://github.com/cra-ros-pkg/robot_localization/issues/646>`_)
