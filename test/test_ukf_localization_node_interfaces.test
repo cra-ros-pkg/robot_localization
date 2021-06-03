@@ -62,9 +62,9 @@
                                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,
                                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01]</rosparam>
 
-      <param name="alpha" value="1.732050808"/>
-      <param name="kappa" value="10.0"/>
-      <param name="beta" value="2.0"/>
+      <param name="alpha" value="0.001"/>
+      <param name="kappa" value="0"/>
+      <param name="beta" value="2"/>
 
     </node>
 
