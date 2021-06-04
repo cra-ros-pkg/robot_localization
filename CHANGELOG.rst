@@ -2,6 +2,19 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing navsat_transform linking
+* SHARED linking for Geographiclib (`#624 <https://github.com/cra-ros-pkg/robot_localization/issues/624>`_)
+* Fixed a typo in validate filter output error message. (`#646 <https://github.com/cra-ros-pkg/robot_localization/issues/646>`_)
+* Fix transformomation for gravitation vector to IMU frame before removing acceleration (`#639 <https://github.com/cra-ros-pkg/robot_localization/issues/639>`_)
+* Stick to the global utm_zone\_ when transforming gps to UTM (`#627 <https://github.com/cra-ros-pkg/robot_localization/issues/627>`_)
+* UTM conversions using geographiclib (`#626 <https://github.com/cra-ros-pkg/robot_localization/issues/626>`_)
+* Update state_estimation_nodes.rst (`#623 <https://github.com/cra-ros-pkg/robot_localization/issues/623>`_)
+* Fixing lat-long to UTM conversion (`#620 <https://github.com/cra-ros-pkg/robot_localization/issues/620>`_)
+* Removing xmlrpcpp dependency
+* Contributors: Achmad Fathoni, JJB_UT, Leonardo Hemerly, Paul Verhoeckx, Tim Clephas, Tom Moore
+
 2.6.9 (2020-12-17)
 ------------------
 * Fix warning "Failed to meet update rate!" (`#602 <https://github.com/cra-ros-pkg/robot_localization/issues/602>`_)
