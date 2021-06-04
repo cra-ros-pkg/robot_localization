@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.10 (2021-06-04)
+-------------------
 * Fixing navsat_transform linking
 * SHARED linking for Geographiclib (`#624 <https://github.com/cra-ros-pkg/robot_localization/issues/624>`_)
 * Fixed a typo in validate filter output error message. (`#646 <https://github.com/cra-ros-pkg/robot_localization/issues/646>`_)
