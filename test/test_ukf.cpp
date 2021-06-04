@@ -57,9 +57,9 @@ class RosUkfPassThrough : public RosUkf
 TEST(UkfTest, Measurements)
 {
   std::vector<double> args;
-  args.push_back(::sqrt(3));
-  args.push_back(10.0);
-  args.push_back(2.0);
+  args.push_back(0.001);
+  args.push_back(0);
+  args.push_back(2);
 
   RosUkfPassThrough ukf(args);
 

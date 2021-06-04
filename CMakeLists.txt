@@ -7,6 +7,7 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(catkin REQUIRED COMPONENTS
+  angles
   diagnostic_msgs
   diagnostic_updater
   eigen_conversions
@@ -96,6 +97,7 @@ catkin_package(
     ukf
     ukf_localization_nodelet
   CATKIN_DEPENDS
+    angles
     cmake_modules
     diagnostic_msgs
     diagnostic_updater
@@ -253,32 +255,35 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ekf.cpp)
   target_link_libraries(test_ekf ros_filter ekf ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
-
   add_rostest_gtest(test_ekf_localization_node_interfaces
                     test/test_ekf_localization_node_interfaces.test
                     test/test_ekf_localization_node_interfaces.cpp)
-  target_link_libraries(test_ekf_localization_node_interfaces ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  target_link_libraries(test_ekf_localization_node_interfaces ros_filter ekf ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ekf_localization_node_interfaces ekf_localization_node)
 
   add_rostest_gtest(test_ekf_localization_node_bag1
                     test/test_ekf_localization_node_bag1.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ekf_localization_node_bag1 ekf_localization_node)
 
   add_rostest_gtest(test_ekf_localization_node_bag2
                     test/test_ekf_localization_node_bag2.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag2 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ekf_localization_node_bag2 ekf_localization_node)
 
   add_rostest_gtest(test_ekf_localization_node_bag3
                     test/test_ekf_localization_node_bag3.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ekf_localization_node_bag3 ekf_localization_node)
 
   add_rostest_gtest(test_ekf_localization_nodelet_bag1
                     test/test_ekf_localization_nodelet_bag1.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ekf_localization_nodelet_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
-
+  add_dependencies(test_ekf_localization_nodelet_bag1 ekf_localization_nodelet)
 
   #### UKF TESTS #####
   add_rostest_gtest(test_ukf
@@ -290,26 +295,31 @@ if (CATKIN_ENABLE_TESTING)
                     test/test_ukf_localization_node_interfaces.test
                     test/test_ukf_localization_node_interfaces.cpp)
   target_link_libraries(test_ukf_localization_node_interfaces ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ukf_localization_node_interfaces ukf_localization_node)
 
   add_rostest_gtest(test_ukf_localization_node_bag1
                     test/test_ukf_localization_node_bag1.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ukf_localization_node_bag1 ukf_localization_node)
 
   add_rostest_gtest(test_ukf_localization_node_bag2
                     test/test_ukf_localization_node_bag2.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag2 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ukf_localization_node_bag2 ukf_localization_node)
 
   add_rostest_gtest(test_ukf_localization_node_bag3
                     test/test_ukf_localization_node_bag3.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_node_bag3 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ukf_localization_node_bag3 ukf_localization_node)
 
   add_rostest_gtest(test_ukf_localization_nodelet_bag1
                     test/test_ukf_localization_nodelet_bag1.test
                     test/test_localization_node_bag_pose_tester.cpp)
   target_link_libraries(test_ukf_localization_nodelet_bag1 ${catkin_LIBRARIES} ${rostest_LIBRARIES})
+  add_dependencies(test_ukf_localization_nodelet_bag1 ukf_localization_nodelet)
 
   #### RLE/RLL TESTS #####
   add_rostest_gtest(test_robot_localization_estimator
