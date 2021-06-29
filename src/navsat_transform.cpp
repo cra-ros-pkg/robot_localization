@@ -91,6 +91,7 @@ namespace RobotLocalization
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    nh_priv.getParam("world_frame", world_frame_id_);
     transform_timeout_.fromSec(transform_timeout);
 
     // Check for deprecated parameters
