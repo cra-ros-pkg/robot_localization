@@ -983,15 +983,18 @@ TEST(InterfacesTest, ImuDifferentialIO)
   imu.angular_velocity_covariance[4] = 0.02;
   imu.angular_velocity_covariance[8] = 0.02;
 
+  ros::Duration(0.1).sleep();
+  ros::spinOnce();
+
   size_t setCount = 0;
-  while (setCount++ < 10)
+  while (setCount++ < 1000)
   {
     imu.header.stamp = ros::Time::now();
     imu0Pub.publish(imu);  // Use this to move the absolute orientation
     imu1Pub.publish(imu);  // Use this to keep velocities at 0
     ros::spinOnce();
 
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.001).sleep();
 
     imu.header.seq++;
   }
