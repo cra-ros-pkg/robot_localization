@@ -415,7 +415,15 @@ namespace RobotLocalization
     {
       int zone_tmp;
       bool nortp_tmp;
-      GeographicLib::UTMUPS::Forward(latitude, longitude, zone_tmp, nortp_tmp, cartesian_x, cartesian_y, utm_zone_);
+      try
+      {
+        GeographicLib::UTMUPS::Forward(latitude, longitude, zone_tmp, nortp_tmp, cartesian_x, cartesian_y, utm_zone_);
+      }
+      catch (const GeographicLib::GeographicErr& e)
+      {
+        ROS_ERROR_STREAM_THROTTLE(1.0, e.what());
+        return false;
+      }
     }
 
     cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
@@ -632,8 +640,16 @@ namespace RobotLocalization
         // Transform to UTM using the fixed utm_zone_
         int zone_tmp;
         bool northp_tmp;
-        GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude,
-                                       zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+        try
+        {
+          GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude,
+                                        zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+        }
+        catch (const GeographicLib::GeographicErr& e)
+        {
+          ROS_ERROR_STREAM_THROTTLE(1.0, e.what());
+          return;
+        }
       }
       latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
       latest_cartesian_covariance_.setZero();
