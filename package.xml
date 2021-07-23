@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>robot_localization</name>
-  <version>2.6.10</version>
+  <version>2.6.11</version>
   <description>Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
 
   <maintainer email="ayrton04@gmail.com">Tom Moore</maintainer>
