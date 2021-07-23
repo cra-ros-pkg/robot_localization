@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Prevent node from crashing on invalid UTM zone, but throw ROS_ERROR to notify user (`#683 <https://github.com/cra-ros-pkg/robot_localization/issues/683>`_)
+* Contributors: MCFurry
+
 2.6.10 (2021-06-04)
 -------------------
 * Fixing navsat_transform linking
