@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.7.3 (2021-07-23)
+------------------
 * Prevent node from crashing on invalid UTM zone, but throw ROS_ERROR to notify user (`#682 <https://github.com/cra-ros-pkg/robot_localization/issues/682>`_)
 * changed geographiclib to <depend> tag (`#684 <https://github.com/cra-ros-pkg/robot_localization/issues/684>`_)
 * Small formatting and content change (`#677 <https://github.com/cra-ros-pkg/robot_localization/issues/677>`_)
