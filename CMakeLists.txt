@@ -111,8 +111,8 @@ catkin_package(
     tf2_ros
   DEPENDS
     ${EIGEN_PACKAGE}
-    YAML_CPP
     GeographicLib
+    YAML_CPP
 )
 
 ###########
