@@ -112,6 +112,7 @@ catkin_package(
   DEPENDS
     ${EIGEN_PACKAGE}
     YAML_CPP
+    GeographicLib
 )
 
 ###########
