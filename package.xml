@@ -20,6 +20,7 @@
   <depend>eigen</depend>
   <depend>eigen_conversions</depend>
   <depend>geographic_msgs</depend>
+  <depend>geographiclib</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>
@@ -33,7 +34,6 @@
   <depend>tf2_ros</depend>
   <depend>yaml-cpp</depend>
 
-  <build_depend>geographiclib</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend condition="$ROS_PYTHON_VERSION == 2">python-catkin-pkg</build_depend>
   <build_depend condition="$ROS_PYTHON_VERSION == 3">python3-catkin-pkg</build_depend>
