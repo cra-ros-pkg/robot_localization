@@ -51,7 +51,7 @@ namespace robot_localization
 
 namespace detail
 {
-rclcpp::SubscriptionOptions
+inline rclcpp::SubscriptionOptions
 get_subscription_options_with_default_qos_override_policies()
 {
   auto subscription_options = rclcpp::SubscriptionOptions();
