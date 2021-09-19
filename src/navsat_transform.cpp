@@ -61,7 +61,7 @@ namespace RobotLocalization
     yaw_offset_(0.0),
     base_link_frame_id_("base_link"),
     gps_frame_id_(""),
-    utm_zone_(""),
+    utm_zone_(0),
     world_frame_id_("odom"),
     transform_timeout_(ros::Duration(0)),
     tf_listener_(tf_buffer_)
@@ -110,6 +110,7 @@ namespace RobotLocalization
 
     to_ll_srv_ = nh.advertiseService("toLL", &NavSatTransform::toLLCallback, this);
     from_ll_srv_ = nh.advertiseService("fromLL", &NavSatTransform::fromLLCallback, this);
+    set_utm_zone_srv_ = nh.advertiseService("setUTMZone", &NavSatTransform::setUTMZoneCallback, this);
 
     if (use_manual_datum_ && nh_priv.hasParam("datum"))
     {
@@ -383,6 +384,7 @@ namespace RobotLocalization
   {
     if (!transform_good_)
     {
+      ROS_ERROR("No transform available (yet)");
       return false;
     }
     tf2::Vector3 point;
@@ -411,8 +413,17 @@ namespace RobotLocalization
     }
     else
     {
-      std::string utm_zone_tmp;
-      NavsatConversions::LLtoUTM(latitude, longitude, cartesian_y, cartesian_x, utm_zone_tmp);
+      int zone_tmp;
+      bool nortp_tmp;
+      try
+      {
+        GeographicLib::UTMUPS::Forward(latitude, longitude, zone_tmp, nortp_tmp, cartesian_x, cartesian_y, utm_zone_);
+      }
+      catch (const GeographicLib::GeographicErr& e)
+      {
+        ROS_ERROR_STREAM_THROTTLE(1.0, e.what());
+        return false;
+      }
     }
 
     cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
@@ -421,11 +432,23 @@ namespace RobotLocalization
 
     if (!transform_good_)
     {
+      ROS_ERROR("No transform available (yet)");
       return false;
     }
 
     response.map_point = cartesianToMap(cartesian_pose).pose.pose.position;
 
+    return true;
+  }
+
+  bool NavSatTransform::setUTMZoneCallback(robot_localization::SetUTMZone::Request& request,
+                                           robot_localization::SetUTMZone::Response& response)
+  {
+    double x_unused;
+    double y_unused;
+    int prec_unused;
+    GeographicLib::MGRS::Reverse(request.utm_zone, utm_zone_, northp_, x_unused, y_unused, prec_unused, true);
+    ROS_INFO("UTM zone set to %d %s", utm_zone_, northp_ ? "north" : "south");
     return true;
   }
 
@@ -473,11 +496,12 @@ namespace RobotLocalization
     }
     else
     {
-      NavsatConversions::UTMtoLL(odom_as_cartesian.getOrigin().getY(),
-                                 odom_as_cartesian.getOrigin().getX(),
-                                 utm_zone_,
-                                 latitude,
-                                 longitude);
+      GeographicLib::UTMUPS::Reverse(utm_zone_,
+                                     northp_,
+                                     odom_as_cartesian.getOrigin().getX(),
+                                     odom_as_cartesian.getOrigin().getY(),
+                                     latitude,
+                                     longitude);
       altitude = odom_as_cartesian.getOrigin().getZ();
     }
   }
@@ -613,8 +637,19 @@ namespace RobotLocalization
       }
       else
       {
-        std::string utm_zone_tmp;
-        NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, cartesian_y, cartesian_x, utm_zone_tmp);
+        // Transform to UTM using the fixed utm_zone_
+        int zone_tmp;
+        bool northp_tmp;
+        try
+        {
+          GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude,
+                                        zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+        }
+        catch (const GeographicLib::GeographicErr& e)
+        {
+          ROS_ERROR_STREAM_THROTTLE(1.0, e.what());
+          return;
+        }
       }
       latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
       latest_cartesian_covariance_.setZero();
@@ -831,15 +866,17 @@ namespace RobotLocalization
     }
     else
     {
-      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, cartesian_y, cartesian_x, utm_zone_,
-                                 utm_meridian_convergence_);
-      utm_meridian_convergence_ *= NavsatConversions::RADIANS_PER_DEGREE;
+      double k_tmp;
+      double utm_meridian_convergence_degrees;
+      GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude, utm_zone_, northp_,
+                                     cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp);
+      utm_meridian_convergence_ = utm_meridian_convergence_degrees * NavsatConversions::RADIANS_PER_DEGREE;
     }
 
     ROS_INFO_STREAM("Datum (latitude, longitude, altitude) is (" << std::fixed << msg->latitude << ", " <<
                     msg->longitude << ", " << msg->altitude << ")");
     ROS_INFO_STREAM("Datum " << ((use_local_cartesian_)? "Local Cartesian" : "UTM") <<
-                    " coordinate is (" << std::fixed << cartesian_x << ", " << cartesian_y << ")");
+                    " coordinate is (" << std::fixed << cartesian_x << ", " << cartesian_y << ") zone " << utm_zone_);
 
     transform_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
     transform_cartesian_pose_.setRotation(tf2::Quaternion::getIdentity());

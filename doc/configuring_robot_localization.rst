@@ -87,8 +87,8 @@ You may wonder why did we not fuse :math:`\dot{Z}` velocity for the same reason.
 
 3. Last, we come to the IMU. You may notice that we have set the :math:`\ddot{Y}` to *false*. This is due to the fact that many systems, including the hypothetical one we are discussing here, will not undergo instantaneous :math:`Y` acceleration. However, the IMU will likely report non-zero, noisy values for Y acceleration, which can cause your estimate to drift rapidly.
 
-The *differential* and *relative* Parameters
-********************************************
+The *differential* Parameters
+*****************************
 
 The state estimation nodes in ''robot_localization'' allow users to fuse as many sensors as they like. This allows users to measure certain state vector variables - in particular, pose variables - using more than one source. For example, your robot may obtain absolute orientation information from multiple IMUs, or it may have multiple data sources providing an estimate its absolute position. In this case, users have two options:
 
@@ -108,7 +108,7 @@ The state estimation nodes in ''robot_localization'' allow users to fuse as many
                                 false, false, false,
                                 false, false, false]</rosparam>
 
- In this case, users should be **very** careful and ensure that the covariances on each measured orientation variable are set correctly. If each IMU advertises a yaw variance of, for example, :math:`0.1`, yet the delta between the IMUs' yaw measurements is :math:`> 0.1`, then the output of the filter will oscillate back and forth between the values provided by each sensor. Users should make sure that the noise distributions around each measurement overlap.
+In this case, users should be **very** careful and ensure that the covariances on each measured orientation variable are set correctly. If each IMU advertises a yaw variance of, for example, :math:`0.1`, yet the delta between the IMUs' yaw measurements is :math:`> 0.1`, then the output of the filter will oscillate back and forth between the values provided by each sensor. Users should make sure that the noise distributions around each measurement overlap.
 
 2. Alternatively, users can make use of the ``_differential`` parameter. By setting this to *true* for a given sensor, all pose (position and orientation) data is converted to a velocity by calculating the change in the measurement value between two consecutive time steps. The data is then fused as a velocity. Again, though, users should take care: when measurements are fused absolutely (especially IMUs), if the measurement has a static or non-increasing variance for a given variable, then the variance in the estimate's covariance matrix will be bounded. If that information is converted to a velocity, then at each time step, the estimate will gain some small amount of error, and the variance for the variable in question will grow without bound. For position :math:`(X, Y, Z)` information, this isn't an issue, but for orientation data, it is a problem. For example, it is acceptable for a robot to move around its environment and accumulate :math:`1.5` meters of error in the :math:`X` direction after some time. If that same robot moves around and accumulates :math:`1.5` radians of error in yaw, then when the robot next drives forward, its position error will explode.
 

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>robot_localization</name>
-  <version>2.7.1</version>
+  <version>2.7.3</version>
   <description>Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
 
   <maintainer email="ayrton04@gmail.com">Tom Moore</maintainer>
@@ -19,6 +19,7 @@
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>eigen_conversions</depend>
+  <depend>geographiclib</depend>
   <depend>geographic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
@@ -33,7 +34,6 @@
   <depend>tf2_ros</depend>
   <depend>yaml-cpp</depend>
 
-  <build_depend>geographiclib</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend condition="$ROS_PYTHON_VERSION == 2">python-catkin-pkg</build_depend>
   <build_depend condition="$ROS_PYTHON_VERSION == 3">python3-catkin-pkg</build_depend>

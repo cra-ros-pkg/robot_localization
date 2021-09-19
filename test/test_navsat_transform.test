@@ -1,0 +1,9 @@
+<!-- Launch file for navsat_transform test -->
+
+<launch>
+
+    <node name="navsat_transform_node" pkg="robot_localization" type="navsat_transform_node" output="screen" />
+
+    <test test-name="test_navsat_transform" pkg="robot_localization" type="test_navsat_transform" />
+
+</launch>

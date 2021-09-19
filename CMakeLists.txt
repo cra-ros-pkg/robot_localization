@@ -66,6 +66,7 @@ add_service_files(
     GetState.srv
     SetDatum.srv
     SetPose.srv
+    SetUTMZone.srv
     ToggleFilterProcessing.srv
     FromLL.srv
     ToLL.srv
@@ -330,5 +331,15 @@ if (CATKIN_ENABLE_TESTING)
                         ros_robot_localization_listener
                         ${catkin_LIBRARIES}
                         ${rostest_LIBRARIES})
+
+  #### NAVSAT CONVERSION TESTS ####
+  catkin_add_gtest(navsat_conversions-test test/test_navsat_conversions.cpp)
+  target_link_libraries(navsat_conversions-test navsat_transform ${catkin_LIBRARIES})
+
+  #### NAVSAT TRANSFORM TESTS ####
+  add_rostest_gtest(test_navsat_transform
+                    test/test_navsat_transform.test
+                    test/test_navsat_transform.cpp)
+  target_link_libraries(test_navsat_transform ${catkin_LIBRARIES} ${rostest_LIBRARIES})
 
 endif()
