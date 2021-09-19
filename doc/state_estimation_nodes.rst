@@ -43,7 +43,7 @@ Specific parameters:
 * ``~map_frame``
 * ``~odom_frame``
 * ``~base_link_frame``
-* ``~base_link_output_frame``
+* ``~base_link_frame_output``
 * ``~world_frame``
 
 These parameters define the operating "mode" for ``robot_localization``. `REP-105 <http://www.ros.org/reps/rep-0105.html>`_ specifies three principal coordinate frames: *map*, *odom*, and *base_link*. *base_link* is the coordinate frame that is affixed to the robot. The robot's position in the *odom* frame will drift over time, but is accurate in the short term and should be continuous. The *map* frame, like the *odom* frame, is a world-fixed coordinate frame, and while it contains the most globally accurate position estimate for your robot, it is subject to discrete jumps, e.g., due to the fusion of GPS data. Here is how to use these parameters:
