@@ -165,6 +165,11 @@ class NavSatTransform
     //!
     bool broadcast_cartesian_transform_as_parent_frame_;
 
+    //! @brief The cartesian frame ID, default as 'local_enu' if using Local Cartesian or 'utm' if using the UTM
+    //! coordinates as our cartesian.
+    //!
+    std::string cartesian_frame_id_;
+
     //! @brief Whether or not we have new GPS data
     //!
     //! We only want to compute and broadcast our transformed GPS data if it's new. This variable keeps track of that.
