@@ -983,6 +983,8 @@ namespace RobotLocalization
     nhLocal_.param("disabled_at_startup", disabledAtStartup_, false);
     enabled_ = !disabledAtStartup_;
 
+    // Check if tf warnings should be suppressed
+    nh_.getParam("/silent_tf_failure", tfSilentFailure_);
 
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
@@ -1009,7 +1011,8 @@ namespace RobotLocalization
              "\ninitial state is " << filter_.getState() <<
              "\ndynamic_process_noise_covariance is " << std::boolalpha << dynamicProcessNoiseCovariance <<
              "\npermit_corrected_publication is " << std::boolalpha << permitCorrectedPublication_ <<
-             "\nprint_diagnostics is " << std::boolalpha << printDiagnostics_ << "\n");
+             "\nprint_diagnostics is " << std::boolalpha << printDiagnostics_ <<
+             "\nsuppress tf warnings is " << std::boolalpha << tfSilentFailure_ << "\n" "\n");
 
     // Create a subscriber for manually setting/resetting pose
     setPoseSub_ = nh_.subscribe("set_pose",
@@ -2427,15 +2430,13 @@ namespace RobotLocalization
     // It's unlikely that we'll get a velocity measurement in another frame, but
     // we have to handle the situation.
     tf2::Transform targetFrameTrans;
-    bool silent_tf_failure;
-    nh_.getParam("/silent_tf_failure", silent_tf_failure);
     bool canTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
                                                                 targetFrame,
                                                                 msgFrame,
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
                                                                 targetFrameTrans,
-                                                                silent_tf_failure);
+                                                                tfSilentFailure_);
 
     if (canTransform)
     {
@@ -2463,7 +2464,8 @@ namespace RobotLocalization
                                                   msgFrame,
                                                   msg->header.stamp,
                                                   tfTimeout_,
-                                                  imuFrameTrans);
+                                                  imuFrameTrans,
+                                                  tfSilentFailure_);
           trans.setBasis(stateTmp * imuFrameTrans.getBasis());
         }
         else
@@ -2650,7 +2652,8 @@ namespace RobotLocalization
                                                                 poseTmp.frame_id_,
                                                                 poseTmp.stamp_,
                                                                 tfTimeout_,
-                                                                targetFrameTrans);
+                                                                targetFrameTrans,
+                                                                tfSilentFailure_);
 
     // 3. Make sure we can work with this data before carrying on
     if (canTransform)
@@ -3017,7 +3020,8 @@ namespace RobotLocalization
                                                                 msgFrame,
                                                                 msg->header.stamp,
                                                                 tfTimeout_,
-                                                                targetFrameTrans);
+                                                                targetFrameTrans,
+                                                                tfSilentFailure_);
 
     if (canTransform)
     {

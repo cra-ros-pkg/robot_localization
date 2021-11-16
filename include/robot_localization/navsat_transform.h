@@ -287,6 +287,10 @@ class NavSatTransform
     //!
     ros::Duration transform_timeout_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tf_silent_failure_;
+
     //! @brief timer calling periodicUpdate
     //!
     ros::Timer periodicUpdateTimer_;

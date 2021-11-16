@@ -638,6 +638,10 @@ template<class T> class RosFilter
     //!
     ros::Duration tfTimeout_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tfSilentFailure_;
+
     //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
     //! Uses a robot_localization ToggleFilterProcessing service.
     //!

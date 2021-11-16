@@ -105,6 +105,9 @@ namespace RobotLocalization
                "'broadcast_cartesian_transform_as_parent_frame' instead.");
     }
 
+    // Check if tf warnings should be suppressed
+    nh.getParam("/silent_tf_failure", tf_silent_failure_);
+
     // Subscribe to the messages and services we need
     datum_srv_ = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
@@ -519,7 +522,8 @@ namespace RobotLocalization
                                                                  gps_frame_id_,
                                                                  transform_time,
                                                                  ros::Duration(transform_timeout_),
-                                                                 offset);
+                                                                 offset,
+                                                                 tf_silent_failure_);
 
     if (can_transform)
     {
@@ -569,7 +573,8 @@ namespace RobotLocalization
                                                                  gps_frame_id_,
                                                                  transform_time,
                                                                  transform_timeout_,
-                                                                 gps_offset_rotated);
+                                                                 gps_offset_rotated,
+                                                                 tf_silent_failure_);
 
     if (can_transform)
     {
@@ -579,7 +584,8 @@ namespace RobotLocalization
                                                               base_link_frame_id_,
                                                               transform_time,
                                                               transform_timeout_,
-                                                              robot_orientation);
+                                                              robot_orientation,
+                                                              tf_silent_failure_);
 
       if (can_transform)
       {
@@ -687,7 +693,8 @@ namespace RobotLocalization
                                                                    msg->header.frame_id,
                                                                    msg->header.stamp,
                                                                    transform_timeout_,
-                                                                   target_frame_trans);
+                                                                   target_frame_trans,
+                                                                   tf_silent_failure_);
 
       if (can_transform)
       {
