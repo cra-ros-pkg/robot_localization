@@ -479,6 +479,10 @@ template<class T> class RosFilter
     //!
     bool useControl_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tfSilentFailure_;
+
     //! @brief The max (worst) dynamic diagnostic level.
     //!
     int dynamicDiagErrorLevel_;
@@ -637,10 +641,6 @@ template<class T> class RosFilter
     //! @brief Parameter that specifies the how long we wait for a transform to become available.
     //!
     ros::Duration tfTimeout_;
-
-    //! @brief When true, do not print warnings for tf lookup failures.
-    //!
-    bool tfSilentFailure_;
 
     //! @brief Service that allows another node to toggle on/off filter processing while still publishing.
     //! Uses a robot_localization ToggleFilterProcessing service.
