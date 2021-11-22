@@ -479,6 +479,10 @@ template<class T> class RosFilter
     //!
     bool useControl_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tfSilentFailure_;
+
     //! @brief The max (worst) dynamic diagnostic level.
     //!
     int dynamicDiagErrorLevel_;

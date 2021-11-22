@@ -210,6 +210,10 @@ class NavSatTransform
     //!
     bool use_local_cartesian_;
 
+    //! @brief When true, do not print warnings for tf lookup failures.
+    //!
+    bool tf_silent_failure_;
+
     //! @brief Local Cartesian projection around gps origin
     //!
     GeographicLib::LocalCartesian gps_local_cartesian_;
