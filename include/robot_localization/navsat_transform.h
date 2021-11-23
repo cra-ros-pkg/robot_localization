@@ -249,6 +249,11 @@ class NavSatTransform
     //!
     std::string base_link_frame_id_;
 
+    //! @brief The cartesian frame ID, default as 'local_enu' if using Local Cartesian or 'utm' if using the UTM
+    //! coordinates as our cartesian.
+    //!
+    std::string cartesian_frame_id_;
+
     //! @brief The frame_id of the GPS message (specifies mounting location)
     //!
     std::string gps_frame_id_;

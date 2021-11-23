@@ -91,6 +91,7 @@ namespace RobotLocalization
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    nh_priv.param("cartesian_frame_id", cartesian_frame_id_, std::string(use_local_cartesian_ ? "local_enu" : "utm"));
     transform_timeout_.fromSec(transform_timeout);
 
     // Check for deprecated parameters
@@ -323,11 +324,10 @@ namespace RobotLocalization
       {
         geometry_msgs::TransformStamped cartesian_transform_stamped;
         cartesian_transform_stamped.header.stamp = ros::Time::now();
-        std::string cartesian_frame_id = (use_local_cartesian_ ? "local_enu" : "utm");
         cartesian_transform_stamped.header.frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
-                                                       cartesian_frame_id : world_frame_id_);
+                                                       cartesian_frame_id_ : world_frame_id_);
         cartesian_transform_stamped.child_frame_id = (broadcast_cartesian_transform_as_parent_frame_ ?
-                                                      world_frame_id_ : cartesian_frame_id);
+                                                      world_frame_id_ : cartesian_frame_id_);
         cartesian_transform_stamped.transform = (broadcast_cartesian_transform_as_parent_frame_ ?
                                              tf2::toMsg(cartesian_world_trans_inverse_) :
                                              tf2::toMsg(cartesian_world_transform_));
