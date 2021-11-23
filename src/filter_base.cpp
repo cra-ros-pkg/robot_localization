@@ -47,7 +47,7 @@ namespace robot_localization
 FilterBase::FilterBase()
 : initialized_(false), use_control_(false),
   use_dynamic_process_noise_covariance_(false), control_timeout_(0),
-  last_measurement_time_(0, 0, RCL_ROS_TIME), latest_control_time_(0),
+  last_measurement_time_(0, 0, RCL_ROS_TIME), latest_control_time_(0, 0, RCL_ROS_TIME),
   sensor_timeout_(0), debug_stream_(nullptr),
   acceleration_gains_(TWIST_SIZE, 0.0),
   acceleration_limits_(TWIST_SIZE, 0.0),
