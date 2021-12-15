@@ -538,14 +538,24 @@ void NavSatTransform::mapToLL(
 
   odom_as_cartesian.mult(cartesian_world_trans_inverse_, pose);
   odom_as_cartesian.setRotation(tf2::Quaternion::getIdentity());
-
-  // Now convert the data back to lat/long and place into the message
-  navsat_conversions::UTMtoLL(
-    odom_as_cartesian.getOrigin().getY(),
-    odom_as_cartesian.getOrigin().getX(),
-    utm_zone_,
-    latitude,
-    longitude);
+  if (use_local_cartesian_) {
+    gps_local_cartesian_.Reverse(
+      odom_as_cartesian.getOrigin().getX(),
+      odom_as_cartesian.getOrigin().getY(),
+      odom_as_cartesian.getOrigin().getZ(),
+      latitude,
+      longitude,
+      altitude
+    );
+  } else {
+    // Now convert the data back to lat/long and place into the message
+    navsat_conversions::UTMtoLL(
+      odom_as_cartesian.getOrigin().getY(),
+      odom_as_cartesian.getOrigin().getX(),
+      utm_zone_,
+      latitude,
+      longitude);
+  }
   altitude = odom_as_cartesian.getOrigin().getZ();
 }
 
