@@ -453,6 +453,18 @@ namespace RobotLocalization
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
 
+    // Apply control terms, which are actually accelerations
+    sigmaPoint(StateMemberVroll) += controlAcceleration_(ControlMemberVroll) * delta;
+    sigmaPoint(StateMemberVpitch) += controlAcceleration_(ControlMemberVpitch) * delta;
+    sigmaPoint(StateMemberVyaw) += controlAcceleration_(ControlMemberVyaw) * delta;
+
+    sigmaPoint(StateMemberAx) = (controlUpdateVector_[ControlMemberVx] ?
+      controlAcceleration_(ControlMemberVx) : sigmaPoint(StateMemberAx));
+    sigmaPoint(StateMemberAy) = (controlUpdateVector_[ControlMemberVy] ?
+      controlAcceleration_(ControlMemberVy) : sigmaPoint(StateMemberAy));
+    sigmaPoint(StateMemberAz) = (controlUpdateVector_[ControlMemberVz] ?
+      controlAcceleration_(ControlMemberVz) : sigmaPoint(StateMemberAz));
+
     sigmaPoint.applyOnTheLeft(transferFunction_);
   }
 }  // namespace RobotLocalization
