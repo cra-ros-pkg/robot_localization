@@ -292,8 +292,8 @@ namespace RobotLocalization
     {
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
-      // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      // (6) Compute the new estimate error covariance P = P - (K * ( P_zz + R ) * K')
+      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * ( predictedMeasCovar + measurementCovarianceSubset )* kalmanGainSubset.transpose());
 
       wrapStateAngles();
 
