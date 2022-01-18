@@ -1939,54 +1939,46 @@ namespace RobotLocalization
         }
         else if (filteredPosition.header.frame_id == mapFrameId_)
         {
-          try
+          /*
+           * First, see these two references:
+           * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
+           * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
+           * We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually transform
+           * a given pose from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, whose
+           * first two arguments are target frame and source frame, to get a transform from
+           * baseLinkFrameId_->odomFrameId_. However, this transform would actually transform data
+           * from odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
+           * mapFrameId_ frame. First, we multiply it by the inverse of the
+           * mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
+           * baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
+           * transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
+           * inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
+           * However, if we want other users to be able to do the same, we need to broadcast
+           * the inverse of that entire transform.
+          */
+
+          tf2::Transform baseLinkOdomTrans;
+          if (RosFilterUtilities::lookupTransformSafe(
+                tfBuffer_,
+                baseLinkFrameId_,
+                odomFrameId_,
+                filteredPosition.header.stamp,
+                tfTimeout_,
+                baseLinkOdomTrans))
           {
             tf2::Transform worldBaseLinkTrans;
             tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
 
-            tf2::Transform baseLinkOdomTrans;
-            if (RosFilterUtilities::lookupTransformSafe(
-                  tfBuffer_,
-                  baseLinkFrameId_,
-                  odomFrameId_,
-                  filteredPosition.header.stamp,
-                  tfTimeout_,
-                  baseLinkOdomTrans))
-            {
-              /*
-               * First, see these two references:
-               * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
-               * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
-               * We have a transform from mapFrameId_->baseLinkFrameId_, but it would actually transform
-               * a given pose from baseLinkFrameId_->mapFrameId_. We then used lookupTransform, whose
-               * first two arguments are target frame and source frame, to get a transform from
-               * baseLinkFrameId_->odomFrameId_. However, this transform would actually transform data
-               * from odomFrameId_->baseLinkFrameId_. Now imagine that we have a position in the
-               * mapFrameId_ frame. First, we multiply it by the inverse of the
-               * mapFrameId_->baseLinkFrameId, which will transform that data from mapFrameId_ to
-               * baseLinkFrameId_. Now we want to go from baseLinkFrameId_->odomFrameId_, but the
-               * transform we have takes data from odomFrameId_->baseLinkFrameId_, so we need its
-               * inverse as well. We have now transformed our data from mapFrameId_ to odomFrameId_.
-               * However, if we want other users to be able to do the same, we need to broadcast
-               * the inverse of that entire transform.
-              */
+            tf2::Transform mapOdomTrans;
+            mapOdomTrans.mult(worldBaseLinkTrans, baseLinkOdomTrans);
 
-              tf2::Transform mapOdomTrans;
-              mapOdomTrans.mult(worldBaseLinkTrans, baseLinkOdomTrans);
+            geometry_msgs::TransformStamped mapOdomTransMsg;
+            mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
+            mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
+            mapOdomTransMsg.header.frame_id = mapFrameId_;
+            mapOdomTransMsg.child_frame_id = odomFrameId_;
 
-              geometry_msgs::TransformStamped mapOdomTransMsg;
-              mapOdomTransMsg.transform = tf2::toMsg(mapOdomTrans);
-              mapOdomTransMsg.header.stamp = filteredPosition.header.stamp + tfTimeOffset_;
-              mapOdomTransMsg.header.frame_id = mapFrameId_;
-              mapOdomTransMsg.child_frame_id = odomFrameId_;
-
-              worldTransformBroadcaster_.sendTransform(mapOdomTransMsg);
-            }
-          }
-          catch(...)
-          {
-            ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from "
-                                              << odomFrameId_ << "->" << baseLinkFrameId_);
+            worldTransformBroadcaster_.sendTransform(mapOdomTransMsg);
           }
         }
         else
