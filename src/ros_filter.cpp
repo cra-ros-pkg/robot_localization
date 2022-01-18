@@ -1945,8 +1945,10 @@ namespace RobotLocalization
             tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
 
             tf2::Transform baseLinkOdomTrans;
-            tf2::fromMsg(tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, ros::Time(0)).transform,
-                         baseLinkOdomTrans);
+            tf2::fromMsg(
+              tfBuffer_.lookupTransform(baseLinkFrameId_, odomFrameId_, filteredPosition.header.stamp, tfTimeout_)
+                .transform,
+              baseLinkOdomTrans);
 
             /*
              * First, see these two references:
