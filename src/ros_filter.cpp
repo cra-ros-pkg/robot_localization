@@ -1980,6 +1980,11 @@ namespace RobotLocalization
 
             worldTransformBroadcaster_.sendTransform(mapOdomTransMsg);
           }
+          else
+          {
+            ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain transform from " << odomFrameId_ <<
+              "->" << baseLinkFrameId_);
+          }
         }
         else
         {
