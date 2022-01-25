@@ -185,7 +185,7 @@ static inline void LLtoUTM(const double Lat, const double Long,
  */
 static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
                            const std::string &UTMZone, double& Lat, double& Long,
-                           double& /*unused*/)
+                           double& /*gamma*/)
 {
   int zone;
   bool northp;
