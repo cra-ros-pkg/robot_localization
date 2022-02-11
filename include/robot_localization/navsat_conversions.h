@@ -184,7 +184,8 @@ static inline void LLtoUTM(const double Lat, const double Long,
  * @param[out] gamma meridian convergence at point (degrees).
  */
 static inline void UTMtoLL(const double UTMNorthing, const double UTMEasting,
-                           const std::string &UTMZone, double& Lat, double& Long, double &gamma)
+                           const std::string &UTMZone, double& Lat, double& Long,
+                           double& /*gamma*/)
 {
   int zone;
   bool northp;
