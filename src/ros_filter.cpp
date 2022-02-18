@@ -2072,7 +2072,8 @@ namespace RobotLocalization
 
     // Prepare the pose data (really just using this to transform it into the target frame).
     // Twist data is going to get zeroed out.
-    preparePose(msg, topicName, worldFrameId_, "", false, false, false, updateVector, measurement, measurementCovariance);
+    preparePose(msg, topicName, worldFrameId_, "", false, false, false,
+                updateVector, measurement, measurementCovariance);
 
     // For the state
     filter_.setState(measurement);
@@ -2908,18 +2909,20 @@ namespace RobotLocalization
       else
       {
         // make pose refer to the baseLinkFrame as source
-        if (childFrame != "" && childFrame != baseLinkFrameId_) {
+        if (childFrame != "" && childFrame != baseLinkFrameId_)
+        {
           tf2::Transform sourceFrameTrans;
-          bool canSrcTransform = RosFilterUtilities::lookupTransformSafe( tfBuffer_,
-                                                                           childFrame,
-                                                                           baseLinkFrameId_,
-                                                                           poseTmp.stamp_,
-                                                                           tfTimeout_,
-                                                                           sourceFrameTrans,
-                                                                           tfSilentFailure_ );
+          bool canSrcTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
+                                                                         childFrame,
+                                                                         baseLinkFrameId_,
+                                                                         poseTmp.stamp_,
+                                                                         tfTimeout_,
+                                                                         sourceFrameTrans,
+                                                                         tfSilentFailure_);
 
-          if( canSrcTransform ) {
-            poseTmp.setData( poseTmp * sourceFrameTrans );
+          if (canSrcTransform)
+          {
+            poseTmp.setData(poseTmp * sourceFrameTrans);
           }
         }
 
