@@ -2,6 +2,14 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Moving to C++17 support (`#725 <https://github.com/cra-ros-pkg/robot_localization/issues/725>`_)
+* SHARED linking for Geographiclib (`#624 <https://github.com/cra-ros-pkg/robot_localization/issues/624>`_) (`#712 <https://github.com/cra-ros-pkg/robot_localization/issues/712>`_)
+  * remove GeographicLib specific linking option
+  Co-authored-by: Achmad Fathoni <fathoni.id@gmail.com>
+* Contributors: Stephan Sundermann, Tom Moore
+
 2.4.0 (2017-06-12)
 ------------------
 * Updated documentation
