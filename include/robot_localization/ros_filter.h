@@ -225,6 +225,12 @@ template<class T> class RosFilter
     //!
     void integrateMeasurements(const ros::Time &currentTime);
 
+    //! @brief Differentiate angular velocity for angular acceleration
+    //!
+    //! @param[in] currentTime - The time at which to carry out differentiation (the current time)
+    //!
+    void differentiateMeasurements(const ros::Time &currentTime);
+
     //! @brief Loads all parameters from file
     //!
     void loadParams();
@@ -600,6 +606,22 @@ template<class T> class RosFilter
     //! The values are treated as static and always reported (i.e., this object is never cleared)
     //!
     std::map<std::string, std::string> staticDiagnostics_;
+
+    //! @brief Last time mark that angular acceleration is calculated
+    //!
+    ros::Time lastAngAccTime_;
+
+    //! @brief Last record of filtered angular velocity
+    //!
+    tf2::Vector3 lastStateTwistRot_;
+
+    //! @brief Calculated angular acceleration from time-differencing
+    //!
+    tf2::Vector3 angular_acceleration_;
+
+    //! @brief Covariance of the calculated angular acceleration
+    //!
+    Eigen::MatrixXd angular_acceleration_cov_;
 
     //! @brief The most recent control input
     //!
