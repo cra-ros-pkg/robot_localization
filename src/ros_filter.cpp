@@ -241,7 +241,7 @@ namespace RobotLocalization
       std::vector<int> updateVectorCorrected = callbackData.updateVector_;
 
       // Prepare the twist data for inclusion in the filter
-      if (prepareAcceleration(msg, topicName, targetFrame, updateVectorCorrected, measurement,
+      if (prepareAcceleration(msg, topicName, targetFrame, callbackData.relative_, updateVectorCorrected, measurement,
             measurementCovariance))
       {
         // Store the measurement. Add an "acceleration" suffix so we know what kind of measurement
@@ -2422,6 +2422,7 @@ namespace RobotLocalization
   bool RosFilter<T>::prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
                            const std::string &topicName,
                            const std::string &targetFrame,
+                           const bool relative,
                            std::vector<int> &updateVector,
                            Eigen::VectorXd &measurement,
                            Eigen::MatrixXd &measurementCovariance)
@@ -2478,6 +2479,13 @@ namespace RobotLocalization
     if (canTransform)
     {
       const Eigen::VectorXd &state = filter_.getState();
+      
+      // Transform to correct frame
+      tf2::Vector3 stateTwistRot(state(StateMemberVroll),
+                                state(StateMemberVpitch),
+                                state(StateMemberVyaw));
+      accTmp = targetFrameTrans.getBasis() * accTmp + targetFrameTrans.getOrigin().cross(angular_acceleration_)
+              - targetFrameTrans.getOrigin().cross(stateTwistRot).cross(stateTwistRot);
 
       // We don't know if the user has already handled the removal
       // of normal forces, so we use a parameter
@@ -2485,6 +2493,7 @@ namespace RobotLocalization
       {
         tf2::Vector3 normAcc(0, 0, gravitationalAcc_);
         tf2::Transform trans;
+        tf2::Vector3 rotNorm;
 
         if (::fabs(msg->orientation_covariance[0] + 1) < 1e-9)
         {
@@ -2496,15 +2505,8 @@ namespace RobotLocalization
                           state(StateMemberYaw));
 
           // transform state orientation to IMU frame
-          tf2::Transform imuFrameTrans;
-          RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                  targetFrame,
-                                                  msgFrame,
-                                                  msg->header.stamp,
-                                                  tfTimeout_,
-                                                  imuFrameTrans,
-                                                  tfSilentFailure_);
-          trans.setBasis(stateTmp * imuFrameTrans.getBasis());
+          trans.setBasis(stateTmp * targetFrameTrans.getBasis());
+          rotNorm = trans.getBasis().inverse() * normAcc;
         }
         else
         {
@@ -2515,9 +2517,14 @@ namespace RobotLocalization
             ROS_WARN_ONCE("An input was not normalized, this should NOT happen, but will normalize.");
             curAttitude.normalize();
           }
-          trans.setRotation(curAttitude);
+          if (relative){
+            trans.setRotation(curAttitude);
+            rotNorm = trans.getBasis().inverse() * normAcc;
+          }
+          else{
+            rotNorm = targetFrameTrans.getBasis() * trans.getBasis().inverse() * normAcc;
+          }
         }
-        tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
         accTmp.setX(accTmp.getX() - rotNorm.getX());
         accTmp.setY(accTmp.getY() - rotNorm.getY());
         accTmp.setZ(accTmp.getZ() - rotNorm.getZ());
@@ -2527,12 +2534,6 @@ namespace RobotLocalization
                  "After removing acceleration due to gravity, acceleration is " << accTmp << "\n");
       }
 
-      // Transform to correct frame
-      tf2::Vector3 stateTwistRot(state(StateMemberVroll),
-                                state(StateMemberVpitch),
-                                state(StateMemberVyaw));
-      accTmp = targetFrameTrans.getBasis() * accTmp + targetFrameTrans.getOrigin().cross(angular_acceleration_)
-               - targetFrameTrans.getOrigin().cross(stateTwistRot).cross(stateTwistRot);
       maskAcc = targetFrameTrans.getBasis() * maskAcc;
 
       // Now use the mask values to determine which update vector values should be true

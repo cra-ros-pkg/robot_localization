@@ -382,6 +382,7 @@ template<class T> class RosFilter
     bool prepareAcceleration(const sensor_msgs::Imu::ConstPtr &msg,
                              const std::string &topicName,
                              const std::string &targetFrame,
+                             const bool relative,
                              std::vector<int> &updateVector,
                              Eigen::VectorXd &measurement,
                              Eigen::MatrixXd &measurementCovariance);
