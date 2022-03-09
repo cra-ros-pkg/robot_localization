@@ -525,10 +525,11 @@ namespace RobotLocalization
 
         // IMU data gets handled a bit differently, since the message is ambiguous and has only a single frame_id,
         // even though the data in it is reported in two different frames. As we assume users will specify a base_link
-        // to imu transform, we make the target frame baseLinkFrameId_ and tell the poseCallback that it is working
-        // with IMU data. This will cause it to apply different logic to the data.
+        // to imu transform, we make the target and child frame baseLinkFrameId_ and tell the poseCallback that it is
+        // working with IMU data. This will cause it to apply different logic to the data.
         geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-        poseCallback(pptr, poseCallbackData, baseLinkFrameId_, "", true);
+        poseCallback(pptr, poseCallbackData, baseLinkFrameId_,
+                     baseLinkFrameId_, true);
       }
     }
 
@@ -1065,7 +1066,11 @@ namespace RobotLocalization
           relative = false;
         }
 
-        std::string odomTopic;
+        // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
+        bool diff_rel_use_child_frame;
+        nhLocal_.param(odomTopicName + std::string("_diff_rel_use_child_frame"), diff_rel_use_child_frame, false);
+
+          std::string odomTopic;
         nhLocal_.getParam(odomTopicName, odomTopic);
 
         // Check for pose rejection threshold
@@ -1095,9 +1100,9 @@ namespace RobotLocalization
         nhLocal_.param(odomTopicName + "_queue_size", odomQueueSize, 1);
 
         const CallbackData poseCallbackData(odomTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
-          relative, poseMahalanobisThresh);
+          relative, diff_rel_use_child_frame, poseMahalanobisThresh);
         const CallbackData twistCallbackData(odomTopicName + "_twist", twistUpdateVec, twistUpdateSum, false, false,
-          twistMahalanobisThresh);
+          false, twistMahalanobisThresh);
 
         bool nodelayOdom = false;
         nhLocal_.param(odomTopicName + "_nodelay", nodelayOdom, false);
@@ -1220,11 +1225,11 @@ namespace RobotLocalization
         if (poseUpdateSum > 0)
         {
           const CallbackData callbackData(poseTopicName, poseUpdateVec, poseUpdateSum, differential, relative,
-            poseMahalanobisThresh);
+            false, poseMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
-              boost::bind(&RosFilter::poseCallback, this, _1, callbackData, worldFrameId_, "", false),
+              boost::bind(&RosFilter::poseCallback, this, _1, callbackData, worldFrameId_, baseLinkFrameId_, false),
               ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayPose)));
 
           if (differential)
@@ -1297,7 +1302,7 @@ namespace RobotLocalization
         if (twistUpdateSum > 0)
         {
           const CallbackData callbackData(twistTopicName, twistUpdateVec, twistUpdateSum, false, false,
-            twistMahalanobisThresh);
+            false, twistMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
@@ -1463,11 +1468,11 @@ namespace RobotLocalization
         if (poseUpdateSum + twistUpdateSum + accelUpdateSum > 0)
         {
           const CallbackData poseCallbackData(imuTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
-            relative, poseMahalanobisThresh);
+            relative, false, poseMahalanobisThresh);
           const CallbackData twistCallbackData(imuTopicName + "_twist", twistUpdateVec, twistUpdateSum, differential,
-            relative, twistMahalanobisThresh);
+            relative, false, twistMahalanobisThresh);
           const CallbackData accelCallbackData(imuTopicName + "_acceleration", accelUpdateVec, accelUpdateSum,
-            differential, relative, accelMahalanobisThresh);
+            differential, relative, false, accelMahalanobisThresh);
 
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
@@ -1741,7 +1746,14 @@ namespace RobotLocalization
       posPtr->pose = msg->pose;  // Entire pose object, also copies covariance
 
       geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-      poseCallback(pptr, poseCallbackData, worldFrameId_, msg->child_frame_id, false);
+      if (poseCallbackData.diff_rel_use_child_frame_)
+      {
+        poseCallback(pptr, poseCallbackData, worldFrameId_, msg->child_frame_id, false);
+      }
+      else
+      {
+        poseCallback(pptr, poseCallbackData, worldFrameId_, baseLinkFrameId_, false);
+      }
     }
 
     if (twistCallbackData.updateSum_ > 0)
@@ -2072,8 +2084,9 @@ namespace RobotLocalization
 
     // Prepare the pose data (really just using this to transform it into the target frame).
     // Twist data is going to get zeroed out.
-    preparePose(msg, topicName, worldFrameId_, "", false, false, false,
-                updateVector, measurement, measurementCovariance);
+    // Since pose messages do not provide a child_frame_id, it defaults to baseLinkFrameId_
+    preparePose(msg, topicName, worldFrameId_, baseLinkFrameId_, false, false,
+                false, updateVector, measurement, measurementCovariance);
 
     // For the state
     filter_.setState(measurement);
@@ -2866,7 +2879,7 @@ namespace RobotLocalization
           // in case there is a childFrame, it originates from an odometry msg, so use that instead of the baseLinkFrame
           geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
           twistPtr->header = msg->header;
-          twistPtr->header.frame_id = childFrame == "" ? baseLinkFrameId_ : childFrame;
+          twistPtr->header.frame_id = childFrame;
           twistPtr->twist.twist.linear.x = xVel;
           twistPtr->twist.twist.linear.y = yVel;
           twistPtr->twist.twist.linear.z = zVel;
@@ -2909,7 +2922,7 @@ namespace RobotLocalization
       else
       {
         // make pose refer to the baseLinkFrame as source
-        if (childFrame != "" && childFrame != baseLinkFrameId_)
+        if (childFrame != baseLinkFrameId_)
         {
           tf2::Transform sourceFrameTrans;
           bool canSrcTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,

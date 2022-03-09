@@ -82,12 +82,14 @@ struct CallbackData
                const int updateSum,
                const bool differential,
                const bool relative,
+               const bool diff_rel_use_child_frame,
                const double rejectionThreshold) :
     topicName_(topicName),
     updateVector_(updateVector),
     updateSum_(updateSum),
     differential_(differential),
     relative_(relative),
+    diff_rel_use_child_frame_(diff_rel_use_child_frame),
     rejectionThreshold_(rejectionThreshold)
   {
   }
@@ -97,6 +99,7 @@ struct CallbackData
   int updateSum_;
   bool differential_;
   bool relative_;
+  bool diff_rel_use_child_frame_;
   double rejectionThreshold_;
 };
 
