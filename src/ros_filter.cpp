@@ -2001,18 +2001,7 @@ void RosFilter<T>::periodicUpdate()
 
   rclcpp::Time cur_time = this->now();
 
-  if (toggled_on_) {
-    // Now we'll integrate any measurements we've received
-    integrateMeasurements(cur_time);
-  } else {
-    // Clear out measurements since we're not currently processing new entries
-    clearMeasurementQueue();
-
-    // Reset last measurement time so we don't get a large time delta on toggle
-    if (filter_.getInitializedStatus()) {
-      filter_.setLastMeasurementTime(this->now());
-    }
-  }
+  updateFilterWithMeasurements(cur_time);
 
   // Get latest state and publish it
   auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
@@ -2171,6 +2160,23 @@ void RosFilter<T>::periodicUpdate()
       "Failed to meet update rate! Took " << std::setprecision(20) <<
       loop_elapsed << "seconds. Try decreasing the rate, limiting "
       "sensor output frequency, or limiting the number of sensors.\n";
+  }
+}
+
+template<typename T>
+void RosFilter<T>::updateFilterWithMeasurements(const rclcpp::Time & time)
+{
+  if (toggled_on_) {
+    // Now we'll integrate any measurements we've received
+    integrateMeasurements(time);
+  } else {
+    // Clear out measurements since we're not currently processing new entries
+    clearMeasurementQueue();
+
+    // Reset last measurement time so we don't get a large time delta on toggle
+    if (filter_.getInitializedStatus()) {
+      filter_.setLastMeasurementTime(time);
+    }
   }
 }
 

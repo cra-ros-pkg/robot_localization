@@ -353,6 +353,11 @@ protected:
   //!
   void clearMeasurementQueue();
 
+  //! @brief Update filter with data from measurements queue
+  //! @param[in] time - The time at which to carry out integration
+  //!
+  void updateFilterWithMeasurements(const rclcpp::Time & time);
+
   //! @brief Adds a diagnostic message to the accumulating map and updates the
   //! error level
   //! @param[in] error_level - The error level of the diagnostic
