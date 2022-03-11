@@ -34,6 +34,7 @@
 #include <robot_localization/ukf.hpp>
 #include <Eigen/Cholesky>
 #include <vector>
+#include <cmath>
 
 
 namespace robot_localization
@@ -240,9 +241,10 @@ void Ukf::correct(const Measurement & measurement)
 
   // Wrap angles in the innovation
   for (size_t i = 0; i < updateSize; ++i) {
-    if (update_indices[i] == StateMemberRoll ||
+    if ((update_indices[i] == StateMemberRoll ||
       update_indices[i] == StateMemberPitch ||
-      update_indices[i] == StateMemberYaw)
+      update_indices[i] == StateMemberYaw) &&
+      std::isfinite(innovation_subset(i)))
     {
       while (innovation_subset(i) < -PI) {
         innovation_subset(i) += TAU;
