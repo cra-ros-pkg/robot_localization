@@ -1067,8 +1067,8 @@ namespace RobotLocalization
         }
 
         // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
-        bool diff_rel_use_child_frame;
-        nhLocal_.param(odomTopicName + std::string("_diff_rel_use_child_frame"), diff_rel_use_child_frame, false);
+        bool pose_use_child_frame;
+        nhLocal_.param(odomTopicName + std::string("_pose_use_child_frame"), pose_use_child_frame, false);
 
           std::string odomTopic;
         nhLocal_.getParam(odomTopicName, odomTopic);
@@ -1100,7 +1100,7 @@ namespace RobotLocalization
         nhLocal_.param(odomTopicName + "_queue_size", odomQueueSize, 1);
 
         const CallbackData poseCallbackData(odomTopicName + "_pose", poseUpdateVec, poseUpdateSum, differential,
-          relative, diff_rel_use_child_frame, poseMahalanobisThresh);
+          relative, pose_use_child_frame, poseMahalanobisThresh);
         const CallbackData twistCallbackData(odomTopicName + "_twist", twistUpdateVec, twistUpdateSum, false, false,
           false, twistMahalanobisThresh);
 
@@ -1746,7 +1746,7 @@ namespace RobotLocalization
       posPtr->pose = msg->pose;  // Entire pose object, also copies covariance
 
       geometry_msgs::PoseWithCovarianceStampedConstPtr pptr(posPtr);
-      if (poseCallbackData.diff_rel_use_child_frame_)
+      if (poseCallbackData.pose_use_child_frame_)
       {
         poseCallback(pptr, poseCallbackData, worldFrameId_, msg->child_frame_id, false);
       }
@@ -1775,7 +1775,7 @@ namespace RobotLocalization
   void RosFilter<T>::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                                   const CallbackData &callbackData,
                                   const std::string &targetFrame,
-                                  const std::string &childFrame,
+                                  const std::string &poseSourceFrame,
                                   const bool imuData)
   {
     const std::string &topicName = callbackData.topicName_;
@@ -1822,7 +1822,7 @@ namespace RobotLocalization
       if (preparePose(msg,
                       topicName,
                       targetFrame,
-                      childFrame,
+                      poseSourceFrame,
                       callbackData.differential_,
                       callbackData.relative_,
                       imuData,
@@ -2580,7 +2580,7 @@ namespace RobotLocalization
   bool RosFilter<T>::preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                                  const std::string &topicName,
                                  const std::string &targetFrame,
-                                 const std::string &childFrame,
+                                 const std::string &sourceFrame,
                                  const bool differential,
                                  const bool relative,
                                  const bool imuData,
@@ -2876,10 +2876,10 @@ namespace RobotLocalization
                    yawVel << ")\n");
 
           // 7d. Fill out the velocity data in the message
-          // in case there is a childFrame, it originates from an odometry msg, so use that instead of the baseLinkFrame
+          // in case there is a sourceFrame, it originates from an odometry msg, so use that instead of the baseLinkFrame
           geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
           twistPtr->header = msg->header;
-          twistPtr->header.frame_id = childFrame;
+          twistPtr->header.frame_id = sourceFrame;
           twistPtr->twist.twist.linear.x = xVel;
           twistPtr->twist.twist.linear.y = yVel;
           twistPtr->twist.twist.linear.z = zVel;
@@ -2922,11 +2922,11 @@ namespace RobotLocalization
       else
       {
         // make pose refer to the baseLinkFrame as source
-        if (childFrame != baseLinkFrameId_)
+        if ( sourceFrame != baseLinkFrameId_)
         {
           tf2::Transform sourceFrameTrans;
           bool canSrcTransform = RosFilterUtilities::lookupTransformSafe(tfBuffer_,
-                                                                         childFrame,
+                                                                         sourceFrame,
                                                                          baseLinkFrameId_,
                                                                          poseTmp.stamp_,
                                                                          tfTimeout_,
