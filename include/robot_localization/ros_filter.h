@@ -89,7 +89,7 @@ struct CallbackData
     updateSum_(updateSum),
     differential_(differential),
     relative_(relative),
-    pose_use_child_frame_( pose_use_child_frame),
+    pose_use_child_frame_(pose_use_child_frame),
     rejectionThreshold_(rejectionThreshold)
   {
   }

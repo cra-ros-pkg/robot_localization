@@ -2876,7 +2876,6 @@ namespace RobotLocalization
                    yawVel << ")\n");
 
           // 7d. Fill out the velocity data in the message
-          // in case there is a sourceFrame, it originates from an odometry msg, so use that instead of the baseLinkFrame
           geometry_msgs::TwistWithCovarianceStamped *twistPtr = new geometry_msgs::TwistWithCovarianceStamped();
           twistPtr->header = msg->header;
           twistPtr->header.frame_id = sourceFrame;
