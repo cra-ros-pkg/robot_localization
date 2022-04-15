@@ -2585,9 +2585,10 @@ bool RosFilter<T>::prepareAcceleration(
         // from filter state to transform and remove acceleration
         const Eigen::VectorXd & state = filter_.getState();
         tf2::Matrix3x3 stateTmp;
-        stateTmp.setRPY(state(StateMemberRoll),
-                        state(StateMemberPitch),
-                        state(StateMemberYaw));
+        stateTmp.setRPY(
+          state(StateMemberRoll),
+          state(StateMemberPitch),
+          state(StateMemberYaw));
 
         // transform state orientation to IMU frame
         tf2::Transform imuFrameTrans;
