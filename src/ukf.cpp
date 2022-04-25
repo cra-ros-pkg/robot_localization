@@ -32,6 +32,7 @@
 
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/ukf.hpp>
+#include <angles/angles.h>
 #include <Eigen/Cholesky>
 #include <vector>
 
@@ -244,13 +245,7 @@ void Ukf::correct(const Measurement & measurement)
       update_indices[i] == StateMemberPitch ||
       update_indices[i] == StateMemberYaw)
     {
-      while (innovation_subset(i) < -PI) {
-        innovation_subset(i) += TAU;
-      }
-
-      while (innovation_subset(i) > PI) {
-        innovation_subset(i) -= TAU;
-      }
+      innovation_subset(i) = ::angles::normalize_angle(innovation_subset(i));
     }
   }
 
