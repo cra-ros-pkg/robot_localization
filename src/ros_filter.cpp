@@ -78,6 +78,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   latest_control_(),
   last_diag_time_(0, 0, RCL_ROS_TIME),
   last_published_stamp_(0, 0, RCL_ROS_TIME),
+  predict_to_current_time_(false),
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0ns),
@@ -848,6 +849,8 @@ void RosFilter<T>::loadParams()
 
   // Update frequency and sensor timeout
   frequency_ = this->declare_parameter("frequency", 30.0);
+
+  predict_to_current_time_ = this->declare_parameter<bool>("predict_to_current_time", false);
 
   double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
   filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
