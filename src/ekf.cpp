@@ -33,10 +33,10 @@
 
 #include <robot_localization/ekf.hpp>
 #include <robot_localization/filter_common.hpp>
+#include <angles/angles.h>
 #include <Eigen/Dense>
 #include <rclcpp/duration.hpp>
 #include <vector>
-#include <cmath>
 
 namespace robot_localization
 {
@@ -174,18 +174,11 @@ void Ekf::correct(const Measurement & measurement)
 
   // Wrap angles in the innovation
   for (size_t i = 0; i < update_size; ++i) {
-    if ((update_indices[i] == StateMemberRoll ||
+    if (update_indices[i] == StateMemberRoll ||
       update_indices[i] == StateMemberPitch ||
-      update_indices[i] == StateMemberYaw) &&
-      std::isfinite(innovation_subset(i)))
+      update_indices[i] == StateMemberYaw)
     {
-      while (innovation_subset(i) < -PI) {
-        innovation_subset(i) += TAU;
-      }
-
-      while (innovation_subset(i) > PI) {
-        innovation_subset(i) -= TAU;
-      }
+      innovation_subset(i) = ::angles::normalize_angle(innovation_subset(i));
     }
   }
 
