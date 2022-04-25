@@ -3342,7 +3342,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   // If we have a valid reversion state, revert
   if (last_history_state) {
     // Reset filter to the latest state from the queue.
-    const FilterStatePtr & state = filter_state_history_.back();
+    const FilterStatePtr & state = last_history_state;
     filter_.setState(state->state_);
     filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
     filter_.setLastMeasurementTime(state->last_measurement_time_);
