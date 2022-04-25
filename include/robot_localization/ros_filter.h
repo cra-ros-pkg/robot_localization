@@ -82,12 +82,14 @@ struct CallbackData
                const int updateSum,
                const bool differential,
                const bool relative,
+               const bool pose_use_child_frame,
                const double rejectionThreshold) :
     topicName_(topicName),
     updateVector_(updateVector),
     updateSum_(updateSum),
     differential_(differential),
     relative_(relative),
+    pose_use_child_frame_(pose_use_child_frame),
     rejectionThreshold_(rejectionThreshold)
   {
   }
@@ -97,6 +99,7 @@ struct CallbackData
   int updateSum_;
   bool differential_;
   bool relative_;
+  bool pose_use_child_frame_;
   double rejectionThreshold_;
 };
 
@@ -245,11 +248,13 @@ template<class T> class RosFilter
     //! @param[in] msg - The ROS stamped pose with covariance message to take in
     //! @param[in] callbackData - Relevant static callback data
     //! @param[in] targetFrame - The target frame_id into which to transform the data
+    //! @param[in] poseSourceFrame - The source frame_id from which to transform the data
     //! @param[in] imuData - Whether this data comes from an IMU
     //!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                       const CallbackData &callbackData,
                       const std::string &targetFrame,
+                      const std::string &poseSourceFrame,
                       const bool imuData);
 
     //! @brief Callback method for manually setting/resetting the internal pose estimate
@@ -384,6 +389,7 @@ template<class T> class RosFilter
     //! @param[in] msg - The pose message to prepare
     //! @param[in] topicName - The name of the topic over which this message was received
     //! @param[in] targetFrame - The target tf frame
+    //! @param[in] sourceFrame - The source tf frame
     //! @param[in] differential - Whether we're carrying out differential integration
     //! @param[in] relative - Whether this measurement is processed relative to the first
     //! @param[in] imuData - Whether this measurement is from an IMU
@@ -395,6 +401,7 @@ template<class T> class RosFilter
     bool preparePose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg,
                      const std::string &topicName,
                      const std::string &targetFrame,
+                     const std::string &sourceFrame,
                      const bool differential,
                      const bool relative,
                      const bool imuData,
