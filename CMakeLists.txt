@@ -15,6 +15,7 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(angles REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
@@ -104,6 +105,7 @@ target_link_libraries(
 
 ament_target_dependencies(
   ${library_name}
+  angles
   diagnostic_msgs
   diagnostic_updater
   geographic_msgs
