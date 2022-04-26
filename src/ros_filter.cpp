@@ -78,6 +78,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   latest_control_(),
   last_diag_time_(0, 0, RCL_ROS_TIME),
   last_published_stamp_(0, 0, RCL_ROS_TIME),
+  predict_to_current_time_(false),
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0ns),
@@ -848,6 +849,8 @@ void RosFilter<T>::loadParams()
 
   // Update frequency and sensor timeout
   frequency_ = this->declare_parameter("frequency", 30.0);
+
+  predict_to_current_time_ = this->declare_parameter<bool>("predict_to_current_time", false);
 
   double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
   filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
@@ -2582,9 +2585,10 @@ bool RosFilter<T>::prepareAcceleration(
         // from filter state to transform and remove acceleration
         const Eigen::VectorXd & state = filter_.getState();
         tf2::Matrix3x3 stateTmp;
-        stateTmp.setRPY(state(StateMemberRoll),
-                        state(StateMemberPitch),
-                        state(StateMemberYaw));
+        stateTmp.setRPY(
+          state(StateMemberRoll),
+          state(StateMemberPitch),
+          state(StateMemberYaw));
 
         // transform state orientation to IMU frame
         tf2::Transform imuFrameTrans;
@@ -3341,7 +3345,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   // If we have a valid reversion state, revert
   if (last_history_state) {
     // Reset filter to the latest state from the queue.
-    const FilterStatePtr & state = filter_state_history_.back();
+    const FilterStatePtr & state = last_history_state;
     filter_.setState(state->state_);
     filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
     filter_.setLastMeasurementTime(state->last_measurement_time_);
