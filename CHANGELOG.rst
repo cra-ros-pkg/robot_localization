@@ -2,6 +2,20 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix angles dependency (`#747 <https://github.com/cra-ros-pkg/robot_localization/issues/747>`_)
+  * Add angles to CMakeLists.txt
+* Using angles library to normalize angles (`#739 <https://github.com/cra-ros-pkg/robot_localization/issues/739>`_)
+  * Using angles library for innovation angle normalization
+* Read predict_to_current_time from ROS parameters (`#737 <https://github.com/cra-ros-pkg/robot_localization/issues/737>`_)
+  Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
+* Fixed state history reversion (`#736 <https://github.com/cra-ros-pkg/robot_localization/issues/736>`_)
+  Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
+* Fixing code style divergence for ament_uncrustify in main ROS2 branch (`#743 <https://github.com/cra-ros-pkg/robot_localization/issues/743>`_)
+* This fixes `#732 <https://github.com/cra-ros-pkg/robot_localization/issues/732>`_ (broadcast_cartesian_transform) (`#733 <https://github.com/cra-ros-pkg/robot_localization/issues/733>`_)
+* Contributors: Anish, Marek Piechula, RoboTech Vision, Tony Najjar, Zygfryd Wieszok
+
 3.3.1 (2022-02-25)
 ------------------
 * Moving to C++17 support (`#725 <https://github.com/cra-ros-pkg/robot_localization/issues/725>`_)
