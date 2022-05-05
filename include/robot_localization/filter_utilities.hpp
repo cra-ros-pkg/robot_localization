@@ -60,24 +60,6 @@ namespace filter_utilities
 {
 
 /**
- * @brief Utility method keeping RPY angles in the range [-pi, pi]
- * @param[in] rotation - The rotation to bind
- * @return the bounded value
- */
-inline double clampRotation(double rotation)
-{
-  while (rotation > PI) {
-    rotation -= TAU;
-  }
-
-  while (rotation < -PI) {
-    rotation += TAU;
-  }
-
-  return rotation;
-}
-
-/**
  * @brief Utility method for appending tf2 prefixes cleanly
  * @param[in] tf_prefix - the tf2 prefix to append
  * @param[in, out] frame_id - the resulting frame_id value

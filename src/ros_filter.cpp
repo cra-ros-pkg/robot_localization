@@ -36,6 +36,7 @@
 #include <robot_localization/ros_filter_utilities.hpp>
 #include <robot_localization/ukf.hpp>
 
+#include <angles/angles.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rcl/time.h>
 #include <rclcpp/qos.hpp>
@@ -1205,7 +1206,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           odom_topic << " (" << odom_topic_name << ")\n\t" <<
           odom_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
@@ -1325,7 +1326,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           pose_topic << " (" << pose_topic_name << ")\n\t" <<
           pose_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
           "_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << pose_topic_name << " update vector is " <<
           pose_update_vec);
@@ -1631,14 +1632,14 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           imu_topic << " (" << imu_topic_name << ")\n\t" <<
           imu_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_linear_acceleration_rejection_threshold is " <<
           accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_remove_gravitational_acceleration is " <<
-        (remove_grav_acc ? "true" : "false") << "\n\t" <<
+          (remove_grav_acc ? "true" : "false") << "\n\t" <<
           imu_topic_name << " pose update vector is " << pose_update_vec <<
           "\t" << imu_topic_name << " twist update vector is " <<
           twist_update_vec << "\t" << imu_topic_name <<
@@ -2928,9 +2929,9 @@ bool RosFilter<T>::preparePose(
       // 6b. Apply the offset (making sure to bound them), and throw them in a
       // vector
       tf2::Vector3 rpy_angles(
-        filter_utilities::clampRotation(roll - rollOffset),
-        filter_utilities::clampRotation(pitch - pitchOffset),
-        filter_utilities::clampRotation(yaw - yaw_offset));
+        angles::normalize_angle(roll - rollOffset),
+        angles::normalize_angle(pitch - pitchOffset),
+        angles::normalize_angle(yaw - yaw_offset));
 
       // 6c. Now we need to rotate the roll and pitch by the yaw offset value.
       // Imagine a case where an IMU is mounted facing sideways. In that case

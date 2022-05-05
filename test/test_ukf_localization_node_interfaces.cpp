@@ -974,13 +974,16 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   imu.angular_velocity_covariance[4] = 0.02;
   imu.angular_velocity_covariance[8] = 0.02;
 
+  rclcpp::sleep_for(rclcpp::Duration::from_seconds(0.1).to_chrono<std::chrono::nanoseconds>());
+  rclcpp::spin_some(node_);
+
   size_t setCount = 0;
   while (setCount++ < 10) {
     imu.header.stamp = node_->now();
     imu0Pub->publish(imu);  // Use this to move the absolute orientation
     imu1Pub->publish(imu);  // Use this to keep velocities at 0
     rclcpp::spin_some(node_);
-    rclcpp::Rate(10).sleep();
+    rclcpp::Rate(100).sleep();
   }
 
   size_t zeroCount = 0;
