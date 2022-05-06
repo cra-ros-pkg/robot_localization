@@ -279,6 +279,13 @@ public:
   //!
   void initialize();
 
+  //! @brief Service callback for resetting the filter to its initial state. Parameters are unused.
+  //!
+  void resetSrvCallback(
+    const std::shared_ptr<rmw_request_id_t>,
+    const std::shared_ptr<std_srvs::srv::Empty::Request>,
+    const std::shared_ptr<std_srvs::srv::Empty::Response>);
+
   //! @brief Callback method for manually setting/resetting the internal pose
   //! estimate
   //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -553,6 +560,10 @@ protected:
   //!
   rclcpp::Duration history_length_;
 
+  //! @brief The sensor timeout value that gets passed to the core filter
+  //!
+  rclcpp::Duration sensor_timeout_;
+
   //! @brief tf frame name for the robot's body frame
   //!
   std::string base_link_frame_id_;
@@ -585,6 +596,14 @@ protected:
   //! @brief The most recent control input
   //!
   Eigen::VectorXd latest_control_;
+
+  //! @brief The process noise covariance matrix that gets passed to the core filter
+  //!
+  Eigen::MatrixXd process_noise_covariance_;
+
+  //! @brief The initial estimate error covariance matrix that gets passed to the core filter
+  //!
+  Eigen::MatrixXd initial_estimate_error_covariance_;
 
   //! @brief Message that contains our latest transform (i.e., state)
   //!
@@ -744,6 +763,10 @@ protected:
   //! standard Empty service.
   //!
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr enable_filter_srv_;
+
+  //! @brief Service that resets the filter to its initial state
+  //!
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr reset_srv_;
 
   //! @brief Transform buffer for managing coordinate transforms
   //!

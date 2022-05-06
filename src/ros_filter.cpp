@@ -76,7 +76,10 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   frequency_(30.0),
   gravitational_acceleration_(9.80665),
   history_length_(0ns),
+  sensor_timeout_(0ns),
   latest_control_(),
+  process_noise_covariance_(STATE_SIZE, STATE_SIZE),
+  initial_estimate_error_covariance_(STATE_SIZE, STATE_SIZE),
   last_diag_time_(0, 0, RCL_ROS_TIME),
   last_published_stamp_(0, 0, RCL_ROS_TIME),
   predict_to_current_time_(false),
@@ -150,6 +153,22 @@ void RosFilter<T>::reset()
 
   // reset filter to uninitialized state
   filter_.reset();
+
+  // Restore filter parameters that we got from the ROS parameter server
+  filter_.setSensorTimeout(sensor_timeout_);
+  filter_.setProcessNoiseCovariance(process_noise_covariance_);
+  filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
+}
+
+template<typename T>
+void RosFilter<T>::resetSrvCallback(
+  const std::shared_ptr<rmw_request_id_t>,
+  const std::shared_ptr<std_srvs::srv::Empty::Request>,
+  const std::shared_ptr<std_srvs::srv::Empty::Response>)
+{
+  RCLCPP_INFO(this->get_logger(), "Received a request to reset filter.");
+
+  reset();
 }
 
 template<typename T>
@@ -853,8 +872,9 @@ void RosFilter<T>::loadParams()
 
   predict_to_current_time_ = this->declare_parameter<bool>("predict_to_current_time", false);
 
-  double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
-  filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
+  sensor_timeout_ =
+    rclcpp::Duration::from_seconds(this->declare_parameter("sensor_timeout", 1.0 / frequency_));
+  filter_.setSensorTimeout(sensor_timeout_);
 
   // Determine if we're in 2D mode
   two_d_mode_ = this->declare_parameter("two_d_mode", false);
@@ -880,7 +900,7 @@ void RosFilter<T>::loadParams()
   reset_on_time_jump_ = this->declare_parameter("reset_on_time_jump", false);
 
   // Determine if we're using a control term
-  double control_timeout = sensor_timeout;
+  double control_timeout = sensor_timeout_.seconds();
   std::vector<bool> control_update_vector;
   std::vector<double> acceleration_limits;
   std::vector<double> acceleration_gains;
@@ -1048,6 +1068,13 @@ void RosFilter<T>::loadParams()
     this->create_service<std_srvs::srv::Empty>(
     "enable", std::bind(
       &RosFilter::enableFilterSrvCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  // Create a service for manually setting/resetting pose
+  reset_srv_ =
+    this->create_service<std_srvs::srv::Empty>(
+    "reset", std::bind(
+      &RosFilter<T>::resetSrvCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Create a service for toggling processing new measurements while still
@@ -1727,8 +1754,7 @@ void RosFilter<T>::loadParams()
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
-  Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
-  process_noise_covariance.setZero();
+  process_noise_covariance_.setZero();
   std::vector<double> process_noise_covar_flat;
 
   this->declare_parameter("process_noise_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -1740,22 +1766,21 @@ void RosFilter<T>::loadParams()
 
     for (int i = 0; i < STATE_SIZE; i++) {
       for (int j = 0; j < STATE_SIZE; j++) {
-        process_noise_covariance(i, j) =
+        process_noise_covariance_(i, j) =
           process_noise_covar_flat[i * STATE_SIZE + j];
       }
     }
 
     RF_DEBUG(
       "Process noise covariance is:\n" <<
-        process_noise_covariance << "\n");
+        process_noise_covariance_ << "\n");
 
-    filter_.setProcessNoiseCovariance(process_noise_covariance);
+    filter_.setProcessNoiseCovariance(process_noise_covariance_);
   }
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
-  Eigen::MatrixXd initial_estimate_error_covariance(STATE_SIZE, STATE_SIZE);
-  initial_estimate_error_covariance.setZero();
+  initial_estimate_error_covariance_.setZero();
   std::vector<double> estimate_error_covar_flat;
 
   this->declare_parameter("initial_estimate_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -1767,16 +1792,16 @@ void RosFilter<T>::loadParams()
 
     for (int i = 0; i < STATE_SIZE; i++) {
       for (int j = 0; j < STATE_SIZE; j++) {
-        initial_estimate_error_covariance(i, j) =
+        initial_estimate_error_covariance_(i, j) =
           estimate_error_covar_flat[i * STATE_SIZE + j];
       }
     }
 
     RF_DEBUG(
       "Initial estimate error covariance is:\n" <<
-        estimate_error_covar_flat << "\n");
+        initial_estimate_error_covariance_ << "\n");
 
-    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance);
+    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
   }
 }
 
