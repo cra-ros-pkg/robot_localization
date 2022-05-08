@@ -32,7 +32,7 @@
 #ifndef ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
 #define ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
 
-#include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "Eigen/Dense"
@@ -105,6 +105,11 @@ private:
       const std::shared_ptr<robot_localization::srv::FromLLArray::Request>
           request,
       std::shared_ptr<robot_localization::srv::FromLLArray::Response> response);
+
+  //! @brief Method for convert point from Lat Lon to the map coordinates system
+  //!
+  geometry_msgs::msg::Point
+  fromLL(const geographic_msgs::msg::GeoPoint &geo_point);
 
   /**
    * @brief Callback for the UTM zone service
