@@ -41,6 +41,8 @@
 #include <Eigen/Dense>
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
+#include <geographic_msgs/msg/geo_point.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -51,6 +53,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace robot_localization
@@ -105,6 +108,10 @@ private:
   bool fromLLArrayCallback(
     const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
     std::shared_ptr<robot_localization::srv::FromLLArray::Response> response);
+
+  //! @brief Method for convert point from Lat Lon to the map coordinates system
+  //!
+  geometry_msgs::msg::Point fromLL(const geographic_msgs::msg::GeoPoint & geo_point);
 
   /**
    * @brief Given the pose of the navsat sensor in the Cartesian frame, removes the
