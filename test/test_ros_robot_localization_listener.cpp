@@ -29,16 +29,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <rclcpp/rclcpp.hpp>
-#include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
-
-#include <string>
 #include <memory>
+#include <string>
 
-#include "robot_localization/ros_robot_localization_listener.hpp"
+#include "gtest/gtest.h"
+#include "rclcpp/rclcpp.hpp"
 #include "robot_localization/filter_common.hpp"
+#include "robot_localization/ros_robot_localization_listener.hpp"
+#include "tf2_ros/static_transform_broadcaster.h"
 
 std::shared_ptr<rclcpp::Node> node;
 std::unique_ptr<robot_localization::RosRobotLocalizationListener> g_listener;

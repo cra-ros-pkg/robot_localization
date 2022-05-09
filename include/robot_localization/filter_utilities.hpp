@@ -29,19 +29,18 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
 #define ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
-
-#include <Eigen/Dense>
-#include <rclcpp/duration.hpp>
-#include <rclcpp/time.hpp>
-#include <std_msgs/msg/header.hpp>
 
 #include <iostream>
 #include <ostream>
 #include <string>
 #include <vector>
+
+#include "Eigen/Dense"
+#include "rclcpp/duration.hpp"
+#include "rclcpp/time.hpp"
+#include "std_msgs/msg/header.hpp"
 
 #define FB_DEBUG(msg) \
   if (getDebug()) { \
@@ -64,20 +63,23 @@ namespace filter_utilities
  * @param[in] tf_prefix - the tf2 prefix to append
  * @param[in, out] frame_id - the resulting frame_id value
  */
-inline void appendPrefix(std::string tf_prefix, std::string & frame_id)
+inline void appendPrefix(const std::string & tf_prefix, std::string & frame_id)
 {
+  size_t frame_id_prefix_index = 0u;
+  size_t tf_prefix_index = 0u;
+
   // Strip all leading slashes for tf2 compliance
-  if (!frame_id.empty() && frame_id.at(0) == '/') {
-    frame_id = frame_id.substr(1);
+  if (!frame_id.empty() && frame_id.at(0u) == '/') {
+    frame_id_prefix_index = 1u;
   }
 
-  if (!tf_prefix.empty() && tf_prefix.at(0) == '/') {
-    tf_prefix = tf_prefix.substr(1);
+  if (!tf_prefix.empty() && tf_prefix.at(0u) == '/') {
+    tf_prefix_index = 1u;
   }
 
   // If we do have a tf prefix, then put a slash in between
   if (!tf_prefix.empty()) {
-    frame_id = tf_prefix + "/" + frame_id;
+    frame_id = tf_prefix.substr(tf_prefix_index) + "/" + frame_id.substr(frame_id_prefix_index);
   }
 }
 

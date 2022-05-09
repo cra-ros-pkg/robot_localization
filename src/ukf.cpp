@@ -29,13 +29,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/ukf.hpp>
-#include <angles/angles.h>
-#include <Eigen/Cholesky>
 #include <vector>
 
+#include "angles/angles.h"
+#include "Eigen/Cholesky"
+#include "robot_localization/filter_common.hpp"
+#include "robot_localization/filter_utilities.hpp"
+#include "robot_localization/ukf.hpp"
 
 namespace robot_localization
 {
@@ -382,7 +382,8 @@ void Ukf::predict(
 
 void Ukf::generateSigmaPoints()
 {
-  // Take the square root of a small fraction of the estimate_error_covariance_ using LL' decomposition
+  // Take the square root of a small fraction of the estimate_error_covariance_ using LL'
+  // decomposition
   weighted_covar_sqrt_ =
     ((static_cast<double>(STATE_SIZE) + lambda_) * estimate_error_covariance_).llt().matrixL();
 

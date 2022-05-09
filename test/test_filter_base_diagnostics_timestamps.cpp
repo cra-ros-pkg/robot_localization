@@ -29,17 +29,15 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
 #include <vector>
 
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
+#include "gtest/gtest.h"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/clock.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -47,6 +45,7 @@
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/srv/set_pose.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 
 namespace robot_localization
 {

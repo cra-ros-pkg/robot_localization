@@ -29,12 +29,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "robot_localization/robot_localization_estimator.hpp"
 
 #include <memory>
 #include <vector>
 
+#include "boost/circular_buffer.hpp"
+#include "Eigen/Dense"
 #include "robot_localization/ekf.hpp"
-#include "robot_localization/robot_localization_estimator.hpp"
 #include "robot_localization/ukf.hpp"
 
 namespace robot_localization

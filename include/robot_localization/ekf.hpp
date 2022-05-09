@@ -30,12 +30,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__EKF_HPP_
 #define ROBOT_LOCALIZATION__EKF_HPP_
 
-#include <robot_localization/filter_base.hpp>
-#include <vector>
+#include "rclcpp/duration.hpp"
+#include "rclcpp/time.hpp"
+#include "robot_localization/filter_base.hpp"
+#include "robot_localization/measurement.hpp"
 
 namespace robot_localization
 {
