@@ -35,6 +35,8 @@
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/filter_utilities.hpp>
 
+#include <angles/angles.h>
+
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -420,12 +422,9 @@ inline double FilterBase::computeControlAcceleration(
 
 void FilterBase::wrapStateAngles()
 {
-  state_(StateMemberRoll) =
-    filter_utilities::clampRotation(state_(StateMemberRoll));
-  state_(StateMemberPitch) =
-    filter_utilities::clampRotation(state_(StateMemberPitch));
-  state_(StateMemberYaw) =
-    filter_utilities::clampRotation(state_(StateMemberYaw));
+  state_(StateMemberRoll) = angles::normalize_angle(state_(StateMemberRoll));
+  state_(StateMemberPitch) = angles::normalize_angle(state_(StateMemberPitch));
+  state_(StateMemberYaw) = angles::normalize_angle(state_(StateMemberYaw));
 }
 
 bool FilterBase::checkMahalanobisThreshold(

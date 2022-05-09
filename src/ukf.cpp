@@ -82,25 +82,7 @@ void Ukf::correct(const Measurement & measurement)
   // the current state. Throughout prediction and correction, we attempt to
   // maximize efficiency in Eigen.
   if (!uncorrected_) {
-    // Take the square root of a small fraction of the
-    // estimate_error_covariance_ using LL' decomposition
-    weighted_covar_sqrt_ =
-      ((STATE_SIZE + lambda_) * estimate_error_covariance_).llt().matrixL();
-
-    // Compute sigma points
-
-    // First sigma point is the current state
-    sigma_points_[0] = state_;
-
-    // Next STATE_SIZE sigma points are state + weighted_covar_sqrt_[ith column]
-    // STATE_SIZE sigma points after that are state - weighted_covar_sqrt_[ith
-    // column]
-    for (size_t sigma_ind = 0; sigma_ind < STATE_SIZE; ++sigma_ind) {
-      sigma_points_[sigma_ind + 1] =
-        state_ + weighted_covar_sqrt_.col(sigma_ind);
-      sigma_points_[sigma_ind + 1 + STATE_SIZE] =
-        state_ - weighted_covar_sqrt_.col(sigma_ind);
-    }
+    generateSigmaPoints();
   }
 
   // We don't want to update everything, so we need to build matrices that only
@@ -127,22 +109,22 @@ void Ukf::correct(const Measurement & measurement)
 
   FB_DEBUG("Update indices are:\n" << update_indices << "\n");
 
-  size_t updateSize = update_indices.size();
+  size_t update_size = update_indices.size();
 
   // Now set up the relevant matrices
-  Eigen::VectorXd state_subset(updateSize);       // x (in most literature)
-  Eigen::VectorXd measurement_subset(updateSize);  // z
-  Eigen::MatrixXd measurement_covariance_subset(updateSize, updateSize);  // R
-  Eigen::MatrixXd state_to_measurement_subset(updateSize, STATE_SIZE);   // H
-  Eigen::MatrixXd kalman_gain_subset(STATE_SIZE, updateSize);            // K
-  Eigen::VectorXd innovation_subset(updateSize);  // z - Hx
-  Eigen::VectorXd predicted_measurement(updateSize);
-  Eigen::VectorXd sigma_diff(updateSize);
-  Eigen::MatrixXd predicted_meas_covar(updateSize, updateSize);
-  Eigen::MatrixXd cross_covar(STATE_SIZE, updateSize);
+  Eigen::VectorXd state_subset(update_size);       // x (in most literature)
+  Eigen::VectorXd measurement_subset(update_size);  // z
+  Eigen::MatrixXd measurement_covariance_subset(update_size, update_size);  // R
+  Eigen::MatrixXd state_to_measurement_subset(update_size, STATE_SIZE);   // H
+  Eigen::MatrixXd kalman_gain_subset(STATE_SIZE, update_size);            // K
+  Eigen::VectorXd innovation_subset(update_size);  // z - Hx
+  Eigen::VectorXd predicted_measurement(update_size);
+  Eigen::VectorXd sigma_diff(update_size);
+  Eigen::MatrixXd predicted_meas_covar(update_size, update_size);
+  Eigen::MatrixXd cross_covar(STATE_SIZE, update_size);
 
   std::vector<Eigen::VectorXd> sigma_point_measurements(
-    sigma_points_.size(), Eigen::VectorXd(updateSize));
+    sigma_points_.size(), Eigen::VectorXd(update_size));
 
   state_subset.setZero();
   measurement_subset.setZero();
@@ -155,11 +137,11 @@ void Ukf::correct(const Measurement & measurement)
   cross_covar.setZero();
 
   // Now build the sub-matrices from the full-sized matrices
-  for (size_t i = 0; i < updateSize; ++i) {
+  for (size_t i = 0; i < update_size; ++i) {
     measurement_subset(i) = measurement.measurement_(update_indices[i]);
     state_subset(i) = state_(update_indices[i]);
 
-    for (size_t j = 0; j < updateSize; ++j) {
+    for (size_t j = 0; j < update_size; ++j) {
       measurement_covariance_subset(i, j) =
         measurement.covariance_(update_indices[i], update_indices[j]);
     }
@@ -197,7 +179,7 @@ void Ukf::correct(const Measurement & measurement)
   // The state-to-measurement function, h, will now be a measurement_size x
   // full_state_size matrix, with ones in the (i, i) locations of the values to
   // be updated
-  for (size_t i = 0; i < updateSize; ++i) {
+  for (size_t i = 0; i < update_size; ++i) {
     state_to_measurement_subset(i, update_indices[i]) = 1;
   }
 
@@ -209,12 +191,44 @@ void Ukf::correct(const Measurement & measurement)
       "\nState-to-measurement subset is:\n" <<
       state_to_measurement_subset << "\n");
 
+  double roll_sum_x {};
+  double roll_sum_y {};
+  double pitch_sum_x {};
+  double pitch_sum_y {};
+  double yaw_sum_x {};
+  double yaw_sum_y {};
+
   // (1) Generate sigma points, use them to generate a predicted measurement
   for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
     sigma_point_measurements[sigma_ind] =
       state_to_measurement_subset * sigma_points_[sigma_ind];
     predicted_measurement.noalias() +=
       state_weights_[sigma_ind] * sigma_point_measurements[sigma_ind];
+
+    // Euler angle averaging requires special care
+    for (size_t i = 0; i < update_size; ++i) {
+      if (update_indices[i] == StateMemberRoll) {
+        roll_sum_x += state_weights_[sigma_ind] * ::cos(sigma_point_measurements[sigma_ind](i));
+        roll_sum_y += state_weights_[sigma_ind] * ::sin(sigma_point_measurements[sigma_ind](i));
+      } else if (update_indices[i] == StateMemberPitch) {
+        pitch_sum_x += state_weights_[sigma_ind] * ::cos(sigma_point_measurements[sigma_ind](i));
+        pitch_sum_y += state_weights_[sigma_ind] * ::sin(sigma_point_measurements[sigma_ind](i));
+      } else if (update_indices[i] == StateMemberYaw) {
+        yaw_sum_x += state_weights_[sigma_ind] * ::cos(sigma_point_measurements[sigma_ind](i));
+        yaw_sum_y += state_weights_[sigma_ind] * ::sin(sigma_point_measurements[sigma_ind](i));
+      }
+    }
+
+    // Wrap angles in the innovation
+    for (size_t i = 0; i < update_size; ++i) {
+      if (update_indices[i] == StateMemberRoll) {
+        predicted_measurement(i) = ::atan2(roll_sum_y, roll_sum_x);
+      } else if (update_indices[i] == StateMemberPitch) {
+        predicted_measurement(i) = ::atan2(pitch_sum_y, pitch_sum_x);
+      } else if (update_indices[i] == StateMemberYaw) {
+        predicted_measurement(i) = ::atan2(yaw_sum_y, yaw_sum_x);
+      }
+    }
   }
 
   // (2) Use the sigma point measurements and predicted measurement to compute a
@@ -222,11 +236,22 @@ void Ukf::correct(const Measurement & measurement)
   // cross-covariance matrix P_xz.
   for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
     sigma_diff = sigma_point_measurements[sigma_ind] - predicted_measurement;
+    Eigen::VectorXd sigma_state_diff = sigma_points_[sigma_ind] - state_;
+
+    for (size_t i = 0; i < update_size; ++i) {
+      if (update_indices[i] == StateMemberRoll ||
+        update_indices[i] == StateMemberPitch ||
+        update_indices[i] == StateMemberYaw)
+      {
+        sigma_diff(i) = angles::normalize_angle(sigma_diff(i));
+        sigma_state_diff(i) = angles::normalize_angle(sigma_state_diff(i));
+      }
+    }
+
     predicted_meas_covar.noalias() +=
       covar_weights_[sigma_ind] * (sigma_diff * sigma_diff.transpose());
-    cross_covar.noalias() +=
-      covar_weights_[sigma_ind] *
-      ((sigma_points_[sigma_ind] - state_) * sigma_diff.transpose());
+    cross_covar.noalias() += covar_weights_[sigma_ind] *
+      (sigma_state_diff * sigma_diff.transpose());
   }
 
   // (3) Compute the Kalman gain, making sure to use the actual measurement
@@ -240,7 +265,7 @@ void Ukf::correct(const Measurement & measurement)
   innovation_subset = (measurement_subset - predicted_measurement);
 
   // Wrap angles in the innovation
-  for (size_t i = 0; i < updateSize; ++i) {
+  for (size_t i = 0; i < update_size; ++i) {
     if (update_indices[i] == StateMemberRoll ||
       update_indices[i] == StateMemberPitch ||
       update_indices[i] == StateMemberYaw)
@@ -282,15 +307,105 @@ void Ukf::predict(
   const rclcpp::Time & reference_time,
   const rclcpp::Duration & delta)
 {
-  const double delta_sec = filter_utilities::toSec(delta);
-
   FB_DEBUG(
     "---------------------- Ukf::predict ----------------------\n" <<
-      "delta is " << delta_sec << "\nstate is " << state_ << "\n");
+      "delta is " << delta.seconds() << "\nstate is " << state_ << "\n");
 
-  double roll = state_(StateMemberRoll);
-  double pitch = state_(StateMemberPitch);
-  double yaw = state_(StateMemberYaw);
+  prepareControl(reference_time, delta);
+
+  generateSigmaPoints();
+
+  double roll_sum_x {};
+  double roll_sum_y {};
+  double pitch_sum_x {};
+  double pitch_sum_y {};
+  double yaw_sum_x {};
+  double yaw_sum_y {};
+
+  // Sum the weighted sigma points to generate a new state prediction
+  state_.setZero();
+  for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
+    // Apply the state transition function to this sigma point
+    projectSigmaPoint(sigma_points_[sigma_ind], delta);
+    state_.noalias() += state_weights_[sigma_ind] * sigma_points_[sigma_ind];
+
+    // Euler angle averaging requires special care
+    roll_sum_x += state_weights_[sigma_ind] * ::cos(sigma_points_[sigma_ind](StateMemberRoll));
+    roll_sum_y += state_weights_[sigma_ind] * ::sin(sigma_points_[sigma_ind](StateMemberRoll));
+    pitch_sum_x += state_weights_[sigma_ind] * ::cos(sigma_points_[sigma_ind](StateMemberPitch));
+    pitch_sum_y += state_weights_[sigma_ind] * ::sin(sigma_points_[sigma_ind](StateMemberPitch));
+    yaw_sum_x += state_weights_[sigma_ind] * ::cos(sigma_points_[sigma_ind](StateMemberYaw));
+    yaw_sum_y += state_weights_[sigma_ind] * ::sin(sigma_points_[sigma_ind](StateMemberYaw));
+  }
+
+  // Recover average Euler angles
+  state_(StateMemberRoll) = ::atan2(roll_sum_y, roll_sum_x);
+  state_(StateMemberPitch) = ::atan2(pitch_sum_y, pitch_sum_x);
+  state_(StateMemberYaw) = ::atan2(yaw_sum_y, yaw_sum_x);
+
+  // Now use the sigma points and the predicted state to compute a predicted covariance
+  estimate_error_covariance_.setZero();
+  Eigen::VectorXd sigma_diff(STATE_SIZE);
+  for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
+    sigma_diff = (sigma_points_[sigma_ind] - state_);
+
+    sigma_diff(StateMemberRoll) = angles::normalize_angle(sigma_diff(StateMemberRoll));
+    sigma_diff(StateMemberPitch) = angles::normalize_angle(sigma_diff(StateMemberPitch));
+    sigma_diff(StateMemberYaw) = angles::normalize_angle(sigma_diff(StateMemberYaw));
+
+    estimate_error_covariance_.noalias() += covar_weights_[sigma_ind] *
+      (sigma_diff * sigma_diff.transpose());
+  }
+
+  // Not strictly in the theoretical UKF formulation, but necessary here
+  // to ensure that we actually incorporate the process_noise_covariance_
+  Eigen::MatrixXd * process_noise_covariance = &process_noise_covariance_;
+
+  if (use_dynamic_process_noise_covariance_) {
+    computeDynamicProcessNoiseCovariance(state_);
+    process_noise_covariance = &dynamic_process_noise_covariance_;
+  }
+
+  estimate_error_covariance_.noalias() += delta.seconds() * (*process_noise_covariance);
+
+  // Keep the angles bounded
+  wrapStateAngles();
+
+  // Mark that we can keep these sigma points
+  uncorrected_ = true;
+
+  FB_DEBUG(
+    "Predicted state is:\n" << state_ <<
+      "\nPredicted estimate error covariance is:\n" << estimate_error_covariance_ <<
+      "\n\n--------------------- /Ukf::predict ----------------------\n");
+}
+
+void Ukf::generateSigmaPoints()
+{
+  // Take the square root of a small fraction of the estimate_error_covariance_ using LL' decomposition
+  weighted_covar_sqrt_ =
+    ((static_cast<double>(STATE_SIZE) + lambda_) * estimate_error_covariance_).llt().matrixL();
+
+  // Compute sigma points
+
+  // First sigma point is the current state
+  sigma_points_[0] = state_;
+
+  // Next STATE_SIZE sigma points are state + weighted_covar_sqrt_[ith column]
+  // STATE_SIZE sigma points after that are state - weighted_covar_sqrt_[ith column]
+  for (size_t sigma_ind = 0; sigma_ind < STATE_SIZE; ++sigma_ind) {
+    sigma_points_[sigma_ind + 1] = state_ + weighted_covar_sqrt_.col(sigma_ind);
+    sigma_points_[sigma_ind + 1 + STATE_SIZE] = state_ - weighted_covar_sqrt_.col(sigma_ind);
+  }
+}
+
+void Ukf::projectSigmaPoint(Eigen::VectorXd & sigma_point, const rclcpp::Duration & delta)
+{
+  auto delta_sec = delta.seconds();
+
+  double roll = sigma_point(StateMemberRoll);
+  double pitch = sigma_point(StateMemberPitch);
+  double yaw = sigma_point(StateMemberYaw);
 
   // We'll need these trig calculations a lot.
   double sp = ::sin(pitch);
@@ -304,40 +419,52 @@ void Ukf::predict(
   double sy = ::sin(yaw);
   double cy = ::cos(yaw);
 
-  prepareControl(reference_time, delta);
-
   // Prepare the transfer function
   transfer_function_(StateMemberX, StateMemberVx) = cy * cp * delta_sec;
-  transfer_function_(StateMemberX, StateMemberVy) =
-    (cy * sp * sr - sy * cr) * delta_sec;
-  transfer_function_(StateMemberX, StateMemberVz) =
-    (cy * sp * cr + sy * sr) * delta_sec;
-  transfer_function_(StateMemberX, StateMemberAx) =
-    0.5 * transfer_function_(StateMemberX, StateMemberVx) * delta_sec;
-  transfer_function_(StateMemberX, StateMemberAy) =
-    0.5 * transfer_function_(StateMemberX, StateMemberVy) * delta_sec;
-  transfer_function_(StateMemberX, StateMemberAz) =
-    0.5 * transfer_function_(StateMemberX, StateMemberVz) * delta_sec;
+  transfer_function_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta_sec;
+  transfer_function_(StateMemberX, StateMemberVz) = (cy * sp * cr + sy * sr) * delta_sec;
+  transfer_function_(StateMemberX, StateMemberAx) = 0.5 * transfer_function_(
+    StateMemberX,
+    StateMemberVx) *
+    delta_sec;
+  transfer_function_(StateMemberX, StateMemberAy) = 0.5 * transfer_function_(
+    StateMemberX,
+    StateMemberVy) *
+    delta_sec;
+  transfer_function_(StateMemberX, StateMemberAz) = 0.5 * transfer_function_(
+    StateMemberX,
+    StateMemberVz) *
+    delta_sec;
   transfer_function_(StateMemberY, StateMemberVx) = sy * cp * delta_sec;
-  transfer_function_(StateMemberY, StateMemberVy) =
-    (sy * sp * sr + cy * cr) * delta_sec;
-  transfer_function_(StateMemberY, StateMemberVz) =
-    (sy * sp * cr - cy * sr) * delta_sec;
-  transfer_function_(StateMemberY, StateMemberAx) =
-    0.5 * transfer_function_(StateMemberY, StateMemberVx) * delta_sec;
-  transfer_function_(StateMemberY, StateMemberAy) =
-    0.5 * transfer_function_(StateMemberY, StateMemberVy) * delta_sec;
-  transfer_function_(StateMemberY, StateMemberAz) =
-    0.5 * transfer_function_(StateMemberY, StateMemberVz) * delta_sec;
+  transfer_function_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta_sec;
+  transfer_function_(StateMemberY, StateMemberVz) = (sy * sp * cr - cy * sr) * delta_sec;
+  transfer_function_(StateMemberY, StateMemberAx) = 0.5 * transfer_function_(
+    StateMemberY,
+    StateMemberVx) *
+    delta_sec;
+  transfer_function_(StateMemberY, StateMemberAy) = 0.5 * transfer_function_(
+    StateMemberY,
+    StateMemberVy) *
+    delta_sec;
+  transfer_function_(StateMemberY, StateMemberAz) = 0.5 * transfer_function_(
+    StateMemberY,
+    StateMemberVz) *
+    delta_sec;
   transfer_function_(StateMemberZ, StateMemberVx) = -sp * delta_sec;
   transfer_function_(StateMemberZ, StateMemberVy) = cp * sr * delta_sec;
   transfer_function_(StateMemberZ, StateMemberVz) = cp * cr * delta_sec;
-  transfer_function_(StateMemberZ, StateMemberAx) =
-    0.5 * transfer_function_(StateMemberZ, StateMemberVx) * delta_sec;
-  transfer_function_(StateMemberZ, StateMemberAy) =
-    0.5 * transfer_function_(StateMemberZ, StateMemberVy) * delta_sec;
-  transfer_function_(StateMemberZ, StateMemberAz) =
-    0.5 * transfer_function_(StateMemberZ, StateMemberVz) * delta_sec;
+  transfer_function_(StateMemberZ, StateMemberAx) = 0.5 * transfer_function_(
+    StateMemberZ,
+    StateMemberVx) *
+    delta_sec;
+  transfer_function_(StateMemberZ, StateMemberAy) = 0.5 * transfer_function_(
+    StateMemberZ,
+    StateMemberVy) *
+    delta_sec;
+  transfer_function_(StateMemberZ, StateMemberAz) = 0.5 * transfer_function_(
+    StateMemberZ,
+    StateMemberVz) *
+    delta_sec;
   transfer_function_(StateMemberRoll, StateMemberVroll) = delta_sec;
   transfer_function_(StateMemberRoll, StateMemberVpitch) = sr * tp * delta_sec;
   transfer_function_(StateMemberRoll, StateMemberVyaw) = cr * tp * delta_sec;
@@ -349,66 +476,7 @@ void Ukf::predict(
   transfer_function_(StateMemberVy, StateMemberAy) = delta_sec;
   transfer_function_(StateMemberVz, StateMemberAz) = delta_sec;
 
-  // (1) Take the square root of a small fraction of the
-  // estimate_error_covariance_ using LL' decomposition
-  weighted_covar_sqrt_ =
-    ((STATE_SIZE + lambda_) * estimate_error_covariance_).llt().matrixL();
-
-  // (2) Compute sigma points *and* pass them through the transfer function to
-  // save the extra loop
-
-  // First sigma point is the current state
-  sigma_points_[0] = transfer_function_ * state_;
-
-  // Next STATE_SIZE sigma points are state + weighted_covar_sqrt_[ith column]
-  // STATE_SIZE sigma points after that are state - weighted_covar_sqrt_[ith
-  // column]
-  for (size_t sigma_ind = 0; sigma_ind < STATE_SIZE; ++sigma_ind) {
-    sigma_points_[sigma_ind + 1] =
-      transfer_function_ * (state_ + weighted_covar_sqrt_.col(sigma_ind));
-    sigma_points_[sigma_ind + 1 + STATE_SIZE] =
-      transfer_function_ * (state_ - weighted_covar_sqrt_.col(sigma_ind));
-  }
-
-  // (3) Sum the weighted sigma points to generate a new state prediction
-  state_.setZero();
-  for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
-    state_.noalias() += state_weights_[sigma_ind] * sigma_points_[sigma_ind];
-  }
-
-  // (4) Now us the sigma points and the predicted state to compute a predicted
-  // covariance
-  estimate_error_covariance_.setZero();
-  Eigen::VectorXd sigma_diff(STATE_SIZE);
-  for (size_t sigma_ind = 0; sigma_ind < sigma_points_.size(); ++sigma_ind) {
-    sigma_diff = (sigma_points_[sigma_ind] - state_);
-    estimate_error_covariance_.noalias() +=
-      covar_weights_[sigma_ind] * (sigma_diff * sigma_diff.transpose());
-  }
-
-  // (5) Not strictly in the theoretical UKF formulation, but necessary here
-  // to ensure that we actually incorporate the process_noise_covariance_
-  Eigen::MatrixXd * process_noise_covariance = &process_noise_covariance_;
-
-  if (use_dynamic_process_noise_covariance_) {
-    computeDynamicProcessNoiseCovariance(state_);
-    process_noise_covariance = &dynamic_process_noise_covariance_;
-  }
-
-  estimate_error_covariance_.noalias() +=
-    delta_sec * (*process_noise_covariance);
-
-  // Keep the angles bounded
-  wrapStateAngles();
-
-  // Mark that we can keep these sigma points
-  uncorrected_ = true;
-
-  FB_DEBUG(
-    "Predicted state is:\n" <<
-      state_ << "\nPredicted estimate error covariance is:\n" <<
-      estimate_error_covariance_ <<
-      "\n\n--------------------- /Ukf::predict ----------------------\n");
+  sigma_point.applyOnTheLeft(transfer_function_);
 }
 
 }  // namespace robot_localization

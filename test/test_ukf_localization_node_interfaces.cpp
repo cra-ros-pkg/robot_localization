@@ -35,7 +35,9 @@
 #include <gtest/gtest.h>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/qos.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+#include <std_srvs/srv/empty.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -43,9 +45,6 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-
-#include "rclcpp/rclcpp.hpp"
-#include "robot_localization/srv/set_pose.hpp"
 
 using namespace std::chrono_literals;
 
@@ -60,46 +59,21 @@ void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
 void resetFilter(rclcpp::Node::SharedPtr node_)
 {
-  // ros2 style service-client server has been implemented
   auto client =
-    node_->create_client<robot_localization::srv::SetPose>("set_pose");
-  auto setPoseRequest =
-    std::make_shared<robot_localization::srv::SetPose::Request>();
-
-  setPoseRequest->pose.pose.pose.orientation.w = 1;
-  setPoseRequest->pose.header.frame_id = "odom";
-
-  for (size_t ind = 0; ind < 36; ind += 7) {
-    setPoseRequest->pose.pose.covariance[ind] = 1e-6;
-  }
-
-  setPoseRequest->pose.header.stamp = node_->now();
+    node_->create_client<std_srvs::srv::Empty>("reset");
+  auto reset_request =
+    std::make_shared<std_srvs::srv::Empty::Request>();
 
   if (!client->wait_for_service(10s)) {
     ASSERT_TRUE(false) << "service not available after waiting";
   }
 
-  auto result = client->async_send_request(setPoseRequest);
-  auto ret = rclcpp::spin_until_future_complete(
-    node_, result,
-    5s);                                              // Wait for the result.
+  auto result = client->async_send_request(reset_request);
+  rclcpp::spin_until_future_complete(node_, result, 5s);  // Wait for the result
 
-  double deltaX = 0.0;
-  double deltaY = 0.0;
-  double deltaZ = 0.0;
-  // Timing and spinning is updated as per ros2
-  if (ret == rclcpp::FutureReturnCode::SUCCESS) {
-    rclcpp::Rate(2).sleep();
-    rclcpp::spin_some(node_);
-    deltaX = filtered_.pose.pose.position.x -
-      setPoseRequest->pose.pose.pose.position.x;
-    deltaY = filtered_.pose.pose.position.y -
-      setPoseRequest->pose.pose.pose.position.y;
-    deltaZ = filtered_.pose.pose.position.z -
-      setPoseRequest->pose.pose.pose.position.z;
-  }
-
-  EXPECT_LT(::sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ), 0.1);
+  // Reset the output message
+  filtered_ = nav_msgs::msg::Odometry();
+  filtered_.pose.pose.orientation.w = 1.0;
 }
 
 TEST(InterfacesTest, OdomPoseBasicIO) {
@@ -560,6 +534,8 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
 
   resetFilter(node_);
 
+  stateUpdated_ = false;
+
   // Test to see if the orientation data is ignored when we set the
   // first covariance value to -1
   sensor_msgs::msg::Imu imuIgnore;
@@ -575,6 +551,7 @@ TEST(InterfacesTest, ImuPoseBasicIO) {
     imuPub->publish(imuIgnore);
     loopRate2.sleep();
     rclcpp::spin_some(node_);
+    EXPECT_FALSE(stateUpdated_);
   }
 
   tf2::fromMsg(filtered_.pose.pose.orientation, quat);
@@ -766,6 +743,8 @@ TEST(InterfacesTest, ImuAccBasicIO) {
 
   resetFilter(node_);
 
+  stateUpdated_ = false;
+
   // Test to see if the linear acceleration data is ignored when we set the
   // first covariance value to -1
   sensor_msgs::msg::Imu imuIgnore;
@@ -779,6 +758,7 @@ TEST(InterfacesTest, ImuAccBasicIO) {
     imuPub->publish(imuIgnore);
     rclcpp::spin_some(node_);
     loopRate.sleep();
+    EXPECT_FALSE(stateUpdated_);
   }
   rclcpp::spin_some(node_);
 

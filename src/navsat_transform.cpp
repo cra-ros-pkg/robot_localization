@@ -36,6 +36,7 @@
 #include <robot_localization/navsat_transform.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
 
+#include <angles/angles.h>
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -676,9 +677,9 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
       // Apply the offset (making sure to bound them), and throw them in a
       // vector
       tf2::Vector3 rpy_angles(
-        filter_utilities::clampRotation(roll - roll_offset),
-        filter_utilities::clampRotation(pitch - pitch_offset),
-        filter_utilities::clampRotation(yaw - yaw_offset));
+        angles::normalize_angle(roll - roll_offset),
+        angles::normalize_angle(pitch - pitch_offset),
+        angles::normalize_angle(yaw - yaw_offset));
 
       // Now we need to rotate the roll and pitch by the yaw offset value.
       // Imagine a case where an IMU is mounted facing sideways. In that case

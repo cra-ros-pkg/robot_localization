@@ -36,6 +36,7 @@
 #include <robot_localization/ros_filter_utilities.hpp>
 #include <robot_localization/ukf.hpp>
 
+#include <angles/angles.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rcl/time.h>
 #include <rclcpp/qos.hpp>
@@ -75,7 +76,10 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   frequency_(30.0),
   gravitational_acceleration_(9.80665),
   history_length_(0ns),
+  sensor_timeout_(0ns),
   latest_control_(),
+  process_noise_covariance_(STATE_SIZE, STATE_SIZE),
+  initial_estimate_error_covariance_(STATE_SIZE, STATE_SIZE),
   last_diag_time_(0, 0, RCL_ROS_TIME),
   last_published_stamp_(0, 0, RCL_ROS_TIME),
   predict_to_current_time_(false),
@@ -149,6 +153,22 @@ void RosFilter<T>::reset()
 
   // reset filter to uninitialized state
   filter_.reset();
+
+  // Restore filter parameters that we got from the ROS parameter server
+  filter_.setSensorTimeout(sensor_timeout_);
+  filter_.setProcessNoiseCovariance(process_noise_covariance_);
+  filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
+}
+
+template<typename T>
+void RosFilter<T>::resetSrvCallback(
+  const std::shared_ptr<rmw_request_id_t>,
+  const std::shared_ptr<std_srvs::srv::Empty::Request>,
+  const std::shared_ptr<std_srvs::srv::Empty::Response>)
+{
+  RCLCPP_INFO(this->get_logger(), "Received a request to reset filter.");
+
+  reset();
 }
 
 template<typename T>
@@ -852,8 +872,9 @@ void RosFilter<T>::loadParams()
 
   predict_to_current_time_ = this->declare_parameter<bool>("predict_to_current_time", false);
 
-  double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
-  filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
+  sensor_timeout_ =
+    rclcpp::Duration::from_seconds(this->declare_parameter("sensor_timeout", 1.0 / frequency_));
+  filter_.setSensorTimeout(sensor_timeout_);
 
   // Determine if we're in 2D mode
   two_d_mode_ = this->declare_parameter("two_d_mode", false);
@@ -879,7 +900,7 @@ void RosFilter<T>::loadParams()
   reset_on_time_jump_ = this->declare_parameter("reset_on_time_jump", false);
 
   // Determine if we're using a control term
-  double control_timeout = sensor_timeout;
+  double control_timeout = sensor_timeout_.seconds();
   std::vector<bool> control_update_vector;
   std::vector<double> acceleration_limits;
   std::vector<double> acceleration_gains;
@@ -1049,6 +1070,13 @@ void RosFilter<T>::loadParams()
       &RosFilter::enableFilterSrvCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
+  // Create a service for manually setting/resetting pose
+  reset_srv_ =
+    this->create_service<std_srvs::srv::Empty>(
+    "reset", std::bind(
+      &RosFilter<T>::resetSrvCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
   // Create a service for toggling processing new measurements while still
   // publishing
   toggle_filter_processing_srv_ =
@@ -1205,7 +1233,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           odom_topic << " (" << odom_topic_name << ")\n\t" <<
           odom_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
@@ -1325,7 +1353,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           pose_topic << " (" << pose_topic_name << ")\n\t" <<
           pose_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
           "_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << pose_topic_name << " update vector is " <<
           pose_update_vec);
@@ -1631,14 +1659,14 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           imu_topic << " (" << imu_topic_name << ")\n\t" <<
           imu_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_linear_acceleration_rejection_threshold is " <<
           accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_remove_gravitational_acceleration is " <<
-        (remove_grav_acc ? "true" : "false") << "\n\t" <<
+          (remove_grav_acc ? "true" : "false") << "\n\t" <<
           imu_topic_name << " pose update vector is " << pose_update_vec <<
           "\t" << imu_topic_name << " twist update vector is " <<
           twist_update_vec << "\t" << imu_topic_name <<
@@ -1726,8 +1754,7 @@ void RosFilter<T>::loadParams()
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
-  Eigen::MatrixXd process_noise_covariance(STATE_SIZE, STATE_SIZE);
-  process_noise_covariance.setZero();
+  process_noise_covariance_.setZero();
   std::vector<double> process_noise_covar_flat;
 
   this->declare_parameter("process_noise_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -1739,22 +1766,21 @@ void RosFilter<T>::loadParams()
 
     for (int i = 0; i < STATE_SIZE; i++) {
       for (int j = 0; j < STATE_SIZE; j++) {
-        process_noise_covariance(i, j) =
+        process_noise_covariance_(i, j) =
           process_noise_covar_flat[i * STATE_SIZE + j];
       }
     }
 
     RF_DEBUG(
       "Process noise covariance is:\n" <<
-        process_noise_covariance << "\n");
+        process_noise_covariance_ << "\n");
 
-    filter_.setProcessNoiseCovariance(process_noise_covariance);
+    filter_.setProcessNoiseCovariance(process_noise_covariance_);
   }
 
   // Load up the process noise covariance (from the launch file/parameter
   // server)
-  Eigen::MatrixXd initial_estimate_error_covariance(STATE_SIZE, STATE_SIZE);
-  initial_estimate_error_covariance.setZero();
+  initial_estimate_error_covariance_.setZero();
   std::vector<double> estimate_error_covar_flat;
 
   this->declare_parameter("initial_estimate_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -1766,16 +1792,16 @@ void RosFilter<T>::loadParams()
 
     for (int i = 0; i < STATE_SIZE; i++) {
       for (int j = 0; j < STATE_SIZE; j++) {
-        initial_estimate_error_covariance(i, j) =
+        initial_estimate_error_covariance_(i, j) =
           estimate_error_covar_flat[i * STATE_SIZE + j];
       }
     }
 
     RF_DEBUG(
       "Initial estimate error covariance is:\n" <<
-        estimate_error_covar_flat << "\n");
+        initial_estimate_error_covariance_ << "\n");
 
-    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance);
+    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
   }
 }
 
@@ -2928,9 +2954,9 @@ bool RosFilter<T>::preparePose(
       // 6b. Apply the offset (making sure to bound them), and throw them in a
       // vector
       tf2::Vector3 rpy_angles(
-        filter_utilities::clampRotation(roll - rollOffset),
-        filter_utilities::clampRotation(pitch - pitchOffset),
-        filter_utilities::clampRotation(yaw - yaw_offset));
+        angles::normalize_angle(roll - rollOffset),
+        angles::normalize_angle(pitch - pitchOffset),
+        angles::normalize_angle(yaw - yaw_offset));
 
       // 6c. Now we need to rotate the roll and pitch by the yaw offset value.
       // Imagine a case where an IMU is mounted facing sideways. In that case
