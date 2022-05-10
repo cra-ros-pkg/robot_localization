@@ -29,6 +29,8 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "robot_localization/ros_robot_localization_listener.hpp"
+
 #include <exception>
 #include <functional>
 #include <memory>
@@ -38,9 +40,10 @@
 
 #include "Eigen/Dense"
 #include "rclcpp/qos.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
-#include "robot_localization/ros_robot_localization_listener.hpp"
+
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/time.h"

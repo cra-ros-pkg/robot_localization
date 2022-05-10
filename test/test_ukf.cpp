@@ -37,6 +37,7 @@
 #include "gtest/gtest.h"
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/filter_base.hpp"
+#include "robot_localization/filter_common.hpp"
 #include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ros_filter_types.hpp"
 #include "robot_localization/ukf.hpp"

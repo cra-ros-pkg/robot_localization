@@ -29,7 +29,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
@@ -37,7 +36,6 @@
 #include <fstream>
 #include <map>
 #include <memory>
-#include <numeric>
 #include <queue>
 #include <string>
 #include <vector>
@@ -54,16 +52,14 @@
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "robot_localization/filter_base.hpp"
-#include "robot_localization/filter_common.hpp"
 #include "robot_localization/filter_state.hpp"
-#include "robot_localization/ros_filter_utilities.hpp"
-#include "robot_localization/srv/set_pose.hpp"
+#include "robot_localization/measurement.hpp"
 #include "robot_localization/srv/toggle_filter_processing.hpp"
+#include "robot_localization/srv/set_pose.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-#include "std_msgs/msg/string.hpp"
 #include "std_srvs/srv/empty.hpp"
 #include "tf2/LinearMath/Transform.h"
+#include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
 

@@ -37,7 +37,6 @@
 #include <memory>
 
 #include "Eigen/Dense"
-#include "rclcpp/duration.hpp"
 #include "rclcpp/macros.hpp"
 #include "rclcpp/time.hpp"
 

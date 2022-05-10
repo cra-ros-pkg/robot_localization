@@ -35,10 +35,12 @@
 #include <memory>
 #include <string>
 
+#include "Eigen/Dense"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include "message_filters/subscriber.h"
 #include "message_filters/time_synchronizer.h"
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/robot_localization_estimator.hpp"
 #include "tf2_ros/buffer.h"

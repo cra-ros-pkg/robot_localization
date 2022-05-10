@@ -37,7 +37,6 @@
 
 #include "angles/angles.h"
 #include "Eigen/Dense"
-#include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"

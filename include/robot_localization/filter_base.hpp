@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "Eigen/Dense"
-#include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 #include "robot_localization/measurement.hpp"
 

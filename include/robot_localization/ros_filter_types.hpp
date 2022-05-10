@@ -32,8 +32,8 @@
 #ifndef ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
 #define ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
 
-#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ekf.hpp"
+#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ukf.hpp"
 
 namespace robot_localization
