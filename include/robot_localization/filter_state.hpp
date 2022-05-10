@@ -31,13 +31,12 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__FILTER_STATE_HPP_
 #define ROBOT_LOCALIZATION__FILTER_STATE_HPP_
 
 #include <memory>
+
 #include "Eigen/Dense"
-#include "rclcpp/duration.hpp"
 #include "rclcpp/macros.hpp"
 #include "rclcpp/time.hpp"
 

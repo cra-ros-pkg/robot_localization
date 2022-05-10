@@ -29,29 +29,34 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "robot_localization/navsat_transform.hpp"
 
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/filter_utilities.hpp>
-#include <robot_localization/navsat_conversions.hpp>
-#include <robot_localization/navsat_transform.hpp>
-#include <robot_localization/ros_filter_utilities.hpp>
-
-#include <angles/angles.h>
-#include <GeographicLib/Geocentric.hpp>
-#include <GeographicLib/LocalCartesian.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <sensor_msgs/msg/nav_sat_fix.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <Eigen/Dense>
-
-#include <iostream>
+#include <chrono>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <utility>
+
+#include "angles/angles.h"
+#include "Eigen/Dense"
+#include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/qos.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "robot_localization/filter_common.hpp"
+#include "robot_localization/navsat_conversions.hpp"
+#include "robot_localization/ros_filter_utilities.hpp"
+#include "robot_localization/srv/from_ll.hpp"
+#include "robot_localization/srv/set_datum.hpp"
+#include "robot_localization/srv/to_ll.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/nav_sat_fix.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2/LinearMath/Vector3.h"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -402,8 +407,6 @@ bool NavSatTransform::toLLCallback(
   if (!transform_good_) {
     return false;
   }
-  // tf2::Vector3 point;
-  // tf2::fromMsg(request.map_point, point);
   tf2::Vector3 point(request->map_point.x, request->map_point.y,
     request->map_point.z);
   mapToLL(

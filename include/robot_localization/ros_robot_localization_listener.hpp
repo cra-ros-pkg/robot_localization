@@ -29,22 +29,22 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__ROS_ROBOT_LOCALIZATION_LISTENER_HPP_
 #define ROBOT_LOCALIZATION__ROS_ROBOT_LOCALIZATION_LISTENER_HPP_
-
-#include <rclcpp/rclcpp.hpp>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <nav_msgs/msg/odometry.hpp>
-#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <string>
 
+#include "Eigen/Dense"
+#include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
+#include "message_filters/subscriber.h"
+#include "message_filters/time_synchronizer.h"
+#include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/qos.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "robot_localization/robot_localization_estimator.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
 
 namespace robot_localization
 {

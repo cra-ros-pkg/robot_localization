@@ -29,18 +29,17 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
 #define ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_
 
-#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ekf.hpp"
+#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ukf.hpp"
 
 namespace robot_localization
 {
-typedef RosFilter<Ukf> RosUkf;
-typedef RosFilter<Ekf> RosEkf;
+using RosUkf = RosFilter<Ukf>;
+using RosEkf = RosFilter<Ekf>;
 }
 
 #endif  // ROBOT_LOCALIZATION__ROS_FILTER_TYPES_HPP_

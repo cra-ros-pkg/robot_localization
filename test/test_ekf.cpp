@@ -29,15 +29,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-
-#include <gtest/gtest.h>
-#include <robot_localization/filter_base.hpp>
 #include <limits>
-#include <vector>
 #include <memory>
+#include <vector>
 
+#include "gtest/gtest.h"
 #include "robot_localization/ekf.hpp"
+#include "robot_localization/filter_base.hpp"
+#include "robot_localization/filter_common.hpp"
 #include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ros_filter_types.hpp"
 
@@ -46,7 +45,6 @@ using robot_localization::RosEkf;
 using robot_localization::STATE_SIZE;
 
 TEST(EkfTest, Measurements) {
-  // node handle is created as per ros2
   rclcpp::NodeOptions options;
   options.arguments({"ekf_filter_node"});
   std::shared_ptr<robot_localization::RosEkf> filter =

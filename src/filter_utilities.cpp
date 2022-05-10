@@ -29,13 +29,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/filter_utilities.hpp>
+#include "robot_localization/filter_utilities.hpp"
 
 #include <iomanip>
 #include <string>
 #include <vector>
+
+#include "robot_localization/filter_common.hpp"
 
 std::ostream & operator<<(std::ostream & os, const Eigen::MatrixXd & mat)
 {
