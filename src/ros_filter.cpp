@@ -713,22 +713,27 @@ namespace RobotLocalization
   }
 
   template<typename T>
-  void RosFilter<T>::differentiateMeasurements(const ros::Time &currentTime){
-    if (filter_.getInitializedStatus()){
-      const double dt = (currentTime - lastAngAccTime_).toSec();
+  void RosFilter<T>::differentiateMeasurements(const ros::Time &currentTime)
+  {
+    if (filter_.getInitializedStatus())
+    {
+      const double dt = (currentTime - lastDiffTime_).toSec();
       const Eigen::VectorXd &state = filter_.getState();
+      // Specific to angular acceleration for now...
       tf2::Vector3 newStateTwistRot(state(StateMemberVroll),
                                     state(StateMemberVpitch),
                                     state(StateMemberVyaw));
       angular_acceleration_ = (newStateTwistRot - lastStateTwistRot_)/dt;
       const Eigen::MatrixXd &cov = filter_.getEstimateErrorCovariance();
-      for (size_t i=0; i<3; i++){
-        for (size_t j=0; j<3; j++){
+      for (size_t i=0; i<3; i++)
+      {
+        for (size_t j=0; j<3; j++)
+        {
           angular_acceleration_cov_(i,j) = cov(i+ORIENTATION_V_OFFSET, j+ORIENTATION_V_OFFSET)*2./(dt*dt);
         }
       }
       lastStateTwistRot_ = newStateTwistRot;
-      lastAngAccTime_ = currentTime;
+      lastDiffTime_ = currentTime;
     }
   }
 
@@ -2495,13 +2500,6 @@ namespace RobotLocalization
     if (canTransform)
     {
       const Eigen::VectorXd &state = filter_.getState();
-      
-      // Transform to correct frame
-      tf2::Vector3 stateTwistRot(state(StateMemberVroll),
-                                state(StateMemberVpitch),
-                                state(StateMemberVyaw));
-      accTmp = targetFrameTrans.getBasis() * accTmp + targetFrameTrans.getOrigin().cross(angular_acceleration_)
-              - targetFrameTrans.getOrigin().cross(stateTwistRot).cross(stateTwistRot);
 
       // We don't know if the user has already handled the removal
       // of normal forces, so we use a parameter
@@ -2533,12 +2531,17 @@ namespace RobotLocalization
             ROS_WARN_ONCE("An input was not normalized, this should NOT happen, but will normalize.");
             curAttitude.normalize();
           }
-          if (relative){
-            trans.setRotation(curAttitude);
+          trans.setRotation(curAttitude);
+          if (!relative)
+          {
+            // curAttitude is the true world-frame attitude of the sensor
             rotNorm = trans.getBasis().inverse() * normAcc;
           }
-          else{
-            rotNorm = targetFrameTrans.getBasis() * trans.getBasis().inverse() * normAcc;
+          else
+          {
+            // curAttitude is relative to the initial pose of the sensor.
+            // Assumption: IMU sensor is rigidly attached to the base_link (but a static rotation is possible).
+            rotNorm = targetFrameTrans.getBasis().inverse() * trans.getBasis().inverse() * normAcc;
           }
         }
         accTmp.setX(accTmp.getX() - rotNorm.getX());
@@ -2550,6 +2553,12 @@ namespace RobotLocalization
                  "After removing acceleration due to gravity, acceleration is " << accTmp << "\n");
       }
 
+      // Transform to correct frame
+      tf2::Vector3 stateTwistRot(state(StateMemberVroll),
+                                state(StateMemberVpitch),
+                                state(StateMemberVyaw));
+      accTmp = targetFrameTrans.getBasis() * accTmp + targetFrameTrans.getOrigin().cross(angular_acceleration_)
+              - targetFrameTrans.getOrigin().cross(stateTwistRot).cross(stateTwistRot);
       maskAcc = targetFrameTrans.getBasis() * maskAcc;
 
       // Now use the mask values to determine which update vector values should be true
@@ -2635,14 +2644,17 @@ namespace RobotLocalization
     // @todo: verify that this is necessary still. New IMU handling may
     // have rendered this obsolete.
     std::string finalTargetFrame;
-    if (targetFrame == ""){
+    if (targetFrame == "")
+    {
       if (msg->header.frame_id == "")
       {
         // Blank target and message frames mean we can just
         // use our world_frame
         finalTargetFrame = worldFrameId_;
         poseTmp.frame_id_ = finalTargetFrame;
-      } else {  // (targetFrame == "")
+      }
+      else
+      { // (targetFrame == "")
         // A blank target frame means we shouldn't bother
         // transforming the data
         finalTargetFrame = msg->header.frame_id;
@@ -2798,7 +2810,8 @@ namespace RobotLocalization
       Eigen::MatrixXd covarianceRotated;
 
       // Transform pose covariance due to a different pose source origin
-      if (canSrcTransform){
+      if (canSrcTransform)
+      {
         rot.setRotation(sourceFrameTrans.getRotation());
         for (size_t rInd = 0; rInd < POSITION_SIZE; ++rInd)
         {

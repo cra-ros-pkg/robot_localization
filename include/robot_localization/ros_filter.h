@@ -232,6 +232,10 @@ template<class T> class RosFilter
     //!
     //! @param[in] currentTime - The time at which to carry out differentiation (the current time)
     //!
+    //! Maybe more state variables can be time-differentiated to estimate higher-order states,
+    //! but now we only focus on obtaining the angular acceleration. It implements a backward-
+    //! Euler differentiation.
+    //!
     void differentiateMeasurements(const ros::Time &currentTime);
 
     //! @brief Loads all parameters from file
@@ -615,9 +619,9 @@ template<class T> class RosFilter
     //!
     std::map<std::string, std::string> staticDiagnostics_;
 
-    //! @brief Last time mark that angular acceleration is calculated
+    //! @brief Last time mark that time-differentiation is calculated
     //!
-    ros::Time lastAngAccTime_;
+    ros::Time lastDiffTime_;
 
     //! @brief Last record of filtered angular velocity
     //!
