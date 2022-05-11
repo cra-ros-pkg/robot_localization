@@ -473,6 +473,25 @@ protected:
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
 
+  //! @brief Validates incoming measurement ordering and produces errors if
+  //! validation does not pass.
+  //! @param[in] topicName - The name of the topic over which this message was
+  //! received
+  //! @param[in] stamp - The timestamp associated with this message.
+  //! @return true if the measrement is newer than all known measurements.
+  //!
+  bool validateMeasurementOrdering(const std::string& topicName,
+                                   const builtin_interfaces::msg::Time& stamp);
+
+  //! @brief Validates incoming measurements are within a reasonable timeframe.
+  //! @param[in] topicName - The name of the topic over which this message was
+  //! received
+  //! @param[in] stamp - The timestamp associated with this message.
+  //! @return true if the measrement is newer than all known measurements.
+  //!
+  bool validateMeasurementTime(const std::string& topicName,
+                               const builtin_interfaces::msg::Time& stamp);
+
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
   //!
@@ -545,13 +564,16 @@ protected:
   //!
   double gravitational_acceleration_;
 
-  //! @brief The depth of the history we track for smoothing/delayed measurement
-  //! processing
+  //! @brief The depth of the history we track for smoothing/delayed
+  //! measurement processing
   //!
   //! This is the guaranteed minimum buffer size for which previous states and
   //! measurements are kept.
   //!
   rclcpp::Duration history_length_;
+
+  //! @brief This is the maximum measurement queque length.
+  uint64_t max_future_queue_size_;
 
   //! @brief tf frame name for the robot's body frame
   //!
@@ -622,8 +644,8 @@ protected:
   //! @brief This object accumulates static diagnostics, e.g., diagnostics
   //! relating to the configuration parameters.
   //!
-  //! The values are treated as static and always reported (i.e., this object is
-  //! never cleared)
+  //! The values are treated as static and always reported (i.e., this object
+  //! is never cleared)
   //!
   std::map<std::string, std::string> static_diagnostics_;
 
@@ -646,8 +668,8 @@ protected:
   //! stores the initial measurements. Note that this is different from using
   //! differential mode, as in differential mode, pose data is converted to
   //! twist data, resulting in boundless error growth for the variables being
-  //! fused. With relative measurements, the vehicle will start with a 0 heading
-  //! and position, but the measurements are still fused absolutely.
+  //! fused. With relative measurements, the vehicle will start with a 0
+  //! heading and position, but the measurements are still fused absolutely.
   std::map<std::string, tf2::Transform> initial_measurements_;
 
   //! @brief If including acceleration for each IMU input, whether or not we
@@ -688,9 +710,9 @@ protected:
   //!
   std::map<std::string, Eigen::MatrixXd> previous_measurement_covariances_;
 
-  //! @brief By default, the filter predicts and corrects up to the time of the
-  //! latest measurement. If this is set to true, the filter does the same, but
-  //! then also predicts up to the current time step.
+  //! @brief By default, the filter predicts and corrects up to the time of
+  //! the latest measurement. If this is set to true, the filter does the
+  //! same, but then also predicts up to the current time step.
   //!
   bool predict_to_current_time_;
 

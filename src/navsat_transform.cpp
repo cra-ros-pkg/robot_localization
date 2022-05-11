@@ -83,6 +83,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   yaw_offset_(0.0),
   zero_altitude_(false)
 {
+
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
