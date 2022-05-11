@@ -906,6 +906,21 @@ int main(int argc, char ** argv)
   }
 
   int ret = RUN_ALL_TESTS();
+
+  odom0_pub_.reset();
+  odom1_pub_.reset();
+  odom2_pub_.reset();
+  pose0_pub_.reset();
+  pose1_pub_.reset();
+  twist0_pub_.reset();
+  imu0_pub_.reset();
+  imu1_pub_.reset();
+  imu2_pub_.reset();
+  imu3_pub_.reset();
+  filtered_sub.reset();
+  reset_client_.reset();
+  node_.reset();
+
   rclcpp::shutdown();
   return ret;
 }
