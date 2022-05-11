@@ -725,11 +725,12 @@ namespace RobotLocalization
                                     state(StateMemberVyaw));
       angular_acceleration_ = (newStateTwistRot - lastStateTwistRot_)/dt;
       const Eigen::MatrixXd &cov = filter_.getEstimateErrorCovariance();
-      for (size_t i=0; i<3; i++)
+      for (size_t i = 0; i < 3; i ++)
       {
-        for (size_t j=0; j<3; j++)
+        for (size_t j = 0; j < 3; j ++)
         {
-          angular_acceleration_cov_(i,j) = cov(i+ORIENTATION_V_OFFSET, j+ORIENTATION_V_OFFSET)*2./(dt*dt);
+          angular_acceleration_cov_(i, j) = cov(i+ORIENTATION_V_OFFSET, j+ORIENTATION_V_OFFSET)
+                                              * 2. / (dt * dt);
         }
       }
       lastStateTwistRot_ = newStateTwistRot;
