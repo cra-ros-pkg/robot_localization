@@ -40,6 +40,7 @@
 #include <rcl/time.h>
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rcpputils/asserts.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -238,7 +239,10 @@ void RosFilter<T>::accelerationCallback(
     const CallbackData& callback_data, const std::string& target_frame) {
   const std::string& topic_name = callback_data.topic_name_;
 
-  validateMeasurementTime(topic_name, msg->header.stamp);
+  // Validate reasonable measurement time and generate debug.
+  if (!validateMeasurementTime(topic_name, msg->header.stamp)) {
+    return;
+  }
 
   RF_DEBUG("------ RosFilter<T>::accelerationCallback (" << topic_name
                                                          << ") ------\n")
@@ -339,13 +343,13 @@ void RosFilter<T>::enqueueMeasurement(
   const std::vector<bool> & update_vector, const double mahalanobis_thresh,
   const rclcpp::Time & time)
 {
-  if (measurement_queue_.size() > max_future_queue_size_) {
-    RCLCPP_FATAL(this->get_logger(),
-                 "Too many measurements on queue . This may mean the filter is "
-                 "running slowly or that measurements are comming in with bad  "
-                 "timestamps.");
-    std::raise(SIGSEGV);
-  }
+
+  rcpputils::check_true(
+      measurement_queue_.size() > max_future_queue_size_,
+      "Too many measurements on queue . This may mean the filter is "
+      "running slowly or that measurements are comming in with bad  "
+      "timestamps.");
+
   constexpr double kMaxQueueTimeS = 0.5;
 
   MeasurementPtr meas = MeasurementPtr(new Measurement());
@@ -504,7 +508,10 @@ void RosFilter<T>::imuCallback(
     "------ RosFilter<T>::imuCallback (" <<
       topic_name << ") ------\n")
 
-  validateMeasurementTime(topic_name, msg->header.stamp);
+  // Validate reasonable measurement time and generate debug.
+  if (!validateMeasurementTime(topic_name, msg->header.stamp)) {
+    return;
+  }
 
   // As with the odometry message, we can separate out the pose- and
   // twist-related variables in the IMU message and pass them to the pose and
