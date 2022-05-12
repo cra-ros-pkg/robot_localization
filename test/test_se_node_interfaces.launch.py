@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Launch file for test_ukf_localization_node_interfaces."""
+"""Launch file for test_se_node_interfaces."""
 
 import launch
 from launch import LaunchDescription
@@ -30,33 +30,33 @@ from launch.actions import ExecuteProcess
 from launch import LaunchService
 from ament_index_python.packages import get_package_prefix
 
-def generate_launch_description():
+def generate_launch_description(node_type):
     parameters_file_dir = pathlib.Path(__file__).resolve().parent
-    parameters_file_path = parameters_file_dir / 'test_ukf_localization_node_interfaces.yaml'    
+    parameters_file_path = parameters_file_dir / 'test_se_node_interfaces.yaml'    
     os.environ['FILE_PATH'] = str(parameters_file_dir)
 
-     #*****test_ukf_localization_node_interfaces.test***** 
-    ukf_node = launch_ros.actions.Node(
+    se_node = launch_ros.actions.Node(
             package='robot_localization',
-            executable='ukf_node',
-            name='test_ukf_localization_node_interfaces_ukf',
+            executable=node_type + '_node',
+            name='test_se_node_interfaces',
             output='screen',
             parameters=[
                 parameters_file_path,
                 str(parameters_file_path),
-                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ukf_localization_node_interfaces.yaml'],
+                [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_se_node_interfaces.yaml'],
            ],)
 
     return LaunchDescription([
-        ukf_node,
+        se_node,
     ])
 
 
 def main(argv=sys.argv[1:]):
-    ld = generate_launch_description()
+    node_type = os.environ['NODE_TYPE']
+    ld = generate_launch_description(node_type)
 
     test1_action = ExecuteProcess(
-        cmd=[get_package_prefix('robot_localization') + '/lib/robot_localization/test_ukf_localization_node_interfaces'],
+        cmd=[get_package_prefix('robot_localization') + '/lib/robot_localization/test_' + node_type + '_node_interfaces'],
         output='screen',
     )
 
