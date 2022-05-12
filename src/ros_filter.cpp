@@ -348,13 +348,6 @@ void RosFilter<T>::enqueueMeasurement(
   }
   constexpr double kMaxQueueTimeS = 0.5;
 
-  if ((time - measurement_queue_.top()->time_).nanoseconds() / 1e9 >
-      kMaxQueueTimeS) {
-    RCLCPP_ERROR(this->get_logger(), "Warning: messages are queued at least "
-                                     "0.5s. This likely means the filter is "
-                                     "not working as excpected.");
-  }
-
   MeasurementPtr meas = MeasurementPtr(new Measurement());
   meas->topic_name_ = topic_name;
   meas->measurement_ = measurement;
@@ -365,6 +358,13 @@ void RosFilter<T>::enqueueMeasurement(
   meas->latest_control_ = latest_control_;
   meas->latest_control_time_ = latest_control_time_;
   measurement_queue_.push(meas);
+
+  if ((time - measurement_queue_.top()->time_).nanoseconds() / 1e9 >
+      kMaxQueueTimeS) {
+    RCLCPP_ERROR(this->get_logger(), "Warning: messages are queued at least "
+                                     "0.5s. This likely means the filter is "
+                                     "not working as excpected.");
+  }
 }
 
 template<typename T>
@@ -1802,7 +1802,7 @@ void RosFilter<T>::odometryCallback(
   const CallbackData & twist_callback_data)
 {
   // Validate reasonable measurement time and generate debug.
-  if (validateMeasurementTime(topic_name, msg->header.stamp)) {
+  if (!validateMeasurementTime(topic_name, msg->header.stamp)) {
     return;
   }
 
@@ -1846,7 +1846,7 @@ void RosFilter<T>::poseCallback(
   const std::string & topic_name = callback_data.topic_name_;
 
   // Validate reasonable measurement time and generate debug.
-  if (validateMeasurementTime(topic_name, msg->header.stamp)) {
+  if (!validateMeasurementTime(topic_name, msg->header.stamp)) {
     return;
   }
 
@@ -2231,7 +2231,7 @@ void RosFilter<T>::twistCallback(
   const std::string & topic_name = callback_data.topic_name_;
 
   // Validate reasonable measurement time and generate debug.
-  if (validateMeasurementTime(topic_name, msg->header.stamp)) {
+  if (!validateMeasurementTime(topic_name, msg->header.stamp)) {
     return;
   }
 
