@@ -345,10 +345,11 @@ void RosFilter<T>::enqueueMeasurement(
 {
 
   rcpputils::check_true(
-      measurement_queue_.size() > max_future_queue_size_,
+      measurement_queue_.size() < max_future_queue_size_,
       "Too many measurements on queue . This may mean the filter is "
       "running slowly or that measurements are comming in with bad  "
-      "timestamps.");
+      "timestamps. max_future_queue_size_ is: " +
+          std::to_string(max_future_queue_size_));
 
   constexpr double kMaxQueueTimeS = 0.5;
 
