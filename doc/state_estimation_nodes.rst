@@ -280,6 +280,8 @@ If ``debug`` is *true*, the file to which debug output is written.
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 The process noise covariance, commonly denoted *Q*, is used to model uncertainty in the prediction stage of the filtering algorithms. It can be difficult to tune, and has been exposed as a parameter for easier customization. This parameter can be left alone, but you will achieve superior results by tuning it. In general, the larger the value for *Q* relative to the variance for a given variable in an input message, the faster the filter will converge to the value in the measurement.
 
+Specifying the full covariance matrix is supported, but can be cumbersome. For that reason, this parameter can also be used to simply specify the diagonal values. In that event, all off-diagonal values will be set to 0.
+
 ~dynamic_process_noise_covariance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If *true*, will dynamically scale the ``process_noise_covariance`` based on the robot's velocity. This is useful, e.g., when you want your robot's estimate error covariance to stop growing when the robot is stationary. Defaults to *false*.
@@ -287,6 +289,8 @@ If *true*, will dynamically scale the ``process_noise_covariance`` based on the 
 ~initial_estimate_covariance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The estimate covariance, commonly denoted *P*, defines the error in the current state estimate. The parameter allows users to set the initial value for the matrix, which will affect how quickly the filter converges. For example, if users set the value at position :math:`[0, 0]` to a very small value, e.g., `1e-12`, and then attempt to fuse measurements of X position with a high variance value for :math:`X`, then the filter will be very slow to "trust" those measurements, and the time required for convergence will increase. Again, users should take care with this parameter. When only fusing velocity data (e.g., no absolute pose information), users will likely *not* want to set the initial covariance values for the absolute pose variables to large numbers. This is because those errors are going to grow without bound (owing to the lack of absolute pose measurements to reduce the error), and starting them with large values will not benefit the state estimate.
+
+Specifying the full covariance matrix is supported, but can be cumbersome. For that reason, this parameter can also be used to simply specify the diagonal values. In that event, all off-diagonal values will be set to 0.
 
 ~reset_on_time_jump
 ^^^^^^^^^^^^^^^^^^^

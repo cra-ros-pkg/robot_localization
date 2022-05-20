@@ -39,6 +39,7 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1791,57 +1792,37 @@ void RosFilter<T>::loadParams()
     }
   }
 
-  // Load up the process noise covariance (from the launch file/parameter
-  // server)
-  process_noise_covariance_.setZero();
-  std::vector<double> process_noise_covar_flat;
+  auto load_covariance = [this](const std::string & parameter, Eigen::MatrixXd & covariance)
+    {
+      covariance.setZero();
+      std::vector<double> covar_flat;
 
-  this->declare_parameter("process_noise_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
-  if (this->get_parameter(
-      "process_noise_covariance",
-      process_noise_covar_flat))
-  {
-    assert(process_noise_covar_flat.size() == STATE_SIZE * STATE_SIZE);
-
-    for (int i = 0; i < STATE_SIZE; i++) {
-      for (int j = 0; j < STATE_SIZE; j++) {
-        process_noise_covariance_(i, j) =
-          process_noise_covar_flat[i * STATE_SIZE + j];
+      declare_parameter(parameter, rclcpp::PARAMETER_DOUBLE_ARRAY);
+      if (get_parameter(parameter, covar_flat)) {
+        if (covar_flat.size() == STATE_SIZE) {
+          RCLCPP_INFO_STREAM(
+            get_logger(), "Detected a " << parameter << " parameter with "
+              "length " << STATE_SIZE << ". Assuming diagonal values specified.");
+          covariance.diagonal() = Eigen::VectorXd::Map(covar_flat.data(), STATE_SIZE);
+        } else if (covariance.size() == STATE_SIZE * STATE_SIZE) {
+          covariance = Eigen::MatrixXd::Map(covar_flat.data(), STATE_SIZE, STATE_SIZE);
+        } else {
+          std::string error = "Invalid " + parameter + " specified. Expected a length of " +
+            std::to_string(STATE_SIZE) + " or " + std::to_string(STATE_SIZE * STATE_SIZE) +
+            ", received length " + std::to_string(covar_flat.size());
+          RCLCPP_FATAL_STREAM(get_logger(), error);
+          throw std::invalid_argument(error);
+        }
       }
-    }
+    };
 
-    RF_DEBUG(
-      "Process noise covariance is:\n" <<
-        process_noise_covariance_ << "\n");
+  load_covariance("process_noise_covariance", process_noise_covariance_);
+  RF_DEBUG("Process noise covariance is:\n" << process_noise_covariance_ << "\n");
+  filter_.setProcessNoiseCovariance(process_noise_covariance_);
 
-    filter_.setProcessNoiseCovariance(process_noise_covariance_);
-  }
-
-  // Load up the process noise covariance (from the launch file/parameter
-  // server)
-  initial_estimate_error_covariance_.setZero();
-  std::vector<double> estimate_error_covar_flat;
-
-  this->declare_parameter("initial_estimate_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
-  if (this->get_parameter(
-      "initial_estimate_covariance",
-      estimate_error_covar_flat))
-  {
-    assert(estimate_error_covar_flat.size() == STATE_SIZE * STATE_SIZE);
-
-    for (int i = 0; i < STATE_SIZE; i++) {
-      for (int j = 0; j < STATE_SIZE; j++) {
-        initial_estimate_error_covariance_(i, j) =
-          estimate_error_covar_flat[i * STATE_SIZE + j];
-      }
-    }
-
-    RF_DEBUG(
-      "Initial estimate error covariance is:\n" <<
-        initial_estimate_error_covariance_ << "\n");
-
-    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
-  }
+  load_covariance("initial_estimate_covariance", initial_estimate_error_covariance_);
+  RF_DEBUG("Initial estimate covariance is:\n" << initial_estimate_error_covariance_ << "\n");
+  filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
 }
 
 template<typename T>
