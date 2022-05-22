@@ -1941,11 +1941,11 @@ template<typename T>
 void RosFilter<T>::initialize()
 {
   diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(
-    shared_from_this());
+    this);
   diagnostic_updater_->setHardwareID("none");
 
   world_transform_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
-    shared_from_this());
+    this);
 
   loadParams();
 
