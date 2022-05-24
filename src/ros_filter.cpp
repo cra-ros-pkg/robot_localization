@@ -1112,7 +1112,8 @@ namespace RobotLocalization
         {
           topicSubs_.push_back(
             nh_.subscribe<nav_msgs::Odometry>(odomTopic, odomQueueSize,
-              boost::bind(&RosFilter::odometryCallback, this, _1, odomTopicName, poseCallbackData, twistCallbackData),
+              boost::bind(&RosFilter::odometryCallback, this, boost::placeholders::_1,
+                odomTopicName, poseCallbackData, twistCallbackData),
               ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayOdom)));
         }
         else
@@ -1229,7 +1230,8 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(poseTopic, poseQueueSize,
-              boost::bind(&RosFilter::poseCallback, this, _1, callbackData, worldFrameId_, baseLinkFrameId_, false),
+              boost::bind(&RosFilter::poseCallback, this, boost::placeholders::_1,
+                callbackData, worldFrameId_, baseLinkFrameId_, false),
               ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayPose)));
 
           if (differential)
@@ -1306,7 +1308,8 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<geometry_msgs::TwistWithCovarianceStamped>(twistTopic, twistQueueSize,
-              boost::bind(&RosFilter<T>::twistCallback, this, _1, callbackData, baseLinkFrameId_),
+              boost::bind(&RosFilter<T>::twistCallback, this, boost::placeholders::_1,
+                callbackData, baseLinkFrameId_),
               ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayTwist)));
 
           twistVarCounts[StateMemberVx] += twistUpdateVec[StateMemberVx];
@@ -1476,8 +1479,9 @@ namespace RobotLocalization
 
           topicSubs_.push_back(
             nh_.subscribe<sensor_msgs::Imu>(imuTopic, imuQueueSize,
-              boost::bind(&RosFilter<T>::imuCallback, this, _1, imuTopicName, poseCallbackData, twistCallbackData,
-                accelCallbackData), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayImu)));
+              boost::bind(&RosFilter<T>::imuCallback, this, boost::placeholders::_1,
+                imuTopicName, poseCallbackData, twistCallbackData,
+              accelCallbackData), ros::VoidPtr(), ros::TransportHints().tcpNoDelay(nodelayImu)));
         }
         else
         {

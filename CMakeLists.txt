@@ -49,8 +49,6 @@ if(NOT EIGEN3_FOUND)
   set(EIGEN_PACKAGE Eigen)
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
-
 if(NOT MSVC)
   set_directory_properties(PROPERTIES COMPILE_OPTIONS "-Wall;-Werror")
 endif()
