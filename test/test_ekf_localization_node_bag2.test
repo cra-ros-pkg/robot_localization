@@ -6,7 +6,7 @@
 
     <param name="/use_sim_time" value="true" />
 
-    <node pkg="rosbag" type="play" name="rosbagplay" args="$(find robot_localization)/test/test2.bag --clock -d 5" required="true"/>
+    <node pkg="rosbag" type="play" name="rosbagplay" args="$/home/jacob/accio_ws/src/robot_localization/test/test2.bag --clock -d 5" required="true"/>
 
     <node name="test_ekf_localization_node_bag2_ekf" pkg="robot_localization" type="ekf_localization_node" clear_params="true" >
 
