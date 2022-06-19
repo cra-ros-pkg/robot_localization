@@ -260,7 +260,7 @@ void RosFilter<T>::accelerationCallback(
 
     // Prepare the twist data for inclusion in the filter
     if (prepareAcceleration(
-        msg, topic_name, target_frame,
+        msg, topic_name, target_frame, callback_data.relative_,
         update_vector_corrected, measurement,
         measurement_covariance))
     {
@@ -480,6 +480,9 @@ bool RosFilter<T>::getFilteredAccelMessage(
     message->accel.accel.linear.x = state(StateMemberAx);
     message->accel.accel.linear.y = state(StateMemberAy);
     message->accel.accel.linear.z = state(StateMemberAz);
+    message->accel.accel.angular.x = angular_acceleration_.x();
+    message->accel.accel.angular.y = angular_acceleration_.y();
+    message->accel.accel.angular.z = angular_acceleration_.z();
 
     // Fill the covariance (only the left-upper matrix since we are not
     // estimating the rotational accelerations arround the axes
@@ -488,6 +491,15 @@ bool RosFilter<T>::getFilteredAccelMessage(
         // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
         message->accel.covariance[POSE_SIZE * i + j] = estimate_error_covariance(
           i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
+      }
+    }
+    for (size_t i = ACCELERATION_SIZE; i < POSE_SIZE; i++)
+    {
+      for (size_t j = ACCELERATION_SIZE; j < POSE_SIZE; j++)
+      {
+        // fill out the angular portion. We assume the linear and angular portions are independent.
+        message->accel.covariance[POSE_SIZE * i + j] =
+            angular_acceleration_cov_(i - ACCELERATION_SIZE, j - ACCELERATION_SIZE);
       }
     }
 
@@ -564,10 +576,11 @@ void RosFilter<T>::imuCallback(
       // IMU data gets handled a bit differently, since the message is ambiguous
       // and has only a single frame_id, even though the data in it is reported
       // in two different frames. As we assume users will specify a base_link to
-      // imu transform, we make the target frame base_link_frame_id_ and tell
-      // the poseCallback that it is working with IMU data. This will cause it
-      // to apply different logic to the data.
-      poseCallback(pos_ptr, pose_callback_data, base_link_frame_id_, true);
+      // imu transform, we make the target and child frame base_link_frame_id_ and
+      // tell the poseCallback that it is working with IMU data. This will cause
+      // it to apply different logic to the data.
+      poseCallback(pos_ptr, pose_callback_data, base_link_frame_id_,
+                    base_link_frame_id_, true);
     }
   }
 
@@ -751,6 +764,27 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
   }
 
   RF_DEBUG("\n----- /RosFilter<T>::integrateMeasurements ------\n");
+}
+
+template<typename T>
+void RosFilter<T>::differentiateMeasurements(const rclcpp::Time &current_time){
+  if (filter_.getInitializedStatus()){
+    const double dt = (current_time - last_diff_time_).seconds();
+    const Eigen::VectorXd &state = filter_.getState();
+    tf2::Vector3 new_state_twist_rot(state(StateMemberVroll),
+                                      state(StateMemberVpitch),
+                                      state(StateMemberVyaw));
+    angular_acceleration_ = (new_state_twist_rot - last_state_twist_rot_)/dt;
+    const Eigen::MatrixXd &cov = filter_.getEstimateErrorCovariance();
+    for (size_t i = 0; i < ORIENTATION_SIZE; i++){
+      for (size_t j = 0; j < ORIENTATION_SIZE; j++){
+        angular_acceleration_cov_(i,j) = cov(
+          i+ORIENTATION_V_OFFSET, j+ORIENTATION_V_OFFSET)*2./(dt*dt);
+      }
+    }
+    last_state_twist_rot_ = new_state_twist_rot;
+    last_diff_time_ = current_time;
+  }
 }
 
 template<typename T>
@@ -1164,6 +1198,10 @@ void RosFilter<T>::loadParams()
         relative = false;
       }
 
+      // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
+      bool pose_use_child_frame = this->declare_parameter(
+                      odom_topic_name + std::string("_pose_use_child_frame"), false);
+
       // Check for pose rejection threshold
       double pose_mahalanobis_thresh = this->declare_parameter(
         odom_topic_name +
@@ -1202,11 +1240,11 @@ void RosFilter<T>::loadParams()
 
       const CallbackData pose_callback_data(
         odom_topic_name + "_pose", pose_update_vec, pose_update_sum,
-        differential, relative, pose_mahalanobis_thresh);
+        differential, relative, pose_use_child_frame, pose_mahalanobis_thresh);
 
       const CallbackData twist_callback_data(
         odom_topic_name + "_twist", twist_update_vec, twist_update_sum, false,
-        false, twist_mahalanobis_thresh);
+        false, false, twist_mahalanobis_thresh);
 
       // Store the odometry topic subscribers so they don't go out of scope.
       if (pose_update_sum + twist_update_sum > 0) {
@@ -1344,14 +1382,14 @@ void RosFilter<T>::loadParams()
       if (pose_update_sum > 0) {
         const CallbackData callback_data(pose_topic_name, pose_update_vec,
           pose_update_sum, differential,
-          relative, pose_mahalanobis_thresh);
+          relative, false, pose_mahalanobis_thresh);
 
         std::function<void(const std::shared_ptr<
             geometry_msgs::msg::PoseWithCovarianceStamped>)>
         pose_callback =
           std::bind(
           &RosFilter<T>::poseCallback, this, std::placeholders::_1,
-          callback_data, world_frame_id_, false);
+          callback_data, world_frame_id_, base_link_frame_id_, false);
 
         auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(queue_size));
 
@@ -1439,7 +1477,7 @@ void RosFilter<T>::loadParams()
 
       if (twist_update_sum > 0) {
         const CallbackData callback_data(twist_topic_name, twist_update_vec,
-          twist_update_sum, false, false,
+          twist_update_sum, false, false, false,
           twist_mahalanobis_thresh);
 
         std::function<void(const std::shared_ptr<
@@ -1643,13 +1681,13 @@ void RosFilter<T>::loadParams()
       if (pose_update_sum + twist_update_sum + accelUpdateSum > 0) {
         const CallbackData pose_callback_data(
           imu_topic_name + "_pose", pose_update_vec, pose_update_sum,
-          differential, relative, pose_mahalanobis_thresh);
+          differential, relative, false, pose_mahalanobis_thresh);
         const CallbackData twist_callback_data(
           imu_topic_name + "_twist", twist_update_vec, twist_update_sum,
-          differential, relative, twist_mahalanobis_thresh);
+          differential, relative, false, twist_mahalanobis_thresh);
         const CallbackData accel_callback_data(
           imu_topic_name + "_acceleration", accel_update_vec, accelUpdateSum,
-          differential, relative, accel_mahalanobis_thresh);
+          differential, relative, false, accel_mahalanobis_thresh);
 
         std::function<void(const std::shared_ptr<sensor_msgs::msg::Imu>)>
         imu_callback =
@@ -1712,6 +1750,9 @@ void RosFilter<T>::loadParams()
           " acceleration update vector is " << accel_update_vec);
     }
   } while (more_params);
+
+  angular_acceleration_cov_.resize(ORIENTATION_SIZE, ORIENTATION_SIZE);
+  angular_acceleration_cov_.setZero();
 
   // Now that we've checked if IMU linear acceleration is being used, we can
   // determine our final control parameters
@@ -1863,7 +1904,14 @@ void RosFilter<T>::odometryCallback(
     pos_ptr->header = msg->header;
     pos_ptr->pose = msg->pose;  // Entire pose object, also copies covariance
 
-    poseCallback(pos_ptr, pose_callback_data, world_frame_id_, false);
+    if (pose_callback_data.pose_use_child_frame_)
+    {
+      poseCallback(pos_ptr, pose_callback_data, world_frame_id_, msg->child_frame_id, false);
+    }
+    else
+    {
+      poseCallback(pos_ptr, pose_callback_data, world_frame_id_, base_link_frame_id_, false);
+    }
   }
 
   if (twist_callback_data.update_sum_ > 0) {
@@ -1887,7 +1935,7 @@ template<typename T>
 void RosFilter<T>::poseCallback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
   const CallbackData & callback_data, const std::string & target_frame,
-  const bool imu_data)
+  const std::string &pose_source_frame, const bool imu_data)
 {
   const std::string & topic_name = callback_data.topic_name_;
 
@@ -1935,7 +1983,7 @@ void RosFilter<T>::poseCallback(
 
     // Prepare the pose data for inclusion in the filter
     if (preparePose(
-        msg, topic_name, target_frame, callback_data.differential_,
+        msg, topic_name, target_frame, pose_source_frame, callback_data.differential_,
         callback_data.relative_, imu_data, update_vector_corrected,
         measurement, measurement_covariance))
     {
@@ -2054,8 +2102,10 @@ void RosFilter<T>::periodicUpdate()
   rclcpp::Time cur_time = this->now();
 
   if (toggled_on_) {
-    // Now we'll integrate any measurements we've received
+    // Now we'll integrate any measurements we've received if requested,
+    // and update angular acceleration.
     integrateMeasurements(cur_time);
+    differentiateMeasurements(cur_time);
   } else {
     // Clear out measurements since we're not currently processing new entries
     clearMeasurementQueue();
@@ -2271,7 +2321,7 @@ void RosFilter<T>::setPoseCallback(
   // Prepare the pose data (really just using this to transform it into the
   // target frame). Twist data is going to get zeroed out.
   preparePose(
-    msg, topic_name, world_frame_id_, false, false, false,
+    msg, topic_name, world_frame_id_, base_link_frame_id_, false, false, false,
     update_vector, measurement, measurement_covariance);
 
   // For the state
@@ -2575,6 +2625,7 @@ bool RosFilter<T>::prepareAcceleration(
   const sensor_msgs::msg::Imu::SharedPtr msg,
   const std::string & topic_name,
   const std::string & target_frame,
+  const bool relative,
   std::vector<bool> & update_vector,
   Eigen::VectorXd & measurement,
   Eigen::MatrixXd & measurement_covariance)
@@ -2630,16 +2681,25 @@ bool RosFilter<T>::prepareAcceleration(
     target_frame_trans);
 
   if (can_transform) {
+    const Eigen::VectorXd &state = filter_.getState();
+
+    // Transform to correct frame, prior to removal of gravity.
+    tf2::Vector3 state_twist_rot(state(StateMemberVroll),
+                                  state(StateMemberVpitch),
+                                  state(StateMemberVyaw));
+    acc_tmp = target_frame_trans.getBasis() * acc_tmp + target_frame_trans.getOrigin().cross(angular_acceleration_)
+            - target_frame_trans.getOrigin().cross(state_twist_rot).cross(state_twist_rot);
+
     // We don't know if the user has already handled the removal
     // of normal forces, so we use a parameter
     if (remove_gravitational_acceleration_[topic_name]) {
       tf2::Vector3 normAcc(0, 0, gravitational_acceleration_);
       tf2::Transform trans;
+      tf2::Vector3 rotNorm;
 
       if (std::abs(msg->orientation_covariance[0] + 1) < 1e-9) {
         // Imu message contains no orientation, so we should use orientation
         // from filter state to transform and remove acceleration
-        const Eigen::VectorXd & state = filter_.getState();
         tf2::Matrix3x3 stateTmp;
         stateTmp.setRPY(
           state(StateMemberRoll),
@@ -2647,11 +2707,8 @@ bool RosFilter<T>::prepareAcceleration(
           state(StateMemberYaw));
 
         // transform state orientation to IMU frame
-        tf2::Transform imuFrameTrans;
-        ros_filter_utilities::lookupTransformSafe(
-          tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
-          imuFrameTrans);
-        trans.setBasis(stateTmp * imuFrameTrans.getBasis());
+        trans.setBasis(stateTmp * target_frame_trans.getBasis());
+        rotNorm = trans.getBasis().inverse() * normAcc;
       } else {
         tf2::Quaternion curAttitude;
         tf2::fromMsg(msg->orientation, curAttitude);
@@ -2662,8 +2719,16 @@ bool RosFilter<T>::prepareAcceleration(
           curAttitude.normalize();
         }
         trans.setRotation(curAttitude);
+        if (!relative)
+        {
+          // curAttitude is the true world-frame attitude of the sensor
+          rotNorm = trans.getBasis().inverse() * normAcc;
+        } else {
+          // curAttitude is relative to the initial pose of the sensor.
+          // Assumption: IMU sensor is rigidly attached to the base_link (but a static rotation is possible).
+          rotNorm = target_frame_trans.getBasis().inverse() * trans.getBasis().inverse() * normAcc;
+        }
       }
-      tf2::Vector3 rotNorm = trans.getBasis().inverse() * normAcc;
       acc_tmp.setX(acc_tmp.getX() - rotNorm.getX());
       acc_tmp.setY(acc_tmp.getY() - rotNorm.getY());
       acc_tmp.setZ(acc_tmp.getZ() - rotNorm.getZ());
@@ -2675,15 +2740,6 @@ bool RosFilter<T>::prepareAcceleration(
           acc_tmp << "\n");
     }
 
-    // Transform to correct frame
-    // @todo: This needs to take into account offsets from the origin. Right
-    // now, it assumes that if the sensor is placed at some non-zero offset from
-    // the vehicle's center, that the vehicle turns with constant velocity. This
-    // needs to be something like acc_tmp = target_frame_trans.getBasis() *
-    // acc_tmp - target_frame_trans.getOrigin().cross(rotation_acceleration); We
-    // can get rotational acceleration by differentiating the rotational
-    // velocity (if it's available)
-    acc_tmp = target_frame_trans.getBasis() * acc_tmp;
     maskAcc = target_frame_trans.getBasis() * maskAcc;
 
     // Now use the mask values to determine which update vector values should be
@@ -2755,6 +2811,7 @@ template<typename T>
 bool RosFilter<T>::preparePose(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
   const std::string & topic_name, const std::string & target_frame,
+  const std::string &source_frame,
   const bool differential, const bool relative, const bool imu_data,
   std::vector<bool> & update_vector, Eigen::VectorXd & measurement,
   Eigen::MatrixXd & measurement_covariance)
@@ -2774,16 +2831,19 @@ bool RosFilter<T>::preparePose(
   // @todo: verify that this is necessary still. New IMU handling may
   // have rendered this obsolete.
   std::string final_target_frame;
-  if (target_frame == "" && msg->header.frame_id == "") {
-    // Blank target and message frames mean we can just
-    // use our world_frame
-    final_target_frame = world_frame_id_;
-    pose_tmp.frame_id_ = final_target_frame;
-  } else if (target_frame == "") {
-    // A blank target frame means we shouldn't bother
-    // transforming the data
-    final_target_frame = msg->header.frame_id;
-    pose_tmp.frame_id_ = final_target_frame;
+  if (target_frame == "") {
+    if (msg->header.frame_id == ""){
+      // Blank target and message frames mean we can just
+      // use our world_frame
+      final_target_frame = world_frame_id_;
+      pose_tmp.frame_id_ = final_target_frame;
+    } else {
+      // Under the (target_frame == "") condition,
+      // a blank target frame means we shouldn't bother
+      // transforming the data
+      final_target_frame = msg->header.frame_id;
+      pose_tmp.frame_id_ = final_target_frame;
+    }
   } else {
     // Otherwise, we should use our target frame
     final_target_frame = target_frame;
@@ -2847,6 +2907,18 @@ bool RosFilter<T>::preparePose(
     tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
     rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
     target_frame_trans);
+
+  // handling multiple odometry origins: convert to the origin adherent to base_link.
+  // make pose refer to the baseLinkFrame as source
+  tf2::Transform source_frame_trans;
+  bool can_src_transform = false;
+  if ( source_frame != base_link_frame_id_ )
+  {
+    can_src_transform = ros_filter_utilities::lookupTransformSafe(
+      tf_buffer_.get(), source_frame, base_link_frame_id_,
+      rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
+      source_frame_trans);
+  }
 
   // 3. Make sure we can work with this data before carrying on
   if (can_transform) {
@@ -2928,6 +3000,25 @@ bool RosFilter<T>::preparePose(
     Eigen::MatrixXd rot6d(POSE_SIZE, POSE_SIZE);
     rot6d.setIdentity();
     Eigen::MatrixXd covariance_rotated;
+
+    // Transform pose covariance due to a different pose source origin
+    if (can_src_transform){
+      // (source_frame != base_link_frame_id_) already satisfied
+      rot.setRotation(source_frame_trans.getRotation());
+      for (size_t r_ind = 0; r_ind < POSITION_SIZE; ++r_ind)
+      {
+        rot6d(r_ind, 0) = rot.getRow(r_ind).getX();
+        rot6d(r_ind, 1) = rot.getRow(r_ind).getY();
+        rot6d(r_ind, 2) = rot.getRow(r_ind).getZ();
+        rot6d(r_ind+POSITION_SIZE, 3) = rot.getRow(r_ind).getX();
+        rot6d(r_ind+POSITION_SIZE, 4) = rot.getRow(r_ind).getY();
+        rot6d(r_ind+POSITION_SIZE, 5) = rot.getRow(r_ind).getZ();
+      }
+      // since the transformation is a post-multiply
+      covariance = rot6d.transpose() * covariance.eval() * rot6d;
+    }
+
+    rot6d.setIdentity();
 
     if (imu_data) {
       // Apply the same special logic to the IMU covariance rotation
@@ -3075,7 +3166,7 @@ bool RosFilter<T>::preparePose(
         geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr twist_ptr =
           std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
         twist_ptr->header = msg->header;
-        twist_ptr->header.frame_id = base_link_frame_id_;
+        twist_ptr->header.frame_id = source_frame;
         twist_ptr->twist.twist.linear.x = xVel;
         twist_ptr->twist.twist.linear.y = yVel;
         twist_ptr->twist.twist.linear.z = zVel;
@@ -3115,7 +3206,7 @@ bool RosFilter<T>::preparePose(
         // required frame
         success = prepareTwist(
           twist_ptr, topic_name + "_twist",
-          twist_ptr->header.frame_id, update_vector,
+          base_link_frame_id_, update_vector,
           measurement, measurement_covariance);
       }
 
@@ -3125,6 +3216,13 @@ bool RosFilter<T>::preparePose(
 
       retVal = success;
     } else {
+      // make pose refer to the baseLinkFrame as source
+      // can_src_transform == true => ( sourceFrame != baseLinkFrameId_ )
+      if (can_src_transform)
+      {
+        pose_tmp.setData(pose_tmp * source_frame_trans);
+      }
+
       // 7g. If we're in relative mode, remove the initial measurement
       if (relative) {
         if (initial_measurements_.count(topic_name) == 0) {
