@@ -199,14 +199,14 @@ public:
   //! @param[out] message - The standard ROS odometry message to be filled
   //! @return true if the filter is initialized, false otherwise
   //!
-  bool getFilteredOdometryMessage(nav_msgs::msg::Odometry * message);
+  bool getFilteredOdometryMessage(nav_msgs::msg::Odometry & message);
 
   //! @brief Retrieves the EKF's acceleration output for broadcasting
   //! @param[out] message - The standard ROS acceleration message to be filled
   //! @return true if the filter is initialized, false otherwise
   //!
   bool getFilteredAccelMessage(
-    geometry_msgs::msg::AccelWithCovarianceStamped * message);
+    geometry_msgs::msg::AccelWithCovarianceStamped & message);
 
   //! @brief Callback method for receiving all IMU messages
   //! @param[in] msg - The ROS IMU message to take in.
@@ -244,6 +244,31 @@ public:
   //! @brief callback function which is called for periodic updates
   //!
   void periodicUpdate();
+
+  //! @brief Update filter with data from measurements queue.
+  //! @param[in] time - The time at which to carry out integration.
+  //!
+  void updateFilterWithMeasurements(const rclcpp::Time & time);
+
+  //! @brief publish world to base link transform and position
+  //! with odometry message
+  //! @param[in] filtered_position - filtered position from
+  //! getFilteredOdometryMessage.
+  //! @return true if data is corrected otherwise false.
+  //!
+  bool publishPositionWithOdometry(nav_msgs::msg::Odometry filtered_position);
+
+  //! @brief Update world to base link transform using filtered position.
+  //! @param[in] filtered_position - filtered position from
+  //! getFilteredOdometryMessage.
+  //!
+  void updateWorldToBaseLinkTransform(const nav_msgs::msg::Odometry & filtered_position);
+
+  //! @brief Publish world transform using frame id from filtered position.
+  //! @param[in] filtered_position - filtered position from
+  //! getFilteredOdometryMessage.
+  //!
+  void publishWorldTransform(const nav_msgs::msg::Odometry & filtered_position);
 
   //! @brief Callback method for receiving all odometry messages
   //! @param[in] msg - The ROS odometry message to take in.
@@ -319,7 +344,7 @@ public:
   //! @param[out] message - The standard ROS odometry message to be validated
   //! @return true if the filter output is valid, false otherwise
   //!
-  bool validateFilterOutput(nav_msgs::msg::Odometry * message);
+  bool validateFilterOutput(nav_msgs::msg::Odometry & message);
 
 protected:
   //! @brief Finds the latest filter state before the given timestamp and makes
