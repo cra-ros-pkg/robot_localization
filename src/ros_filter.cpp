@@ -2980,7 +2980,7 @@ namespace RobotLocalization
           // into the target frame, and add the current measurement's rotated covariance
           // to the previous measurement's rotated covariance, and multiply by the time delta.
           Eigen::MatrixXd prevCovarRotated = rot6d * previousMeasurementCovariances_[topicName] * rot6d.transpose();
-          covarianceRotated = (covarianceRotated.eval() + prevCovarRotated) * dt;
+          covarianceRotated = (covarianceRotated.eval() + prevCovarRotated) / pow(dt, 2);
           copyCovariance(covarianceRotated, &(twistPtr->twist.covariance[0]), POSE_SIZE);
 
           RF_DEBUG("Previous measurement covariance:\n" << previousMeasurementCovariances_[topicName] <<
