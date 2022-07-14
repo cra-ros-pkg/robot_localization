@@ -493,13 +493,11 @@ bool RosFilter<T>::getFilteredAccelMessage(
           i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
       }
     }
-    for (size_t i = ACCELERATION_SIZE; i < POSE_SIZE; i++)
-    {
-      for (size_t j = ACCELERATION_SIZE; j < POSE_SIZE; j++)
-      {
+    for (size_t i = ACCELERATION_SIZE; i < POSE_SIZE; i++) {
+      for (size_t j = ACCELERATION_SIZE; j < POSE_SIZE; j++) {
         // fill out the angular portion. We assume the linear and angular portions are independent.
         message->accel.covariance[POSE_SIZE * i + j] =
-            angular_acceleration_cov_(i - ACCELERATION_SIZE, j - ACCELERATION_SIZE);
+          angular_acceleration_cov_(i - ACCELERATION_SIZE, j - ACCELERATION_SIZE);
       }
     }
 
@@ -579,8 +577,9 @@ void RosFilter<T>::imuCallback(
       // imu transform, we make the target and child frame base_link_frame_id_ and
       // tell the poseCallback that it is working with IMU data. This will cause
       // it to apply different logic to the data.
-      poseCallback(pos_ptr, pose_callback_data, base_link_frame_id_,
-                    base_link_frame_id_, true);
+      poseCallback(
+        pos_ptr, pose_callback_data, base_link_frame_id_,
+        base_link_frame_id_, true);
     }
   }
 
@@ -767,24 +766,27 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
 }
 
 template<typename T>
-void RosFilter<T>::differentiateMeasurements(const rclcpp::Time &current_time){
-  if (filter_.getInitializedStatus()){
-    const double dt = (current_time - last_diff_time_).seconds();
-    const Eigen::VectorXd &state = filter_.getState();
-    tf2::Vector3 new_state_twist_rot(state(StateMemberVroll),
-                                      state(StateMemberVpitch),
-                                      state(StateMemberVyaw));
-    angular_acceleration_ = (new_state_twist_rot - last_state_twist_rot_)/dt;
-    const Eigen::MatrixXd &cov = filter_.getEstimateErrorCovariance();
+void RosFilter<T>::differentiateMeasurements(const rclcpp::Time &current_time)
+{
+  if (filter_.getInitializedStatus()) {
+    const double time_now = filter_utilities::toSec(current_time);
+    const double dt = time_now - last_diff_time_;
+    const Eigen::VectorXd & state = filter_.getState();
+    tf2::Vector3 new_state_twist_rot(
+      state(StateMemberVroll),
+      state(StateMemberVpitch),
+      state(StateMemberVyaw));
+    angular_acceleration_ = (new_state_twist_rot - last_state_twist_rot_) / dt;
+    const Eigen::MatrixXd & cov = filter_.getEstimateErrorCovariance();
     for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
       for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
-        angular_acceleration_cov_(i,j) =
+        angular_acceleration_cov_(i, j) =
           cov(i + ORIENTATION_V_OFFSET, j + ORIENTATION_V_OFFSET) * 2. /
           ( dt * dt );
       }
     }
     last_state_twist_rot_ = new_state_twist_rot;
-    last_diff_time_ = current_time;
+    last_diff_time_ = time_now;
   }
 }
 
@@ -1201,7 +1203,7 @@ void RosFilter<T>::loadParams()
 
       // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
       bool pose_use_child_frame = this->declare_parameter(
-                      odom_topic_name + std::string("_pose_use_child_frame"), false);
+        odom_topic_name + std::string("_pose_use_child_frame"), false);
 
       // Check for pose rejection threshold
       double pose_mahalanobis_thresh = this->declare_parameter(
@@ -1905,12 +1907,9 @@ void RosFilter<T>::odometryCallback(
     pos_ptr->header = msg->header;
     pos_ptr->pose = msg->pose;  // Entire pose object, also copies covariance
 
-    if (pose_callback_data.pose_use_child_frame_)
-    {
+    if (pose_callback_data.pose_use_child_frame_) {
       poseCallback(pos_ptr, pose_callback_data, world_frame_id_, msg->child_frame_id, false);
-    }
-    else
-    {
+    } else {
       poseCallback(pos_ptr, pose_callback_data, world_frame_id_, base_link_frame_id_, false);
     }
   }
@@ -1936,7 +1935,7 @@ template<typename T>
 void RosFilter<T>::poseCallback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
   const CallbackData & callback_data, const std::string & target_frame,
-  const std::string &pose_source_frame, const bool imu_data)
+  const std::string & pose_source_frame, const bool imu_data)
 {
   const std::string & topic_name = callback_data.topic_name_;
 
@@ -2683,14 +2682,17 @@ bool RosFilter<T>::prepareAcceleration(
     target_frame_trans);
 
   if (can_transform) {
-    const Eigen::VectorXd &state = filter_.getState();
+    const Eigen::VectorXd & state = filter_.getState();
 
     // Transform to correct frame, prior to removal of gravity.
-    tf2::Vector3 state_twist_rot(state(StateMemberVroll),
-                                  state(StateMemberVpitch),
-                                  state(StateMemberVyaw));
-    acc_tmp = target_frame_trans.getBasis() * acc_tmp + target_frame_trans.getOrigin().cross(angular_acceleration_)
-            - target_frame_trans.getOrigin().cross(state_twist_rot).cross(state_twist_rot);
+    tf2::Vector3 state_twist_rot(
+      state(StateMemberVroll),
+      state(StateMemberVpitch),
+      state(StateMemberVyaw));
+    acc_tmp = target_frame_trans.getBasis() * acc_tmp + 
+      target_frame_trans.getOrigin().cross(angular_acceleration_) -
+      target_frame_trans.getOrigin().cross(state_twist_rot).cross(
+      state_twist_rot);
 
     // We don't know if the user has already handled the removal
     // of normal forces, so we use a parameter
@@ -2721,8 +2723,7 @@ bool RosFilter<T>::prepareAcceleration(
           curAttitude.normalize();
         }
         trans.setRotation(curAttitude);
-        if (!relative)
-        {
+        if (!relative) {
           // curAttitude is the true world-frame attitude of the sensor
           rotNorm = trans.getBasis().inverse() * normAcc;
         } else {
@@ -2813,7 +2814,7 @@ template<typename T>
 bool RosFilter<T>::preparePose(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
   const std::string & topic_name, const std::string & target_frame,
-  const std::string &source_frame,
+  const std::string & source_frame,
   const bool differential, const bool relative, const bool imu_data,
   std::vector<bool> & update_vector, Eigen::VectorXd & measurement,
   Eigen::MatrixXd & measurement_covariance)
@@ -2834,7 +2835,7 @@ bool RosFilter<T>::preparePose(
   // have rendered this obsolete.
   std::string final_target_frame;
   if (target_frame == "") {
-    if (msg->header.frame_id == ""){
+    if (msg->header.frame_id == "") {
       // Blank target and message frames mean we can just
       // use our world_frame
       final_target_frame = world_frame_id_;
@@ -2914,8 +2915,7 @@ bool RosFilter<T>::preparePose(
   // make pose refer to the baseLinkFrame as source
   tf2::Transform source_frame_trans;
   bool can_src_transform = false;
-  if ( source_frame != base_link_frame_id_ )
-  {
+  if ( source_frame != base_link_frame_id_ ) {
     can_src_transform = ros_filter_utilities::lookupTransformSafe(
       tf_buffer_.get(), source_frame, base_link_frame_id_,
       rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
@@ -3004,11 +3004,10 @@ bool RosFilter<T>::preparePose(
     Eigen::MatrixXd covariance_rotated;
 
     // Transform pose covariance due to a different pose source origin
-    if (can_src_transform){
+    if (can_src_transform) {
       // (source_frame != base_link_frame_id_) already satisfied
       rot.setRotation(source_frame_trans.getRotation());
-      for (size_t r_ind = 0; r_ind < POSITION_SIZE; ++r_ind)
-      {
+      for (size_t r_ind = 0; r_ind < POSITION_SIZE; ++r_ind) {
         // let's borrow rot6d here...
         rot6d(r_ind, 0) = rot.getRow(r_ind).getX();
         rot6d(r_ind, 1) = rot.getRow(r_ind).getY();
@@ -3221,8 +3220,7 @@ bool RosFilter<T>::preparePose(
     } else {
       // make pose refer to the baseLinkFrame as source
       // can_src_transform == true => ( sourceFrame != baseLinkFrameId_ )
-      if (can_src_transform)
-      {
+      if (can_src_transform) {
         pose_tmp.setData(pose_tmp * source_frame_trans);
       }
 

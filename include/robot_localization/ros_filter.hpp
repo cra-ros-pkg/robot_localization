@@ -283,7 +283,7 @@ public:
   void poseCallback(
     const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
     const CallbackData & callback_data, const std::string & target_frame,
-    const std::string &pose_source_frame,
+    const std::string & pose_source_frame,
     const bool imu_data);
 
   //! @brief initialize the filter
@@ -473,7 +473,7 @@ protected:
   bool preparePose(
     const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg,
     const std::string & topic_name, const std::string & target_frame,
-    const std::string &source_frame,
+    const std::string & source_frame,
     const bool differential, const bool relative, const bool imu_data,
     std::vector<bool> & update_vector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurement_covariance);
@@ -672,9 +672,9 @@ protected:
   //!
   std::map<std::string, rclcpp::Time> last_message_times_;
 
-  //! @brief Last time mark that time-differentiation is calculated
+  //! @brief Last time mark that time-differentiation is calculated, in seconds
   //!
-  rclcpp::Time last_diff_time_;
+  double last_diff_time_;
 
   //! @brief Last record of filtered angular velocity
   //!
