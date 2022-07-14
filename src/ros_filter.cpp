@@ -766,7 +766,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
 }
 
 template<typename T>
-void RosFilter<T>::differentiateMeasurements(const rclcpp::Time &current_time)
+void RosFilter<T>::differentiateMeasurements(const rclcpp::Time & current_time)
 {
   if (filter_.getInitializedStatus()) {
     const double time_now = filter_utilities::toSec(current_time);
@@ -2689,7 +2689,7 @@ bool RosFilter<T>::prepareAcceleration(
       state(StateMemberVroll),
       state(StateMemberVpitch),
       state(StateMemberVyaw));
-    acc_tmp = target_frame_trans.getBasis() * acc_tmp + 
+    acc_tmp = target_frame_trans.getBasis() * acc_tmp +
       target_frame_trans.getOrigin().cross(angular_acceleration_) -
       target_frame_trans.getOrigin().cross(state_twist_rot).cross(
       state_twist_rot);
@@ -2728,7 +2728,8 @@ bool RosFilter<T>::prepareAcceleration(
           rotNorm = trans.getBasis().inverse() * normAcc;
         } else {
           // curAttitude is relative to the initial pose of the sensor.
-          // Assumption: IMU sensor is rigidly attached to the base_link (but a static rotation is possible).
+          // Assumption: IMU sensor is rigidly attached to the base_link
+          // (but a static rotation is possible).
           rotNorm = target_frame_trans.getBasis().inverse() * trans.getBasis().inverse() * normAcc;
         }
       }
@@ -2915,7 +2916,7 @@ bool RosFilter<T>::preparePose(
   // make pose refer to the baseLinkFrame as source
   tf2::Transform source_frame_trans;
   bool can_src_transform = false;
-  if ( source_frame != base_link_frame_id_ ) {
+  if (source_frame != base_link_frame_id_) {
     can_src_transform = ros_filter_utilities::lookupTransformSafe(
       tf_buffer_.get(), source_frame, base_link_frame_id_,
       rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
@@ -3012,9 +3013,9 @@ bool RosFilter<T>::preparePose(
         rot6d(r_ind, 0) = rot.getRow(r_ind).getX();
         rot6d(r_ind, 1) = rot.getRow(r_ind).getY();
         rot6d(r_ind, 2) = rot.getRow(r_ind).getZ();
-        rot6d(r_ind+POSITION_SIZE, 3) = rot.getRow(r_ind).getX();
-        rot6d(r_ind+POSITION_SIZE, 4) = rot.getRow(r_ind).getY();
-        rot6d(r_ind+POSITION_SIZE, 5) = rot.getRow(r_ind).getZ();
+        rot6d(r_ind + POSITION_SIZE, 3) = rot.getRow(r_ind).getX();
+        rot6d(r_ind + POSITION_SIZE, 4) = rot.getRow(r_ind).getY();
+        rot6d(r_ind + POSITION_SIZE, 5) = rot.getRow(r_ind).getZ();
       }
       // since the transformation is a post-multiply
       covariance = rot6d.transpose() * covariance.eval() * rot6d;
