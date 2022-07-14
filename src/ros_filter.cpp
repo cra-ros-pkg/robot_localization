@@ -776,10 +776,11 @@ void RosFilter<T>::differentiateMeasurements(const rclcpp::Time &current_time){
                                       state(StateMemberVyaw));
     angular_acceleration_ = (new_state_twist_rot - last_state_twist_rot_)/dt;
     const Eigen::MatrixXd &cov = filter_.getEstimateErrorCovariance();
-    for (size_t i = 0; i < ORIENTATION_SIZE; i++){
-      for (size_t j = 0; j < ORIENTATION_SIZE; j++){
-        angular_acceleration_cov_(i,j) = cov(
-          i+ORIENTATION_V_OFFSET, j+ORIENTATION_V_OFFSET)*2./(dt*dt);
+    for (size_t i = 0; i < ORIENTATION_SIZE; i++) {
+      for (size_t j = 0; j < ORIENTATION_SIZE; j++) {
+        angular_acceleration_cov_(i,j) =
+          cov(i + ORIENTATION_V_OFFSET, j + ORIENTATION_V_OFFSET) * 2. /
+          ( dt * dt );
       }
     }
     last_state_twist_rot_ = new_state_twist_rot;
@@ -2320,6 +2321,7 @@ void RosFilter<T>::setPoseCallback(
 
   // Prepare the pose data (really just using this to transform it into the
   // target frame). Twist data is going to get zeroed out.
+  // Since pose messages do not provide a child_frame_id, it defaults to baseLinkFrameId_
   preparePose(
     msg, topic_name, world_frame_id_, base_link_frame_id_, false, false, false,
     update_vector, measurement, measurement_covariance);
@@ -3007,6 +3009,7 @@ bool RosFilter<T>::preparePose(
       rot.setRotation(source_frame_trans.getRotation());
       for (size_t r_ind = 0; r_ind < POSITION_SIZE; ++r_ind)
       {
+        // let's borrow rot6d here...
         rot6d(r_ind, 0) = rot.getRow(r_ind).getX();
         rot6d(r_ind, 1) = rot.getRow(r_ind).getY();
         rot6d(r_ind, 2) = rot.getRow(r_ind).getZ();
@@ -3017,7 +3020,7 @@ bool RosFilter<T>::preparePose(
       // since the transformation is a post-multiply
       covariance = rot6d.transpose() * covariance.eval() * rot6d;
     }
-
+    // return rot6d to its initial state.
     rot6d.setIdentity();
 
     if (imu_data) {
