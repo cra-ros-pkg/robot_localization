@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.7.4 (2022-07-27)
+------------------
 * Fix odometry and acceleration processing pipeline (`#753 <https://github.com/cra-ros-pkg/robot_localization/issues/753>`_)
 * Use default CXX, need to specify boost::placeholders::_1 instead of just _1 (`#750 <https://github.com/cra-ros-pkg/robot_localization/issues/750>`_)
 * Fix odometry msgs with child frame other than baseLink (`#728 <https://github.com/cra-ros-pkg/robot_localization/issues/728>`_)
