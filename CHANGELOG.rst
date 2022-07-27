@@ -2,6 +2,21 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix odometry and acceleration processing pipeline (`#753 <https://github.com/cra-ros-pkg/robot_localization/issues/753>`_)
+* Use default CXX, need to specify boost::placeholders::_1 instead of just _1 (`#750 <https://github.com/cra-ros-pkg/robot_localization/issues/750>`_)
+* Fix odometry msgs with child frame other than baseLink (`#728 <https://github.com/cra-ros-pkg/robot_localization/issues/728>`_)
+* update documentation (`#723 <https://github.com/cra-ros-pkg/robot_localization/issues/723>`_)
+* Fix unused-parameter warning (`#721 <https://github.com/cra-ros-pkg/robot_localization/issues/721>`_)
+* Fix tf lookup timestamp during map->odom publication (`#719 <https://github.com/cra-ros-pkg/robot_localization/issues/719>`_)
+* UKF cleanup (`#671 <https://github.com/cra-ros-pkg/robot_localization/issues/671>`_)
+* Added geographiclib to catkin exported depends (`#709 <https://github.com/cra-ros-pkg/robot_localization/issues/709>`_)
+* Make the navsat tf frame name parametric (`#699 <https://github.com/cra-ros-pkg/robot_localization/issues/699>`_)
+* Propagate the suppression of tf warnings (`#705 <https://github.com/cra-ros-pkg/robot_localization/issues/705>`_)
+* Fix typo in base_link_frame_output name. (`#701 <https://github.com/cra-ros-pkg/robot_localization/issues/701>`_)
+* Contributors: AR Dabbour, Carlos Agüero, Haoguang Yang, J.P.S, Joshua Owen, Leonardo Hemerly, Lucas Walter, Marcus Scheunemann, Stephen Williams, Tom Moore
+
 2.7.3 (2021-07-23)
 ------------------
 * Prevent node from crashing on invalid UTM zone, but throw ROS_ERROR to notify user (`#682 <https://github.com/cra-ros-pkg/robot_localization/issues/682>`_)
