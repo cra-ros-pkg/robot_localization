@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.6.12 (2022-08-08)
+-------------------
 * Moved GeographicLib from build_depend to depend (`#689 <https://github.com/cra-ros-pkg/robot_localization/issues/689>`_)
 * Contributors: Joshua Owen
 
