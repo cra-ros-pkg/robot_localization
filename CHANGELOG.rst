@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Moved GeographicLib from build_depend to depend (`#689 <https://github.com/cra-ros-pkg/robot_localization/issues/689>`_)
+* Contributors: Joshua Owen
+
 2.6.11 (2021-07-23)
 -------------------
 * Prevent node from crashing on invalid UTM zone, but throw ROS_ERROR to notify user (`#683 <https://github.com/cra-ros-pkg/robot_localization/issues/683>`_)
