@@ -1024,6 +1024,8 @@ namespace RobotLocalization
     // Check if tf warnings should be suppressed
     nh_.getParam("/silent_tf_failure", tfSilentFailure_);
 
+    ROS_WARN_STREAM("tfSilentFailure_ = " << tfSilentFailure_ );
+
     // Debugging writes to file
     RF_DEBUG("tf_prefix is " << tfPrefix <<
              "\nmap_frame is " << mapFrameId_ <<
@@ -2022,7 +2024,8 @@ namespace RobotLocalization
                 odomFrameId_,
                 filteredPosition.header.stamp,
                 tfTimeout_,
-                baseLinkOdomTrans))
+                baseLinkOdomTrans,
+		tfSilentFailure_))
           {
             tf2::Transform worldBaseLinkTrans;
             tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
