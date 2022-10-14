@@ -2022,7 +2022,8 @@ namespace RobotLocalization
                 odomFrameId_,
                 filteredPosition.header.stamp,
                 tfTimeout_,
-                baseLinkOdomTrans))
+                baseLinkOdomTrans,
+                tfSilentFailure_))
           {
             tf2::Transform worldBaseLinkTrans;
             tf2::fromMsg(worldBaseLinkTransMsg_.transform, worldBaseLinkTrans);
