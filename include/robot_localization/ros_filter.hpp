@@ -746,6 +746,12 @@ protected:
   //!
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr control_sub_;
 
+  //! @brief Subscribes to the set_state topic 
+  //! Message type is robot_localization/State.
+  //!
+  rclcpp::Subscription<robot_localization::msg::State>::SharedPtr
+    set_state_sub_;
+
   //! @brief Subscribes to the set_pose topic (usually published from rviz).
   //! Message type is geometry_msgs/PoseWithCovarianceStamped.
   //!
@@ -757,6 +763,12 @@ protected:
   //!
   rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr
     set_pose_service_;
+
+  //! @brief Service that allows another node to change the current state
+  //! (not just the pose) and recieve a confirmation. Uses a custom SetState service.
+  //!
+  rclcpp::Service<robot_localization::srv::SetState>::SharedPtr
+    set_state_service_;
 
   //! @brief Service that allows another node to enable the filter. Uses a
   //! standard Empty service.
