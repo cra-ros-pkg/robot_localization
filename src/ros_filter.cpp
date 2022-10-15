@@ -51,7 +51,7 @@
 #include <utility>
 #include <memory>
 #include <vector>
-
+#include <Eigen/Dense>
 namespace robot_localization
 {
 using namespace std::chrono_literals;
@@ -2241,6 +2241,148 @@ bool RosFilter<T>::setPoseSrvCallback(
   setPoseCallback(msg);
 
   return true;
+}
+
+template<typename T>
+void RosFilter<T>::setStateCallback(const robot_localization::msg::State::SharedPtr msg)
+{
+  std::string topic_name("set_state");
+  std::vector<bool> update_vector(msg->update_vector.begin(), msg->update_vector.end());
+
+  // Get rid of any initial poses (pretend we've never had a measurement)
+  initial_measurements_.clear();
+  previous_measurements_.clear();
+  previous_measurement_covariances_.clear();
+
+  clearMeasurementQueue();
+
+  filter_state_history_.clear();
+  measurement_history_.clear();
+
+  // Also set the last set pose time, so we ignore all messages
+  // that occur before it
+  last_set_pose_time_ = msg->pose.header.stamp;
+
+  // Set the state vector to the reported pose
+  Eigen::VectorXd measurement(STATE_SIZE);
+  Eigen::MatrixXd measurement_covariance(STATE_SIZE, STATE_SIZE);
+
+  // We only measure pose variables, so initialize the vector to 0
+  measurement.setZero();
+
+  // Set this to the identity and let the message reset it
+  measurement_covariance.setIdentity();
+  measurement_covariance *= 1e-6;
+
+  Eigen::Matrix<double, 6, 6, Eigen::RowMajor> msg_pose_covariance;
+  msg_pose_covariance.setZero();
+  std::copy_n(msg->pose.pose.covariance.begin(), msg->pose.pose.covariance.size(), msg_pose_covariance.data());
+  if (msg_pose_covariance.isApprox(msg_pose_covariance.transpose())){
+    Eigen::VectorXcd eigenvalues = msg_pose_covariance.eigenvalues();
+    bool all_real_and_nonnegative = true;
+    for(unsigned int i =0; i < eigenvalues.size(); i++) { 
+      std::complex< double > eigval = eigenvalues[i];
+      all_real_and_nonnegative = all_real_and_nonnegative 
+        && eigval.real()>0.0 && std::abs(eigval.imag())<1E-6;
+    }
+    if(all_real_and_nonnegative){
+      RCLCPP_INFO(get_logger(), "Setting pose");
+      // Prepare the pose data (really just using this to transform it into the
+      // target frame). Twist data is going to get zeroed out, but we'll set it later.
+      std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped> pose_ptr = std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>(msg->pose);
+      preparePose(
+        pose_ptr, topic_name, world_frame_id_, false, false, false,
+          update_vector, measurement, measurement_covariance);
+    }else{
+      RCLCPP_INFO(get_logger(), "Not setting pose because pose covariance is not positive definite");
+    }
+  }else{
+    RCLCPP_INFO(get_logger(), "Not setting pose because pose covariance is not symmetric");
+  }
+
+  Eigen::Matrix<double, 6, 6, Eigen::RowMajor> msg_twist_covariance;
+  msg_twist_covariance.setZero();
+  std::copy_n(msg->twist.twist.covariance.begin(), msg->twist.twist.covariance.size(), msg_twist_covariance.data());
+  if (msg_twist_covariance.isApprox(msg_twist_covariance.transpose())){
+    Eigen::VectorXcd eigenvalues = msg_twist_covariance.eigenvalues();
+    bool all_real_and_nonnegative = true;
+    for(unsigned int i =0; i < eigenvalues.size(); i++) { 
+      std::complex< double > eigval = eigenvalues[i];
+      all_real_and_nonnegative = all_real_and_nonnegative 
+        && eigval.real()>0.0 && std::abs(eigval.imag())<1E-6;
+    }
+    if(all_real_and_nonnegative) {
+      // Prepare the twist data.
+      RCLCPP_INFO(get_logger(), "Setting twist");
+      std::shared_ptr<geometry_msgs::msg::TwistWithCovarianceStamped> twist_ptr = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>(msg->twist);
+      prepareTwist(
+        twist_ptr, topic_name, world_frame_id_, update_vector, 
+          measurement, measurement_covariance);
+    }else{
+      RCLCPP_INFO(get_logger(), "Not setting twist because twist covariance is not positive definite");
+    }
+  }else{
+      RCLCPP_INFO(get_logger(), "Not setting twist because twist covariance is not symmetric");
+  }
+
+  Eigen::Matrix<double, 6, 6, Eigen::RowMajor> msg_accel_covariance_full;
+  msg_accel_covariance_full.setZero();
+  std::copy_n(msg->accel.accel.covariance.begin(), msg->accel.accel.covariance.size(), msg_accel_covariance_full.data());
+  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> msg_accel_covariance = msg_accel_covariance_full.block<3,3>(0,0);
+  if (msg_accel_covariance.isApprox(msg_accel_covariance.transpose())) {
+    Eigen::Vector3cd eigenvalues = msg_accel_covariance.eigenvalues();
+    bool all_real_and_nonnegative = true;
+    for(unsigned int i =0; i < eigenvalues.size(); i++) { 
+      std::complex< double > eigval = eigenvalues[i];
+      all_real_and_nonnegative = all_real_and_nonnegative 
+        && eigval.real()>0.0 && std::abs(eigval.imag())<1E-6;
+    }
+    if(all_real_and_nonnegative){
+      // Prepare the acceleration data.
+      RCLCPP_INFO(get_logger(), "Setting acceleration");
+      std::shared_ptr<sensor_msgs::msg::Imu> imu_ptr(new sensor_msgs::msg::Imu);
+      std::vector<bool> update_vector_imu(msg->update_vector.begin(), msg->update_vector.end());
+      update_vector_imu[StateMemberVroll]=update_vector_imu[StateMemberVpitch]=update_vector_imu[StateMemberVyaw]=
+      update_vector_imu[StateMemberRoll]=update_vector_imu[StateMemberPitch]=update_vector_imu[StateMemberYaw]=false;
+      imu_ptr->set__header(msg->accel.header);
+      imu_ptr->set__linear_acceleration(msg->accel.accel.accel.linear);
+      std::copy_n(msg_accel_covariance.data(), msg_accel_covariance.size(), imu_ptr->linear_acceleration_covariance.data());
+      prepareAcceleration(
+        imu_ptr, topic_name, world_frame_id_, update_vector_imu, 
+          measurement, measurement_covariance);
+    }else{
+      RCLCPP_INFO(get_logger(), "Not setting acceleration because acceleration covariance is not positive definite");
+    }
+  }else{
+    RCLCPP_INFO(get_logger(), "Not setting acceleration because acceleration covariance is not symmetric");
+  }
+  // For the state
+  filter_.setState(measurement);
+  filter_.setEstimateErrorCovariance(measurement_covariance);
+
+  filter_.setLastMeasurementTime(this->now());
+}
+template<typename T>
+bool RosFilter<T>::setStateSrvCallback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<robot_localization::srv::SetState::Request> request,
+  std::shared_ptr<robot_localization::srv::SetState::Response> response)
+{
+  RCLCPP_DEBUG(get_logger(), "--setStateSrvCallback--");
+  RCLCPP_DEBUG(get_logger(), "sequence number: %lld. writer guid: %s", request_header->sequence_number, std::string((char*)&(request_header->writer_guid[0])).c_str());
+  try
+  {
+    std::shared_ptr<robot_localization::msg::State> state_ptr = std::make_shared<robot_localization::msg::State>(request->state);
+    setStateCallback(state_ptr);
+    response->set__success(true);
+  }
+  catch(const std::exception& e)
+  {
+    RCLCPP_ERROR(get_logger(), "Unable to set EKF state: %s" , e.what());
+    response->set__success(false);
+  }
+  return response->success;
+  
 }
 
 template<typename T>

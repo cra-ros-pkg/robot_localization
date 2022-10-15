@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
 #include <robot_localization/srv/set_pose.hpp>
+#include <robot_localization/srv/set_state.hpp>
 #include <robot_localization/srv/toggle_filter_processing.hpp>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -279,6 +280,23 @@ public:
   //!
   void initialize();
 
+  //! @brief Topic callback for manually setting/resetting the whole internal state estimate of the filter (not just the pose)
+  //!
+  //! @param[in] msg - Custom message with pose, twist, and accel information
+  void setStateCallback(
+    const robot_localization::msg::State::SharedPtr msg);
+  
+  //! @brief Service callback for manually setting/resetting the whole internal state estimate of the filter (not just the pose)
+  //!
+  //! @param[in] request - Custom service request with pose, twist, and accel information
+  //! @return true if successful, false if not
+  bool setStateSrvCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<robot_localization::srv::SetState::Request> request,
+    std::shared_ptr<robot_localization::srv::SetState::Response> response);
+
+
+    
   //! @brief Callback method for manually setting/resetting the internal pose
   //! estimate
   //! @param[in] msg - The ROS stamped pose with covariance message to take in
