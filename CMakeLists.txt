@@ -124,6 +124,7 @@ ament_target_dependencies(
   tf2_geometry_msgs
   tf2_ros
   yaml_cpp_vendor
+  rclcpp_components
 )
 
 target_link_libraries(
