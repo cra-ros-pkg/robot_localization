@@ -38,7 +38,7 @@
   <depend>tf2_eigen</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
-  <depend>yaml_cpp_vendor</depend>
+  <!-- <depend>yaml_cpp_vendor</depend> -->
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>builtin_interfaces</test_depend>
@@ -55,6 +55,6 @@
   <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
-    <build_type>ament_cmake</build_type>
+    <!-- <build_type>ament_cmake</build_type> -->
   </export>
 </package>
