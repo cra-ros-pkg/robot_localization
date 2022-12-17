@@ -2330,7 +2330,7 @@ void RosFilter<T>::setStateCallback(const robot_localization::msg::State::Shared
       RCLCPP_INFO(get_logger(), "Setting twist");
       std::shared_ptr<geometry_msgs::msg::TwistWithCovarianceStamped> twist_ptr = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>(msg->twist);
       prepareTwist(
-        twist_ptr, topic_name, world_frame_id_, update_vector, 
+        twist_ptr, topic_name, base_link_frame_id_, update_vector, 
           measurement, measurement_covariance);
     }else{
       RCLCPP_INFO(get_logger(), "Not setting twist because twist covariance is not positive definite");
@@ -2362,7 +2362,7 @@ void RosFilter<T>::setStateCallback(const robot_localization::msg::State::Shared
       imu_ptr->set__linear_acceleration(msg->accel.accel.accel.linear);
       std::copy_n(msg_accel_covariance.data(), msg_accel_covariance.size(), imu_ptr->linear_acceleration_covariance.data());
       prepareAcceleration(
-        imu_ptr, topic_name, world_frame_id_, update_vector_imu, 
+        imu_ptr, topic_name, base_link_frame_id_, update_vector_imu, 
           measurement, measurement_covariance);
     }else{
       RCLCPP_INFO(get_logger(), "Not setting acceleration because acceleration covariance is not positive definite");
