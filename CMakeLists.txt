@@ -332,6 +332,11 @@ install(TARGETS ${library_name}
   RUNTIME DESTINATION bin
 )
 
+install(DIRECTORY
+  include/
+  DESTINATION include/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS)
+
 # Install params config files.
 install(DIRECTORY
   params
