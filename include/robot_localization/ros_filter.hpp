@@ -196,17 +196,14 @@ public:
   }
 
   //! @brief Retrieves the EKF's output for broadcasting
-  //! @param[out] message - The standard ROS odometry message to be filled
-  //! @return true if the filter is initialized, false otherwise
+  //! @return The standard ROS odometry message if the filter is initialized, null otherwise
   //!
-  bool getFilteredOdometryMessage(nav_msgs::msg::Odometry & message);
+  std::optional<nav_msgs::msg::Odometry> getFilteredOdometryMessage();
 
   //! @brief Retrieves the EKF's acceleration output for broadcasting
-  //! @param[out] message - The standard ROS acceleration message to be filled
-  //! @return true if the filter is initialized, false otherwise
+  //! @return The standard ROS acceleration message if the filter is initialized, null otherwise
   //!
-  bool getFilteredAccelMessage(
-    geometry_msgs::msg::AccelWithCovarianceStamped & message);
+  std::optional<geometry_msgs::msg::AccelWithCovarianceStamped> getFilteredAccelMessage();
 
   //! @brief Callback method for receiving all IMU messages
   //! @param[in] msg - The ROS IMU message to take in.

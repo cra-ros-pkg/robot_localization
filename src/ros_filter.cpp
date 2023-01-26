@@ -364,10 +364,11 @@ void RosFilter<T>::forceTwoD(
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
+std::optional<nav_msgs::msg::Odometry> RosFilter<T>::getFilteredOdometryMessage()
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
+    nav_msgs::msg::Odometry message;
     // Grab our current state and covariance estimates
     const Eigen::VectorXd & state = filter_.getState();
     const Eigen::MatrixXd & estimate_error_covariance =
@@ -418,17 +419,18 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry & message)
     message.header.stamp = filter_.getLastMeasurementTime();
     message.header.frame_id = world_frame_id_;
     message.child_frame_id = base_link_output_frame_id_;
+    return message;
   }
 
-  return filter_.getInitializedStatus();
+  return {};
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredAccelMessage(
-  geometry_msgs::msg::AccelWithCovarianceStamped & message)
+std::optional<geometry_msgs::msg::AccelWithCovarianceStamped> RosFilter<T>::getFilteredAccelMessage()
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
+    geometry_msgs::msg::AccelWithCovarianceStamped message;
     // Grab our current state and covariance estimates
     const Eigen::VectorXd & state = filter_.getState();
     const Eigen::MatrixXd & estimate_error_covariance =
@@ -452,9 +454,10 @@ bool RosFilter<T>::getFilteredAccelMessage(
     // Fill header information
     message.header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
     message.header.frame_id = base_link_output_frame_id_;
+    return message;
   }
 
-  return filter_.getInitializedStatus();
+  return {};
 }
 
 template<typename T>
@@ -2011,20 +2014,14 @@ void RosFilter<T>::periodicUpdate()
   updateFilterWithMeasurements(cur_time);
 
   // Get latest state and publish it
-  {
-    nav_msgs::msg::Odometry filtered_position;
-    if (getFilteredOdometryMessage(filtered_position)) {
-      corrected_data = publishPositionWithOdometry(std::move(filtered_position));
-    }
+  if (auto filtered_position = getFilteredOdometryMessage()) {
+    corrected_data = publishPositionWithOdometry(*filtered_position);
   }
 
   // Publish the acceleration if desired and filter is initialized
-  {
-    geometry_msgs::msg::AccelWithCovarianceStamped filtered_acceleration;
-    if (!corrected_data && publish_acceleration_ &&
-      getFilteredAccelMessage(filtered_acceleration))
-    {
-      accel_pub_->publish(std::move(filtered_acceleration));
+  if (!corrected_data && publish_acceleration_) {
+    if (auto filtered_acceleration = getFilteredAccelMessage()) {
+      accel_pub_->publish(*filtered_acceleration);
     }
   }
 
