@@ -2072,7 +2072,7 @@ void RosFilter<T>::updateFilterWithMeasurements(const rclcpp::Time & time)
 }
 
 template<typename T>
-bool RosFilter<T>::publishPositionWithOdometry(nav_msgs::msg::Odometry filtered_position)
+bool RosFilter<T>::publishPositionWithOdometry(const nav_msgs::msg::Odometry & filtered_position)
 {
   updateWorldToBaseLinkTransform(filtered_position);
 
@@ -2149,9 +2149,10 @@ void RosFilter<T>::publishWorldTransform(const nav_msgs::msg::Odometry & filtere
   }
 
   if (frame_id != map_frame_id_) {
-    std::cerr << "Odometry message frame_id was " <<
-      frame_id << ", expected " <<
-      map_frame_id_ << " or " << odom_frame_id_ << "\n";
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "[%s:] Odometry message frame_id was %s, expected %s or %s.",
+      this->get_name(), frame_id.c_str(), map_frame_id_.c_str(), odom_frame_id_.c_str());
     return;
   }
 
@@ -2205,10 +2206,10 @@ void RosFilter<T>::publishWorldTransform(const nav_msgs::msg::Odometry & filtere
 
     world_transform_broadcaster_->sendTransform(map_odom_trans_msg);
   } catch (...) {
-    // ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain
-    // transform from "
-    //                                  << odom_frame_id_ << "->" <<
-    //                                  base_link_frame_id_);
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "[%s:] Could not obtain transform from %s -> %s.",
+      this->get_name(), odom_frame_id_.c_str(), base_link_frame_id_.c_str());
   }
 }
 
@@ -3415,7 +3416,7 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 }
 
 template<typename T>
-bool RosFilter<T>::validateFilterOutput(nav_msgs::msg::Odometry & message)
+bool RosFilter<T>::validateFilterOutput(const nav_msgs::msg::Odometry & message)
 {
   return !std::isnan(message.pose.pose.position.x) &&
          !std::isinf(message.pose.pose.position.x) &&

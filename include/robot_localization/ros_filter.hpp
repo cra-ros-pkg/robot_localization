@@ -247,23 +247,19 @@ public:
   //!
   void updateFilterWithMeasurements(const rclcpp::Time & time);
 
-  //! @brief publish world to base link transform and position
-  //! with odometry message
-  //! @param[in] filtered_position - filtered position from
-  //! getFilteredOdometryMessage.
+  //! @brief publish world to base link transform and position with odometry message.
+  //! @param[in] filtered_position - filtered position from getFilteredOdometryMessage.
   //! @return true if data is corrected otherwise false.
   //!
-  bool publishPositionWithOdometry(nav_msgs::msg::Odometry filtered_position);
+  bool publishPositionWithOdometry(const nav_msgs::msg::Odometry & filtered_position);
 
   //! @brief Update world to base link transform using filtered position.
-  //! @param[in] filtered_position - filtered position from
-  //! getFilteredOdometryMessage.
+  //! @param[in] filtered_position - filtered position from getFilteredOdometryMessage.
   //!
   void updateWorldToBaseLinkTransform(const nav_msgs::msg::Odometry & filtered_position);
 
   //! @brief Publish world transform using frame id from filtered position.
-  //! @param[in] filtered_position - filtered position from
-  //! getFilteredOdometryMessage.
+  //! @param[in] filtered_position - filtered position from getFilteredOdometryMessage.
   //!
   void publishWorldTransform(const nav_msgs::msg::Odometry & filtered_position);
 
@@ -341,7 +337,7 @@ public:
   //! @param[out] message - The standard ROS odometry message to be validated
   //! @return true if the filter output is valid, false otherwise
   //!
-  bool validateFilterOutput(nav_msgs::msg::Odometry & message);
+  bool validateFilterOutput(const nav_msgs::msg::Odometry & message);
 
 protected:
   //! @brief Finds the latest filter state before the given timestamp and makes
