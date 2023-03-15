@@ -161,17 +161,20 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       datum_lat = datum_vals[0];
       datum_lon = datum_vals[1];
       datum_yaw = datum_vals[2];
-    }
 
-    auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
-    request->geo_pose.position.latitude = datum_lat;
-    request->geo_pose.position.longitude = datum_lon;
-    request->geo_pose.position.altitude = 0.0;
-    tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, datum_yaw);
-    request->geo_pose.orientation = tf2::toMsg(quat);
-    auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
-    datumCallback(request, response);
+      auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
+      request->geo_pose.position.latitude = datum_lat;
+      request->geo_pose.position.longitude = datum_lon;
+      request->geo_pose.position.altitude = 0.0;
+      tf2::Quaternion quat;
+      quat.setRPY(0.0, 0.0, datum_yaw);
+      request->geo_pose.orientation = tf2::toMsg(quat);
+      auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
+      datumCallback(request, response);
+    } else {
+      RCLCPP_INFO(
+      this->get_logger(), "No datum parameter given, waiting to SetDatum call.");
+    }
   }
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
