@@ -95,11 +95,6 @@ ekf_filter_node:
         # the size of the subscription queue so that more measurements are fused.
         odom0_queue_size: 2
 
-        # [ADVANCED] Large messages in ROS can exhibit strange behavior when they arrive at a high frequency. This is a result
-        # of Nagle's algorithm. This option tells the ROS subscriber to use the tcpNoDelay option, which disables Nagle's
-        # algorithm.
-        odom0_nodelay: false
-
         # [ADVANCED] When measuring one pose variable with two sensors, a situation can arise in which both sensors under-
         # report their covariances. This can lead to the filter rapidly jumping back and forth between each measurement as they
         # arrive. In these cases, it often makes sense to (a) correct the measurement covariances, or (b) if velocity is also
@@ -144,7 +139,6 @@ ekf_filter_node:
         odom1_queue_size: 2
         odom1_pose_rejection_threshold: 2.0
         odom1_twist_rejection_threshold: 0.2
-        odom1_nodelay: false
         pose0: example/pose
         pose0_config: [true,  true,  false,
                        false, false, false,
@@ -155,7 +149,6 @@ ekf_filter_node:
         pose0_relative: false
         pose0_queue_size: 5
         pose0_rejection_threshold: 2.0  # Note the difference in parameter name
-        pose0_nodelay: false
 
         twist0: example/twist
         twist0_config: [false, false, false,
@@ -165,7 +158,6 @@ ekf_filter_node:
                         false, false, false]
         twist0_queue_size: 3
         twist0_rejection_threshold: 2.0
-        twist0_nodelay: false
 
         imu0: example/imu
         imu0_config: [false, false, false,
@@ -173,7 +165,6 @@ ekf_filter_node:
                       false, false, false,
                       true,  true,  true,
                       true,  true,  true]
-        imu0_nodelay: false
         imu0_differential: false
         imu0_relative: true
         imu0_queue_size: 5
