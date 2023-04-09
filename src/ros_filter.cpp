@@ -1967,7 +1967,7 @@ void RosFilter<T>::poseCallback(
   }
 
   // Make sure this message is newer than the last one
-  if (last_message_times_[topic_name] <= msg->header.stamp) {
+  if (last_message_times_[topic_name] < msg->header.stamp) {
     RF_DEBUG(
       "Update vector for " << topic_name << " is:\n" <<
         callback_data.update_vector_);
