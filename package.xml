@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>robot_localization</name>
-  <version>3.5.0</version>
+  <version>3.6.0</version>
   <description>Provides nonlinear state estimation through sensor fusion of an abritrary number of sensors.</description>
 
   <author email="ayrton04@gmail.com">Tom Moore</author> 
