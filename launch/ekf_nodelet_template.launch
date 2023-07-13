@@ -6,7 +6,7 @@
 -->
 
 <launch>
-  <arg name="use_nodelets"    default="${optenv USE_NODELETS false)" />
+  <arg name="use_nodelets"    default="$(optenv USE_NODELETS false)" />
   <arg name="nodelet_manager" default="$optenv robot_localization_NODELET_MANAGER robot_localization_nodelet_manager)" />
 
 
