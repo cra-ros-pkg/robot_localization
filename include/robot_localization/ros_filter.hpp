@@ -39,6 +39,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include "robot_localization/measurement.hpp"
 
 #include "diagnostic_msgs/msg/diagnostic_status.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
@@ -52,10 +53,12 @@
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "robot_localization/filter_common.hpp"
 #include "robot_localization/filter_state.hpp"
 #include "robot_localization/measurement.hpp"
 #include "robot_localization/srv/toggle_filter_processing.hpp"
 #include "robot_localization/srv/set_pose.hpp"
+#include "robot_localization/topic_diagnostics.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_srvs/srv/empty.hpp"
 #include "tf2/LinearMath/Transform.h"
@@ -249,6 +252,22 @@ public:
   //!
   void loadParams();
 
+  //! @brief Loads \parameters for topic diagnostics
+  std::optional<TopicDiagnosticSettings> load_topic_diagnostics_config(
+    const std::string& topic_name
+  );
+
+  //! @brief Configures a topic diagnostic if diagnostic for topic is enabled
+  //! @param[in] topic_name - The name of the topic in configuration ex. pose0
+  //! @param[in] diag_name - The name displayed in topic diagnostic.
+  //!                        For quick identification, the ROS topic name is used
+  void add_topic_diagnostic_if_configured(
+    const std::string& topic_name,
+    const std::string& diag_name);
+
+  //! @brief Register received message for topic diagnostics
+  void register_topic_tick(std::string topic_name, const rclcpp::Time& time);
+
   //! @brief callback function which is called for periodic updates
   //!
   void periodicUpdate();
@@ -390,6 +409,12 @@ protected:
   void aggregateDiagnostics(
     diagnostic_updater::DiagnosticStatusWrapper & wrapper);
 
+  //! @brief Publishes diagnostics for state protection algorithm
+  //! @param[in] wrapper - The diagnostic status wrapper to update
+  //!
+  void stateLockProtectionDiagnostics(
+    diagnostic_updater::DiagnosticStatusWrapper & wrapper);
+
   //! @brief Utility method for copying covariances from ROS covariance arrays
   //! to Eigen matrices
   //!
@@ -495,6 +520,18 @@ protected:
     const std::string & topicName, const std::string & targetFrame,
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
+
+  //! @brief Tracks the timestamp of the last update for state variables
+  //! @param[in] measurement - The processed measurement
+  //!
+  void updateStateLockProtection(const Measurement& measurement);
+  
+  //! @brief The function checks when the last accepted state variable update occurred. 
+  //!        If the state variable has not been updated for a time exceeding the configured threshold, 
+  //!        the covariance for this variable is set to unknown.
+  //! @param[in] state_stamp - Time stamp of filter state
+  //!
+  void preventStateLock(rclcpp::Time state_stamp);
 
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
@@ -633,10 +670,6 @@ protected:
   //!
   geometry_msgs::msg::TransformStamped world_base_link_trans_msg_;
 
-  //! @brief last call of periodicUpdate
-  //!
-  rclcpp::Time last_diag_time_;
-
   //! @brief The time of the most recent published state
   //!
   rclcpp::Time last_published_stamp_;
@@ -727,6 +760,9 @@ protected:
   //! @brief Vector to hold our subscribers until they go out of scope
   //!
   std::vector<rclcpp::SubscriptionBase::SharedPtr> topic_subs_;
+
+  //! @brief Dictionary of topic diagnostics which monitors input topic quality
+  std::map<std::string, TopicDiagnostic> topic_diagnostics_;
 
   //! @brief Stores the last measurement from a given topic for differential
   //! integration
@@ -854,8 +890,49 @@ protected:
   //! Must be on heap since pointer is passed to diagnostic_updater::FrequencyStatusParam
   //!
   double max_frequency_;
-};
 
-}  // namespace robot_localization
+  //! @brief Indicates that we should monitor the applied measurements and reset the covariance of
+  //! the state variable didn't updated with them.
+  bool use_state_lock_protection_ = false;
 
-#endif  // ROBOT_LOCALIZATION__ROS_FILTER_HPP_
+  //! @brief State lock protection members
+  //! A list of members which will should be check with state lock protection mechanism
+  //!
+  std::vector<StateMembers> sl_protected_members{
+    StateMemberX,
+    StateMemberY,
+    StateMemberZ,
+  };
+
+  //! @brief The time threshold within which the state variable should be updated to not have reset
+  //! covariance.
+  rclcpp::Duration state_lock_protection_threshold_;
+
+  //! @brief Data gathered on the applied measurement for the state lock protection mechanism.
+  struct StateLockMeasurementData
+  {
+    //! @brief Time of the measurement.
+    rclcpp::Time time_;
+    //! @brief Applied measurement.
+    double measurement_;
+    //! @brief Covariance of the applied measurement.
+    double covariance_;
+  };
+
+  //! @brief Type for the map of the input to the state lock protection mechanism data.
+  using TopicTimeMap = std::map<std::string, StateLockMeasurementData>;
+
+  //! @brief Finds the latests applied measurement.
+  rclcpp::Time findLatestUpdateTime(const TopicTimeMap & map);
+
+  //! @brief The applied measurements per the state variable.
+  std::vector<TopicTimeMap> state_element_update_times_;
+
+  //! @brief The variance value to which the state variable covariance will be reset.
+  Eigen::VectorXd state_lock_protection_variance_;
+ };
+ 
+ }  // namespace robot_localization
+ 
+ #endif  // ROBOT_LOCALIZATION__ROS_FILTER_HPP_
+ 

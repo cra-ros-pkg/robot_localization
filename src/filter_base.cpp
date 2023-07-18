@@ -192,7 +192,7 @@ const rclcpp::Duration & FilterBase::getSensorTimeout()
 
 const Eigen::VectorXd & FilterBase::getState() {return state_;}
 
-void FilterBase::processMeasurement(const Measurement & measurement)
+bool FilterBase::processMeasurement(const Measurement & measurement)
 {
   FB_DEBUG(
     "------ FilterBase::processMeasurement (" << measurement.topic_name_ <<
@@ -200,6 +200,7 @@ void FilterBase::processMeasurement(const Measurement & measurement)
 
   rclcpp::Duration delta(0, 0u);
 
+  auto is_measurement_applied = false;
   // If we've had a previous reading, then go through the predict/update
   // cycle. Otherwise, set our state and covariance to whatever we get
   // from this measurement.
@@ -224,7 +225,7 @@ void FilterBase::processMeasurement(const Measurement & measurement)
       predicted_state_ = state_;
     }
 
-    correct(measurement);
+    is_measurement_applied = correct(measurement);
   } else {
     FB_DEBUG("First measurement. Initializing filter.\n");
 
@@ -245,6 +246,7 @@ void FilterBase::processMeasurement(const Measurement & measurement)
       }
     }
 
+    is_measurement_applied = true;
     initialized_ = true;
   }
 
@@ -262,6 +264,7 @@ void FilterBase::processMeasurement(const Measurement & measurement)
   FB_DEBUG(
     "------ /FilterBase::processMeasurement (" << measurement.topic_name_ <<
       ") ------\n");
+  return is_measurement_applied;
 }
 
 void FilterBase::setControl(

@@ -71,7 +71,7 @@ void Ukf::setConstants(double alpha, double kappa, double beta)
   }
 }
 
-void Ukf::correct(const Measurement & measurement)
+bool Ukf::correct(const Measurement & measurement)
 {
   FB_DEBUG(
     "---------------------- Ukf::correct ----------------------\n" <<
@@ -304,6 +304,9 @@ void Ukf::correct(const Measurement & measurement)
         state_ << "\nCorrected full estimate error covariance is:\n" <<
         estimate_error_covariance_ <<
         "\n\n---------------------- /Ukf::correct ----------------------\n");
+    return true;
+  } else{
+    return false;
   }
 }
 

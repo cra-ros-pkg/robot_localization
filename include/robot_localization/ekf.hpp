@@ -65,7 +65,7 @@ public:
    *
    * @param[in] measurement - The measurement to fuse with our estimate
    */
-  void correct(const Measurement & measurement) override;
+  bool correct(const Measurement & measurement) override;
 
   /**
    * @brief Carries out the predict step in the predict/update cycle.

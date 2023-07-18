@@ -54,7 +54,7 @@ public:
   FilterDerived()
   : val(0) {}
 
-  void correct(const Measurement & measurement)
+  bool correct(const Measurement & measurement)
   {
     EXPECT_EQ(val, measurement.time_);
     EXPECT_EQ(measurement.topic_name_, "topic");
@@ -63,6 +63,7 @@ public:
     for (size_t i = 0; i < measurement.update_vector_.size(); ++i) {
       EXPECT_EQ(measurement.update_vector_[i], true);
     }
+    return true;
   }
   void predict(
     const rclcpp::Time & /*reference_time*/,
@@ -74,15 +75,17 @@ class FilterDerived2 : public FilterBase
 public:
   FilterDerived2() {}
 
-  void correct(const Measurement & /*measurement*/) {}
+  bool correct(const Measurement & /*measurement*/) {
+    return true;
+  }
 
   void predict(
     const rclcpp::Time & /*reference_time*/,
     const rclcpp::Duration & /*delta*/) {}
 
-  void processMeasurement(const Measurement & measurement)
+  bool processMeasurement(const Measurement & measurement)
   {
-    FilterBase::processMeasurement(measurement);
+    return FilterBase::processMeasurement(measurement);
   }
 };
 
