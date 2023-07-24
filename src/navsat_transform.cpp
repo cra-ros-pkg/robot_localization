@@ -103,7 +103,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_local_cartesian_ = this->declare_parameter("use_local_cartesian", false);
   frequency = this->declare_parameter("frequency", frequency);
   delay = this->declare_parameter("delay", delay);
-
   transform_timeout = this->declare_parameter("transform_timeout", transform_timeout);
 
   transform_timeout_ = tf2::durationFromSec(transform_timeout);
