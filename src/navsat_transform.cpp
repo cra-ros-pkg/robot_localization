@@ -142,7 +142,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
     "toLL", std::bind(&NavSatTransform::toLLCallback, this, _1, _2));
   from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
-
+  from_ll_array_srv_ = this->create_service<robot_localization::srv::FromLLArray>(
+    "fromLLArray", std::bind(&NavSatTransform::fromLLArrayCallback, this, _1, _2));
   std::vector<double> datum_vals;
   if (use_manual_datum_) {
     datum_vals = this->declare_parameter("datum", datum_vals);
@@ -420,9 +421,38 @@ bool NavSatTransform::fromLLCallback(
   const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
   std::shared_ptr<robot_localization::srv::FromLL::Response> response)
 {
-  double altitude = request->ll_point.altitude;
-  double longitude = request->ll_point.longitude;
-  double latitude = request->ll_point.latitude;
+  try {
+    response->map_point = fromLL(request->ll_point);
+  }
+  catch(const std::runtime_error& e) {
+    return false;
+  }
+
+  return true;
+}
+
+bool NavSatTransform::fromLLArrayCallback(
+  const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
+  std::shared_ptr<robot_localization::srv::FromLLArray::Response> response)
+{
+  for (auto it = request->ll_points.begin(); it != request->ll_points.end(); ++it) {
+    try {
+      response->map_points.push_back(fromLL(*it));
+    }
+    catch(const std::runtime_error& e) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+geometry_msgs::msg::Point NavSatTransform::fromLL(
+  const geographic_msgs::msg::GeoPoint& geo_point)
+{
+  double altitude = geo_point.altitude;
+  double longitude = geo_point.longitude;
+  double latitude = geo_point.latitude;
 
   tf2::Transform cartesian_pose;
 
@@ -450,15 +480,11 @@ bool NavSatTransform::fromLLCallback(
 
   cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
 
-  nav_msgs::msg::Odometry gps_odom;
-
   if (!transform_good_) {
-    return false;
+    throw std::runtime_error("Invalid transform.");
   }
 
-  response->map_point = cartesianToMap(cartesian_pose).pose.pose.position;
-
-  return true;
+  return cartesianToMap(cartesian_pose).pose.pose.position;
 }
 
 nav_msgs::msg::Odometry NavSatTransform::cartesianToMap(
@@ -498,14 +524,24 @@ void NavSatTransform::mapToLL(
 
   odom_as_cartesian.mult(cartesian_world_trans_inverse_, pose);
   odom_as_cartesian.setRotation(tf2::Quaternion::getIdentity());
-
-  // Now convert the data back to lat/long and place into the message
-  navsat_conversions::UTMtoLL(
-    odom_as_cartesian.getOrigin().getY(),
-    odom_as_cartesian.getOrigin().getX(),
-    utm_zone_,
-    latitude,
-    longitude);
+  if (use_local_cartesian_) {
+    gps_local_cartesian_.Reverse(
+      odom_as_cartesian.getOrigin().getX(),
+      odom_as_cartesian.getOrigin().getY(),
+      odom_as_cartesian.getOrigin().getZ(),
+      latitude,
+      longitude,
+      altitude
+    );
+  } else {
+    // Now convert the data back to lat/long and place into the message
+    navsat_conversions::UTMtoLL(
+      odom_as_cartesian.getOrigin().getY(),
+      odom_as_cartesian.getOrigin().getX(),
+      utm_zone_,
+      latitude,
+      longitude);
+  }
   altitude = odom_as_cartesian.getOrigin().getZ();
 }
 
