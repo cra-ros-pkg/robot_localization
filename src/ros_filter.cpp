@@ -59,6 +59,7 @@ namespace RobotLocalization
                           std::vector<double> args) :
       disabledAtStartup_(false),
       enabled_(false),
+      invertTransform_(false),
       predictToCurrentTime_(false),
       printDiagnostics_(true),
       publishAcceleration_(false),
@@ -856,8 +857,12 @@ namespace RobotLocalization
     FilterUtilities::appendPrefix(tfPrefix, baseLinkOutputFrameId_);
     FilterUtilities::appendPrefix(tfPrefix, worldFrameId_);
 
-    // Whether we're publshing the world_frame->base_link_frame transform
+    // Whether we're publishing the world_frame->base_link_frame transform
     nhLocal_.param("publish_tf", publishTransform_, true);
+
+    // Whether we should invert the transform before publishing:
+    // word_frame->base_link_frame to base_link_frame->world_frame
+    nhLocal_.param("invert_tf", invertTransform_, false);
 
     // Whether we're publishing the acceleration state transform
     nhLocal_.param("publish_acceleration", publishAcceleration_, false);
@@ -1991,9 +1996,10 @@ namespace RobotLocalization
       // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
       if (publishTransform_ && !corrected_data)
       {
-        if (filteredPosition.header.frame_id == odomFrameId_)
+        if (invertTransform_ || filteredPosition.header.frame_id == odomFrameId_)
         {
-          worldTransformBroadcaster_.sendTransform(worldBaseLinkTransMsg_);
+          worldTransformBroadcaster_.sendTransform(
+            invertTransform_ ? RosFilterUtilities::invertTF(worldBaseLinkTransMsg_) : worldBaseLinkTransMsg_);
         }
         else if (filteredPosition.header.frame_id == mapFrameId_)
         {

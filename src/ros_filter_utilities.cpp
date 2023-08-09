@@ -191,5 +191,16 @@ namespace RosFilterUtilities
     quatToRPY(stateTF.getRotation(), state(StateMemberRoll), state(StateMemberPitch), state(StateMemberYaw));
   }
 
+  geometry_msgs::TransformStamped invertTF(const geometry_msgs::TransformStamped& input)
+  {
+    auto output = input;
+    tf2::Transform inputTransform;
+    tf2::fromMsg(input.transform, inputTransform);
+    output.header.frame_id = input.child_frame_id;
+    output.child_frame_id = input.header.frame_id;
+    output.transform = tf2::toMsg(inputTransform.inverse());
+    return output;
+  }
+
 }  // namespace RosFilterUtilities
 }  // namespace RobotLocalization

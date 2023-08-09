@@ -451,6 +451,15 @@ template<class T> class RosFilter
     //! @brief Whether the filter is enabled or not. See disabledAtStartup_.
     bool enabled_;
 
+    //! @brief Whether we invert the transform from the world_frame to the base_link_frame:
+    //! from: world_frame (parent) -> base_link_frame (child) to  base_link_frame (parent) -> world_frame (child)
+    //!
+    //! @note: Only used if @p publishTransform_ is set to true. If this is set to true, and
+    //! the @p worldFrameId_ is equal to the @p mapFrameId_, the middle transform from mapFrameId_ to odomFrameId_
+    //! will not be published as @p mapFrameId_ will be considered child of @p baseLinkFrameId_
+    //!
+    bool invertTransform_;
+
     //! Whether we'll allow old measurements to cause a re-publication of the updated state
     bool permitCorrectedPublication_;
 

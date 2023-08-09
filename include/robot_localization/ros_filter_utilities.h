@@ -129,6 +129,12 @@ void stateToTF(const Eigen::VectorXd &state, tf2::Transform &stateTF);
 //!
 void TFtoState(const tf2::Transform &stateTF, Eigen::VectorXd &state);
 
+//! @brief Invert incoming tf
+//! @param[in] input - Input transform
+//! @return Inverted transform
+//!
+geometry_msgs::TransformStamped invertTF(const geometry_msgs::TransformStamped& input);
+
 }  // namespace RosFilterUtilities
 }  // namespace RobotLocalization
 
