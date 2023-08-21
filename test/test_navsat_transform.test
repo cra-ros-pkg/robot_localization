@@ -2,7 +2,13 @@
 
 <launch>
 
-    <node name="navsat_transform_node" pkg="robot_localization" type="navsat_transform_node" output="screen" />
+    <node name="navsat_transform_node" pkg="robot_localization" type="navsat_transform_node" output="screen" >
+        <param name="use_odometry_yaw" value="true" />
+        <param name="broadcast_cartesian_transform" value="true" />
+        <param name="broadcast_cartesian_transform_as_parent_frame" value="true" />
+    </node>
+
+    <node name="static_pub" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 map base_link" />
 
     <test test-name="test_navsat_transform" pkg="robot_localization" type="test_navsat_transform" />
 
