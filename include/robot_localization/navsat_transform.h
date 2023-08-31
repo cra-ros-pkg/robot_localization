@@ -210,7 +210,7 @@ class NavSatTransform
     //!
     bool use_local_cartesian_;
 
-    //! @brief Whether we want to have our UTM zone fixed, and not change it if we move outside of it
+    //! @brief Whether we want to force the user's UTM zone and not rely on current GPS data for determining it
     //!
     bool force_user_utm_;
 
