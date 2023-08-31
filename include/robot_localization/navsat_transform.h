@@ -210,6 +210,10 @@ class NavSatTransform
     //!
     bool use_local_cartesian_;
 
+    //! @brief Whether we want to have our UTM zone fixed, and not change it if we move outside of it
+    //!
+    bool force_user_utm_;
+
     //! @brief When true, do not print warnings for tf lookup failures.
     //!
     bool tf_silent_failure_;

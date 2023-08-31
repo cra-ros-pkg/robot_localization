@@ -56,6 +56,7 @@ namespace RobotLocalization
     use_manual_datum_(false),
     use_odometry_yaw_(false),
     use_local_cartesian_(false),
+    force_user_utm_(false),
     zero_altitude_(false),
     magnetic_declination_(0.0),
     yaw_offset_(0.0),
@@ -451,7 +452,13 @@ namespace RobotLocalization
     double y_unused;
     int prec_unused;
     GeographicLib::MGRS::Reverse(request.utm_zone, utm_zone_, northp_, x_unused, y_unused, prec_unused, true);
+    // Toggle flags such that transforms get updated to user utm zone
+    force_user_utm_ = true;
+    use_manual_datum_ = false;
+    transform_good_ = false;
+    has_transform_gps_ = false;
     ROS_INFO("UTM zone set to %d %s", utm_zone_, northp_ ? "north" : "south");
+
     return true;
   }
 
@@ -875,8 +882,18 @@ namespace RobotLocalization
     {
       double k_tmp;
       double utm_meridian_convergence_degrees;
-      GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude, utm_zone_, northp_,
-                                     cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp);
+      try
+      {
+        // If we're using a fixed UTM zone, then we want to use the zone that the user gave us.
+        int set_zone = force_user_utm_ ? utm_zone_ : -1;
+        GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude, utm_zone_, northp_,
+                                     cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp, set_zone);
+      }
+      catch (const GeographicLib::GeographicErr& e)
+      {
+        ROS_ERROR_STREAM_THROTTLE(1.0, e.what());
+        return;
+      }
       utm_meridian_convergence_ = utm_meridian_convergence_degrees * NavsatConversions::RADIANS_PER_DEGREE;
     }
 

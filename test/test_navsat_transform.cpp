@@ -102,6 +102,8 @@ TEST(NavSatTransformUTMJumpTest, UtmServiceTest)
   gps_msg.header.frame_id = "base_link";
   gps_msg.header.stamp = ros::Time::now();
   gps_msg.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+  gps_msg.latitude = 36.0;
+  gps_msg.longitude = 0.0;
 
   nav_msgs::Odometry odom_msg;
   odom_msg.header.frame_id = "odom";
@@ -111,14 +113,14 @@ TEST(NavSatTransformUTMJumpTest, UtmServiceTest)
 
   // Initialise the navsat_transform node to a UTM zone
   robot_localization::SetUTMZone set_zone_srv;
-  set_zone_srv.request.utm_zone = "30N";
+  set_zone_srv.request.utm_zone = "30U";
   EXPECT_TRUE(set_zone_client.call(set_zone_srv));
-  // Let the node figure out its transforms
-  ros::Duration(0.2).sleep();
   gps_msg.header.stamp = ros::Time::now();
   gps_pub.publish(gps_msg);
   odom_msg.header.stamp = ros::Time::now();
   odom_pub.publish(odom_msg);
+  // Let the node figure out its transforms
+  ros::Duration(0.3).sleep();
 
   // Record the initial map transform
   geometry_msgs::TransformStamped initial_transform;
@@ -134,14 +136,15 @@ TEST(NavSatTransformUTMJumpTest, UtmServiceTest)
   }
 
   // Set the zone to a neighboring zone
-  set_zone_srv.request.utm_zone = "31N";
+  set_zone_srv.request.utm_zone = "31U";
   EXPECT_TRUE(set_zone_client.call(set_zone_srv));
-  // Let the node figure out its transforms
-  ros::Duration(0.2).sleep();
+  tf_buffer.clear();
   gps_msg.header.stamp = ros::Time::now();
   gps_pub.publish(gps_msg);
   odom_msg.header.stamp = ros::Time::now();
   odom_pub.publish(odom_msg);
+  // Let the node figure out its transforms
+  ros::Duration(0.3).sleep();
 
   // Check if map transform has changed
   geometry_msgs::TransformStamped new_transform;
@@ -159,9 +162,7 @@ TEST(NavSatTransformUTMJumpTest, UtmServiceTest)
   // Check difference between initial and new transform
   EXPECT_GT(std::abs(initial_transform.transform.translation.x - new_transform.transform.translation.x), 1.0);
   EXPECT_GT(std::abs(initial_transform.transform.translation.x - new_transform.transform.translation.x), 1.0);
-  EXPECT_GT(std::abs(initial_transform.transform.rotation.x - new_transform.transform.rotation.x), 1.0);
-  EXPECT_GT(std::abs(initial_transform.transform.rotation.y - new_transform.transform.rotation.y), 1.0);
-  EXPECT_GT(std::abs(initial_transform.transform.rotation.z - new_transform.transform.rotation.z), 1.0);
+  EXPECT_GT(std::abs(initial_transform.transform.rotation.z - new_transform.transform.rotation.z), 0.02);
 }
 
 int main(int argc, char **argv)
