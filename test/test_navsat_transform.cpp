@@ -35,6 +35,9 @@
 #include <robot_localization/ToLL.h>
 #include <robot_localization/FromLL.h>
 
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/NavSatFix.h>
+
 #include <gtest/gtest.h>
 
 #include <string>
@@ -80,6 +83,86 @@ TEST(NavSatTransformUTMJumpTest, UtmTest)
 
   EXPECT_NEAR(initial_response.map_point.x, neighbour_zone_response.map_point.x, 2*120e3);
   EXPECT_NEAR(initial_response.map_point.y, neighbour_zone_response.map_point.y, 2*120e3);
+}
+
+TEST(NavSatTransformUTMJumpTest, UtmServiceTest)
+{
+  ros::NodeHandle nh;
+  ros::ServiceClient set_zone_client = nh.serviceClient<robot_localization::SetUTMZone>("/setUTMZone");
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener(tf_buffer);
+
+  EXPECT_TRUE(set_zone_client.waitForExistence(ros::Duration(5)));
+
+  // Publish input topics
+  ros::Publisher gps_pub = nh.advertise<sensor_msgs::NavSatFix>("gps/fix", 1, true);
+  ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odometry/filtered", 1, true);
+
+  sensor_msgs::NavSatFix gps_msg;
+  gps_msg.header.frame_id = "base_link";
+  gps_msg.header.stamp = ros::Time::now();
+  gps_msg.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+  gps_msg.latitude = 36.0;
+  gps_msg.longitude = 0.0;
+
+  nav_msgs::Odometry odom_msg;
+  odom_msg.header.frame_id = "odom";
+  odom_msg.header.stamp = ros::Time::now();
+  odom_msg.child_frame_id = "base_link";
+  odom_msg.pose.pose.orientation.w = 1;
+
+  // Initialise the navsat_transform node to a UTM zone
+  robot_localization::SetUTMZone set_zone_srv;
+  set_zone_srv.request.utm_zone = "30U";
+  EXPECT_TRUE(set_zone_client.call(set_zone_srv));
+  gps_msg.header.stamp = ros::Time::now();
+  gps_pub.publish(gps_msg);
+  odom_msg.header.stamp = ros::Time::now();
+  odom_pub.publish(odom_msg);
+  // Let the node figure out its transforms
+  ros::Duration(0.3).sleep();
+
+  // Record the initial map transform
+  geometry_msgs::TransformStamped initial_transform;
+  try
+  {
+    EXPECT_TRUE(tf_buffer.canTransform("utm", "odom", ros::Time::now(), ros::Duration(3.0)));
+    initial_transform = tf_buffer.lookupTransform("utm", "odom", ros::Time::now());
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    FAIL();
+  }
+
+  // Set the zone to a neighboring zone
+  set_zone_srv.request.utm_zone = "31U";
+  EXPECT_TRUE(set_zone_client.call(set_zone_srv));
+  tf_buffer.clear();
+  gps_msg.header.stamp = ros::Time::now();
+  gps_pub.publish(gps_msg);
+  odom_msg.header.stamp = ros::Time::now();
+  odom_pub.publish(odom_msg);
+  // Let the node figure out its transforms
+  ros::Duration(0.3).sleep();
+
+  // Check if map transform has changed
+  geometry_msgs::TransformStamped new_transform;
+  try
+  {
+    EXPECT_TRUE(tf_buffer.canTransform("utm", "odom", ros::Time::now(), ros::Duration(3.0)));
+    new_transform = tf_buffer.lookupTransform("utm", "odom", ros::Time::now());
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    FAIL();
+  }
+
+  // Check difference between initial and new transform
+  EXPECT_GT(std::abs(initial_transform.transform.translation.x - new_transform.transform.translation.x), 1.0);
+  EXPECT_GT(std::abs(initial_transform.transform.translation.x - new_transform.transform.translation.x), 1.0);
+  EXPECT_GT(std::abs(initial_transform.transform.rotation.z - new_transform.transform.rotation.z), 0.02);
 }
 
 int main(int argc, char **argv)

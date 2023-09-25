@@ -210,6 +210,10 @@ class NavSatTransform
     //!
     bool use_local_cartesian_;
 
+    //! @brief Whether we want to force the user's UTM zone and not rely on current GPS data for determining it
+    //!
+    bool force_user_utm_;
+
     //! @brief When true, do not print warnings for tf lookup failures.
     //!
     bool tf_silent_failure_;
