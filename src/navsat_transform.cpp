@@ -410,8 +410,6 @@ void NavSatTransform::setManualDatum()
   sensor_msgs::msg::Imu::SharedPtr imu_ptr =
     std::make_shared<sensor_msgs::msg::Imu>(imu);
   imuCallback(imu_ptr);
-
-  return true;
 }
 
 bool NavSatTransform::toLLCallback(
