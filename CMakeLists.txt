@@ -287,6 +287,10 @@ if(BUILD_TESTING)
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
 
+  #### NAVSAT CONVERSION TESTS ####
+  ament_add_gtest(test_navsat_conversions test/test_navsat_conversions.cpp)
+  target_link_libraries(test_navsat_conversions ${library_name})
+
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
@@ -321,6 +325,7 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag2
     #test_ekf_localization_node_bag3
     test_robot_localization_estimator
+    test_navsat_conversions
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1
