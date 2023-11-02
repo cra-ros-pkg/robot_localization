@@ -38,6 +38,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <algorithm>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -824,6 +825,9 @@ namespace RobotLocalization
     // Whether we're publishing the acceleration state transform
     nhLocal_.param("publish_acceleration", publishAcceleration_, false);
 
+    // Whether we'll allow old measurements to cause a re-publication of the updated state
+    nhLocal_.param("permit_corrected_publication", permitCorrectedPublication_, false);
+
     // Transform future dating
     double offsetTmp;
     nhLocal_.param("transform_time_offset", offsetTmp, 0.0);
@@ -996,12 +1000,12 @@ namespace RobotLocalization
              "\ntransform_timeout is " << tfTimeout_.toSec() <<
              "\nfrequency is " << frequency_ <<
              "\nsensor_timeout is " << filter_.getSensorTimeout() <<
-             "\ntwo_d_mode is " << (twoDMode_ ? "true" : "false") <<
              "\nsilent_tf_failure is " << (silentTfFailure_ ? "true" : "false") <<
-             "\nsmooth_lagged_data is " << (smoothLaggedData_ ? "true" : "false") <<
+             "\ntwo_d_mode is " << std::boolalpha << twoDMode_ <<
+             "\nsmooth_lagged_data is " << std::boolalpha << smoothLaggedData_ <<
              "\nhistory_length is " << historyLength_ <<
-             "\nuse_control is " << (useControl_ ? "true" : "false") <<
-             "\nstamped_control is " << (stampedControl ? "true" : "false") <<
+             "\nuse_control is " << std::boolalpha << useControl_ <<
+             "\nstamped_control is " << std::boolalpha << stampedControl <<
              "\ncontrol_config is " << controlUpdateVector <<
              "\ncontrol_timeout is " << controlTimeout <<
              "\nacceleration_limits are " << accelerationLimits <<
@@ -1009,8 +1013,9 @@ namespace RobotLocalization
              "\ndeceleration_limits are " << decelerationLimits <<
              "\ndeceleration_gains are " << decelerationGains <<
              "\ninitial state is " << filter_.getState() <<
-             "\ndynamic_process_noise_covariance is " << (dynamicProcessNoiseCovariance ? "true" : "false") <<
-             "\nprint_diagnostics is " << (printDiagnostics_ ? "true" : "false") << "\n");
+             "\ndynamic_process_noise_covariance is " << std::boolalpha << dynamicProcessNoiseCovariance <<
+             "\npermit_corrected_publication is " << std::boolalpha << permitCorrectedPublication_ <<
+             "\nprint_diagnostics is " << std::boolalpha << printDiagnostics_ << "\n");
 
     // Create a subscriber for manually setting/resetting pose
     setPoseSub_ = nh_.subscribe("set_pose",
@@ -1898,6 +1903,8 @@ namespace RobotLocalization
     // Get latest state and publish it
     nav_msgs::Odometry filteredPosition;
 
+    bool corrected_data = false;
+
     if (getFilteredOdometryMessage(filteredPosition))
     {
       worldBaseLinkTransMsg_.transform = tf2::toMsg(tf2::Transform::getIdentity());
@@ -1918,9 +1925,16 @@ namespace RobotLocalization
               " This was likely due to poorly conditioned process, noise, or sensor covariances.");
       }
 
+      // If we're trying to publish with the same time stamp, it means that we had a measurement get inserted into the
+      // filter history, and our state estimate was updated after it was already published. As of ROS Noetic, TF2 will
+      // issue warnings whenever this occurs, so we make this behavior optional.
+      // Just for safety, we also check for the condition where the last published stamp is *later* than this stamp.
+      // This should never happen, but we should handle the case anyway.
+      corrected_data = (!permitCorrectedPublication_ && lastPublishedStamp_ >= filteredPosition.header.stamp);
+
       // If the worldFrameId_ is the odomFrameId_ frame, then we can just send the transform. If the
       // worldFrameId_ is the mapFrameId_ frame, we'll have some work to do.
-      if (publishTransform_)
+      if (publishTransform_ && !corrected_data)
       {
         if (filteredPosition.header.frame_id == odomFrameId_)
         {
@@ -1980,7 +1994,13 @@ namespace RobotLocalization
       }
 
       // Fire off the position and the transform
-      positionPub_.publish(filteredPosition);
+      if (!corrected_data)
+      {
+        positionPub_.publish(filteredPosition);
+      }
+
+      // Retain the last published stamp so we can detect repeated transforms in future cycles
+      lastPublishedStamp_ = filteredPosition.header.stamp;
 
       if (printDiagnostics_)
       {
@@ -1990,7 +2010,7 @@ namespace RobotLocalization
 
     // Publish the acceleration if desired and filter is initialized
     geometry_msgs::AccelWithCovarianceStamped filteredAcceleration;
-    if (publishAcceleration_ && getFilteredAccelMessage(filteredAcceleration))
+    if (publishAcceleration_ && getFilteredAccelMessage(filteredAcceleration) && !corrected_data)
     {
       accelPub_.publish(filteredAcceleration);
     }

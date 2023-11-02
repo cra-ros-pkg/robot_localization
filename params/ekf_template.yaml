@@ -42,6 +42,9 @@ publish_tf: true
 # Whether to publish the acceleration state. Defaults to false if unspecified.
 publish_acceleration: false
 
+# Whether we'll allow old measurements to cause a re-publication of the updated state
+permit_corrected_publication: false
+
 # REP-105 (http://www.ros.org/reps/rep-0105.html) specifies four principal coordinate frames: base_link, odom, map, and
 # earth. base_link is the coordinate frame that is affixed to the robot. Both odom and map are world-fixed frames.
 # The robot's position in the odom frame will drift over time, but is accurate in the short term and should be
