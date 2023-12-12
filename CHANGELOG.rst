@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.7.5 (2023-12-12)
+------------------
 * Fix/set utm map frame change (`#830 <https://github.com/cra-ros-pkg/robot_localization/issues/830>`_)
   * Fix utm service properly resetting transforms and fix test for this
   ---------
