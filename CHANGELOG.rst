@@ -2,6 +2,20 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix/set utm map frame change (`#830 <https://github.com/cra-ros-pkg/robot_localization/issues/830>`_)
+  * Fix utm service properly resetting transforms and fix test for this
+  ---------
+  Co-authored-by: Ferry Schoenmakers <ferry.schoenmakers@nobleo.nl>
+* Add flag to invert published transform (`#827 <https://github.com/cra-ros-pkg/robot_localization/issues/827>`_)
+* fix bracket missing bug ekf nodelet template noetic (`#823 <https://github.com/cra-ros-pkg/robot_localization/issues/823>`_)
+* Noetic devel (`#775 <https://github.com/cra-ros-pkg/robot_localization/issues/775>`_)
+  * fixed missing silent flag
+  * removed debug statement
+  * replace tabs with blanks
+* Contributors: Carlos Mendes, ChenHehe, CyberNet, Ferry Schoenmakers
+
 2.7.4 (2022-07-27)
 ------------------
 * Fix odometry and acceleration processing pipeline (`#753 <https://github.com/cra-ros-pkg/robot_localization/issues/753>`_)
