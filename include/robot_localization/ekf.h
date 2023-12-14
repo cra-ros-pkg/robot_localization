@@ -80,6 +80,15 @@ class Ekf: public FilterBase
     //! @param[in] delta - The time step over which to predict.
     //!
     void predict(const double referenceTime, const double delta);
+    
+    //! @brief Constructs an instance of Ekf
+    //!
+    //! Initializes a Ekf object with specified NodeOptions
+    //!
+    //! @param[in] options - The NodeOptions configuration for the MaskDepth instance.
+    //!
+    explicit Ekf(const rclcpp::NodeOptions & options);
+
 };
 
 }  // namespace RobotLocalization

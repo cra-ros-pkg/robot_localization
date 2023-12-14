@@ -144,7 +144,7 @@ struct FilterState
 };
 typedef boost::shared_ptr<FilterState> FilterStatePtr;
 
-class FilterBase
+class FilterBase : public rclcpp::Node
 {
   public:
     //! @brief Constructor for the FilterBase class

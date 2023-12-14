@@ -43,6 +43,9 @@
 
 namespace RobotLocalization
 {
+  Ekf::Ekf(const rclcpp::NodeOptions & options)
+  : Node("ekf", options)
+
   Ekf::Ekf(std::vector<double>) :
     FilterBase()  // Must initialize filter base!
   {
@@ -385,5 +388,8 @@ namespace RobotLocalization
     FB_DEBUG("Predicted estimate error covariance is:\n" << estimateErrorCovariance_ <<
              "\n\n--------------------- /Ekf::predict ----------------------\n");
   }
+  
+  #include "rclcpp_components/register_node_macro.hpp"
+  RCLCPP_COMPONENTS_REGISTER_NODE(ExtendedKalmanFilter)
 
 }  // namespace RobotLocalization

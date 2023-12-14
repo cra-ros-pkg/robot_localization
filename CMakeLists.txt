@@ -29,6 +29,31 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP yaml-cpp)
 
+find_package(rclcpp_components REQUIRED)
+# is ekf.cpp correct?
+add_library(ekf SHARED src/ekf.cpp)
+
+ament_target_dependencies(
+  ekf
+  diagnostic_msgs
+  diagnostic_updater
+  eigen_conversions
+  geographic_msgs
+  geometry_msgs
+  message_filters
+  message_generation
+  nav_msgs
+  nodelet
+  roscpp
+  roslint
+  sensor_msgs
+  std_msgs
+  std_srvs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
+  xmlrpcpp
+)
 
 # Geographiclib installs FindGeographicLib.cmake to this non-standard location
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
@@ -142,10 +167,12 @@ add_library(ukf_localization_nodelet src/ukf_localization_nodelet.cpp)
 add_library(navsat_transform_nodelet src/navsat_transform_nodelet.cpp)
 
 # Executables
-add_executable(ekf_localization_node src/ekf_localization_node.cpp)
-add_executable(ukf_localization_node src/ukf_localization_node.cpp)
-add_executable(navsat_transform_node src/navsat_transform_node.cpp)
-add_executable(robot_localization_listener_node src/robot_localization_listener_node.cpp)
+
+# mb should rewrite to add_library
+# add_executable(ekf_localization_node src/ekf_localization_node.cpp)
+# add_executable(ukf_localization_node src/ukf_localization_node.cpp)
+# add_executable(navsat_transform_node src/navsat_transform_node.cpp)
+# add_executable(robot_localization_listener_node src/robot_localization_listener_node.cpp)
 
 # Dependencies
 add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
@@ -220,6 +247,12 @@ install(FILES
 install(FILES nodelet_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+install(TARGETS ekf
+LIBRARY DESTINATION lib)
+
+rclcpp_components_register_nodes(ekf "ExtendedKalmanFilter")
+
 
 #############
 ## Testing ##
@@ -331,3 +364,6 @@ if (CATKIN_ENABLE_TESTING)
                         ${rostest_LIBRARIES})
 
 endif()
+
+ament_export_libraries(ekf)
+ament_package()
