@@ -33,6 +33,8 @@
 #include "robot_localization/filter_utilities.h"
 #include "robot_localization/filter_common.h"
 
+#include <angles/angles.h>
+
 #include <string>
 #include <vector>
 
@@ -128,17 +130,7 @@ namespace FilterUtilities
 
   double clampRotation(double rotation)
   {
-    while (rotation > PI)
-    {
-      rotation -= TAU;
-    }
-
-    while (rotation < -PI)
-    {
-      rotation += TAU;
-    }
-
-    return rotation;
+    return angles::normalize_angle(rotation);
   }
 
 }  // namespace FilterUtilities
