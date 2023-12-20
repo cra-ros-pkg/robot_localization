@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.5.2 (2023-12-20)
+------------------
 * fix header timestamp (`#852 <https://github.com/cra-ros-pkg/robot_localization/issues/852>`_)
   Co-authored-by: Luke Chang <luke@boxfish.nz>
 * Wait for odometry message before setting manual datum so that the base and world frame names can be set. (`#835 <https://github.com/cra-ros-pkg/robot_localization/issues/835>`_)
