@@ -2,6 +2,25 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* fix header timestamp (`#852 <https://github.com/cra-ros-pkg/robot_localization/issues/852>`_)
+  Co-authored-by: Luke Chang <luke@boxfish.nz>
+* Wait for odometry message before setting manual datum so that the base and world frame names can be set. (`#835 <https://github.com/cra-ros-pkg/robot_localization/issues/835>`_)
+  * wait for odom msg before setting manual datum
+* Utm using geographiclib humble branch (`#834 <https://github.com/cra-ros-pkg/robot_localization/issues/834>`_)
+  * Add single test for navsat_conversions
+  * Add a southern point to the navsat_transform test
+  * LLtoUTM using GeographicLib
+  * Use GeographicLib for UTMtoLL conversions
+  * Linting
+  * Forgot include
+  * Fix compilation
+  * Calculate gamma because it's a function output and was supplied before
+  * Also test for gamma conversion
+  * Align naming and install
+* Contributors: Luke Chang, Tim Clephas, Tom Greier
+
 3.4.0 (2022-05-05)
 ------------------
 * Fix angles dependency (`#747 <https://github.com/cra-ros-pkg/robot_localization/issues/747>`_)
