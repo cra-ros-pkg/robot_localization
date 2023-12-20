@@ -2744,7 +2744,7 @@ bool RosFilter<T>::preparePose(
 
   pose_tmp.stamp_ = tf2::timeFromSec(
     static_cast<double>(msg->header.stamp.sec) +
-    static_cast<double>(msg->header.stamp.sec) / 1000000000.0);
+    static_cast<double>(msg->header.stamp.nanosec) / 1000000000.0);
 
   // Fill out the position data
   pose_tmp.setOrigin(
