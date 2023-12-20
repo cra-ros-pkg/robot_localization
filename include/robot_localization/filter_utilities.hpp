@@ -33,6 +33,7 @@
 #ifndef ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
 #define ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
 
+#include <angles/angles.h>
 #include <Eigen/Dense>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/time.hpp>
@@ -66,15 +67,7 @@ namespace filter_utilities
  */
 inline double clampRotation(double rotation)
 {
-  while (rotation > PI) {
-    rotation -= TAU;
-  }
-
-  while (rotation < -PI) {
-    rotation += TAU;
-  }
-
-  return rotation;
+  return angles::normalize_angle(rotation);
 }
 
 /**
