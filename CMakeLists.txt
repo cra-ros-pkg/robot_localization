@@ -17,6 +17,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(angles REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(geographic_msgs REQUIRED)
@@ -64,6 +65,7 @@ include_directories(
 
 add_library(
   ${library_name}
+  SHARED
   src/ekf.cpp
   src/ukf.cpp
   src/filter_base.cpp
@@ -72,7 +74,8 @@ add_library(
   src/robot_localization_estimator.cpp
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp
-  src/ros_robot_localization_listener.cpp)
+  src/ros_robot_localization_listener.cpp
+  src/ros_components.cpp)
 
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(${library_name} "${cpp_typesupport_target}")
@@ -121,6 +124,7 @@ ament_target_dependencies(
   tf2_geometry_msgs
   tf2_ros
   yaml_cpp_vendor
+  rclcpp_components
 )
 
 target_link_libraries(
@@ -161,6 +165,16 @@ target_link_libraries(
 ament_target_dependencies(
   robot_localization_listener_node
   rclcpp
+)
+
+rclcpp_components_register_nodes(
+  ${library_name} 
+  "robot_localization::UkfFilter"
+)
+
+rclcpp_components_register_nodes(
+  ${library_name} 
+  "robot_localization::EkfFilter"
 )
 
 if(BUILD_TESTING)
