@@ -364,10 +364,11 @@ void RosFilter<T>::forceTwoD(
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
+std::optional<nav_msgs::msg::Odometry> RosFilter<T>::getFilteredOdometryMessage()
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
+    nav_msgs::msg::Odometry message;
     // Grab our current state and covariance estimates
     const Eigen::VectorXd & state = filter_.getState();
     const Eigen::MatrixXd & estimate_error_covariance =
@@ -381,24 +382,24 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
       state(StateMemberYaw));
 
     // Fill out the message
-    message->pose.pose.position.x = state(StateMemberX);
-    message->pose.pose.position.y = state(StateMemberY);
-    message->pose.pose.position.z = state(StateMemberZ);
-    message->pose.pose.orientation.x = quat.x();
-    message->pose.pose.orientation.y = quat.y();
-    message->pose.pose.orientation.z = quat.z();
-    message->pose.pose.orientation.w = quat.w();
-    message->twist.twist.linear.x = state(StateMemberVx);
-    message->twist.twist.linear.y = state(StateMemberVy);
-    message->twist.twist.linear.z = state(StateMemberVz);
-    message->twist.twist.angular.x = state(StateMemberVroll);
-    message->twist.twist.angular.y = state(StateMemberVpitch);
-    message->twist.twist.angular.z = state(StateMemberVyaw);
+    message.pose.pose.position.x = state(StateMemberX);
+    message.pose.pose.position.y = state(StateMemberY);
+    message.pose.pose.position.z = state(StateMemberZ);
+    message.pose.pose.orientation.x = quat.x();
+    message.pose.pose.orientation.y = quat.y();
+    message.pose.pose.orientation.z = quat.z();
+    message.pose.pose.orientation.w = quat.w();
+    message.twist.twist.linear.x = state(StateMemberVx);
+    message.twist.twist.linear.y = state(StateMemberVy);
+    message.twist.twist.linear.z = state(StateMemberVz);
+    message.twist.twist.angular.x = state(StateMemberVroll);
+    message.twist.twist.angular.y = state(StateMemberVpitch);
+    message.twist.twist.angular.z = state(StateMemberVyaw);
 
     // Our covariance matrix layout doesn't quite match
     for (size_t i = 0; i < POSE_SIZE; i++) {
       for (size_t j = 0; j < POSE_SIZE; j++) {
-        message->pose.covariance[POSE_SIZE * i + j] =
+        message.pose.covariance[POSE_SIZE * i + j] =
           estimate_error_covariance(i, j);
       }
     }
@@ -408,53 +409,55 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
     // size of a pose covariance array
     for (size_t i = 0; i < TWIST_SIZE; i++) {
       for (size_t j = 0; j < TWIST_SIZE; j++) {
-        message->twist.covariance[TWIST_SIZE * i + j] =
+        message.twist.covariance[TWIST_SIZE * i + j] =
           estimate_error_covariance(
           i + POSITION_V_OFFSET,
           j + POSITION_V_OFFSET);
       }
     }
 
-    message->header.stamp = filter_.getLastMeasurementTime();
-    message->header.frame_id = world_frame_id_;
-    message->child_frame_id = base_link_output_frame_id_;
+    message.header.stamp = filter_.getLastMeasurementTime();
+    message.header.frame_id = world_frame_id_;
+    message.child_frame_id = base_link_output_frame_id_;
+    return message;
   }
 
-  return filter_.getInitializedStatus();
+  return {};
 }
 
 template<typename T>
-bool RosFilter<T>::getFilteredAccelMessage(
-  geometry_msgs::msg::AccelWithCovarianceStamped * message)
+std::optional<geometry_msgs::msg::AccelWithCovarianceStamped> RosFilter<T>::getFilteredAccelMessage()
 {
   // If the filter has received a measurement at some point...
   if (filter_.getInitializedStatus()) {
+    geometry_msgs::msg::AccelWithCovarianceStamped message;
     // Grab our current state and covariance estimates
     const Eigen::VectorXd & state = filter_.getState();
     const Eigen::MatrixXd & estimate_error_covariance =
       filter_.getEstimateErrorCovariance();
 
     //! Fill out the accel_msg
-    message->accel.accel.linear.x = state(StateMemberAx);
-    message->accel.accel.linear.y = state(StateMemberAy);
-    message->accel.accel.linear.z = state(StateMemberAz);
+    message.accel.accel.linear.x = state(StateMemberAx);
+    message.accel.accel.linear.y = state(StateMemberAy);
+    message.accel.accel.linear.z = state(StateMemberAz);
 
     // Fill the covariance (only the left-upper matrix since we are not
     // estimating the rotational accelerations arround the axes
     for (size_t i = 0; i < ACCELERATION_SIZE; i++) {
       for (size_t j = 0; j < ACCELERATION_SIZE; j++) {
         // We use the POSE_SIZE since the accel cov matrix of ROS is 6x6
-        message->accel.covariance[POSE_SIZE * i + j] = estimate_error_covariance(
+        message.accel.covariance[POSE_SIZE * i + j] = estimate_error_covariance(
           i + POSITION_A_OFFSET, j + POSITION_A_OFFSET);
       }
     }
 
     // Fill header information
-    message->header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
-    message->header.frame_id = base_link_output_frame_id_;
+    message.header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
+    message.header.frame_id = base_link_output_frame_id_;
+    return message;
   }
 
-  return filter_.getInitializedStatus();
+  return {};
 }
 
 template<typename T>
@@ -2006,149 +2009,20 @@ void RosFilter<T>::periodicUpdate()
   }
 
   rclcpp::Time cur_time = this->now();
-
-  if (toggled_on_) {
-    // Now we'll integrate any measurements we've received
-    integrateMeasurements(cur_time);
-  } else {
-    // Clear out measurements since we're not currently processing new entries
-    clearMeasurementQueue();
-
-    // Reset last measurement time so we don't get a large time delta on toggle
-    if (filter_.getInitializedStatus()) {
-      filter_.setLastMeasurementTime(this->now());
-    }
-  }
-
-  // Get latest state and publish it
-  auto filtered_position = std::make_unique<nav_msgs::msg::Odometry>();
-
   bool corrected_data = false;
 
-  if (getFilteredOdometryMessage(filtered_position.get())) {
-    world_base_link_trans_msg_.header.stamp =
-      static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
-    world_base_link_trans_msg_.header.frame_id =
-      filtered_position->header.frame_id;
-    world_base_link_trans_msg_.child_frame_id =
-      filtered_position->child_frame_id;
+  updateFilterWithMeasurements(cur_time);
 
-    world_base_link_trans_msg_.transform.translation.x =
-      filtered_position->pose.pose.position.x;
-    world_base_link_trans_msg_.transform.translation.y =
-      filtered_position->pose.pose.position.y;
-    world_base_link_trans_msg_.transform.translation.z =
-      filtered_position->pose.pose.position.z;
-    world_base_link_trans_msg_.transform.rotation =
-      filtered_position->pose.pose.orientation;
-
-    // The filtered_position is the message containing the state and covariances:
-    // nav_msgs Odometry
-    if (!validateFilterOutput(filtered_position.get())) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Critical Error, NaNs were detected in the output state of the filter. "
-        "This was likely due to poorly coniditioned process, noise, or sensor "
-        "covariances.");
-    }
-
-    // If we're trying to publish with the same time stamp, it means that we had a measurement get
-    // inserted into the filter history, and our state estimate was updated after it was already
-    // published. As of ROS Noetic, TF2 will issue warnings whenever this occurs, so we make this
-    // behavior optional. Just for safety, we also check for the condition where the last published
-    // stamp is *later* than this stamp. This should never happen, but we should handle the case
-    // anyway.
-    corrected_data = (!permit_corrected_publication_ &&
-      last_published_stamp_ >= filtered_position->header.stamp);
-
-    // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
-    // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
-    // we'll have some work to do.
-    if (publish_transform_ && !corrected_data) {
-      if (filtered_position->header.frame_id == odom_frame_id_) {
-        world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
-      } else if (filtered_position->header.frame_id == map_frame_id_) {
-        try {
-          tf2::Transform world_base_link_trans;
-          tf2::fromMsg(
-            world_base_link_trans_msg_.transform,
-            world_base_link_trans);
-
-          tf2::Transform base_link_odom_trans;
-          tf2::fromMsg(
-            tf_buffer_
-            ->lookupTransform(
-              base_link_frame_id_,
-              odom_frame_id_,
-              tf2::TimePointZero)
-            .transform,
-            base_link_odom_trans);
-
-          /*
-           * First, see these two references:
-           * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
-           * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
-           * We have a transform from map_frame_id_->base_link_frame_id_, but
-           * it would actually transform a given pose from
-           * base_link_frame_id_->map_frame_id_. We then used lookupTransform,
-           * whose first two arguments are target frame and source frame, to
-           * get a transform from base_link_frame_id_->odom_frame_id_.
-           * However, this transform would actually transform data from
-           * odom_frame_id_->base_link_frame_id_. Now imagine that we have a
-           * position in the map_frame_id_ frame. First, we multiply it by the
-           * inverse of the map_frame_id_->baseLinkFrameId, which will
-           * transform that data from map_frame_id_ to base_link_frame_id_.
-           * Now we want to go from base_link_frame_id_->odom_frame_id_, but
-           * the transform we have takes data from
-           * odom_frame_id_->base_link_frame_id_, so we need its inverse as
-           * well. We have now transformed our data from map_frame_id_ to
-           * odom_frame_id_. However, if we want other users to be able to do
-           * the same, we need to broadcast the inverse of that entire
-           * transform.
-           */
-          tf2::Transform map_odom_trans;
-          map_odom_trans.mult(world_base_link_trans, base_link_odom_trans);
-
-          geometry_msgs::msg::TransformStamped map_odom_trans_msg;
-          map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);
-          map_odom_trans_msg.header.stamp =
-            static_cast<rclcpp::Time>(filtered_position->header.stamp) + tf_time_offset_;
-          map_odom_trans_msg.header.frame_id = map_frame_id_;
-          map_odom_trans_msg.child_frame_id = odom_frame_id_;
-
-          world_transform_broadcaster_->sendTransform(map_odom_trans_msg);
-        } catch (...) {
-          // ROS_ERROR_STREAM_DELAYED_THROTTLE(5.0, "Could not obtain
-          // transform from "
-          //                                  << odom_frame_id_ << "->" <<
-          //                                  base_link_frame_id_);
-        }
-      } else {
-        std::cerr << "Odometry message frame_id was " <<
-          filtered_position->header.frame_id << ", expected " <<
-          map_frame_id_ << " or " << odom_frame_id_ << "\n";
-      }
-    }
-
-    // Retain the last published stamp so we can detect repeated transforms in future cycles
-    last_published_stamp_ = filtered_position->header.stamp;
-
-    // Fire off the position and the transform
-    if (!corrected_data) {
-      position_pub_->publish(std::move(filtered_position));
-    }
-
-    if (print_diagnostics_) {
-      freq_diag_->tick();
-    }
+  // Get latest state and publish it
+  if (auto filtered_position = getFilteredOdometryMessage()) {
+    corrected_data = publishPositionWithOdometry(*filtered_position);
   }
 
   // Publish the acceleration if desired and filter is initialized
-  auto filtered_acceleration = std::make_unique<geometry_msgs::msg::AccelWithCovarianceStamped>();
-  if (!corrected_data && publish_acceleration_ &&
-    getFilteredAccelMessage(filtered_acceleration.get()))
-  {
-    accel_pub_->publish(std::move(filtered_acceleration));
+  if (!corrected_data && publish_acceleration_) {
+    if (auto filtered_acceleration = getFilteredAccelMessage()) {
+      accel_pub_->publish(*filtered_acceleration);
+    }
   }
 
   /* Diagnostics can behave strangely when playing back from bag
@@ -2177,6 +2051,165 @@ void RosFilter<T>::periodicUpdate()
       "Failed to meet update rate! Took " << std::setprecision(20) <<
       loop_elapsed << "seconds. Try decreasing the rate, limiting "
       "sensor output frequency, or limiting the number of sensors.\n";
+  }
+}
+
+template<typename T>
+void RosFilter<T>::updateFilterWithMeasurements(const rclcpp::Time & time)
+{
+  if (toggled_on_) {
+    // Now we'll integrate any measurements we've received
+    integrateMeasurements(time);
+  } else {
+    // Clear out measurements since we're not currently processing new entries
+    clearMeasurementQueue();
+
+    // Reset last measurement time so we don't get a large time delta on toggle
+    if (filter_.getInitializedStatus()) {
+      filter_.setLastMeasurementTime(time);
+    }
+  }
+}
+
+template<typename T>
+bool RosFilter<T>::publishPositionWithOdometry(const nav_msgs::msg::Odometry & filtered_position)
+{
+  updateWorldToBaseLinkTransform(filtered_position);
+
+  // The filtered_position is the message containing the state and covariances:
+  // nav_msgs Odometry
+  if (!validateFilterOutput(filtered_position)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Critical Error, NaNs were detected in the output state of the filter. "
+      "This was likely due to poorly conditioned process, noise, or sensor "
+      "covariances.");
+  }
+
+  // If we're trying to publish with the same time stamp, it means that we had a measurement get
+  // inserted into the filter history, and our state estimate was updated after it was already
+  // published. As of ROS Noetic, TF2 will issue warnings whenever this occurs, so we make this
+  // behavior optional. Just for safety, we also check for the condition where the last published
+  // stamp is *later* than this stamp. This should never happen, but we should handle the case
+  // anyway.
+  bool corrected_data = (!permit_corrected_publication_ &&
+    last_published_stamp_ >= filtered_position.header.stamp);
+
+  if (publish_transform_ && !corrected_data) {
+    publishWorldTransform(filtered_position);
+  }
+
+  // Retain the last published stamp so we can detect repeated transforms in future cycles
+  last_published_stamp_ = filtered_position.header.stamp;
+
+  // Fire off the position and the transform
+  if (!corrected_data) {
+    position_pub_->publish(std::move(filtered_position));
+  }
+
+  if (print_diagnostics_) {
+    freq_diag_->tick();
+  }
+
+  return corrected_data;
+}
+
+template<typename T>
+void RosFilter<T>::updateWorldToBaseLinkTransform(const nav_msgs::msg::Odometry & filtered_position)
+{
+  world_base_link_trans_msg_.header.stamp =
+    static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
+  world_base_link_trans_msg_.header.frame_id =
+    filtered_position.header.frame_id;
+  world_base_link_trans_msg_.child_frame_id =
+    filtered_position.child_frame_id;
+
+  world_base_link_trans_msg_.transform.translation.x =
+    filtered_position.pose.pose.position.x;
+  world_base_link_trans_msg_.transform.translation.y =
+    filtered_position.pose.pose.position.y;
+  world_base_link_trans_msg_.transform.translation.z =
+    filtered_position.pose.pose.position.z;
+  world_base_link_trans_msg_.transform.rotation =
+    filtered_position.pose.pose.orientation;
+}
+
+template<typename T>
+void RosFilter<T>::publishWorldTransform(const nav_msgs::msg::Odometry & filtered_position)
+{
+  // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
+  // send the transform. If the world_frame_id_ is the map_frame_id_ frame,
+  // we'll have some work to do.
+
+  auto frame_id = filtered_position.header.frame_id;
+
+  if (frame_id == odom_frame_id_) {
+    world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
+    return;
+  }
+
+  if (frame_id != map_frame_id_) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "[%s:] Odometry message frame_id was %s, expected %s or %s.",
+      this->get_name(), frame_id.c_str(), map_frame_id_.c_str(), odom_frame_id_.c_str());
+    return;
+  }
+
+  try {
+    tf2::Transform world_base_link_trans;
+    tf2::fromMsg(
+      world_base_link_trans_msg_.transform,
+      world_base_link_trans);
+
+    tf2::Transform base_link_odom_trans;
+    tf2::fromMsg(
+      tf_buffer_
+      ->lookupTransform(
+        base_link_frame_id_,
+        odom_frame_id_,
+        tf2::TimePointZero)
+      .transform,
+      base_link_odom_trans);
+
+    /*
+      * First, see these two references:
+      * http://wiki.ros.org/tf/Overview/Using%20Published%20Transforms#lookupTransform
+      * http://wiki.ros.org/geometry/CoordinateFrameConventions#Transform_Direction
+      * We have a transform from map_frame_id_->base_link_frame_id_, but
+      * it would actually transform a given pose from
+      * base_link_frame_id_->map_frame_id_. We then used lookupTransform,
+      * whose first two arguments are target frame and source frame, to
+      * get a transform from base_link_frame_id_->odom_frame_id_.
+      * However, this transform would actually transform data from
+      * odom_frame_id_->base_link_frame_id_. Now imagine that we have a
+      * position in the map_frame_id_ frame. First, we multiply it by the
+      * inverse of the map_frame_id_->baseLinkFrameId, which will
+      * transform that data from map_frame_id_ to base_link_frame_id_.
+      * Now we want to go from base_link_frame_id_->odom_frame_id_, but
+      * the transform we have takes data from
+      * odom_frame_id_->base_link_frame_id_, so we need its inverse as
+      * well. We have now transformed our data from map_frame_id_ to
+      * odom_frame_id_. However, if we want other users to be able to do
+      * the same, we need to broadcast the inverse of that entire
+      * transform.
+      */
+    tf2::Transform map_odom_trans;
+    map_odom_trans.mult(world_base_link_trans, base_link_odom_trans);
+
+    geometry_msgs::msg::TransformStamped map_odom_trans_msg;
+    map_odom_trans_msg.transform = tf2::toMsg(map_odom_trans);
+    map_odom_trans_msg.header.stamp =
+      static_cast<rclcpp::Time>(filtered_position.header.stamp) + tf_time_offset_;
+    map_odom_trans_msg.header.frame_id = map_frame_id_;
+    map_odom_trans_msg.child_frame_id = odom_frame_id_;
+
+    world_transform_broadcaster_->sendTransform(map_odom_trans_msg);
+  } catch (...) {
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "[%s:] Could not obtain transform from %s -> %s.",
+      this->get_name(), odom_frame_id_.c_str(), base_link_frame_id_.c_str());
   }
 }
 
@@ -3383,34 +3416,34 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
 }
 
 template<typename T>
-bool RosFilter<T>::validateFilterOutput(nav_msgs::msg::Odometry * message)
+bool RosFilter<T>::validateFilterOutput(const nav_msgs::msg::Odometry & message)
 {
-  return !std::isnan(message->pose.pose.position.x) &&
-         !std::isinf(message->pose.pose.position.x) &&
-         !std::isnan(message->pose.pose.position.y) &&
-         !std::isinf(message->pose.pose.position.y) &&
-         !std::isnan(message->pose.pose.position.z) &&
-         !std::isinf(message->pose.pose.position.z) &&
-         !std::isnan(message->pose.pose.orientation.x) &&
-         !std::isinf(message->pose.pose.orientation.x) &&
-         !std::isnan(message->pose.pose.orientation.y) &&
-         !std::isinf(message->pose.pose.orientation.y) &&
-         !std::isnan(message->pose.pose.orientation.z) &&
-         !std::isinf(message->pose.pose.orientation.z) &&
-         !std::isnan(message->pose.pose.orientation.w) &&
-         !std::isinf(message->pose.pose.orientation.w) &&
-         !std::isnan(message->twist.twist.linear.x) &&
-         !std::isinf(message->twist.twist.linear.x) &&
-         !std::isnan(message->twist.twist.linear.y) &&
-         !std::isinf(message->twist.twist.linear.y) &&
-         !std::isnan(message->twist.twist.linear.z) &&
-         !std::isinf(message->twist.twist.linear.z) &&
-         !std::isnan(message->twist.twist.angular.x) &&
-         !std::isinf(message->twist.twist.angular.x) &&
-         !std::isnan(message->twist.twist.angular.y) &&
-         !std::isinf(message->twist.twist.angular.y) &&
-         !std::isnan(message->twist.twist.angular.z) &&
-         !std::isinf(message->twist.twist.angular.z);
+  return !std::isnan(message.pose.pose.position.x) &&
+         !std::isinf(message.pose.pose.position.x) &&
+         !std::isnan(message.pose.pose.position.y) &&
+         !std::isinf(message.pose.pose.position.y) &&
+         !std::isnan(message.pose.pose.position.z) &&
+         !std::isinf(message.pose.pose.position.z) &&
+         !std::isnan(message.pose.pose.orientation.x) &&
+         !std::isinf(message.pose.pose.orientation.x) &&
+         !std::isnan(message.pose.pose.orientation.y) &&
+         !std::isinf(message.pose.pose.orientation.y) &&
+         !std::isnan(message.pose.pose.orientation.z) &&
+         !std::isinf(message.pose.pose.orientation.z) &&
+         !std::isnan(message.pose.pose.orientation.w) &&
+         !std::isinf(message.pose.pose.orientation.w) &&
+         !std::isnan(message.twist.twist.linear.x) &&
+         !std::isinf(message.twist.twist.linear.x) &&
+         !std::isnan(message.twist.twist.linear.y) &&
+         !std::isinf(message.twist.twist.linear.y) &&
+         !std::isnan(message.twist.twist.linear.z) &&
+         !std::isinf(message.twist.twist.linear.z) &&
+         !std::isnan(message.twist.twist.angular.x) &&
+         !std::isinf(message.twist.twist.angular.x) &&
+         !std::isnan(message.twist.twist.angular.y) &&
+         !std::isinf(message.twist.twist.angular.y) &&
+         !std::isnan(message.twist.twist.angular.z) &&
+         !std::isinf(message.twist.twist.angular.z);
 }
 
 template<typename T>
