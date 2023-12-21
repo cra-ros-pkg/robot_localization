@@ -80,6 +80,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   transform_good_(false),
   transform_timeout_(0ns),
   use_local_cartesian_(false),
+  force_user_utm_(false),
   use_manual_datum_(false),
   use_odometry_yaw_(false),
   cartesian_broadcaster_(*this),
@@ -494,6 +495,11 @@ bool NavSatTransform::setUTMZoneCallback(
   GeographicLib::MGRS::Reverse(
     request->utm_zone, utm_zone_, northp_, x_unused, y_unused,
     prec_unused, true);
+  // Toggle flags such that transforms get updated to user utm zone
+  force_user_utm_ = true;
+  use_manual_datum_ = false;
+  transform_good_ = false;
+  has_transform_gps_ = false;
   RCLCPP_INFO(this->get_logger(), "UTM zone set to %d %s", utm_zone_, northp_ ? "north" : "south");
   return true;
 }
@@ -887,9 +893,16 @@ void NavSatTransform::setTransformGps(
   } else {
     double k_tmp;
     double utm_meridian_convergence_degrees;
-    GeographicLib::UTMUPS::Forward(
-      msg->latitude, msg->longitude, utm_zone_, northp_,
-      cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp);
+    try {
+      // If we're using a fixed UTM zone, then we want to use the zone that the user gave us.
+      int set_zone = force_user_utm_ ? utm_zone_ : -1;
+      GeographicLib::UTMUPS::Forward(
+        msg->latitude, msg->longitude, utm_zone_, northp_,
+        cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp, set_zone);
+    } catch (const GeographicLib::GeographicErr & e) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      return;
+    }
     utm_meridian_convergence_ = utm_meridian_convergence_degrees *
       navsat_conversions::RADIANS_PER_DEGREE;
   }
