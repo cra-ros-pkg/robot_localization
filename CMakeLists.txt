@@ -45,6 +45,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
+  "srv/SetUTMZone.srv"
   "srv/ToggleFilterProcessing.srv"
   "srv/ToLL.srv"
   DEPENDENCIES
