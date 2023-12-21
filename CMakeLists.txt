@@ -17,6 +17,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(angles REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(geographic_msgs REQUIRED)
@@ -63,7 +64,7 @@ include_directories(
 )
 
 add_library(
-  ${library_name}
+  ${library_name} SHARED
   src/ekf.cpp
   src/ukf.cpp
   src/filter_base.cpp
@@ -113,6 +114,7 @@ ament_target_dependencies(
   message_filters
   nav_msgs
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
   std_srvs
@@ -161,7 +163,11 @@ target_link_libraries(
 ament_target_dependencies(
   robot_localization_listener_node
   rclcpp
+  rclcpp_components
 )
+
+
+rclcpp_components_register_nodes(${library_name} "robot_localization::Ekf")
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

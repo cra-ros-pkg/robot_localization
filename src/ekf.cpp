@@ -46,8 +46,11 @@
 namespace robot_localization
 {
 Ekf::Ekf()
-: FilterBase()
+: FilterBase(), Node("ekf", rclcpp::NodeOptions())
 {}
+
+Ekf::Ekf(const rclcpp::NodeOptions & options)
+  : FilterBase(), Node("ekf", options) {}
 
 Ekf::~Ekf() {}
 
@@ -442,3 +445,6 @@ void Ekf::predict(
 }
 
 }  // namespace robot_localization
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(robot_localization::Ekf)

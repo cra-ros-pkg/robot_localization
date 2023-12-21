@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION__EKF_HPP_
 
 #include "rclcpp/time.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/measurement.hpp"
 
@@ -47,13 +48,21 @@ namespace robot_localization
  * FilterBase and overrides the predict() and correct() methods in keeping with
  * the discrete time EKF algorithm.
  */
-class Ekf : public FilterBase
+class Ekf : public FilterBase, public rclcpp::Node
 {
 public:
   /**
    * @brief Constructor for the Ekf class
    */
   Ekf();
+    
+  /**
+   * @brief Constructs an instance of Ekf
+   * Initializes a Ekf object with specified NodeOptions
+   * 
+   * @param[in] options - The NodeOptions configuration for the ExtendeKalmanFilter instance.
+   */
+  explicit Ekf(const rclcpp::NodeOptions & options);
 
   /**
    * @brief Destructor for the Ekf class
