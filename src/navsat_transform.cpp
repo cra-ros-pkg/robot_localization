@@ -456,14 +456,6 @@ bool NavSatTransform::fromLLCallback(
       cartesian_y,
       cartesian_z);
   } else {
-    // std::string utm_zone_tmp;
-    // navsat_conversions::LLtoUTM(
-    //   latitude,
-    //   longitude,
-    //   cartesian_y,
-    //   cartesian_x,
-    //   utm_zone_tmp);
-
     // Transform to UTM using the fixed utm_zone_
     int zone_tmp;
     bool northp_tmp;
@@ -912,9 +904,8 @@ void NavSatTransform::setTransformGps(
     msg->latitude, msg->longitude, msg->altitude);
   RCLCPP_INFO(
     this->get_logger(), "Datum %s coordinate is (%d %s, %0.2f, %0.2f)",
-    ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), utm_zone_, (northp_ ? "north" : "south"), cartesian_x,
-    cartesian_y);
-
+    ((use_local_cartesian_) ? "Local Cartesian" : "UTM"),
+    utm_zone_, (northp_ ? "north" : "south"), cartesian_x, cartesian_y);
 
   transform_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
   transform_cartesian_pose_.setRotation(tf2::Quaternion::getIdentity());
