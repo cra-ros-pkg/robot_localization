@@ -163,7 +163,6 @@ target_link_libraries(
 ament_target_dependencies(
   robot_localization_listener_node
   rclcpp
-  rclcpp_components
 )
 
 
