@@ -1857,16 +1857,20 @@ void RosFilter<T>::loadParams()
           RCLCPP_FATAL_STREAM(get_logger(), error);
           throw std::invalid_argument(error);
         }
+        return true;
       }
+      return false;
     };
 
-  load_covariance("process_noise_covariance", process_noise_covariance_);
-  RF_DEBUG("Process noise covariance is:\n" << process_noise_covariance_ << "\n");
-  filter_.setProcessNoiseCovariance(process_noise_covariance_);
+  if (load_covariance("process_noise_covariance", process_noise_covariance_)) {
+    RF_DEBUG("Process noise covariance is:\n" << process_noise_covariance_ << "\n");
+    filter_.setProcessNoiseCovariance(process_noise_covariance_);
+  }
 
-  load_covariance("initial_estimate_covariance", initial_estimate_error_covariance_);
-  RF_DEBUG("Initial estimate covariance is:\n" << initial_estimate_error_covariance_ << "\n");
-  filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
+  if (load_covariance("initial_estimate_covariance", initial_estimate_error_covariance_)) {
+    RF_DEBUG("Initial estimate covariance is:\n" << initial_estimate_error_covariance_ << "\n");
+    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
+  }
 }
 
 template<typename T>
@@ -2861,7 +2865,7 @@ bool RosFilter<T>::preparePose(
 
   pose_tmp.stamp_ = tf2::timeFromSec(
     static_cast<double>(msg->header.stamp.sec) +
-    static_cast<double>(msg->header.stamp.sec) / 1000000000.0);
+    static_cast<double>(msg->header.stamp.nanosec) / 1000000000.0);
 
   // Fill out the position data
   pose_tmp.setOrigin(

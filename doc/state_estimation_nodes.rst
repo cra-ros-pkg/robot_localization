@@ -245,7 +245,7 @@ If ``smooth_lagged_data`` is set to *true*, this parameter specifies the number 
 ~[sensor]_nodelay
 ^^^^^^^^^^^^^^^^^
 
-Specific parameters:
+ROS 1 specific parameters:
 
 * ``~odomN_nodelay``
 * ``~twistN_nodelay``

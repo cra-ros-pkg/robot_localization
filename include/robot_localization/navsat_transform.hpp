@@ -42,6 +42,7 @@
 #include "rclcpp/timer.hpp"
 #include "robot_localization/srv/from_ll.hpp"
 #include "robot_localization/srv/set_datum.hpp"
+#include "robot_localization/srv/set_utm_zone.hpp"
 #include "robot_localization/srv/to_ll.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
@@ -98,6 +99,13 @@ private:
   bool fromLLCallback(
     const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
     std::shared_ptr<robot_localization::srv::FromLL::Response> response);
+
+  /**
+   * @brief Callback for the UTM zone service
+  */
+  bool setUTMZoneCallback(
+    const std::shared_ptr<robot_localization::srv::SetUTMZone::Request> request,
+    std::shared_ptr<robot_localization::srv::SetUTMZone::Response>);
 
   /**
    * @brief Given the pose of the navsat sensor in the Cartesian frame, removes the
@@ -178,6 +186,11 @@ private:
     double & altitude) const;
 
   /**
+   * @brief Sets the manual datum pose to be used by the transform computation
+   */
+  void setManualDatum();
+
+  /**
    * @brief Frame ID of the robot's body frame
    *
    * This is needed for obtaining transforms from the robot's body frame to the
@@ -210,6 +223,11 @@ private:
    * @brief Service for from Lat Long
    */
   rclcpp::Service<robot_localization::srv::FromLL>::SharedPtr from_ll_srv_;
+
+  /**
+   * @brief Service for set UTM zone
+  */
+  rclcpp::Service<robot_localization::srv::SetUTMZone>::SharedPtr set_utm_zone_srv_;
 
   /**
    * @brief Navsatfix publisher
@@ -365,6 +383,11 @@ private:
    */
   bool use_local_cartesian_;
 
+  /**
+   * @brief Whether we want to force the user's UTM zone and not rely on current GPS data for determining it
+   */
+  bool force_user_utm_;
+
   //! @brief Local Cartesian projection around gps origin
   //!
   GeographicLib::LocalCartesian gps_local_cartesian_;
@@ -406,9 +429,14 @@ private:
   tf2::Transform cartesian_world_trans_inverse_;
 
   /**
-   * @brief Cartesian zone as determined after transforming GPS message
+   * @brief @brief the UTM zone (zero means UPS)
    */
-  std::string utm_zone_;
+  int utm_zone_;
+
+  /**
+   * @brief hemisphere (true means north, false means south)
+  */
+  bool northp_;
 
   /**
    * @brief Frame ID of the GPS odometry output
@@ -433,6 +461,15 @@ private:
    * converted GPS odometry message.
    */
   bool zero_altitude_;
+
+  /**
+   * @brief Manual datum pose to be used by the transform computation
+   *
+   * Then manual datum requested by a service request (or configuration) is stored
+   * here until the odom message is received, and the manual datum pose can be
+   * set.
+   */
+  geographic_msgs::msg::GeoPose manual_datum_geopose_;
 };
 
 }  // namespace robot_localization
