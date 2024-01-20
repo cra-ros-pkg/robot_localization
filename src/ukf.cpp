@@ -214,18 +214,18 @@ namespace RobotLocalization
       {
         if (updateIndices[i] == StateMemberRoll)
         {
-          roll_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPointMeasurements[sigmaInd](i));
-          roll_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPointMeasurements[sigmaInd](i));
+          roll_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPointMeasurements[sigmaInd](i));
+          roll_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPointMeasurements[sigmaInd](i));
         }
         else if (updateIndices[i] == StateMemberPitch)
         {
-          pitch_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPointMeasurements[sigmaInd](i));
-          pitch_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPointMeasurements[sigmaInd](i));
+          pitch_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPointMeasurements[sigmaInd](i));
+          pitch_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPointMeasurements[sigmaInd](i));
         }
         else if (updateIndices[i] == StateMemberYaw)
         {
-          yaw_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPointMeasurements[sigmaInd](i));
-          yaw_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPointMeasurements[sigmaInd](i));
+          yaw_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPointMeasurements[sigmaInd](i));
+          yaw_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPointMeasurements[sigmaInd](i));
         }
       }
     }
@@ -336,12 +336,12 @@ namespace RobotLocalization
       state_.noalias() += stateWeights_[sigmaInd] * sigmaPoints_[sigmaInd];
 
       // Euler angle averaging requires special care
-      roll_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPoints_[sigmaInd](StateMemberRoll));
-      roll_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPoints_[sigmaInd](StateMemberRoll));
-      pitch_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPoints_[sigmaInd](StateMemberPitch));
-      pitch_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPoints_[sigmaInd](StateMemberPitch));
-      yaw_sum_x += stateWeights_[sigmaInd] * ::cos(sigmaPoints_[sigmaInd](StateMemberYaw));
-      yaw_sum_y += stateWeights_[sigmaInd] * ::sin(sigmaPoints_[sigmaInd](StateMemberYaw));
+      roll_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPoints_[sigmaInd](StateMemberRoll));
+      roll_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPoints_[sigmaInd](StateMemberRoll));
+      pitch_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPoints_[sigmaInd](StateMemberPitch));
+      pitch_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPoints_[sigmaInd](StateMemberPitch));
+      yaw_sum_x += std::abs(stateWeights_[sigmaInd]) * ::cos(sigmaPoints_[sigmaInd](StateMemberYaw));
+      yaw_sum_y += std::abs(stateWeights_[sigmaInd]) * ::sin(sigmaPoints_[sigmaInd](StateMemberYaw));
     }
 
     // Recover average Euler angles
