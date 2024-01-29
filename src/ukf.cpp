@@ -292,8 +292,9 @@ namespace RobotLocalization
     {
       state_.noalias() += kalmanGainSubset * innovationSubset;
 
-      // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
-      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * predictedMeasCovar * kalmanGainSubset.transpose());
+      // (6) Compute the new estimate error covariance P = P - (K * ( P_zz + R ) * K')
+      estimateErrorCovariance_.noalias() -= (kalmanGainSubset * (predictedMeasCovar + measurementCovarianceSubset)*
+                                    kalmanGainSubset.transpose());
 
       wrapStateAngles();
 
@@ -452,6 +453,18 @@ namespace RobotLocalization
     transferFunction_(StateMemberVx, StateMemberAx) = delta;
     transferFunction_(StateMemberVy, StateMemberAy) = delta;
     transferFunction_(StateMemberVz, StateMemberAz) = delta;
+
+    // Apply control terms, which are actually accelerations
+    sigmaPoint(StateMemberVroll) += controlAcceleration_(ControlMemberVroll) * delta;
+    sigmaPoint(StateMemberVpitch) += controlAcceleration_(ControlMemberVpitch) * delta;
+    sigmaPoint(StateMemberVyaw) += controlAcceleration_(ControlMemberVyaw) * delta;
+
+    sigmaPoint(StateMemberAx) = (controlUpdateVector_[ControlMemberVx] ?
+      controlAcceleration_(ControlMemberVx) : sigmaPoint(StateMemberAx));
+    sigmaPoint(StateMemberAy) = (controlUpdateVector_[ControlMemberVy] ?
+      controlAcceleration_(ControlMemberVy) : sigmaPoint(StateMemberAy));
+    sigmaPoint(StateMemberAz) = (controlUpdateVector_[ControlMemberVz] ?
+      controlAcceleration_(ControlMemberVz) : sigmaPoint(StateMemberAz));
 
     sigmaPoint.applyOnTheLeft(transferFunction_);
   }
