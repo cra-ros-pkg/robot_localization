@@ -24,11 +24,11 @@ cmd3="source /opt/ros/$ROS1_DISTRO/setup.bash; rosparam set use_sim_time true; r
 cmd4="source /opt/ros/$ROS2_DISTRO/setup.bash; source $PWD/install/setup.bash; ros2 launch robot_localization test_ukf_localization_node_bag1.launch.py; exec /bin/bash"
 
 #Command to run static_transform_publisher
-cmd5="source /opt/ros/$ROS2_DISTRO/setup.bash; ros2 run tf2_ros static_transform_publisher 0 -0.3 0.52 -1.570796327 0 1.570796327 base_link imu_link; exec /bin/bash"
+cmd5="source /opt/ros/$ROS2_DISTRO/setup.bash; ros2 run tf2_ros static_transform_publisher --x 0 --y -0.3 --z 0.52 --roll -1.570796327 --pitch 0 --yaw 1.570796327 --frame-id base_link --child-frame-id imu_link; exec /bin/bash"
 
-gnome-terminal --tab -t "roscore" -- /bin/bash -c "$cmd1" 
+gnome-terminal --tab -t "roscore" -- /bin/bash -c "$cmd1"
 sleep 1
-gnome-terminal --tab -t "ros1_bridge" -- /bin/bash -c "$cmd2" 
-gnome-terminal --tab -t "bag" -- /bin/bash -c "$cmd3" 
+gnome-terminal --tab -t "ros1_bridge" -- /bin/bash -c "$cmd2"
+gnome-terminal --tab -t "bag" -- /bin/bash -c "$cmd3"
 gnome-terminal --tab -t "TestCase_launch" -- /bin/bash -c "$cmd4"
-gnome-terminal --tab -t "static_transform_publisher" -- /bin/bash -c "$cmd5"  
+gnome-terminal --tab -t "static_transform_publisher" -- /bin/bash -c "$cmd5"
