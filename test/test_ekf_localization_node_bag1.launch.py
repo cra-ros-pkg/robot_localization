@@ -33,11 +33,6 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument(
             'output_location',
 	    default_value='ekf1.txt'),
-	
-	#launch_ros.actions.Node(
-         #   package='tf2_ros', node_executable='static_transform_publisher',node_name='bl_imu', output='screen',                       
-          #  arguments=['0', '-0.3', '0.52', '-1.570796327', '0', '1.570796327', 'base_link', 'imu_link']            		
-           #),
 
 	launch_ros.actions.Node(
             package='robot_localization', executable='ekf_node', name='test_ekf_localization_node_bag1_ekf',
@@ -48,7 +43,7 @@ def generate_launch_description():
                 [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag1.yaml'],
            ],
            ),
-        
+
         launch_ros.actions.Node(
             package='robot_localization', executable='test_ekf_localization_node_bag1', name='test_ekf_localization_node_bag1_pose',
             output='screen',
@@ -58,5 +53,5 @@ def generate_launch_description():
                 str(parameters_file_path),
                 [EnvironmentVariable(name='FILE_PATH'), os.sep, 'test_ekf_localization_node_bag1.yaml'],
            ],
-           ),	
+           ),
 ])
