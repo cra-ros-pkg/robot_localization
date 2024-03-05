@@ -2221,7 +2221,7 @@ void RosFilter<T>::periodicUpdate()
           RCLCPP_ERROR_STREAM_SKIPFIRST_THROTTLE(
             get_logger(),
             *get_clock(),
-            5.0,
+            5000,
             "Could not obtain transform from " << odom_frame_id_ << "->" << base_link_frame_id_);
         }
       } else {
