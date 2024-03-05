@@ -348,7 +348,7 @@ void RosFilter<T>::controlStampedCallback(
     filter_.setControl(latest_control_, msg->header.stamp);
   } else {
     RCLCPP_WARN_STREAM_THROTTLE(
-      get_logger(), *get_clock(), 5.0, "Commanded velocities "
+      get_logger(), *get_clock(), 5000, "Commanded velocities "
       " must be given in the robot's body frame (" << base_link_frame_id_ <<
         "). Message frame was " << msg->header.frame_id);
   }
