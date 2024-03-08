@@ -110,6 +110,13 @@ ukf_filter_node:
         # difference is that the relative parameter doesn't cause the measurement to be converted to a velocity before
         # integrating it. If you simply want your measurements to start at 0 for a given sensor, set this to true.
         odom0_relative: false
+        
+        # [ADVANCED] Whether to use the starting pose of child_frame_id as the origin of odometry.
+        # Note: this is different from setting odom0_relative to true, as when child_frame is different from 
+        # base_link_frame, the rotation of base_link will be coupled into the translation of child_frame.
+        # Set to true for fusing secondary odometry sources that are rigidly connected to base_link but has a non-zero 
+        # offset from base_link.
+        odom0_pose_use_child_frame: false
 
         # [ADVANCED] If your data is subject to outliers, use these threshold settings, expressed as Mahalanobis distances, to
         # control how far away from the current vehicle state a sensor measurement is permitted to be. Each defaults to
