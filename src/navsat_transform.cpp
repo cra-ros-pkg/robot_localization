@@ -380,7 +380,7 @@ bool NavSatTransform::datumCallback(
   // we are using a datum from now on, and we want other methods to not attempt
   // to transform the values we are specifying here.
   use_manual_datum_ = true;
-  set_datum_service_called_at_least_once_ = true; // We have received the datum, no need to wait for it anymore.
+  set_datum_service_called_at_least_once_ = true;
   transform_good_ = false;
   return true;
 }
@@ -663,8 +663,6 @@ void NavSatTransform::gpsFixCallback(
     // store this message as the initial GPS data to use
     if (!transform_good_ && !use_manual_datum_) {
       setTransformGps(msg);
-        RCLCPP_INFO(
-    this->get_logger(), "setTransformGps from gpsFixCallback");
     }
 
     double cartesian_x = 0;
