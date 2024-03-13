@@ -463,9 +463,9 @@ private:
   bool zero_altitude_;
 
   /**
-   * @brief True if the service setDatum has been called at least once, false otherwise
+   * @brief True if the service datum has been called at least once, false otherwise
    * 
-   * 
+   * If use_manual_datum_ is true and if set_datum_service_called_at_least_once_ is false, the NavSatFix messages are ignored 
   */
   bool set_datum_service_called_at_least_once_;
 

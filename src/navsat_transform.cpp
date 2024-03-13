@@ -258,8 +258,6 @@ void NavSatTransform::computeTransform()
   // 
   if (!transform_good_ && has_transform_odom_ && use_manual_datum_ && set_datum_service_called_at_least_once_) {
     setManualDatum();
-    RCLCPP_INFO(
-      this->get_logger(), "Setting manual datum");
   }
 
   // Only do this if:
@@ -389,8 +387,6 @@ bool NavSatTransform::datumCallback(
 
 void NavSatTransform::setManualDatum()
 {
-  RCLCPP_INFO(
-    this->get_logger(), "setTransformGps from setManualDatum");
   sensor_msgs::msg::NavSatFix fix;
   fix.latitude = manual_datum_geopose_.position.latitude;
   fix.longitude = manual_datum_geopose_.position.longitude;
