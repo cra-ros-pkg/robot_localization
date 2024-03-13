@@ -661,7 +661,8 @@ void NavSatTransform::gpsFixCallback(
     !std::isnan(msg->altitude) && !std::isnan(msg->latitude) &&
     !std::isnan(msg->longitude));
 
-  if (good_gps && set_datum_service_called_at_least_once_) {
+  // If we're using the manual datum, then we need to wait for the set_datum service to be called at least once
+  if (good_gps && ( set_datum_service_called_at_least_once_ || ! use_manual_datum_ )) {
     // If we haven't computed the transform yet, then
     // store this message as the initial GPS data to use
     if (!transform_good_ && !use_manual_datum_) {
