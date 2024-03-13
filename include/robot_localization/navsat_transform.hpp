@@ -467,7 +467,7 @@ private:
    * 
    * 
   */
-  bool set_datum_service_called_at_least_once;
+  bool set_datum_service_called_at_least_once_;
 
   /**
    * @brief Manual datum pose to be used by the transform computation
