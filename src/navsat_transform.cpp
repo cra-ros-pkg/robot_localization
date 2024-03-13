@@ -89,7 +89,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   northp_(true),
   world_frame_id_("odom"),
   yaw_offset_(0.0),
-  zero_altitude_(false)
+  zero_altitude_(false),
+  set_datum_service_called_at_least_once(false)
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -254,8 +255,11 @@ void NavSatTransform::computeTransform()
   // When using manual datum, wait for the receive of odometry message so
   // that the base frame and world frame names can be set before
   // the manual datum pose is set. This must be done prior to the transform computation.
-  if (!transform_good_ && has_transform_odom_ && use_manual_datum_) {
+  // 
+  if (!transform_good_ && has_transform_odom_ && use_manual_datum_ && set_datum_service_called_at_least_once) {
     setManualDatum();
+    RCLCPP_INFO(
+      this->get_logger(), "Setting manual datum");
   }
 
   // Only do this if:
@@ -378,13 +382,15 @@ bool NavSatTransform::datumCallback(
   // we are using a datum from now on, and we want other methods to not attempt
   // to transform the values we are specifying here.
   use_manual_datum_ = true;
-
+  set_datum_service_called_at_least_once = true; // We have received the datum, no need to wait for it anymore.
   transform_good_ = false;
   return true;
 }
 
 void NavSatTransform::setManualDatum()
 {
+  RCLCPP_INFO(
+    this->get_logger(), "setTransformGps from setManualDatum");
   sensor_msgs::msg::NavSatFix fix;
   fix.latitude = manual_datum_geopose_.position.latitude;
   fix.longitude = manual_datum_geopose_.position.longitude;
@@ -655,11 +661,13 @@ void NavSatTransform::gpsFixCallback(
     !std::isnan(msg->altitude) && !std::isnan(msg->latitude) &&
     !std::isnan(msg->longitude));
 
-  if (good_gps) {
+  if (good_gps && set_datum_service_called_at_least_once) {
     // If we haven't computed the transform yet, then
     // store this message as the initial GPS data to use
     if (!transform_good_ && !use_manual_datum_) {
       setTransformGps(msg);
+        RCLCPP_INFO(
+    this->get_logger(), "setTransformGps from gpsFixCallback");
     }
 
     double cartesian_x = 0;

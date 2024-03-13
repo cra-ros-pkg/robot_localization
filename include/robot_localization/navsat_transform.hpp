@@ -463,6 +463,13 @@ private:
   bool zero_altitude_;
 
   /**
+   * @brief True if the service setDatum has been called at least once, false otherwise
+   * 
+   * 
+  */
+  bool set_datum_service_called_at_least_once;
+
+  /**
    * @brief Manual datum pose to be used by the transform computation
    *
    * Then manual datum requested by a service request (or configuration) is stored
