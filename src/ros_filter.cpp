@@ -819,9 +819,8 @@ void RosFilter<T>::loadParams()
 
   // Try to resolve tf_prefix
   std::string tf_prefix = "";
-  std::string tf_prefix_path = "";
   this->declare_parameter("tf_prefix", rclcpp::PARAMETER_STRING);
-  if (this->get_parameter("tf_prefix", tf_prefix_path)) {
+  if (this->get_parameter("tf_prefix", tf_prefix)) {
     // Append the tf prefix in a tf2-friendly manner
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, odom_frame_id_);
