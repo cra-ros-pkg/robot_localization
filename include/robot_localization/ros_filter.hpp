@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
 #include <robot_localization/srv/set_pose.hpp>
+#include <robot_localization/srv/set_state.hpp>
 #include <robot_localization/srv/toggle_filter_processing.hpp>
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -279,6 +280,23 @@ public:
   //!
   void initialize();
 
+  //! @brief Topic callback for manually setting/resetting the whole internal state estimate of the filter (not just the pose)
+  //!
+  //! @param[in] msg - Custom message with pose, twist, and accel information
+  void setStateCallback(
+    const robot_localization::msg::State::SharedPtr msg);
+  
+  //! @brief Service callback for manually setting/resetting the whole internal state estimate of the filter (not just the pose)
+  //!
+  //! @param[in] request - Custom service request with pose, twist, and accel information
+  //! @return true if successful, false if not
+  bool setStateSrvCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<robot_localization::srv::SetState::Request> request,
+    std::shared_ptr<robot_localization::srv::SetState::Response> response);
+
+
+    
   //! @brief Callback method for manually setting/resetting the internal pose
   //! estimate
   //! @param[in] msg - The ROS stamped pose with covariance message to take in
@@ -728,6 +746,12 @@ protected:
   //!
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr control_sub_;
 
+  //! @brief Subscribes to the set_state topic 
+  //! Message type is robot_localization/State.
+  //!
+  rclcpp::Subscription<robot_localization::msg::State>::SharedPtr
+    set_state_sub_;
+
   //! @brief Subscribes to the set_pose topic (usually published from rviz).
   //! Message type is geometry_msgs/PoseWithCovarianceStamped.
   //!
@@ -739,6 +763,12 @@ protected:
   //!
   rclcpp::Service<robot_localization::srv::SetPose>::SharedPtr
     set_pose_service_;
+
+  //! @brief Service that allows another node to change the current state
+  //! (not just the pose) and recieve a confirmation. Uses a custom SetState service.
+  //!
+  rclcpp::Service<robot_localization::srv::SetState>::SharedPtr
+    set_state_service_;
 
   //! @brief Service that allows another node to enable the filter. Uses a
   //! standard Empty service.
