@@ -619,15 +619,17 @@ void NavSatTransform::getRobotOriginWorldPose(
       gps_offset_rotated.setRotation(tf2::Quaternion::getIdentity());
       robot_odom_pose = gps_offset_rotated.inverse() * gps_odom_pose;
     } else {
-      RCLCPP_ERROR(
+      RCLCPP_ERROR_THROTTLE(
         this->get_logger(),
+        *this->get_clock(), 5000,
         "Could not obtain %s -> %s transform. "
         "Will not remove offset of navsat device from robot's origin",
         world_frame_id_.c_str(), base_link_frame_id_.c_str());
     }
   } else {
-    RCLCPP_ERROR(
+    RCLCPP_ERROR_THROTTLE(
       this->get_logger(),
+      *this->get_clock(), 5000,
       "Could not obtain %s -> %s transform. "
       "Will not remove offset of navsat device from robot's origin.",
       base_link_frame_id_.c_str(), gps_frame_id_.c_str());
