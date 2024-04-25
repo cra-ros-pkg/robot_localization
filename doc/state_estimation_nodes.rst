@@ -242,6 +242,10 @@ If any of your sensors produce data with timestamps that are older than the most
 ^^^^^^^^^^^^^^^
 If ``smooth_lagged_data`` is set to *true*, this parameter specifies the number of seconds for which the filter will retain its state and measurement history. This value should be at least as large as the time delta between your lagged measurements and the current time.
 
+~max_future_queue_size
+^^^^^^^^^^^^^^^
+This parameter specifies the number of total data samples, arriving between filter runs, the filter will retain. This is to ensure excessive memory is not used as would happen if incoming data is badly time stamped or the filter ``frequency`` is badly set. 
+
 ~[sensor]_nodelay
 ^^^^^^^^^^^^^^^^^
 
