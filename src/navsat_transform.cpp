@@ -460,8 +460,7 @@ bool NavSatTransform::fromLLCallback(
     int zone_tmp;
     bool northp_tmp;
 
-    try
-    {
+    try {
       GeographicLib::UTMUPS::Forward(latitude, longitude,
                                      zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
     } catch ( GeographicLib::GeographicErr  const &e) {
