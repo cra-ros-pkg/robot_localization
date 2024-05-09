@@ -461,9 +461,10 @@ bool NavSatTransform::fromLLCallback(
     bool northp_tmp;
 
     try {
-      GeographicLib::UTMUPS::Forward(latitude, longitude,
-                                     zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
-    } catch ( GeographicLib::GeographicErr  const &e) {
+      GeographicLib::UTMUPS::Forward(
+        latitude, longitude,
+        zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+    } catch (GeographicLib::GeographicErr const & e) {
       RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
       return false;
     }
@@ -684,17 +685,18 @@ void NavSatTransform::gpsFixCallback(
     double cartesian_y = {};
     double cartesian_z = {};
 
-    if (use_local_cartesian_)
-    {
-      gps_local_cartesian_.Forward(msg->latitude, msg->longitude, msg->altitude,
-                                   cartesian_x, cartesian_y, cartesian_z);
+    if (use_local_cartesian_) {
+      gps_local_cartesian_.Forward(
+        msg->latitude, msg->longitude, msg->altitude,
+        cartesian_x, cartesian_y, cartesian_z);
     } else {
       int zone_tmp;
       bool northp_tmp;
       try {
-        GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude, zone_tmp, northp_tmp,
-                                       cartesian_x, cartesian_y);
-      } catch ( GeographicLib::GeographicErr  const &e) {
+        GeographicLib::UTMUPS::Forward(
+          msg->latitude, msg->longitude, zone_tmp, northp_tmp,
+          cartesian_x, cartesian_y);
+      } catch (GeographicLib::GeographicErr const & e) {
         RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
         return;
       }
