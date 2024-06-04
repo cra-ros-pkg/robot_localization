@@ -459,9 +459,15 @@ bool NavSatTransform::fromLLCallback(
     // Transform to UTM using the fixed utm_zone_
     int zone_tmp;
     bool northp_tmp;
-    GeographicLib::UTMUPS::Forward(
-      latitude, longitude,
-      zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+
+    try {
+      GeographicLib::UTMUPS::Forward(
+        latitude, longitude,
+        zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
+    } catch (GeographicLib::GeographicErr const & e) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      return false;
+    }
   }
 
   cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
@@ -535,14 +541,28 @@ void NavSatTransform::mapToLL(
   odom_as_cartesian.setRotation(tf2::Quaternion::getIdentity());
 
   // Now convert the data back to lat/long and place into the message
-  GeographicLib::UTMUPS::Reverse(
-    utm_zone_,
-    northp_,
-    odom_as_cartesian.getOrigin().getX(),
-    odom_as_cartesian.getOrigin().getY(),
-    latitude,
-    longitude);
-  altitude = odom_as_cartesian.getOrigin().getZ();
+  if (use_local_cartesian_) {
+    double altitude_tmp = {};
+    gps_local_cartesian_.Reverse(
+      odom_as_cartesian.getOrigin().getX(),
+      odom_as_cartesian.getOrigin().getY(),
+      0.0,
+      latitude,
+      longitude,
+      altitude_tmp);
+
+    altitude = odom_as_cartesian.getOrigin().getZ();
+  } else {
+    GeographicLib::UTMUPS::Reverse(
+      utm_zone_,
+      northp_,
+      odom_as_cartesian.getOrigin().getX(),
+      odom_as_cartesian.getOrigin().getY(),
+      latitude,
+      longitude);
+
+    altitude = odom_as_cartesian.getOrigin().getZ();
+  }
 }
 
 void NavSatTransform::getRobotOriginCartesianPose(
@@ -661,13 +681,27 @@ void NavSatTransform::gpsFixCallback(
       setTransformGps(msg);
     }
 
-    double cartesian_x = 0;
-    double cartesian_y = 0;
-    int zone_tmp;
-    bool northp_tmp;
-    GeographicLib::UTMUPS::Forward(
-      msg->latitude, msg->longitude,
-      zone_tmp, northp_tmp, cartesian_x, cartesian_y);
+    double cartesian_x = {};
+    double cartesian_y = {};
+    double cartesian_z = {};
+
+    if (use_local_cartesian_) {
+      gps_local_cartesian_.Forward(
+        msg->latitude, msg->longitude, msg->altitude,
+        cartesian_x, cartesian_y, cartesian_z);
+    } else {
+      int zone_tmp;
+      bool northp_tmp;
+      try {
+        GeographicLib::UTMUPS::Forward(
+          msg->latitude, msg->longitude, zone_tmp, northp_tmp,
+          cartesian_x, cartesian_y);
+      } catch (GeographicLib::GeographicErr const & e) {
+        RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+        return;
+      }
+    }
+
     latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
     latest_cartesian_covariance_.setZero();
 
