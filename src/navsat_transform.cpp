@@ -43,7 +43,7 @@
 #include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/filter_common.hpp"
-#include "robot_localization/navsat_conversions.hpp"
+#include "navsat_conversions.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
 #include "robot_localization/srv/from_ll.hpp"
 #include "robot_localization/srv/set_datum.hpp"

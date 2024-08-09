@@ -34,7 +34,7 @@
 
 #include <string>
 
-#include "robot_localization/navsat_conversions.hpp"
+#include "navsat_conversions.hpp"
 
 void NavsatConversionsTest(
   const double lat, const double lon,
