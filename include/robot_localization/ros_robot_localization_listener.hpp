@@ -37,8 +37,8 @@
 
 #include "Eigen/Dense"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "message_filters/subscriber.h"
-#include "message_filters/time_synchronizer.h"
+#include "message_filters/subscriber.hpp"
+#include "message_filters/time_synchronizer.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
