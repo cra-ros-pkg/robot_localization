@@ -758,12 +758,13 @@ TEST(InterfacesTest, PoseDifferentialIO) {
 TEST(InterfacesTest, ImuDifferentialIO) {
   sensor_msgs::msg::Imu imu;
   imu.header.frame_id = "base_link";
-  tf2::Quaternion quat;
+  tf2::Quaternion start_quat;
   const double roll = M_PI / 2.0;
-  const double pitch = -M_PI;
+  const double pitch = -M_PI / 6.0;
   const double yaw = -M_PI / 4.0;
-  quat.setRPY(roll, pitch, yaw);
-  imu.orientation = tf2::toMsg(quat);
+  start_quat.setRPY(roll, pitch, yaw);
+  start_quat.normalize();
+  imu.orientation = tf2::toMsg(start_quat);
 
   imu.orientation_covariance[0] = 0.02;
   imu.orientation_covariance[4] = 0.02;
@@ -773,15 +774,23 @@ TEST(InterfacesTest, ImuDifferentialIO) {
   imu.angular_velocity_covariance[4] = 0.02;
   imu.angular_velocity_covariance[8] = 0.02;
 
+  rclcpp::Rate set_rate(20);
+
+  // Get the filter's orientation output to match our quaternion
   size_t setCount = 0;
   while (setCount++ < 10) {
     imu.header.stamp = node_->now();
+
     imu0_pub_->publish(imu);  // Use this to move the absolute orientation
+    rclcpp::spin_some(node_);
+    set_rate.sleep();
+
     imu1_pub_->publish(imu);  // Use this to keep velocities at 0
     rclcpp::spin_some(node_);
-    rclcpp::Rate(10).sleep();
+    set_rate.sleep();
   }
 
+  // Send the exact same message. The imu3 source is differential, so the output should not change.
   size_t zeroCount = 0;
   while (zeroCount++ < 10) {
     imu.header.stamp = node_->now();
@@ -790,18 +799,15 @@ TEST(InterfacesTest, ImuDifferentialIO) {
     rclcpp::Rate(10).sleep();
   }
 
-  double rollFinal = roll;
-  double pitchFinal = pitch;
-  double yawFinal = yaw;
-
   // Move the orientation slowly, and see if we can push it to 0
+  tf2::Quaternion target_quat(0.0, 0.0, 0.0, 1.0);
+
   rclcpp::Rate loop_rate(20);
   for (size_t i = 0; i < 100; ++i) {
-    yawFinal -= 0.01 * (3.0 * M_PI / 4.0);
+    // Get the interpolated quaternion between our start quaternion and target
+    auto current_quat = start_quat.slerp(target_quat, static_cast<double>(i + 1) / 100.0);
 
-    quat.setRPY(rollFinal, pitchFinal, yawFinal);
-
-    imu.orientation = tf2::toMsg(quat);
+    imu.orientation = tf2::toMsg(current_quat);
     imu.header.stamp = node_->now();
     imu3_pub_->publish(imu);
     rclcpp::spin_some(node_);
@@ -809,27 +815,17 @@ TEST(InterfacesTest, ImuDifferentialIO) {
     loop_rate.sleep();
   }
 
-  // Move the orientation slowly, and see if we can push it to 0
-  for (size_t i = 0; i < 100; ++i) {
-    rollFinal += 0.01 * (M_PI / 2.0);
+  tf2::Quaternion final_quat;
+  double roll_final {};
+  double pitch_final {};
+  double yaw_final {};
+  tf2::fromMsg(filtered_.pose.pose.orientation, final_quat);
+  tf2::Matrix3x3 mat(final_quat);
+  mat.getRPY(roll_final, pitch_final, yaw_final);
 
-    quat.setRPY(rollFinal, pitchFinal, yawFinal);
-
-    imu.orientation = tf2::toMsg(quat);
-    imu.header.stamp = node_->now();
-    imu3_pub_->publish(imu);
-    rclcpp::spin_some(node_);
-
-    loop_rate.sleep();
-  }
-
-  tf2::fromMsg(filtered_.pose.pose.orientation, quat);
-  tf2::Matrix3x3 mat(quat);
-  mat.getRPY(rollFinal, pitchFinal, yawFinal);
-
-  EXPECT_LT(std::abs(rollFinal), 0.2);
-  EXPECT_LT(std::abs(pitchFinal), 0.2);
-  EXPECT_LT(std::abs(yawFinal), 0.2);
+  EXPECT_LT(std::abs(roll_final), 0.2);
+  EXPECT_LT(std::abs(pitch_final), 0.2);
+  EXPECT_LT(std::abs(yaw_final), 0.2);
 
   resetFilter();
 }

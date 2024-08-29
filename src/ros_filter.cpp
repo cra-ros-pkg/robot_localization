@@ -1960,7 +1960,7 @@ void RosFilter<T>::poseCallback(
 
   RF_DEBUG(
     "------ RosFilter<T>::poseCallback (" << topic_name << ") ------\n"
-      "Pose message:\n" << msg);
+      "Pose message:\n" << geometry_msgs::msg::to_yaml(*msg));
 
   //  Put the initial value in the lastMessagTimes_ for this variable if it's
   //  empty
@@ -2287,7 +2287,8 @@ void RosFilter<T>::setPoseCallback(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
   RF_DEBUG(
-    "------ RosFilter<T>::setPoseCallback ------\nPose message:\n" << msg);
+    "------ RosFilter<T>::setPoseCallback ------\nPose message:\n" <<
+      geometry_msgs::msg::to_yaml(*msg));
 
   RCLCPP_INFO_STREAM(
     get_logger(),
@@ -2402,7 +2403,7 @@ void RosFilter<T>::twistCallback(
 
   RF_DEBUG(
     "------ RosFilter<T>::twistCallback (" << topic_name << ") ------\n"
-      "Twist message:\n" << msg);
+      "Twist message:\n" << geometry_msgs::msg::to_yaml(*msg));
 
   if (last_message_times_.count(topic_name) == 0) {
     last_message_times_.insert(
