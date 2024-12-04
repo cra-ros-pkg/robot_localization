@@ -1858,7 +1858,7 @@ void RosFilter<T>::loadParams()
             get_logger(), "Detected a " << parameter << " parameter with "
               "length " << STATE_SIZE << ". Assuming diagonal values specified.");
           covariance.diagonal() = Eigen::VectorXd::Map(covar_flat.data(), STATE_SIZE);
-        } else if (covariance.size() == STATE_SIZE * STATE_SIZE) {
+        } else if (covar_flat.size() == STATE_SIZE * STATE_SIZE) {
           covariance = Eigen::MatrixXd::Map(covar_flat.data(), STATE_SIZE, STATE_SIZE);
         } else {
           std::string error = "Invalid " + parameter + " specified. Expected a length of " +
