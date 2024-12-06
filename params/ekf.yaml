@@ -192,7 +192,7 @@ ekf_filter_node:
 
         # Whether the input (assumed to be cmd_vel) is a geometry_msgs/Twist or geometry_msgs/TwistStamped message. Defaults to
         # false.
-        stamped_control: false
+        stamped_control: true
 
         # The last issued control command will be used in prediction for this period. Defaults to 0.2.
         control_timeout: 0.2

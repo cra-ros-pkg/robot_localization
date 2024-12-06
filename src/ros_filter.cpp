@@ -92,7 +92,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   toggled_on_(true),
   two_d_mode_(false),
   use_control_(false),
-  stamped_control_(false),
+  stamped_control_(true),
   disabled_at_startup_(false),
   enabled_(false),
   permit_corrected_publication_(false),
@@ -972,7 +972,7 @@ void RosFilter<T>::loadParams()
   std::vector<double> deceleration_gains;
 
   use_control_ = this->declare_parameter("use_control", false);
-  stamped_control_ = this->declare_parameter("stamped_control", false);
+  stamped_control_ = this->declare_parameter("stamped_control", true);
   control_timeout = this->declare_parameter("control_timeout", 0.0);
 
   if (use_control_) {
