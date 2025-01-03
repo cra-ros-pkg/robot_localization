@@ -453,15 +453,19 @@ bool NavSatTransform::fromLLArrayCallback(
   const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
   std::shared_ptr<robot_localization::srv::FromLLArray::Response> response)
 {
-  for (auto it = request->ll_points.begin(); it != request->ll_points.end(); ++it) {
-    try {
-      response->map_points.push_back(fromLL(*it));
-    }
-    catch(const std::runtime_error& e) {
+  decltype(response->map_points) converted_points;
+  converted_points.reserve(request->ll_points.size());
+
+  try {
+    std::transform(request->ll_points.begin(), request->ll_points.end(),
+                   std::back_inserter(response->map_points),
+                   [this] (const auto& point) { return fromLL(point); });
+  }
+  catch(const std::runtime_error& e) {
       return false;
-    }
   }
 
+  response->map_points = std::move(converted_points);
   return true;
 }
 
@@ -497,7 +501,7 @@ geometry_msgs::msg::Point NavSatTransform::fromLL(
         zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
     } catch (GeographicLib::GeographicErr const & e) {
       RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
-      return false;
+      throw;
     }
   }
 
