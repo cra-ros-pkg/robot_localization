@@ -458,7 +458,7 @@ bool NavSatTransform::fromLLArrayCallback(
 
   try {
     std::transform(request->ll_points.begin(), request->ll_points.end(),
-                   std::back_inserter(response->map_points),
+                   std::back_inserter(converted_points),
                    [this] (const auto& point) { return fromLL(point); });
   }
   catch(const std::runtime_error& e) {
