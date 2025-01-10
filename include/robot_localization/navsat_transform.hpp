@@ -56,7 +56,8 @@
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
 
-namespace robot_localization {
+namespace robot_localization
+{
 
 class NavSatTransform : public rclcpp::Node {
 public:
