@@ -441,8 +441,7 @@ bool NavSatTransform::fromLLCallback(
 {
   try {
     response->map_point = fromLL(request->ll_point);
-  }
-  catch(const std::runtime_error& e) {
+  } catch(const std::runtime_error & e) {
     return false;
   }
 
@@ -460,8 +459,7 @@ bool NavSatTransform::fromLLArrayCallback(
     std::transform(request->ll_points.begin(), request->ll_points.end(),
                    std::back_inserter(converted_points),
                    [this] (const auto& point) { return fromLL(point); });
-  }
-  catch(const std::runtime_error& e) {
+  } catch(const std::runtime_error & e) {
       return false;
   }
 
@@ -470,7 +468,7 @@ bool NavSatTransform::fromLLArrayCallback(
 }
 
 geometry_msgs::msg::Point NavSatTransform::fromLL(
-  const geographic_msgs::msg::GeoPoint& geo_point)
+  const geographic_msgs::msg::GeoPoint & geo_point)
 {
   double altitude = geo_point.altitude;
   double longitude = geo_point.longitude;

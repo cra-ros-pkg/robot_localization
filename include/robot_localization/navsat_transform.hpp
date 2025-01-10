@@ -34,6 +34,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <memory>
 
 #include "Eigen/Dense"
 #include "GeographicLib/Geocentric.hpp"
@@ -84,58 +85,58 @@ private:
    * @brief Callback for the datum service
    */
   bool datumCallback(
-      const std::shared_ptr<robot_localization::srv::SetDatum::Request> request,
-      std::shared_ptr<robot_localization::srv::SetDatum::Response>);
+    const std::shared_ptr<robot_localization::srv::SetDatum::Request> request,
+    std::shared_ptr<robot_localization::srv::SetDatum::Response>);
 
   //! @brief Callback for the to Lat Long service
   //!
   bool toLLCallback(
-      const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
-      std::shared_ptr<robot_localization::srv::ToLL::Response> response);
+    const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
+    std::shared_ptr<robot_localization::srv::ToLL::Response> response);
 
   //! @brief Callback for the from Lat Long service
   //!
   bool fromLLCallback(
-      const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
-      std::shared_ptr<robot_localization::srv::FromLL::Response> response);
+    const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
+    std::shared_ptr<robot_localization::srv::FromLL::Response> response);
 
   //! @brief Callback for the from Lat Long Array service
   //!
   bool fromLLArrayCallback(
-      const std::shared_ptr<robot_localization::srv::FromLLArray::Request>
-          request,
-      std::shared_ptr<robot_localization::srv::FromLLArray::Response> response);
+    const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
+    std::shared_ptr<robot_localization::srv::FromLLArray::Response> response);
 
   //! @brief Method for convert point from Lat Lon to the map coordinates system
   //!
   geometry_msgs::msg::Point
-  fromLL(const geographic_msgs::msg::GeoPoint &geo_point);
+  fromLL(const geographic_msgs::msg::GeoPoint & geo_point);
 
   /**
    * @brief Callback for the UTM zone service
    */
   bool setUTMZoneCallback(
-      const std::shared_ptr<robot_localization::srv::SetUTMZone::Request>
-          request,
-      std::shared_ptr<robot_localization::srv::SetUTMZone::Response>);
+    const std::shared_ptr<robot_localization::srv::SetUTMZone::Request> request,
+    std::shared_ptr<robot_localization::srv::SetUTMZone::Response>);
 
   /**
    * @brief Given the pose of the navsat sensor in the Cartesian frame, removes
    * the offset from the vehicle's centroid and returns the Cartesian-frame pose
    * of said centroid.
    */
-  void getRobotOriginCartesianPose(const tf2::Transform &gps_cartesian_pose,
-                                   tf2::Transform &robot_cartesian_pose,
-                                   const rclcpp::Time &transform_time);
+  void getRobotOriginCartesianPose(
+    const tf2::Transform & gps_cartesian_pose,
+    tf2::Transform & robot_cartesian_pose,
+    const rclcpp::Time & transform_time);
 
   /**
    * @brief Given the pose of the navsat sensor in the world frame, removes the
    * offset from the vehicle's centroid and returns the world-frame pose of said
    * centroid.
    */
-  void getRobotOriginWorldPose(const tf2::Transform &gps_odom_pose,
-                               tf2::Transform &robot_odom_pose,
-                               const rclcpp::Time &transform_time);
+  void getRobotOriginWorldPose(
+    const tf2::Transform & gps_odom_pose,
+    tf2::Transform & robot_odom_pose,
+    const rclcpp::Time & transform_time);
 
   /**
    * @brief Callback for the GPS fix data
@@ -172,28 +173,29 @@ private:
    * transform
    * @param[in] msg The NavSatFix message to use in the transform
    */
-  void setTransformGps(const sensor_msgs::msg::NavSatFix::SharedPtr &msg);
+  void setTransformGps(const sensor_msgs::msg::NavSatFix::SharedPtr & msg);
 
   /**
    * @brief Used for setting the odometry data that will be used to compute the
    * transform
    * @param[in] msg The odometry message to use in the transform
    */
-  void setTransformOdometry(const nav_msgs::msg::Odometry::SharedPtr &msg);
+  void setTransformOdometry(const nav_msgs::msg::Odometry::SharedPtr & msg);
 
   /**
    * @brief Transforms the passed in pose from Cartesian to map frame
    *  @param[in] cartesian_pose the pose in Cartesian frame to use to transform
    */
   nav_msgs::msg::Odometry
-  cartesianToMap(const tf2::Transform &cartesian_pose) const;
+  cartesianToMap(const tf2::Transform & cartesian_pose) const;
 
   /**
    * @brief Transforms the passed in point from map frame to lat/long
    * @param[in] point the point in map frame to use to transform
    */
-  void mapToLL(const tf2::Vector3 &point, double &latitude, double &longitude,
-               double &altitude) const;
+  void mapToLL(
+    const tf2::Vector3 & point, double & latitude, double & longitude,
+    double & altitude) const;
 
   /**
    * @brief Sets the manual datum pose to be used by the transform computation
@@ -238,13 +240,13 @@ private:
    * @brief Service for from Lat Long Array
    */
   rclcpp::Service<robot_localization::srv::FromLLArray>::SharedPtr
-      from_ll_array_srv_;
+    from_ll_array_srv_;
 
   /**
    * @brief Service for set UTM zone
    */
   rclcpp::Service<robot_localization::srv::SetUTMZone>::SharedPtr
-      set_utm_zone_srv_;
+    set_utm_zone_srv_;
 
   /**
    * @brief Navsatfix publisher
@@ -491,6 +493,7 @@ private:
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
 };
+
 
 } // namespace robot_localization
 
