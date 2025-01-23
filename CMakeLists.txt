@@ -124,9 +124,14 @@ catkin_package(
 
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIRS}
-  ${YAML_CPP_INCLUDE_DIRS})
+)
+
+include_directories(
+  SYSTEM
+    ${catkin_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIRS}
+    ${YAML_CPP_INCLUDE_DIRS}
+)
 
 link_directories(${YAML_CPP_LIBRARY_DIRS})
 
