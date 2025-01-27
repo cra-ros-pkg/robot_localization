@@ -531,7 +531,6 @@ bool NavSatTransform::setUTMZoneCallback(
   return true;
 }
 
-
 nav_msgs::msg::Odometry NavSatTransform::cartesianToMap(
   const tf2::Transform & cartesian_pose) const
 {

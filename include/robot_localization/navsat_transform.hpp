@@ -32,9 +32,9 @@
 #ifndef ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
 #define ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
 
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <memory>
 
 #include "Eigen/Dense"
 #include "GeographicLib/Geocentric.hpp"
@@ -161,13 +161,13 @@ private:
    * @brief Converts the odometry data back to GPS and broadcasts it
    * @param[out] filtered_gps The NavSatFix message to prepare
    */
-  bool prepareFilteredGps(sensor_msgs::msg::NavSatFix *filtered_gps);
+  bool prepareFilteredGps(sensor_msgs::msg::NavSatFix * filtered_gps);
 
   /**
    * @brief Prepares the GPS odometry message before sending
    * @param[out] gps_odom The odometry message to prepare
    */
-  bool prepareGpsOdometry(nav_msgs::msg::Odometry *gps_odom);
+  bool prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom);
 
   /**
    * @brief Used for setting the GPS data that will be used to compute the
