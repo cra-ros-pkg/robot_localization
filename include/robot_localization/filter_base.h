@@ -333,14 +333,16 @@ class FilterBase
     //! @brief Method for settings bounds on acceleration values derived from controls
     //! @param[in] state - The current state variable (e.g., linear X velocity)
     //! @param[in] control - The current control commanded velocity corresponding to the state variable
+    //! @param[in] delta - the timestep of the predict for which these terms are computed
     //! @param[in] accelerationLimit - Limit for acceleration (regardless of driving direction)
     //! @param[in] accelerationGain - Gain applied to acceleration control error
     //! @param[in] decelerationLimit - Limit for deceleration (moving towards zero, regardless of driving direction)
     //! @param[in] decelerationGain - Gain applied to deceleration control error
     //! @return a usable acceleration estimate for the control vector
     //!
-    inline double computeControlAcceleration(const double state, const double control, const double accelerationLimit,
-      const double accelerationGain, const double decelerationLimit, const double decelerationGain)
+    inline double computeControlAcceleration(const double state, const double control, const double delta,
+      const double accelerationLimit, const double accelerationGain, const double decelerationLimit,
+      const double decelerationGain)
     {
       FB_DEBUG("---------- FilterBase::computeControlAcceleration ----------\n");
 
@@ -357,7 +359,7 @@ class FilterBase
         gain = decelerationGain;
       }
 
-      const double finalAccel = std::min(std::max(gain * error, -limit), limit);
+      const double finalAccel = std::min(std::max(gain * error / delta, -limit), limit);
 
       FB_DEBUG("Control value: " << control << "\n" <<
                "State value: " << state << "\n" <<

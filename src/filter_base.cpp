@@ -367,7 +367,7 @@ namespace RobotLocalization
         if (controlUpdateVector_[controlInd])
         {
           controlAcceleration_(controlInd) = computeControlAcceleration(state_(controlInd + POSITION_V_OFFSET),
-            (timedOut ? 0.0 : latestControl_(controlInd)), accelerationLimits_[controlInd],
+            (timedOut ? 0.0 : latestControl_(controlInd)), predictionDelta, accelerationLimits_[controlInd],
             accelerationGains_[controlInd], decelerationLimits_[controlInd], decelerationGains_[controlInd]);
         }
       }
