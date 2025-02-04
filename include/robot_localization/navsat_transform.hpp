@@ -33,14 +33,17 @@
 #define ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "Eigen/Dense"
+#include "GeographicLib/Geocentric.hpp"
 #include "GeographicLib/LocalCartesian.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/timer.hpp"
 #include "robot_localization/srv/from_ll.hpp"
+#include "robot_localization/srv/from_ll_array.hpp"
 #include "robot_localization/srv/set_datum.hpp"
 #include "robot_localization/srv/set_utm_zone.hpp"
 #include "robot_localization/srv/to_ll.hpp"
@@ -56,8 +59,7 @@
 namespace robot_localization
 {
 
-class NavSatTransform : public rclcpp::Node
-{
+class NavSatTransform : public rclcpp::Node {
 public:
   /**
    * @brief Constructor
@@ -84,8 +86,7 @@ private:
    * @brief Callback for the datum service
    */
   bool datumCallback(
-    const std::shared_ptr<robot_localization::srv::SetDatum::Request>
-    request,
+    const std::shared_ptr<robot_localization::srv::SetDatum::Request> request,
     std::shared_ptr<robot_localization::srv::SetDatum::Response>);
 
   //! @brief Callback for the to Lat Long service
@@ -100,17 +101,28 @@ private:
     const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
     std::shared_ptr<robot_localization::srv::FromLL::Response> response);
 
+  //! @brief Callback for the from Lat Long Array service
+  //!
+  bool fromLLArrayCallback(
+    const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
+    std::shared_ptr<robot_localization::srv::FromLLArray::Response> response);
+
+  //! @brief Method for convert point from Lat Lon to the map coordinates system
+  //!
+  geometry_msgs::msg::Point
+  fromLL(const geographic_msgs::msg::GeoPoint & geo_point);
+
   /**
    * @brief Callback for the UTM zone service
-  */
+   */
   bool setUTMZoneCallback(
     const std::shared_ptr<robot_localization::srv::SetUTMZone::Request> request,
     std::shared_ptr<robot_localization::srv::SetUTMZone::Response>);
 
   /**
-   * @brief Given the pose of the navsat sensor in the Cartesian frame, removes the
-   * offset from the vehicle's centroid and returns the Cartesian-frame pose of said
-   * centroid.
+   * @brief Given the pose of the navsat sensor in the Cartesian frame, removes
+   * the offset from the vehicle's centroid and returns the Cartesian-frame pose
+   * of said centroid.
    */
   void getRobotOriginCartesianPose(
     const tf2::Transform & gps_cartesian_pose,
@@ -175,7 +187,8 @@ private:
    * @brief Transforms the passed in pose from Cartesian to map frame
    *  @param[in] cartesian_pose the pose in Cartesian frame to use to transform
    */
-  nav_msgs::msg::Odometry cartesianToMap(const tf2::Transform & cartesian_pose) const;
+  nav_msgs::msg::Odometry
+  cartesianToMap(const tf2::Transform & cartesian_pose) const;
 
   /**
    * @brief Transforms the passed in point from map frame to lat/long
@@ -204,8 +217,8 @@ private:
   bool broadcast_cartesian_transform_;
 
   /**
-   * @brief Whether to broadcast the Cartesian transform as parent frame, default as
-   * child
+   * @brief Whether to broadcast the Cartesian transform as parent frame,
+   * default as child
    */
   bool broadcast_cartesian_transform_as_parent_frame_;
 
@@ -225,9 +238,16 @@ private:
   rclcpp::Service<robot_localization::srv::FromLL>::SharedPtr from_ll_srv_;
 
   /**
+   * @brief Service for from Lat Long Array
+   */
+  rclcpp::Service<robot_localization::srv::FromLLArray>::SharedPtr
+    from_ll_array_srv_;
+
+  /**
    * @brief Service for set UTM zone
-  */
-  rclcpp::Service<robot_localization::srv::SetUTMZone>::SharedPtr set_utm_zone_srv_;
+   */
+  rclcpp::Service<robot_localization::srv::SetUTMZone>::SharedPtr
+    set_utm_zone_srv_;
 
   /**
    * @brief Navsatfix publisher
@@ -369,7 +389,8 @@ private:
   tf2::Duration transform_timeout_;
 
   /**
-   * @brief Holds the Cartesian (UTM or local ENU) pose that is used to compute the transform
+   * @brief Holds the Cartesian (UTM or local ENU) pose that is used to compute
+   * the transform
    */
   tf2::Transform transform_cartesian_pose_;
 
@@ -379,12 +400,14 @@ private:
   tf2::Transform transform_world_pose_;
 
   /**
-   * @brief Whether we use a Local Cartesian (tangent plane ENU) or the UTM coordinates as our cartesian
+   * @brief Whether we use a Local Cartesian (tangent plane ENU) or the UTM
+   * coordinates as our cartesian
    */
   bool use_local_cartesian_;
 
   /**
-   * @brief Whether we want to force the user's UTM zone and not rely on current GPS data for determining it
+   * @brief Whether we want to force the user's UTM zone and not rely on current
+   * GPS data for determining it
    */
   bool force_user_utm_;
 
@@ -412,8 +435,8 @@ private:
    * @brief UTM's meridian convergence
    *
    * Angle between projected meridian (True North) and Cartesian's grid Y-axis.
-   * For Cartesian projection (Ellipsoidal Transverse Mercator) it is zero on the
-   * equator and non-zero everywhere else. It increases as the poles are
+   * For Cartesian projection (Ellipsoidal Transverse Mercator) it is zero on
+   * the equator and non-zero everywhere else. It increases as the poles are
    * approached or as we're getting farther from central meridian.
    */
   double utm_meridian_convergence_;
@@ -435,7 +458,7 @@ private:
 
   /**
    * @brief hemisphere (true means north, false means south)
-  */
+   */
   bool northp_;
 
   /**
@@ -465,13 +488,14 @@ private:
   /**
    * @brief Manual datum pose to be used by the transform computation
    *
-   * Then manual datum requested by a service request (or configuration) is stored
-   * here until the odom message is received, and the manual datum pose can be
-   * set.
+   * Then manual datum requested by a service request (or configuration) is
+   * stored here until the odom message is received, and the manual datum pose
+   * can be set.
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
 };
 
-}  // namespace robot_localization
 
-#endif  // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
+} // namespace robot_localization
+
+#endif // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
