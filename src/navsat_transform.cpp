@@ -428,14 +428,9 @@ bool NavSatTransform::toLLCallback(
   }
   tf2::Vector3 point(request->map_point.x, request->map_point.y,
     request->map_point.z);
-  try {
-    mapToLL(
-      point, response->ll_point.latitude, response->ll_point.longitude,
-      response->ll_point.altitude);
-  } catch (const GeographicLib::GeographicErr & e) {
-    RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
-    return false;
-  }
+  mapToLL(
+    point, response->ll_point.latitude, response->ll_point.longitude,
+    response->ll_point.altitude);
 
   return true;
 }
@@ -587,14 +582,19 @@ void NavSatTransform::mapToLL(
 
     altitude = odom_as_cartesian.getOrigin().getZ();
   } else {
-    GeographicLib::UTMUPS::Reverse(
-      utm_zone_,
-      northp_,
-      odom_as_cartesian.getOrigin().getX(),
-      odom_as_cartesian.getOrigin().getY(),
-      latitude,
-      longitude);
-    altitude = odom_as_cartesian.getOrigin().getZ();
+    try {
+      GeographicLib::UTMUPS::Reverse(
+        utm_zone_,
+        northp_,
+        odom_as_cartesian.getOrigin().getX(),
+        odom_as_cartesian.getOrigin().getY(),
+        latitude,
+        longitude);
+      altitude = odom_as_cartesian.getOrigin().getZ();
+    } catch (const GeographicLib::GeographicErr & e) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      latitude = longitude = altitude = std::numeric_limits<double>::quiet_NaN();
+    }
   }
 }
 
@@ -831,14 +831,9 @@ bool NavSatTransform::prepareFilteredGps(
   bool new_data = false;
 
   if (transform_good_ && odom_updated_) {
-    try {
-      mapToLL(
-        latest_world_pose_.getOrigin(), filtered_gps->latitude,
-        filtered_gps->longitude, filtered_gps->altitude);
-    } catch (const GeographicLib::GeographicErr & e) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
-      return false;
-    }
+    mapToLL(
+      latest_world_pose_.getOrigin(), filtered_gps->latitude,
+      filtered_gps->longitude, filtered_gps->altitude);
 
     // Rotate the covariance as well
     tf2::Matrix3x3 rot(cartesian_world_trans_inverse_.getRotation());
