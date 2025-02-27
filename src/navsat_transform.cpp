@@ -428,9 +428,14 @@ bool NavSatTransform::toLLCallback(
   }
   tf2::Vector3 point(request->map_point.x, request->map_point.y,
     request->map_point.z);
-  mapToLL(
-    point, response->ll_point.latitude, response->ll_point.longitude,
-    response->ll_point.altitude);
+  try {
+    mapToLL(
+      point, response->ll_point.latitude, response->ll_point.longitude,
+      response->ll_point.altitude);
+  } catch (const GeographicLib::GeographicErr & e) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+    return false;
+  }
 
   return true;
 }
@@ -589,7 +594,6 @@ void NavSatTransform::mapToLL(
       odom_as_cartesian.getOrigin().getY(),
       latitude,
       longitude);
-
     altitude = odom_as_cartesian.getOrigin().getZ();
   }
 }
@@ -724,7 +728,7 @@ void NavSatTransform::gpsFixCallback(
       try {
         GeographicLib::UTMUPS::Forward(
           msg->latitude, msg->longitude, zone_tmp, northp_tmp,
-          cartesian_x, cartesian_y);
+          cartesian_x, cartesian_y, utm_zone_);
       } catch (GeographicLib::GeographicErr const & e) {
         RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
         return;
@@ -827,9 +831,14 @@ bool NavSatTransform::prepareFilteredGps(
   bool new_data = false;
 
   if (transform_good_ && odom_updated_) {
-    mapToLL(
-      latest_world_pose_.getOrigin(), filtered_gps->latitude,
-      filtered_gps->longitude, filtered_gps->altitude);
+    try {
+      mapToLL(
+        latest_world_pose_.getOrigin(), filtered_gps->latitude,
+        filtered_gps->longitude, filtered_gps->altitude);
+    } catch (const GeographicLib::GeographicErr & e) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      return false;
+    }
 
     // Rotate the covariance as well
     tf2::Matrix3x3 rot(cartesian_world_trans_inverse_.getRotation());
