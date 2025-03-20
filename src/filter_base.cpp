@@ -66,6 +66,26 @@ FilterBase::FilterBase()
   reset();
 }
 
+FilterBase::FilterBase(KinematicState state)
+: FilterBase()
+{
+  switch (state)
+  {
+    case KinematicState::DiffBased:
+      jacobian_creator_ = std::make_unique<DiffBasedJacobianCreator>();
+    break;
+
+    case KinematicState::OmniBased:
+      jacobian_creator_ = std::make_unique<DiffBasedJacobianCreator>();
+    break;
+  
+  default:
+    std::runtime_error("Declared kinematic state is invalid");
+    break;
+  }
+}
+
+
 FilterBase::~FilterBase() {}
 
 void FilterBase::reset()

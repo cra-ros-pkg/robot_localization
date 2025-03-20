@@ -72,7 +72,8 @@ add_library(
   src/robot_localization_estimator.cpp
   src/ros_filter.cpp
   src/ros_filter_utilities.cpp
-  src/ros_robot_localization_listener.cpp)
+  src/ros_robot_localization_listener.cpp
+  src/jacobian_creators.cpp)
 
 rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 target_link_libraries(${library_name} "${cpp_typesupport_target}")

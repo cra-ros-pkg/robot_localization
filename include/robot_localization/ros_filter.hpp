@@ -191,11 +191,11 @@ public:
   //! @brief Method to get filter
   //! @param[out] filter - the underlying templated filter
   //!
-  T & getFilter()
+  std::shared_ptr<T> getFilter()
   {
     return filter_;
   }
-
+;
   //! @brief Retrieves the EKF's output for broadcasting
   //! @param[out] message - The standard ROS odometry message to be filled
   //! @return true if the filter is initialized, false otherwise
@@ -341,7 +341,7 @@ protected:
   //! older measurements come in.
   //! @param[in] filter - The filter base object whose state we want to save
   //!
-  void saveFilterState(T & filter);
+  void saveFilterState(std::shared_ptr<T> filter);
 
   //! @brief Removes measurements and filter states older than the given cutoff
   //! time.
@@ -781,7 +781,7 @@ protected:
 
   //! @brief Our filter (EKF, UKF, etc.)
   //!
-  T filter_;
+  std::shared_ptr<T> filter_;
 
   //! @brief Timer for filter updates
   //!

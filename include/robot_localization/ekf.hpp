@@ -55,6 +55,8 @@ public:
    */
   Ekf();
 
+  Ekf(KinematicState state);
+
   /**
    * @brief Destructor for the Ekf class
    */

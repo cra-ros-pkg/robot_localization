@@ -49,6 +49,10 @@ Ukf::Ukf()
   covar_weights_.resize(sigma_count);
 }
 
+Ukf::Ukf(KinematicState state)
+: Ukf()
+{}
+
 Ukf::~Ukf() {}
 
 void Ukf::setConstants(double alpha, double kappa, double beta)

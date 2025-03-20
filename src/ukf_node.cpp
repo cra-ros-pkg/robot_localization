@@ -49,7 +49,7 @@ int main(int argc, char ** argv)
   double alpha = filter->declare_parameter("alpha", 0.001);
   double kappa = filter->declare_parameter("kappa", 0.0);
   double beta = filter->declare_parameter("beta", 2.0);
-  filter->getFilter().setConstants(alpha, kappa, beta);
+  filter->getFilter()->setConstants(alpha, kappa, beta);
   filter->initialize();
   rclcpp::spin(filter->get_node_base_interface());
   rclcpp::shutdown();

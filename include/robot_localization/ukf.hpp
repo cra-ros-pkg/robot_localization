@@ -65,6 +65,8 @@ public:
    */
   Ukf();
 
+  Ukf(KinematicState state);
+
   /**
    * @brief  Destructor for the Ukf class
    */

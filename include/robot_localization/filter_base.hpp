@@ -46,6 +46,8 @@
 #include <robot_localization/measurement.hpp>
 #include <robot_localization/filter_state.hpp>
 
+#include <robot_localization/jacobian_creators.hpp>
+
 namespace robot_localization
 {
 
@@ -56,6 +58,11 @@ public:
    * @brief Constructor for the FilterBase class
    */
   FilterBase();
+
+  /**
+   * @brief Constructor with kinematic state parameter for the FilterBase class
+   */
+  FilterBase(KinematicState state);
 
   /**
    * @brief Destructor for the FilterBase class
@@ -484,6 +491,9 @@ protected:
    * with respect to each state variable.
    */
   Eigen::MatrixXd transfer_function_jacobian_;
+
+
+  std::unique_ptr<JacobianCreator> jacobian_creator_;
 
 private:
   /**

@@ -55,7 +55,7 @@ TEST(UkfTest, Measurements) {
   double alpha = filter->declare_parameter("alpha", 0.001);
   double kappa = filter->declare_parameter("kappa", 0.0);
   double beta = filter->declare_parameter("beta", 2.0);
-  filter->getFilter().setConstants(alpha, kappa, beta);
+  filter->getFilter()->setConstants(alpha, kappa, beta);
 
   // create the instance of the class and pass parameters
   Eigen::MatrixXd initialCovar(15, 15);
@@ -63,9 +63,9 @@ TEST(UkfTest, Measurements) {
   initialCovar.setIdentity();
   initialCovar *= 0.5;
 
-  filter->getFilter().setEstimateErrorCovariance(initialCovar);
+  filter->getFilter()->setEstimateErrorCovariance(initialCovar);
 
-  EXPECT_EQ(filter->getFilter().getEstimateErrorCovariance(), initialCovar);
+  EXPECT_EQ(filter->getFilter()->getEstimateErrorCovariance(), initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   measurement.setIdentity();
@@ -88,12 +88,12 @@ TEST(UkfTest, Measurements) {
 
   filter->robot_localization::RosUkf::integrateMeasurements(rclcpp::Time(1001));
 
-  EXPECT_EQ(filter->getFilter().getState(), measurement);
+  EXPECT_EQ(filter->getFilter()->getState(), measurement);
   EXPECT_EQ(
-    filter->getFilter().getEstimateErrorCovariance(),
+    filter->getFilter()->getEstimateErrorCovariance(),
     measurementCovariance);
 
-  filter->getFilter().setEstimateErrorCovariance(initialCovar);
+  filter->getFilter()->setEstimateErrorCovariance(initialCovar);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -115,7 +115,7 @@ TEST(UkfTest, Measurements) {
 
   filter->robot_localization::RosUkf::integrateMeasurements(rclcpp::Time(1003));
 
-  measurement = measurement2.eval() - filter->getFilter().getState();
+  measurement = measurement2.eval() - filter->getFilter()->getState();
   for (size_t i = 0; i < STATE_SIZE; ++i) {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
   }

@@ -58,6 +58,9 @@ enum StateMembers
   StateMemberAz
 };
 
+enum KinematicState {DiffBased = 0,
+                     OmniBased};
+
 /**
  * @brief Enumeration that defines the control vector
  */

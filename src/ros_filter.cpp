@@ -151,7 +151,7 @@ void RosFilter<T>::reset()
   last_message_times_.clear();
 
   // reset filter to uninitialized state
-  filter_.reset();
+  filter_->reset();
 }
 
 template<typename T>
@@ -303,7 +303,7 @@ void RosFilter<T>::controlStampedCallback(
     latest_control_time_ = msg->header.stamp;
 
     // Update the filter with this control term
-    filter_.setControl(latest_control_, msg->header.stamp);
+    filter_->setControl(latest_control_, msg->header.stamp);
   } else {
     // ROS_WARN_STREAM_THROTTLE(5.0, "Commanded velocities must be given in the
     // robot's body frame (" << base_link_frame_id_ << "). Message frame was " <<
@@ -370,11 +370,11 @@ template<typename T>
 bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
 {
   // If the filter has received a measurement at some point...
-  if (filter_.getInitializedStatus()) {
+  if (filter_->getInitializedStatus()) {
     // Grab our current state and covariance estimates
-    const Eigen::VectorXd & state = filter_.getState();
+    const Eigen::VectorXd & state = filter_->getState();
     const Eigen::MatrixXd & estimate_error_covariance =
-      filter_.getEstimateErrorCovariance();
+      filter_->getEstimateErrorCovariance();
 
     // Convert from roll, pitch, and yaw back to quaternion for
     // orientation values
@@ -418,12 +418,12 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
       }
     }
 
-    message->header.stamp = filter_.getLastMeasurementTime();
+    message->header.stamp = filter_->getLastMeasurementTime();
     message->header.frame_id = world_frame_id_;
     message->child_frame_id = base_link_output_frame_id_;
   }
 
-  return filter_.getInitializedStatus();
+  return filter_->getInitializedStatus();
 }
 
 template<typename T>
@@ -431,11 +431,11 @@ bool RosFilter<T>::getFilteredAccelMessage(
   geometry_msgs::msg::AccelWithCovarianceStamped * message)
 {
   // If the filter has received a measurement at some point...
-  if (filter_.getInitializedStatus()) {
+  if (filter_->getInitializedStatus()) {
     // Grab our current state and covariance estimates
-    const Eigen::VectorXd & state = filter_.getState();
+    const Eigen::VectorXd & state = filter_->getState();
     const Eigen::MatrixXd & estimate_error_covariance =
-      filter_.getEstimateErrorCovariance();
+      filter_->getEstimateErrorCovariance();
 
     //! Fill out the accel_msg
     message->accel.accel.linear.x = state(StateMemberAx);
@@ -453,11 +453,11 @@ bool RosFilter<T>::getFilteredAccelMessage(
     }
 
     // Fill header information
-    message->header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
+    message->header.stamp = rclcpp::Time(filter_->getLastMeasurementTime());
     message->header.frame_id = base_link_output_frame_id_;
   }
 
-  return filter_.getInitializedStatus();
+  return filter_->getInitializedStatus();
 }
 
 template<typename T>
@@ -597,12 +597,12 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     const MeasurementPtr & first_measurement = measurement_queue_.top();
     int restored_measurement_count = 0;
     if (smooth_lagged_data_ &&
-      first_measurement->time_ < filter_.getLastMeasurementTime())
+      first_measurement->time_ < filter_->getLastMeasurementTime())
     {
       RF_DEBUG(
         "Received a measurement that was " <<
           filter_utilities::toSec(
-          filter_.getLastMeasurementTime() -
+          filter_->getLastMeasurementTime() -
           first_measurement->time_) <<
           " seconds in the past. Reverting filter state and "
           "measurement queue...");
@@ -652,14 +652,14 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       // overwrite that value with this one (i.e., with the "old" control we
       // associated with the measurement).
       if (use_control_ && restored_measurement_count > 0) {
-        filter_.setControl(
+        filter_->setControl(
           measurement->latest_control_,
           measurement->latest_control_time_);
         restored_measurement_count--;
       }
 
       // This will call predict and, if necessary, correct
-      filter_.processMeasurement(*(measurement.get()));
+      filter_->processMeasurement(*(measurement.get()));
 
       // Store old states and measurements if we're smoothing
       if (smooth_lagged_data_) {
@@ -670,26 +670,26 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
         // We should only save the filter state once per unique timstamp
         if (measurement_queue_.empty() ||
           measurement_queue_.top()->time_ !=
-          filter_.getLastMeasurementTime())
+          filter_->getLastMeasurementTime())
         {
           saveFilterState(filter_);
         }
       }
     }
-  } else if (filter_.getInitializedStatus()) {
+  } else if (filter_->getInitializedStatus()) {
     // In the event that we don't get any measurements for a long time,
     // we still need to continue to estimate our state. Therefore, we
     // should project the state forward here.
     rclcpp::Duration last_update_delta =
-      current_time - filter_.getLastMeasurementTime();
+      current_time - filter_->getLastMeasurementTime();
 
     // If we get a large delta, then continuously predict until
-    if (last_update_delta >= filter_.getSensorTimeout()) {
+    if (last_update_delta >= filter_->getSensorTimeout()) {
       predict_to_current_time = true;
 
       RF_DEBUG(
         "Sensor timeout! Last measurement time was " <<
-          filter_utilities::toSec(filter_.getLastMeasurementTime()) <<
+          filter_utilities::toSec(filter_->getLastMeasurementTime()) <<
           ", current time is " << filter_utilities::toSec(current_time) <<
           ", delta is " << filter_utilities::toSec(last_update_delta) <<
           "\n");
@@ -698,16 +698,16 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     RF_DEBUG("Filter not yet initialized.\n");
   }
 
-  if (filter_.getInitializedStatus() && predict_to_current_time) {
+  if (filter_->getInitializedStatus() && predict_to_current_time) {
     rclcpp::Duration last_update_delta =
-      current_time - filter_.getLastMeasurementTime();
+      current_time - filter_->getLastMeasurementTime();
 
-    filter_.validateDelta(last_update_delta);
-    filter_.predict(current_time, last_update_delta);
+    filter_->validateDelta(last_update_delta);
+    filter_->predict(current_time, last_update_delta);
 
     // Update the last measurement time and last update time
-    filter_.setLastMeasurementTime(
-      filter_.getLastMeasurementTime() +
+    filter_->setLastMeasurementTime(
+      filter_->getLastMeasurementTime() +
       last_update_delta);
   }
 
@@ -741,6 +741,19 @@ void RosFilter<T>::loadParams()
   // Determine if we'll be printing diagnostic information
   print_diagnostics_ = this->declare_parameter("print_diagnostics", false);
 
+  // Determine which kinematic we should use
+  std::string string_state = this->declare_parameter("kinematic", "omni");
+
+  if (string_state == "omni")
+  {
+    filter_ = std::make_shared<T>(KinematicState::OmniBased);
+  }
+  else if (string_state == "diff")
+  {
+    filter_ = std::make_shared<T>(KinematicState::DiffBased);
+  }
+  
+
   // Check for custom gravitational acceleration value
   gravitational_acceleration_ = this->declare_parameter(
     "gravitational_acceleration",
@@ -756,7 +769,7 @@ void RosFilter<T>::loadParams()
 
       // Make sure we succeeded
       if (debug_stream_.is_open()) {
-        filter_.setDebug(debug, &debug_stream_);
+        filter_->setDebug(debug, &debug_stream_);
       } else {
         std::cerr <<
           "RosFilter<T>::loadParams() - unable to create debug output file " <<
@@ -855,7 +868,7 @@ void RosFilter<T>::loadParams()
   predict_to_current_time_ = this->declare_parameter<bool>("predict_to_current_time", false);
 
   double sensor_timeout = this->declare_parameter("sensor_timeout", 1.0 / frequency_);
-  filter_.setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
+  filter_->setSensorTimeout(rclcpp::Duration::from_seconds(sensor_timeout));
 
   // Determine if we're in 2D mode
   two_d_mode_ = this->declare_parameter("two_d_mode", false);
@@ -983,7 +996,7 @@ void RosFilter<T>::loadParams()
 
   bool dynamic_process_noise_covariance = this->declare_parameter(
     "dynamic_process_noise_covariance", false);
-  filter_.setUseDynamicProcessNoiseCovariance(
+  filter_->setUseDynamicProcessNoiseCovariance(
     dynamic_process_noise_covariance);
 
   std::vector<double> initial_state;
@@ -996,7 +1009,7 @@ void RosFilter<T>::loadParams()
     } else {
       Eigen::Map<Eigen::VectorXd> eigen_state(initial_state.data(),
         initial_state.size());
-      filter_.setState(eigen_state);
+      filter_->setState(eigen_state);
     }
   }
 
@@ -1016,7 +1029,7 @@ void RosFilter<T>::loadParams()
       "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
       "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
       "\nfrequency is " << frequency_ <<
-      "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
+      "\nsensor_timeout is " << filter_utilities::toSec(filter_->getSensorTimeout()) <<
       "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
       "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
       "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
@@ -1028,7 +1041,7 @@ void RosFilter<T>::loadParams()
       "\nacceleration_gains are " << acceleration_gains <<
       "\ndeceleration_limits are " << deceleration_limits <<
       "\ndeceleration_gains are " << deceleration_gains <<
-      "\ninitial state is " << filter_.getState() <<
+      "\ninitial state is " << filter_->getState() <<
       "\ndynamic_process_noise_covariance is " << dynamic_process_noise_covariance <<
       "\npermit_corrected_publication is " << permit_corrected_publication_ <<
       "\nprint_diagnostics is " << print_diagnostics_ << "\n");
@@ -1062,7 +1075,7 @@ void RosFilter<T>::loadParams()
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   // Init the last measurement time so we don't get a huge initial delta
-  filter_.setLastMeasurementTime(this->now());
+  filter_->setLastMeasurementTime(this->now());
 
   // Now pull in each topic to which we want to subscribe.
   // Start with odom.
@@ -1668,7 +1681,7 @@ void RosFilter<T>::loadParams()
     latest_control_.resize(TWIST_SIZE);
     latest_control_.setZero();
 
-    filter_.setControlParams(
+    filter_->setControlParams(
       control_update_vector,
       rclcpp::Duration::from_seconds(control_timeout),
       acceleration_limits, acceleration_gains, deceleration_limits,
@@ -1759,7 +1772,7 @@ void RosFilter<T>::loadParams()
       "Process noise covariance is:\n" <<
         process_noise_covariance << "\n");
 
-    filter_.setProcessNoiseCovariance(process_noise_covariance);
+    filter_->setProcessNoiseCovariance(process_noise_covariance);
   }
 
   // Load up the process noise covariance (from the launch file/parameter
@@ -1786,7 +1799,7 @@ void RosFilter<T>::loadParams()
       "Initial estimate error covariance is:\n" <<
         estimate_error_covar_flat << "\n");
 
-    filter_.setEstimateErrorCovariance(initial_estimate_error_covariance);
+    filter_->setEstimateErrorCovariance(initial_estimate_error_covariance);
   }
 }
 
@@ -2026,8 +2039,8 @@ void RosFilter<T>::periodicUpdate()
     clearMeasurementQueue();
 
     // Reset last measurement time so we don't get a large time delta on toggle
-    if (filter_.getInitializedStatus()) {
-      filter_.setLastMeasurementTime(this->now());
+    if (filter_->getInitializedStatus()) {
+      filter_->setLastMeasurementTime(this->now());
     }
   }
 
@@ -2178,7 +2191,7 @@ void RosFilter<T>::periodicUpdate()
 
   // Clear out expired history data
   if (smooth_lagged_data_) {
-    clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
+    clearExpiredHistory(filter_->getLastMeasurementTime() - history_length_);
   }
 
   // Warn the user if the update took too long
@@ -2235,10 +2248,10 @@ void RosFilter<T>::setPoseCallback(
     update_vector, measurement, measurement_covariance);
 
   // For the state
-  filter_.setState(measurement);
-  filter_.setEstimateErrorCovariance(measurement_covariance);
+  filter_->setState(measurement);
+  filter_->setEstimateErrorCovariance(measurement_covariance);
 
-  filter_.setLastMeasurementTime(this->now());
+  filter_->setLastMeasurementTime(this->now());
 
   RF_DEBUG("\n------ /RosFilter<T>::setPoseCallback ------\n");
 }
@@ -2597,7 +2610,7 @@ bool RosFilter<T>::prepareAcceleration(
       if (::fabs(msg->orientation_covariance[0] + 1) < 1e-9) {
         // Imu message contains no orientation, so we should use orientation
         // from filter state to transform and remove acceleration
-        const Eigen::VectorXd & state = filter_.getState();
+        const Eigen::VectorXd & state = filter_->getState();
         tf2::Matrix3x3 stateTmp;
         stateTmp.setRPY(
           state(StateMemberRoll),
@@ -3154,7 +3167,7 @@ bool RosFilter<T>::prepareTwist(
   // if it measures linear velocity, then later on, we'll need to remove "false"
   // linear velocity resulting from angular velocity and the translational
   // offset of the sensor from the vehicle origin.
-  const Eigen::VectorXd & state = filter_.getState();
+  const Eigen::VectorXd & state = filter_->getState();
   tf2::Vector3 state_twist_rot(state(StateMemberVroll),
     state(StateMemberVpitch),
     state(StateMemberVyaw));
@@ -3290,15 +3303,15 @@ bool RosFilter<T>::prepareTwist(
 }
 
 template<typename T>
-void RosFilter<T>::saveFilterState(T & filter)
+void RosFilter<T>::saveFilterState(std::shared_ptr<T> filter)
 {
   FilterStatePtr state = FilterStatePtr(new FilterState());
-  state->state_ = Eigen::VectorXd(filter.getState());
+  state->state_ = Eigen::VectorXd(filter->getState());
   state->estimate_error_covariance_ =
-    Eigen::MatrixXd(filter.getEstimateErrorCovariance());
-  state->last_measurement_time_ = filter.getLastMeasurementTime();
-  state->latest_control_ = Eigen::VectorXd(filter.getControl());
-  state->latest_control_time_ = filter.getControlTime();
+    Eigen::MatrixXd(filter->getEstimateErrorCovariance());
+  state->last_measurement_time_ = filter->getLastMeasurementTime();
+  state->latest_control_ = Eigen::VectorXd(filter->getControl());
+  state->latest_control_time_ = filter->getControlTime();
   filter_state_history_.push_back(state);
   RF_DEBUG(
     "Saved state with timestamp " <<
@@ -3360,9 +3373,9 @@ bool RosFilter<T>::revertTo(const rclcpp::Time & time)
   if (last_history_state) {
     // Reset filter to the latest state from the queue.
     const FilterStatePtr & state = last_history_state;
-    filter_.setState(state->state_);
-    filter_.setEstimateErrorCovariance(state->estimate_error_covariance_);
-    filter_.setLastMeasurementTime(state->last_measurement_time_);
+    filter_->setState(state->state_);
+    filter_->setEstimateErrorCovariance(state->estimate_error_covariance_);
+    filter_->setLastMeasurementTime(state->last_measurement_time_);
 
     RF_DEBUG(
       "Reverted to state with time " <<

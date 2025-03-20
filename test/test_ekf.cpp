@@ -59,7 +59,7 @@ TEST(EkfTest, Measurements) {
   initialCovar.setIdentity();
   initialCovar *= 0.5;
 
-  filter->getFilter().setEstimateErrorCovariance(initialCovar);
+  filter->getFilter()->setEstimateErrorCovariance(initialCovar);
 
   Eigen::VectorXd measurement(STATE_SIZE);
   measurement.setIdentity();
@@ -82,12 +82,12 @@ TEST(EkfTest, Measurements) {
 
   filter->robot_localization::RosEkf::integrateMeasurements(rclcpp::Time(1001));
 
-  EXPECT_EQ(filter->getFilter().getState(), measurement);
+  EXPECT_EQ(filter->getFilter()->getState(), measurement);
   EXPECT_EQ(
-    filter->getFilter().getEstimateErrorCovariance(),
+    filter->getFilter()->getEstimateErrorCovariance(),
     measurementCovariance);
 
-  filter->getFilter().setEstimateErrorCovariance(initialCovar);
+  filter->getFilter()->setEstimateErrorCovariance(initialCovar);
 
   // Now fuse another measurement and check the output.
   // We know what the filter's state should be when
@@ -109,7 +109,7 @@ TEST(EkfTest, Measurements) {
 
   filter->robot_localization::RosEkf::integrateMeasurements(rclcpp::Time(1003));
 
-  measurement = measurement2.eval() - filter->getFilter().getState();
+  measurement = measurement2.eval() - filter->getFilter()->getState();
   for (size_t i = 0; i < STATE_SIZE; ++i) {
     EXPECT_LT(::fabs(measurement[i]), 0.001);
   }
