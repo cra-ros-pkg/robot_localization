@@ -2,6 +2,21 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix user UTM conversion and catch GeographicErr to not crash navsat_transfrom node (`#917 <https://github.com/cra-ros-pkg/robot_localization/issues/917>`_)
+  * Fix user UTM conversion and catch GeographicErr to not crash navsat_transform node
+  ---------
+  Co-authored-by: Ferry Schoenmakers <ferry.schoenmakers@nobleo.nl>
+* Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
+  * Added FromLLArray service
+  ---------
+  Co-authored-by: Marcin Słomiany <m.slomiany93@gmail.com>
+* Added subscription to stamped topic (`#898 <https://github.com/cra-ros-pkg/robot_localization/issues/898>`_) (`#900 <https://github.com/cra-ros-pkg/robot_localization/issues/900>`_)
+  * Added subscription to stamped topic (`#898 <https://github.com/cra-ros-pkg/robot_localization/issues/898>`_)
+* Fixing IMU differential test (`#897 <https://github.com/cra-ros-pkg/robot_localization/issues/897>`_)
+* Contributors: Ferry Schoenmakers, Jay Herpin, Pablo, Tom Moore
+
 3.8.1 (2024-08-29)
 ------------------
 * Spam the logs a little bit less (`#880 <https://github.com/cra-ros-pkg/robot_localization/issues/880>`_)
