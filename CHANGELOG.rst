@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.8.2 (2025-03-21)
+------------------
 * Fix user UTM conversion and catch GeographicErr to not crash navsat_transfrom node (`#917 <https://github.com/cra-ros-pkg/robot_localization/issues/917>`_)
   * Fix user UTM conversion and catch GeographicErr to not crash navsat_transform node
   ---------
