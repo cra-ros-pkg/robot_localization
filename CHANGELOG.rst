@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.9.2 (2025-03-21)
+------------------
 * Same change on rolling (`#918 <https://github.com/cra-ros-pkg/robot_localization/issues/918>`_)
   Co-authored-by: Ferry Schoenmakers <ferry.schoenmakers@nobleo.nl>
 * Fixing bug with diagonal covariance loading (`#909 <https://github.com/cra-ros-pkg/robot_localization/issues/909>`_)
