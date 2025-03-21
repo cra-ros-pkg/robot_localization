@@ -553,15 +553,19 @@ void NavSatTransform::mapToLL(
 
     altitude = odom_as_cartesian.getOrigin().getZ();
   } else {
-    GeographicLib::UTMUPS::Reverse(
-      utm_zone_,
-      northp_,
-      odom_as_cartesian.getOrigin().getX(),
-      odom_as_cartesian.getOrigin().getY(),
-      latitude,
-      longitude);
-
-    altitude = odom_as_cartesian.getOrigin().getZ();
+    try {
+      GeographicLib::UTMUPS::Reverse(
+        utm_zone_,
+        northp_,
+        odom_as_cartesian.getOrigin().getX(),
+        odom_as_cartesian.getOrigin().getY(),
+        latitude,
+        longitude);
+      altitude = odom_as_cartesian.getOrigin().getZ();
+    } catch (const GeographicLib::GeographicErr & e) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      latitude = longitude = altitude = std::numeric_limits<double>::quiet_NaN();
+    }
   }
 }
 
@@ -695,7 +699,7 @@ void NavSatTransform::gpsFixCallback(
       try {
         GeographicLib::UTMUPS::Forward(
           msg->latitude, msg->longitude, zone_tmp, northp_tmp,
-          cartesian_x, cartesian_y);
+          cartesian_x, cartesian_y, utm_zone_);
       } catch (GeographicLib::GeographicErr const & e) {
         RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
         return;
