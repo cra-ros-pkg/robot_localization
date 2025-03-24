@@ -916,6 +916,9 @@ rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
   for (const auto & param: parameters) {
     if (param.get_name() == "magnetic_declination_radians") {
       magnetic_declination_ = param.as_double();
+
+      // Set back transform_good_ to false to recalculate the transform
+      transform_good_ = false;
       RCLCPP_INFO(
         this->get_logger(), "The new magnetic declination is (%f) rads", magnetic_declination_);
     }
