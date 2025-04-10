@@ -150,6 +150,9 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
     this->get_clock()->wait_until_started();
   }
 
+  parameters_callback_handle_ = this->add_on_set_parameters_callback(
+    std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
+
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
@@ -1014,6 +1017,26 @@ void NavSatTransform::setTransformOdometry(
       std::make_shared<sensor_msgs::msg::Imu>(imu);
     imuCallback(imuPtr);
   }
+}
+
+rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+  // Here update class attributes
+  for (const auto & param: parameters) {
+    if (param.get_name() == "magnetic_declination_radians") {
+      magnetic_declination_ = param.as_double();
+
+      // Set back transform_good_ to false to recalculate the transform
+      transform_good_ = false;
+      RCLCPP_INFO(
+        this->get_logger(), "The new magnetic declination is (%f) rads", magnetic_declination_);
+    }
+  }
+  return result;
 }
 
 }  // namespace robot_localization

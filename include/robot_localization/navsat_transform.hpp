@@ -158,6 +158,13 @@ private:
   void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   /**
+   * @brief Callback for parameters update
+   * @param[in] msg The parameter list to update
+   */
+  rcl_interfaces::msg::SetParametersResult parametersCallback(
+    const std::vector<rclcpp::Parameter> & parameters);
+
+  /**
    * @brief Converts the odometry data back to GPS and broadcasts it
    * @param[out] filtered_gps The NavSatFix message to prepare
    */
@@ -305,6 +312,10 @@ private:
    */
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
 
+  /**
+   * @brief Parameters Callback handle
+   */
+  OnSetParametersCallbackHandle::SharedPtr parameters_callback_handle_;
   /**
    * @brief Covariance for most recent odometry data
    */
@@ -493,6 +504,7 @@ private:
    * can be set.
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
+
 };
 
 }  // namespace robot_localization
