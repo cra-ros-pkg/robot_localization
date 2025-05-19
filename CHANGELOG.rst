@@ -2,6 +2,11 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing deprecated tf2 headers (`#926 <https://github.com/cra-ros-pkg/robot_localization/issues/926>`_)
+* Contributors: Tom Moore
+
 3.9.2 (2025-03-21)
 ------------------
 * Same change on rolling (`#918 <https://github.com/cra-ros-pkg/robot_localization/issues/918>`_)
