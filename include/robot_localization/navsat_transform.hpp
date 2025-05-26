@@ -422,6 +422,11 @@ private:
   bool use_manual_datum_;
 
   /**
+   * @brief Whether we got a datum from the datum service or parameters
+   */
+  bool datum_is_set_;
+
+  /**
    * @brief Whether we get the transform's yaw from the odometry or IMU source
    */
   bool use_odometry_yaw_;

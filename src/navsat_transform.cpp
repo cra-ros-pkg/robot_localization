@@ -82,6 +82,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_local_cartesian_(false),
   force_user_utm_(false),
   use_manual_datum_(false),
+  datum_is_set_(false),
   use_odometry_yaw_(false),
   cartesian_broadcaster_(*this),
   utm_meridian_convergence_(0.0),
@@ -168,17 +169,20 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       datum_lat = datum_vals[0];
       datum_lon = datum_vals[1];
       datum_yaw = datum_vals[2];
-    }
 
-    auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
-    request->geo_pose.position.latitude = datum_lat;
-    request->geo_pose.position.longitude = datum_lon;
-    request->geo_pose.position.altitude = 0.0;
-    tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, datum_yaw);
-    request->geo_pose.orientation = tf2::toMsg(quat);
-    auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
-    datumCallback(request, response);
+      auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
+      request->geo_pose.position.latitude = datum_lat;
+      request->geo_pose.position.longitude = datum_lon;
+      request->geo_pose.position.altitude = 0.0;
+      tf2::Quaternion quat;
+      quat.setRPY(0.0, 0.0, datum_yaw);
+      request->geo_pose.orientation = tf2::toMsg(quat);
+      auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
+      datumCallback(request, response);
+    } else {
+      RCLCPP_INFO(
+      this->get_logger(), "No datum parameter given, waiting to SetDatum call.");
+    }
   }
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
@@ -377,8 +381,9 @@ bool NavSatTransform::datumCallback(
   // we are using a datum from now on, and we want other methods to not attempt
   // to transform the values we are specifying here.
   use_manual_datum_ = true;
-
+  datum_is_set_ = true;
   transform_good_ = false;
+  RCLCPP_INFO(this->get_logger(), "Datum set.");
   return true;
 }
 
@@ -423,6 +428,10 @@ bool NavSatTransform::toLLCallback(
   const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
   std::shared_ptr<robot_localization::srv::ToLL::Response> response)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return false;
+  }
   if (!transform_good_) {
     return false;
   }
@@ -439,6 +448,10 @@ bool NavSatTransform::fromLLCallback(
   const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
   std::shared_ptr<robot_localization::srv::FromLL::Response> response)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return false;
+  }
   try {
     response->map_point = fromLL(request->ll_point);
   } catch(const std::runtime_error & e) {
@@ -452,6 +465,10 @@ bool NavSatTransform::fromLLArrayCallback(
   const std::shared_ptr<robot_localization::srv::FromLLArray::Request> request,
   std::shared_ptr<robot_localization::srv::FromLLArray::Response> response)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return false;
+  }
   decltype(response->map_points) converted_points;
   converted_points.reserve(request->ll_points.size());
 
@@ -692,6 +709,10 @@ void NavSatTransform::getRobotOriginWorldPose(
 void NavSatTransform::gpsFixCallback(
   const sensor_msgs::msg::NavSatFix::SharedPtr msg)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return;
+  }
   gps_frame_id_ = msg->header.frame_id;
 
   if (gps_frame_id_.empty()) {
@@ -753,6 +774,10 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return;
+  }
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
@@ -805,6 +830,10 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 void NavSatTransform::odomCallback(
   const nav_msgs::msg::Odometry::SharedPtr msg)
 {
+  if (use_manual_datum_ && !datum_is_set_){
+    // We have to wait for a call to SetDatum before computing anything.
+    return;
+  }
   world_frame_id_ = msg->header.frame_id;
   base_link_frame_id_ = msg->child_frame_id;
 
