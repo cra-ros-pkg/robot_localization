@@ -257,7 +257,7 @@ void NavSatTransform::computeTransform()
   // When using manual datum, wait for the receive of odometry message so
   // that the base frame and world frame names can be set before
   // the manual datum pose is set. This must be done prior to the transform computation.
-  if (!transform_good_ && has_transform_odom_ && use_manual_datum_) {
+  if (!transform_good_ && has_transform_odom_ && use_manual_datum_ && datum_is_set_) {
     setManualDatum();
   }
 
@@ -269,6 +269,7 @@ void NavSatTransform::computeTransform()
   {
     // The UTM pose we have is given at the location of the GPS sensor on the
     // robot. We need to get the UTM pose of the robot's origin.
+    RCLCPP_INFO(this->get_logger(), "Computing utm->odom TF.");
     tf2::Transform transform_cartesian_pose_corrected;
     if (!use_manual_datum_) {
       getRobotOriginCartesianPose(
@@ -389,6 +390,7 @@ bool NavSatTransform::datumCallback(
 
 void NavSatTransform::setManualDatum()
 {
+  RCLCPP_INFO(this->get_logger(), "Setting map origin fix from manual datum value.");
   sensor_msgs::msg::NavSatFix fix;
   fix.latitude = manual_datum_geopose_.position.latitude;
   fix.longitude = manual_datum_geopose_.position.longitude;
@@ -515,7 +517,7 @@ geometry_msgs::msg::Point NavSatTransform::fromLL(
         latitude, longitude,
         zone_tmp, northp_tmp, cartesian_x, cartesian_y, utm_zone_);
     } catch (GeographicLib::GeographicErr const & e) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Error in fromLL: " << e.what());
       throw;
     }
   }
@@ -609,7 +611,7 @@ void NavSatTransform::mapToLL(
         longitude);
       altitude = odom_as_cartesian.getOrigin().getZ();
     } catch (const GeographicLib::GeographicErr & e) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Error in mapToLL: " << e.what());
       latitude = longitude = altitude = std::numeric_limits<double>::quiet_NaN();
     }
   }
@@ -713,6 +715,16 @@ void NavSatTransform::gpsFixCallback(
     // We have to wait for a call to SetDatum before computing anything.
     return;
   }
+  if (use_manual_datum_ && datum_is_set_ && !transform_good_) {
+    // This race condition that can happen when the TF is not prepared before the first fix message arrives
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(), 5000,
+      "Cannot compute fix to odom because TF is missing: has_transform_gps: %s, "
+      "has_transform_odom: %s, has_transform_imu: %s",
+      has_transform_gps_ ? "true" : "false", has_transform_odom_ ? "true" : "false", has_transform_imu_ ? "true" : "false");
+    return;
+  }
   gps_frame_id_ = msg->header.frame_id;
 
   if (gps_frame_id_.empty()) {
@@ -751,7 +763,7 @@ void NavSatTransform::gpsFixCallback(
           msg->latitude, msg->longitude, zone_tmp, northp_tmp,
           cartesian_x, cartesian_y, utm_zone_);
       } catch (GeographicLib::GeographicErr const & e) {
-        RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Error converting fix message to odometry: " << e.what());
         return;
       }
     }
@@ -774,10 +786,6 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  if (use_manual_datum_ && !datum_is_set_){
-    // We have to wait for a call to SetDatum before computing anything.
-    return;
-  }
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
@@ -830,15 +838,15 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 void NavSatTransform::odomCallback(
   const nav_msgs::msg::Odometry::SharedPtr msg)
 {
-  if (use_manual_datum_ && !datum_is_set_){
-    // We have to wait for a call to SetDatum before computing anything.
-    return;
-  }
   world_frame_id_ = msg->header.frame_id;
   base_link_frame_id_ = msg->child_frame_id;
 
   if (!transform_good_) {
     setTransformOdometry(msg);
+  }
+  if (use_manual_datum_ && !datum_is_set_) {
+    // We have to wait for a call to SetDatum before computing anything.
+    return;
   }
 
   tf2::fromMsg(msg->pose.pose, latest_world_pose_);
@@ -990,7 +998,7 @@ void NavSatTransform::setTransformGps(
         msg->latitude, msg->longitude, utm_zone_, northp_,
         cartesian_x, cartesian_y, utm_meridian_convergence_degrees, k_tmp, set_zone);
     } catch (const GeographicLib::GeographicErr & e) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), e.what());
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Error computing utm->map TF: " << e.what());
       return;
     }
     utm_meridian_convergence_ = utm_meridian_convergence_degrees *
