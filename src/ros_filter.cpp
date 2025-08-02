@@ -382,6 +382,18 @@ bool RosFilter<T>::getFilteredOdometryMessage(nav_msgs::msg::Odometry * message)
     quat.setRPY(
       state(StateMemberRoll), state(StateMemberPitch),
       state(StateMemberYaw));
+    
+    double tempRoll, tempPitch, tempYaw;
+    ros_filter_utilities::quatToRPY(quat, tempRoll, tempPitch, tempYaw);
+
+    RCLCPP_INFO_STREAM(
+      this->get_logger(),
+      "RPY: [" << state(StateMemberRoll) <<
+      ", " << state(StateMemberPitch) <<
+      ", " << state(StateMemberYaw) << "]" << 
+      ", Quaternion: [" << quat.x() << ", " << quat.y() << ", " <<
+      quat.z() << ", " << quat.w() << "]" << " back to RPY: [" <<
+      tempRoll << ", " << tempPitch << ", " << tempYaw << "]");
 
     // Fill out the message
     message->pose.pose.position.x = state(StateMemberX);
