@@ -1049,7 +1049,7 @@ void RosFilter<T>::loadParams()
   // Create a service for manually enabling the filter
   enable_filter_srv_ =
     this->create_service<std_srvs::srv::Empty>(
-    "enable", std::bind(
+    "~/enable", std::bind(
       &RosFilter::enableFilterSrvCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
@@ -1057,7 +1057,7 @@ void RosFilter<T>::loadParams()
   // publishing
   toggle_filter_processing_srv_ =
     this->create_service<robot_localization::srv::ToggleFilterProcessing>(
-    "toggle", std::bind(
+    "~/toggle", std::bind(
       &RosFilter<T>::toggleFilterProcessingCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
