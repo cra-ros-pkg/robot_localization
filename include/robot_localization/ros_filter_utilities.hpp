@@ -41,7 +41,7 @@
 #include "tf2/LinearMath/Quaternion.hpp"
 #include "tf2/LinearMath/Transform.hpp"
 #include "tf2/LinearMath/Vector3.hpp"
-#include "tf2_ros/buffer.h"
+#include <tf2_ros/buffer.hpp>
 
 #define RF_DEBUG(msg) \
   if (filter_.getDebug()) { \

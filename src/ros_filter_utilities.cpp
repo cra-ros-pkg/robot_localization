@@ -47,7 +47,7 @@
 #include "tf2/LinearMath/Vector3.hpp"
 #include "tf2/time.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#include "tf2_ros/buffer.h"
+#include <tf2_ros/buffer.hpp>
 
 std::ostream & operator<<(std::ostream & os, const tf2::Vector3 & vec)
 {
