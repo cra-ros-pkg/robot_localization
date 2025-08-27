@@ -70,11 +70,13 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   broadcast_cartesian_transform_(false),
   broadcast_cartesian_transform_as_parent_frame_(false),
   gps_frame_id_(""),
+  gps_update_time_(0, 0, RCL_ROS_TIME),
   gps_updated_(false),
   has_transform_gps_(false),
   has_transform_imu_(false),
   has_transform_odom_(false),
   magnetic_declination_(0.0),
+  odom_update_time_(0, 0, RCL_ROS_TIME),
   odom_updated_(false),
   publish_gps_(false),
   transform_good_(false),
@@ -143,6 +145,11 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       broadcast_cartesian_transform_as_parent_frame_);
   }
 
+  if (!this->get_clock()->started()) {
+    RCLCPP_INFO(this->get_logger(), "Waiting for clock to start...");
+    this->get_clock()->wait_until_started();
+  }
+
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
 
@@ -183,40 +190,36 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
-  auto subscriber_options = rclcpp::SubscriptionOptions();
-  subscriber_options.qos_overriding_options =
-    rclcpp::QosOverridingOptions::with_default_policies();
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/filtered", custom_qos, std::bind(
-      &NavSatTransform::odomCallback, this, _1), subscriber_options);
+      &NavSatTransform::odomCallback, this, _1));
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
-    subscriber_options);
+    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1));
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
+      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1));
   }
 
-  rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
   gps_odom_pub_ =
     this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/gps", rclcpp::QoS(10), publisher_options);
+    "odometry/gps", rclcpp::QoS(10));
 
   if (publish_gps_) {
     filtered_gps_pub_ =
       this->create_publisher<sensor_msgs::msg::NavSatFix>(
-      "gps/filtered", rclcpp::QoS(10), publisher_options);
+      "gps/filtered", rclcpp::QoS(10));
   }
 
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
-  rclcpp::sleep_for(
-    std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::duration<double>(
-        delay)));
+  if (delay > 0) {
+    RCLCPP_INFO_STREAM(this->get_logger(), "Delaying for " << delay << " seconds before starting...");
+    rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
+    this->get_clock()->sleep_for(delay_duration);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Delaying elapsed. Continuing.");
+  }
 
   auto interval = std::chrono::duration<double>(1.0 / frequency);
   timer_ = this->create_wall_timer(interval, std::bind(&NavSatTransform::transformCallback, this));
@@ -226,13 +229,14 @@ NavSatTransform::~NavSatTransform() {}
 
 void NavSatTransform::transformCallback()
 {
+  RCLCPP_INFO_THROTTLE(
+    this->get_logger(),
+    *this->get_clock(),
+    1000,
+    "Transform callback!");
+
   if (!transform_good_) {
     computeTransform();
-
-    if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
-      // Once we have the transform, we don't need the IMU
-      imu_sub_.reset();
-    }
   } else {
     auto gps_odom = std::make_unique<nav_msgs::msg::Odometry>();
     if (prepareGpsOdometry(gps_odom.get())) {
@@ -269,7 +273,7 @@ void NavSatTransform::computeTransform()
     if (!use_manual_datum_) {
       getRobotOriginCartesianPose(
         transform_cartesian_pose_, transform_cartesian_pose_corrected,
-        rclcpp::Time(0));
+        rclcpp::Time(0, 0, RCL_ROS_TIME));
     } else {
       transform_cartesian_pose_corrected = transform_cartesian_pose_;
     }
@@ -692,6 +696,12 @@ void NavSatTransform::getRobotOriginWorldPose(
 void NavSatTransform::gpsFixCallback(
   const sensor_msgs::msg::NavSatFix::SharedPtr msg)
 {
+  RCLCPP_INFO_THROTTLE(
+    this->get_logger(),
+    *this->get_clock(),
+    1000,
+    "GPS callback!");
+
   gps_frame_id_ = msg->header.frame_id;
 
   if (gps_frame_id_.empty()) {
@@ -753,6 +763,17 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  RCLCPP_INFO_THROTTLE(
+    this->get_logger(),
+    *this->get_clock(),
+    1000,
+    "IMU callback!");
+
+  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_)
+  {
+    return;
+  }
+
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
@@ -780,12 +801,17 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
         roll_offset, pitch_offset, yaw_offset);
       ros_filter_utilities::quatToRPY(transform_orientation_, roll, pitch, yaw);
 
+      std::cerr << "IMU Roll: " << roll << ", Pitch: " << pitch << ", Yaw: " << yaw << std::endl;
+      std::cerr << "IMU Roll Offset: " << roll_offset << ", Pitch Offset: " << pitch_offset << ", Yaw Offset: " << yaw_offset << std::endl;
+
       // Apply the offset (making sure to bound them), and throw them in a
       // vector
       tf2::Vector3 rpy_angles(
         angles::normalize_angle(roll - roll_offset),
         angles::normalize_angle(pitch - pitch_offset),
         angles::normalize_angle(yaw - yaw_offset));
+
+      std::cerr << "Corrected IMU Roll: " << rpy_angles.getX() << ", Pitch: " << rpy_angles.getY() << ", Yaw: " << rpy_angles.getZ() << std::endl;
 
       // Now we need to rotate the roll and pitch by the yaw offset value.
       // Imagine a case where an IMU is mounted facing sideways. In that case
@@ -805,6 +831,12 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 void NavSatTransform::odomCallback(
   const nav_msgs::msg::Odometry::SharedPtr msg)
 {
+  RCLCPP_INFO_THROTTLE(
+    this->get_logger(),
+    *this->get_clock(),
+    1000,
+    "Odometry callback!");
+
   world_frame_id_ = msg->header.frame_id;
   base_link_frame_id_ = msg->child_frame_id;
 
@@ -890,7 +922,7 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom)
     tf2::Transform transformed_cartesian_robot;
     rclcpp::Time time(static_cast<double>(gps_odom->header.stamp.sec) +
       static_cast<double>(gps_odom->header.stamp.nanosec) /
-      1000000000.0);
+      1000000000.0, RCL_ROS_TIME);
     getRobotOriginWorldPose(transformed_cartesian_gps, transformed_cartesian_robot, time);
 
     // Rotate the covariance as well

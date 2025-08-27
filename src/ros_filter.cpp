@@ -2068,6 +2068,11 @@ void RosFilter<T>::poseCallback(
 template<typename T>
 void RosFilter<T>::initialize()
 {
+  if (!this->get_clock()->started()) {
+    RCLCPP_INFO(get_logger(), "Waiting for clock to start...");
+    this->get_clock()->wait_until_started();
+  }
+
   diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(
     shared_from_this());
   diagnostic_updater_->setHardwareID("none");

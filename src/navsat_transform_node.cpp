@@ -38,7 +38,8 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
 
-  const rclcpp::NodeOptions options;
+  rclcpp::NodeOptions options;
+  options.clock_type(RCL_ROS_TIME);
   auto navsat_transform_node = std::make_shared<robot_localization::NavSatTransform>(options);
 
   rclcpp::spin(navsat_transform_node->get_node_base_interface());

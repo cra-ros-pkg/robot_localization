@@ -40,6 +40,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   rclcpp::NodeOptions options;
   options.arguments({"ekf_filter_node"});
+  options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosEkf> filter =
     std::make_shared<robot_localization::RosEkf>(options);
   filter->initialize();
