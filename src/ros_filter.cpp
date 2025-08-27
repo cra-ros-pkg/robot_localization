@@ -382,6 +382,7 @@ void RosFilter<T>::forceTwoD(
   Eigen::MatrixXd & measurement_covariance,
   std::vector<bool> & update_vector)
 {
+  // Force 3D variables to 0 in the measurement
   measurement(StateMemberZ) = 0.0;
   measurement(StateMemberRoll) = 0.0;
   measurement(StateMemberPitch) = 0.0;
@@ -390,6 +391,24 @@ void RosFilter<T>::forceTwoD(
   measurement(StateMemberVpitch) = 0.0;
   measurement(StateMemberAz) = 0.0;
 
+  // Need to eliminate any off-diagonal covariance values that involve one of our 3D variables
+  measurement_covariance.col(StateMemberZ).fill(0.0);
+  measurement_covariance.col(StateMemberRoll).fill(0.0);
+  measurement_covariance.col(StateMemberPitch).fill(0.0);
+  measurement_covariance.col(StateMemberVz).fill(0.0);
+  measurement_covariance.col(StateMemberVroll).fill(0.0);
+  measurement_covariance.col(StateMemberVpitch).fill(0.0);
+  measurement_covariance.col(StateMemberAz).fill(0.0);
+
+  measurement_covariance.row(StateMemberZ).fill(0.0);
+  measurement_covariance.row(StateMemberRoll).fill(0.0);
+  measurement_covariance.row(StateMemberPitch).fill(0.0);
+  measurement_covariance.row(StateMemberVz).fill(0.0);
+  measurement_covariance.row(StateMemberVroll).fill(0.0);
+  measurement_covariance.row(StateMemberVpitch).fill(0.0);
+  measurement_covariance.row(StateMemberAz).fill(0.0);
+
+  // Now set the diagonal covariance values to something small
   measurement_covariance(StateMemberZ, StateMemberZ) = 1e-6;
   measurement_covariance(StateMemberRoll, StateMemberRoll) = 1e-6;
   measurement_covariance(StateMemberPitch, StateMemberPitch) = 1e-6;
@@ -398,6 +417,7 @@ void RosFilter<T>::forceTwoD(
   measurement_covariance(StateMemberVpitch, StateMemberVpitch) = 1e-6;
   measurement_covariance(StateMemberAz, StateMemberAz) = 1e-6;
 
+  // Finally, update the update vector
   update_vector[StateMemberZ] = 1;
   update_vector[StateMemberRoll] = 1;
   update_vector[StateMemberPitch] = 1;
