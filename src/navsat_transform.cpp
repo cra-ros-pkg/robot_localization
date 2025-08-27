@@ -70,11 +70,13 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   broadcast_cartesian_transform_(false),
   broadcast_cartesian_transform_as_parent_frame_(false),
   gps_frame_id_(""),
+  gps_update_time_(0, 0, RCL_ROS_TIME),
   gps_updated_(false),
   has_transform_gps_(false),
   has_transform_imu_(false),
   has_transform_odom_(false),
   magnetic_declination_(0.0),
+  odom_update_time_(0, 0, RCL_ROS_TIME),
   odom_updated_(false),
   publish_gps_(false),
   transform_good_(false),
@@ -141,6 +143,11 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       this->declare_parameter(
       "broadcast_cartesian_transform_as_parent_frame",
       broadcast_cartesian_transform_as_parent_frame_);
+  }
+
+  if (!this->get_clock()->started()) {
+    RCLCPP_INFO(this->get_logger(), "Waiting for clock to start...");
+    this->get_clock()->wait_until_started();
   }
 
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
@@ -213,10 +220,12 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
-  rclcpp::sleep_for(
-    std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::duration<double>(
-        delay)));
+  if (delay > 0) {
+    RCLCPP_INFO_STREAM(this->get_logger(), "Delaying for " << delay << " seconds before starting...");
+    rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
+    this->get_clock()->sleep_for(delay_duration);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Delay elapsed. Continuing.");
+  }
 
   auto interval = std::chrono::duration<double>(1.0 / frequency);
   timer_ = this->create_wall_timer(interval, std::bind(&NavSatTransform::transformCallback, this));
@@ -269,7 +278,7 @@ void NavSatTransform::computeTransform()
     if (!use_manual_datum_) {
       getRobotOriginCartesianPose(
         transform_cartesian_pose_, transform_cartesian_pose_corrected,
-        rclcpp::Time(0));
+        rclcpp::Time(0, 0, RCL_ROS_TIME));
     } else {
       transform_cartesian_pose_corrected = transform_cartesian_pose_;
     }
@@ -890,7 +899,7 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom)
     tf2::Transform transformed_cartesian_robot;
     rclcpp::Time time(static_cast<double>(gps_odom->header.stamp.sec) +
       static_cast<double>(gps_odom->header.stamp.nanosec) /
-      1000000000.0);
+      1000000000.0, RCL_ROS_TIME);
     getRobotOriginWorldPose(transformed_cartesian_gps, transformed_cartesian_robot, time);
 
     // Rotate the covariance as well
