@@ -53,12 +53,12 @@
 #include "robot_localization/ros_filter_utilities.hpp"
 
 #define THROTTLE(clock, duration, thing) do { \
-  static rclcpp::Time _last_output_time ## __LINE__(0, 0, (clock)->get_clock_type()); \
-  auto _now = (clock)->now(); \
-  if (_now - _last_output_time ## __LINE__ > (duration)) { \
-  _last_output_time ## __LINE__ = _now; \
-  thing; \
-  } \
+    static rclcpp::Time _last_output_time ## __LINE__(0, 0, (clock)->get_clock_type()); \
+    auto _now = (clock)->now(); \
+    if (_now - _last_output_time ## __LINE__ > (duration)) { \
+      _last_output_time ## __LINE__ = _now; \
+      thing; \
+    } \
 } while (0)
 
 namespace robot_localization
