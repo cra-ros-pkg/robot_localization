@@ -51,7 +51,7 @@ Ekf::Ekf()
 
 Ekf::~Ekf() {}
 
-void Ekf::correct(const Measurement & measurement)
+bool Ekf::correct(const Measurement & measurement)
 {
   FB_DEBUG(
     "---------------------- Ekf::correct ----------------------\n" <<
@@ -216,6 +216,9 @@ void Ekf::correct(const Measurement & measurement)
         state_ << "\nCorrected full estimate error covariance is:\n" <<
         estimate_error_covariance_ <<
         "\n\n---------------------- /Ekf::correct ----------------------\n");
+    return true;
+  } else{
+    return false;
   }
 }
 

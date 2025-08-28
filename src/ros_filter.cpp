@@ -43,6 +43,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "robot_localization/filter_common.hpp"
 
 #include "angles/angles.h"
 #include "diagnostic_msgs/msg/diagnostic_status.hpp"
@@ -105,13 +106,16 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   latest_control_(),
   process_noise_covariance_(STATE_SIZE, STATE_SIZE),
   initial_estimate_error_covariance_(STATE_SIZE, STATE_SIZE),
-  last_diag_time_(0, 0, RCL_ROS_TIME),
   last_published_stamp_(0, 0, RCL_ROS_TIME),
   predict_to_current_time_(false),
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0ns),
-  tf_time_offset_(0ns)
+  tf_time_offset_(0ns),
+  use_state_lock_protection_(false),
+  state_lock_protection_threshold_(0,0),
+  state_element_update_times_(STATE_SIZE),
+  state_lock_protection_variance_(Eigen::VectorXd::Constant(STATE_SIZE, 1.0e9))
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -167,7 +171,6 @@ void RosFilter<T>::reset()
   // Also set the last set pose time, so we ignore all messages
   // that occur before it
   last_set_pose_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
-  last_diag_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   latest_control_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   last_published_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
@@ -184,6 +187,8 @@ void RosFilter<T>::reset()
   filter_.setSensorTimeout(sensor_timeout_);
   filter_.setProcessNoiseCovariance(process_noise_covariance_);
   filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
+
+  state_element_update_times_.resize(STATE_SIZE);
 }
 
 template<typename T>
@@ -543,6 +548,8 @@ void RosFilter<T>::imuCallback(
     return;
   }
 
+  register_topic_tick(topic_name, msg->header.stamp);
+
   // As with the odometry message, we can separate out the pose- and
   // twist-related variables in the IMU message and pass them to the pose and
   // twist callbacks (filters)
@@ -712,7 +719,11 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       }
 
       // This will call predict and, if necessary, correct
-      filter_.processMeasurement(*(measurement.get()));
+      auto is_measurement_applied = filter_.processMeasurement(*(measurement.get()));
+      if(is_measurement_applied)
+      {
+        updateStateLockProtection(*measurement);
+      }
 
       // Store old states and measurements if we're smoothing
       if (smooth_lagged_data_) {
@@ -764,6 +775,11 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       last_update_delta);
   }
 
+  if(use_state_lock_protection_)
+  {
+    preventStateLock(filter_.getLastMeasurementTime());
+  }
+
   RF_DEBUG("\n----- /RosFilter<T>::integrateMeasurements ------\n");
 }
 
@@ -789,6 +805,64 @@ void RosFilter<T>::differentiateMeasurements(const rclcpp::Time & current_time)
     }
     last_state_twist_rot_ = new_state_twist_rot;
     last_diff_time_ = time_now;
+  }
+}
+
+template<typename T>
+void RosFilter<T>::updateStateLockProtection(const Measurement& measurement){ 
+  for(size_t i = 0; i < STATE_SIZE; ++i){
+    if(measurement.update_vector_[i] == true){
+      auto & data = state_element_update_times_[i][measurement.topic_name_]; 
+      data.time_=measurement.time_;
+      data.measurement_=measurement.measurement_(i);
+      data.covariance_=measurement.covariance_(i, i);
+    }
+  }
+}
+
+template<typename T>
+rclcpp::Time RosFilter<T>::findLatestUpdateTime(const TopicTimeMap& map){
+  auto max_element = std::max_element(
+    map.begin(), map.end(),
+    [](const auto& a, const auto& b){
+      return a.second.time_ < b.second.time_;
+    }
+  );
+  
+  return max_element != map.end() 
+    ? max_element->second.time_ 
+    : rclcpp::Time(0, 0, RCL_ROS_TIME);
+}
+
+template<typename T>
+void RosFilter<T>::preventStateLock(rclcpp::Time state_stamp){
+  auto measurement_covariance = filter_.getEstimateErrorCovariance();
+  bool state_lock_hazard = false;
+  auto no_update_duration = rclcpp::Duration(0,0);
+  // Check if any of the protected state elements have not been updated for a long time
+  // If so, set the covariance to a high value to prevent Mahalanobis lock
+  for(auto member : sl_protected_members){
+    auto last_update = findLatestUpdateTime(state_element_update_times_[static_cast<size_t>(member)]);
+    auto diff = state_stamp - last_update;
+    no_update_duration = std::max(no_update_duration, diff);
+    if(diff > state_lock_protection_threshold_){
+      state_lock_hazard = true;
+      auto i = static_cast<int>(member);
+      measurement_covariance(i,i) = std::max(state_lock_protection_variance_[i], measurement_covariance(i,i));
+    }    
+  }
+
+  if(state_lock_hazard)
+  {
+    using namespace std::chrono_literals;
+    filter_.setEstimateErrorCovariance(measurement_covariance);
+
+    auto& clk = *this->get_clock();
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), clk, 30'000, // 30s
+      "Filter did not receive absolute measurement for %0.2f s which exceeds threshold of %0.2f s.\nResetting covariance to prevent Mahalanobis lock!",
+      no_update_duration.seconds(), state_lock_protection_threshold_.seconds()
+    );
   }
 }
 
@@ -1265,6 +1339,8 @@ void RosFilter<T>::loadParams()
           this->create_subscription<nav_msgs::msg::Odometry>(
             odom_topic, custom_qos,
             odom_callback));
+
+        add_topic_diagnostic_if_configured(odom_topic_name, odom_topic);
       } else {
         std::stringstream stream;
         stream << odom_topic << " is listed as an input topic, but all update "
@@ -1404,6 +1480,8 @@ void RosFilter<T>::loadParams()
             geometry_msgs::msg::PoseWithCovarianceStamped>(
             pose_topic, custom_qos, pose_callback));
 
+        add_topic_diagnostic_if_configured(pose_topic_name, pose_topic);
+
         if (differential) {
           twist_var_counts[StateMemberVx] += pose_update_vec[StateMemberX];
           twist_var_counts[StateMemberVy] += pose_update_vec[StateMemberY];
@@ -1498,6 +1576,7 @@ void RosFilter<T>::loadParams()
           this->create_subscription<
             geometry_msgs::msg::TwistWithCovarianceStamped>(
             twist_topic, custom_qos, twist_callback));
+        add_topic_diagnostic_if_configured(twist_topic_name, twist_topic);
 
         twist_var_counts[StateMemberVx] += twist_update_vec[StateMemberVx];
         twist_var_counts[StateMemberVy] += twist_update_vec[StateMemberVy];
@@ -1706,6 +1785,8 @@ void RosFilter<T>::loadParams()
         topic_subs_.push_back(
           this->create_subscription<sensor_msgs::msg::Imu>(
             imu_topic, custom_qos, imu_callback));
+
+        add_topic_diagnostic_if_configured(imu_topic_name, imu_topic);
       } else {
         RCLCPP_ERROR_STREAM(
           get_logger(),
@@ -1881,8 +1962,70 @@ void RosFilter<T>::loadParams()
     RF_DEBUG("Initial estimate covariance is:\n" << initial_estimate_error_covariance_ << "\n");
     filter_.setEstimateErrorCovariance(initial_estimate_error_covariance_);
   }
+
+  use_state_lock_protection_ = this->declare_parameter<bool>("use_state_lock_protection", false);
+  state_lock_protection_threshold_ = rclcpp::Duration::from_seconds(
+    this->declare_parameter<double>("state_lock_protection_threshold_s", 15.0));
+
+  this->declare_parameter("state_lock_protection_variance", rclcpp::PARAMETER_DOUBLE_ARRAY);
+  std::vector<double> spv;
+  if (this->get_parameter("state_lock_protection_variance", spv))
+  {
+    assert(spv.size() == STATE_SIZE);
+    for (int i = 0; i < STATE_SIZE; i++) {
+      state_lock_protection_variance_[i] =spv[i];
+    }
+  }
 }
 
+template<typename T>
+std::optional<TopicDiagnosticSettings> RosFilter<T>::load_topic_diagnostics_config(
+  const std::string& topic_name)
+{
+  auto use_topic_diag = this->declare_parameter<bool>(
+        topic_name + std::string("_topic_diagnostics"),
+        false);
+  if (use_topic_diag) {
+    TopicDiagnosticSettings settings;
+    settings.min_freq = this->declare_parameter<double>(
+      topic_name + std::string("_min_frequency"), 10.0);
+    settings.max_freq = this->declare_parameter<double>(
+      topic_name + std::string("_max_frequency"), 20.0);
+    settings.tolerance = this->declare_parameter<double>(
+      topic_name + std::string("_tolerance"), 0.1);
+    settings.window_size = this->declare_parameter<int>(
+      topic_name + std::string("_window_size"), 5);
+    settings.min_stamp_dt_acceptable = this->declare_parameter<double>(
+      topic_name + std::string("_min_dt"), -1.0);
+    settings.max_stamp_dt_acceptable = this->declare_parameter<double>(
+      topic_name + std::string("_max_dt"), 5.0);
+    return settings;
+  } 
+  return {};
+}
+
+template<typename T>
+void RosFilter<T>::add_topic_diagnostic_if_configured(const std::string& topic_name, const std::string& diag_name){
+  auto settings = load_topic_diagnostics_config(topic_name);
+  if(settings.has_value()){
+    topic_diagnostics_.emplace(
+      std::piecewise_construct,
+      std::forward_as_tuple(topic_name),
+      std::forward_as_tuple(
+          diag_name,
+          *this->diagnostic_updater_,
+          settings.value(),
+          this->get_clock()));
+  }
+}
+template<typename T>
+void RosFilter<T>::register_topic_tick(std::string topic_name, const rclcpp::Time& time)
+{
+  auto diag = topic_diagnostics_.find(topic_name);
+  if(diag != topic_diagnostics_.end()){
+    diag->second.tick(time);
+  }
+}
 template<typename T>
 void RosFilter<T>::odometryCallback(
   const nav_msgs::msg::Odometry::SharedPtr msg,
@@ -1909,6 +2052,8 @@ void RosFilter<T>::odometryCallback(
 
     return;
   }
+
+  register_topic_tick(topic_name, msg->header.stamp);
 
   RF_DEBUG(
     "------ RosFilter<T>::odometryCallback (" <<
@@ -1968,6 +2113,8 @@ void RosFilter<T>::poseCallback(
       topic_name + "_timestamp", stream.str(), false);
     return;
   }
+
+  register_topic_tick(topic_name, msg->header.stamp);
 
   RF_DEBUG(
     "------ RosFilter<T>::poseCallback (" << topic_name << ") ------\n"
@@ -2063,6 +2210,10 @@ void RosFilter<T>::initialize()
       &RosFilter<T>::aggregateDiagnostics);
   }
 
+  diagnostic_updater_->add(
+    "State lock protection", this,
+    &RosFilter<T>::stateLockProtectionDiagnostics);
+
   // Set up the frequency diagnostic
   min_frequency_ = frequency_ - 2;
   max_frequency_ = frequency_ + 2;
@@ -2073,8 +2224,6 @@ void RosFilter<T>::initialize()
     diagnostic_updater::FrequencyStatusParam(
       &min_frequency_,
       &max_frequency_, 0.1, 10));
-
-  last_diag_time_ = this->now();
 
   // Clear out the transforms
   world_base_link_trans_msg_.transform =
@@ -2263,20 +2412,6 @@ void RosFilter<T>::periodicUpdate()
     accel_pub_->publish(std::move(filtered_acceleration));
   }
 
-  /* Diagnostics can behave strangely when playing back from bag
-   * files and using simulated time, so we have to check for
-   * time suddenly moving backwards as well as the standard
-   * timeout criterion before publishing. */
-
-  double diag_duration = (cur_time - last_diag_time_).nanoseconds();
-  if (print_diagnostics_ &&
-    (diag_duration >= diagnostic_updater_->getPeriod().nanoseconds() ||
-    diag_duration < 0.0))
-  {
-    diagnostic_updater_->force_update();
-    last_diag_time_ = cur_time;
-  }
-
   // Clear out expired history data
   if (smooth_lagged_data_) {
     clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
@@ -2412,6 +2547,8 @@ void RosFilter<T>::twistCallback(
     return;
   }
 
+  register_topic_tick(topic_name, msg->header.stamp);
+  
   RF_DEBUG(
     "------ RosFilter<T>::twistCallback (" << topic_name << ") ------\n"
       "Twist message:\n" << geometry_msgs::msg::to_yaml(*msg));
@@ -2555,6 +2692,41 @@ void RosFilter<T>::aggregateDiagnostics(
 
   // Reset the warning level for the dynamic diagnostic messages
   dynamic_diag_error_level_ = diagnostic_msgs::msg::DiagnosticStatus::OK;
+}
+
+template<typename T>
+void RosFilter<T>::stateLockProtectionDiagnostics(diagnostic_updater::DiagnosticStatusWrapper & wrapper){
+  wrapper.add("State lock protection enabled", use_state_lock_protection_);
+  wrapper.add("EKF state variable", "Update delay [s].");
+  auto isValid = true;
+  auto filter_stamp = filter_.getLastMeasurementTime();
+  for (int i=0; i<STATE_SIZE; i++) {
+    auto diff = filter_stamp - findLatestUpdateTime(state_element_update_times_[i]);
+    wrapper.add(state_variable_names_[i], diff.seconds());
+    if(isValid){
+      auto it = std::find(sl_protected_members.begin(), sl_protected_members.end(), (StateMembers)i);
+      auto is_protected = it != sl_protected_members.end();
+      if(diff > state_lock_protection_threshold_ && is_protected){
+        isValid = false;
+      }
+    }
+
+    for (auto & topic_update_time: state_element_update_times_[i]){
+      auto & data = topic_update_time.second;
+      wrapper.add(
+        "\t" + topic_update_time.first, 
+      "diff time: " + std::to_string((filter_stamp - data.time_).seconds()) +
+        ", measurement: " + std::to_string(data.measurement_) +
+        ", covariance: " + std::to_string(data.covariance_)
+      );
+    }
+  }
+
+  if(isValid){
+    wrapper.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK");
+  } else{
+    wrapper.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "State lock hazard detected! Reseting state covariance to avoid state lock.");
+  }
 }
 
 template<typename T>

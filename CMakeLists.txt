@@ -180,6 +180,14 @@ if(BUILD_TESTING)
     test_ekf_node_interfaces
     ${library_name})
 
+  # --- Lock state protection tests ---
+  ament_add_gtest(test_lsp_ekf test/test_lsp_ekf.cpp)
+  target_link_libraries(test_lsp_ekf ${library_name})
+  
+  rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+  target_link_libraries(test_lsp_ekf "${cpp_typesupport_target}")
+  # --- Lock state protection tests ---
+
   rosidl_get_typesupport_target(
     cpp_typesupport_target
     "${PROJECT_NAME}" "rosidl_typesupport_cpp")

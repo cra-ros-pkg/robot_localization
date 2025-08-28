@@ -74,8 +74,10 @@ public:
    * @brief Carries out the correct step in the predict/update cycle. This
    * method must be implemented by subclasses.
    * @param[in] measurement - The measurement to fuse with the state estimate
+   * 
+   * @return Whether or not the measurement was successfully fused or rejected
    */
-  virtual void correct(const Measurement & measurement) = 0;
+  virtual bool correct(const Measurement & measurement) = 0;
 
   /**
    * @brief Returns the control vector currently being used
@@ -165,7 +167,7 @@ public:
    * @brief Does some final preprocessing, carries out the predict/update cycle
    * @param[in] measurement - The measurement object to fuse into the filter
    */
-  virtual void processMeasurement(const Measurement & measurement);
+  virtual bool processMeasurement(const Measurement & measurement);
 
   /**
    * @brief Sets the most recent control term
