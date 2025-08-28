@@ -40,6 +40,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   rclcpp::NodeOptions options;
   options.arguments({"ukf_filter_node"});
+  options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosUkf> filter =
     std::make_shared<robot_localization::RosUkf>(options);
   double alpha = filter->declare_parameter("alpha", 0.001);
