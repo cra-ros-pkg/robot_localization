@@ -235,11 +235,6 @@ void NavSatTransform::transformCallback()
 {
   if (!transform_good_) {
     computeTransform();
-
-    if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
-      // Once we have the transform, we don't need the IMU
-      imu_sub_.reset();
-    }
   } else {
     auto gps_odom = std::make_unique<nav_msgs::msg::Odometry>();
     if (prepareGpsOdometry(gps_odom.get())) {
@@ -733,6 +728,11 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
+    // Once we have the transform, we don't need the IMU
+    return;
+  }
+
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
