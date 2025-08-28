@@ -221,7 +221,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
   if (delay > 0) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "Delaying for " << delay << " seconds before starting...");
+    RCLCPP_INFO_STREAM(this->get_logger(),
+      "Delaying for " << delay << " seconds before starting...");
     rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
     this->get_clock()->sleep_for(delay_duration);
     RCLCPP_INFO_STREAM(this->get_logger(), "Delay elapsed. Continuing.");
@@ -237,11 +238,6 @@ void NavSatTransform::transformCallback()
 {
   if (!transform_good_) {
     computeTransform();
-
-    if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
-      // Once we have the transform, we don't need the IMU
-      imu_sub_.reset();
-    }
   } else {
     auto gps_odom = std::make_unique<nav_msgs::msg::Odometry>();
     if (prepareGpsOdometry(gps_odom.get())) {
@@ -465,9 +461,11 @@ bool NavSatTransform::fromLLArrayCallback(
   converted_points.reserve(request->ll_points.size());
 
   try {
-    std::transform(request->ll_points.begin(), request->ll_points.end(),
-                   std::back_inserter(converted_points),
-                   [this] (const auto& point) { return fromLL(point); });
+    std::transform(
+      request->ll_points.begin(),
+      request->ll_points.end(),
+      std::back_inserter(converted_points),
+      [this] (const auto & point) {return fromLL(point);});
   } catch(const std::runtime_error & e) {
     return false;
   }
@@ -762,6 +760,10 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
+    return;
+  }
+
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
