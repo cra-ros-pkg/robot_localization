@@ -35,6 +35,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "Eigen/Dense"
 #include "GeographicLib/Geocentric.hpp"
@@ -504,10 +505,8 @@ private:
    * can be set.
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
-
 };
 
+}  // namespace robot_localization
 
-} // namespace robot_localization
-
-#endif // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
+#endif  // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
