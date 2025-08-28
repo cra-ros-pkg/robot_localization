@@ -224,7 +224,8 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
   if (delay > 0) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "Delaying for " << delay << " seconds before starting...");
+    RCLCPP_INFO_STREAM(this->get_logger(),
+        "Delaying for " << delay << " seconds before starting...");
     rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
     this->get_clock()->sleep_for(delay_duration);
     RCLCPP_INFO_STREAM(this->get_logger(), "Delay elapsed. Continuing.");
@@ -465,7 +466,7 @@ bool NavSatTransform::fromLLArrayCallback(
   try {
     std::transform(request->ll_points.begin(), request->ll_points.end(),
                    std::back_inserter(converted_points),
-                   [this] (const auto& point) { return fromLL(point); });
+      [this] (const auto & point) {return fromLL(point);});
   } catch(const std::runtime_error & e) {
     return false;
   }
@@ -1024,7 +1025,7 @@ rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
   result.successful = true;
   result.reason = "success";
   // Here update class attributes
-  for (const auto & param: parameters) {
+  for (const auto & param : parameters) {
     if (param.get_name() == "magnetic_declination_radians") {
       magnetic_declination_ = param.as_double();
 
