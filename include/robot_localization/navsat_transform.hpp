@@ -42,6 +42,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <robot_localization/srv/set_datum.hpp>
 #include <robot_localization/srv/to_ll.hpp>
@@ -460,7 +461,6 @@ private:
    * set.
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
-
 };
 
 }  // namespace robot_localization

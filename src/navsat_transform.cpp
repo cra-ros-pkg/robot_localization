@@ -913,7 +913,7 @@ rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
   result.successful = true;
   result.reason = "success";
   // Here update class attributes
-  for (const auto & param: parameters) {
+  for (const auto & param : parameters) {
     if (param.get_name() == "magnetic_declination_radians") {
       magnetic_declination_ = param.as_double();
 
