@@ -465,7 +465,7 @@ bool NavSatTransform::fromLLArrayCallback(
       request->ll_points.begin(),
       request->ll_points.end(),
       std::back_inserter(converted_points),
-      [this] (const auto& point) { return fromLL(point); });
+      [this] (const auto & point) {return fromLL(point);});
   } catch(const std::runtime_error & e) {
     return false;
   }
@@ -760,8 +760,7 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_)
-  {
+  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
     return;
   }
 
