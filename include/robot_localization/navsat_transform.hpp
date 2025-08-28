@@ -495,7 +495,6 @@ private:
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
 };
 
+}  // namespace robot_localization
 
-} // namespace robot_localization
-
-#endif // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
+#endif  // ROBOT_LOCALIZATION__NAVSAT_TRANSFORM_HPP_
