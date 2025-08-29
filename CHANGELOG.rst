@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.10.0 (2025-08-29)
+-------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
   * Added FromLLArray service
   ---------
