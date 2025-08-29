@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.8.3 (2025-08-29)
+------------------
 * Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
   * Add a Parameters Callback to be able to set magnetic_declination_radians value at runtime.
 * Fixing issue with subscriber disconnect (`#944 <https://github.com/cra-ros-pkg/robot_localization/issues/944>`_)
