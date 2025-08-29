@@ -2,6 +2,16 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
+  * Add a Parameters Callback to be able to set magnetic_declination_radians value at runtime.
+* Fixing issue with subscriber disconnect (`#944 <https://github.com/cra-ros-pkg/robot_localization/issues/944>`_)
+  * Fixing issue with subscriber disconnect
+* Fixing ROS time sources (`#943 <https://github.com/cra-ros-pkg/robot_localization/issues/943>`_)
+* Fixing off-diagonal covariance values in measurement (`#942 <https://github.com/cra-ros-pkg/robot_localization/issues/942>`_)
+* Contributors: Enzo Ghisoni, Tom Moore
+
 3.8.2 (2025-03-21)
 ------------------
 * Fix user UTM conversion and catch GeographicErr to not crash navsat_transfrom node (`#917 <https://github.com/cra-ros-pkg/robot_localization/issues/917>`_)
