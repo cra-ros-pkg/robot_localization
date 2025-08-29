@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.5.4 (2025-08-29)
+------------------
 * Backporting IMU sub reset fix
 * Fixing off-diagonal covariance values in measurement (`#942 <https://github.com/cra-ros-pkg/robot_localization/issues/942>`_)
 * Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
