@@ -690,7 +690,7 @@ protected:
 
   //! @brief Covariance of the calculated angular acceleration
   //!
-  Eigen::MatrixXd angular_acceleration_cov_;
+  Eigen::Matrix3d angular_acceleration_cov_;
 
   //! @brief Stores the first measurement from each topic for relative
   //! measurements
