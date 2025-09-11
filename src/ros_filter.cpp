@@ -2781,7 +2781,7 @@ bool RosFilter<T>::prepareAcceleration(
         if (!relative) {
           // curAttitude is the true world-frame attitude of the sensor
           rotNorm = target_frame_trans.getBasis() *
-                    (trans.getBasis().inverse() * normAcc);
+            (trans.getBasis().inverse() * normAcc);
         } else {
           // curAttitude is relative to the initial pose of the sensor.
           // Assumption 1: IMU sensor is rigidly attached to the
@@ -2789,8 +2789,8 @@ bool RosFilter<T>::prepareAcceleration(
           // Assumption 2: the initial pose of target_frame (base_link)
           // is upright.
           rotNorm = target_frame_trans.getBasis() *
-                      (trans.getBasis().inverse() *
-                      (target_frame_trans.getBasis().inverse() * normAcc));
+            (trans.getBasis().inverse() *
+            (target_frame_trans.getBasis().inverse() * normAcc));
         }
       }
       // Note that acc_tmp and rotNorm are both in target_frame
