@@ -158,6 +158,6 @@ We now need to convert our latitude and longitude to UTM coordinates. The UTM gr
 
  :math:`\theta = yaw_{imu} + \omega + offset_{yaw}`
 
-We now have a translation :math:`(x_{UTM}, y_{UTM})` and rotation :math:`\theta`, which we can use to create the required *utm* -> *map* transform. We use the transform to convert all future GPS  positions into the robot's local coordinate frame. ``navsat_transform_node`` will also broadcast this transform if the ``broadcast_utm_transform`` parameter is set to *true*.
+We now have a translation :math:`(x_{UTM}, y_{UTM})` and rotation :math:`\theta`, which we can use to create the required *utm* -> *map* transform. We use the transform to convert all future GPS  positions into the robot's local coordinate frame. ``navsat_transform_node`` will also broadcast this transform if the ``broadcast_cartesian_transform`` parameter is set to *true*.
 
 If you have any questions about this tutorial, please feel free to ask questions on `answers.ros.org <http://answers.ros.org>`_.
