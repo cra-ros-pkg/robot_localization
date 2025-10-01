@@ -411,7 +411,6 @@ void NavSatTransform::computeTransform()
       if (broadcast_cartesian_transform_ &&
         broadcast_cartesian_transform_as_parent_frame_)
       {
-
         earth_transform_stamped.child_frame_id = "local_enu";
         earth_transform_stamped.transform = tf2::toMsg(earth_cartesian_transform_.inverse());
 

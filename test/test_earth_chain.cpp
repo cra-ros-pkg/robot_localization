@@ -30,16 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-
 #include <memory>
 #include <string>
 
+#include "gtest/gtest.h"
+
 #include "robot_localization/navsat_transform.hpp"
+
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "tf2_ros/buffer.hpp"
+#include "tf2_ros/transform_listener.hpp"
 
 class EarthChainTest : public ::testing::Test
 {
