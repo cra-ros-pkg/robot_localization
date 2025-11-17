@@ -762,10 +762,16 @@ protected:
   //!
   rclcpp::Time latest_control_time_;
 
-  //! @brief Parameter that specifies the how long we wait for a transform to
+  //! @brief Parameter that specifies how long we wait for a transform to
   //! become available.
   //!
   rclcpp::Duration tf_timeout_;
+
+  //! @brief Parameter that specifies how long we wait for the odom->base_link
+  //! transform to become available. Only relevant when the world_frame is the same
+  //! as the map_frame and publish_tf is set to true.
+  //!
+  rclcpp::Duration tf_timeout_odom_bl_;
 
   //! @brief For future (or past) dating the world_frame->base_link_frame
   //! transform

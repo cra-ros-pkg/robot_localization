@@ -111,6 +111,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   last_set_pose_time_(0, 0, RCL_ROS_TIME),
   latest_control_time_(0, 0, RCL_ROS_TIME),
   tf_timeout_(0ns),
+  tf_timeout_odom_bl_(0ns),
   tf_time_offset_(0ns)
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -960,6 +961,10 @@ void RosFilter<T>::loadParams()
   double timeout_tmp = this->declare_parameter("transform_timeout", 0.0);
   tf_timeout_ = rclcpp::Duration::from_seconds(timeout_tmp);
 
+  // Transform timeout odom->base_link
+  double timeout_odom_bl_tmp = this->declare_parameter("transform_timeout_odom_bl", 0.0);
+  tf_timeout_odom_bl_ = rclcpp::Duration::from_seconds(timeout_odom_bl_tmp);
+
   // Update frequency and sensor timeout
   frequency_ = this->declare_parameter("frequency", 30.0);
 
@@ -1139,6 +1144,7 @@ void RosFilter<T>::loadParams()
       "\nworld_frame is " << world_frame_id_ <<
       "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
       "\ntransform_timeout is " << filter_utilities::toSec(tf_timeout_) <<
+      "\ntransform_timeout_odom_bl is " << filter_utilities::toSec(tf_timeout_odom_bl_) <<
       "\nfrequency is " << frequency_ <<
       "\nsensor_timeout is " << filter_utilities::toSec(filter_.getSensorTimeout()) <<
       "\ntwo_d_mode is " << (two_d_mode_ ? "true" : "false") <<
@@ -2230,7 +2236,7 @@ void RosFilter<T>::periodicUpdate()
           base_link_frame_id_,
           odom_frame_id_,
           filtered_position->header.stamp,
-          tf_timeout_,
+          tf_timeout_odom_bl_,
           base_link_odom_trans);
 
         if(can_transform_odom) {
