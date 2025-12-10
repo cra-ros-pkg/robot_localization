@@ -2766,9 +2766,8 @@ bool RosFilter<T>::prepareAcceleration(
           state(StateMemberPitch),
           state(StateMemberYaw));
 
-        // transform state orientation to IMU frame
-        trans.setBasis(stateTmp * target_frame_trans.getBasis());
-        rotNorm = trans.getBasis().inverse() * normAcc;
+        // transform state orientation to target frame
+        rotNorm = stateTmp.inverse() * normAcc;
       } else {
         tf2::Quaternion curAttitude;
         tf2::fromMsg(msg->orientation, curAttitude);
@@ -2781,14 +2780,20 @@ bool RosFilter<T>::prepareAcceleration(
         trans.setRotation(curAttitude);
         if (!relative) {
           // curAttitude is the true world-frame attitude of the sensor
-          rotNorm = trans.getBasis().inverse() * normAcc;
+          rotNorm = target_frame_trans.getBasis() *
+            (trans.getBasis().inverse() * normAcc);
         } else {
           // curAttitude is relative to the initial pose of the sensor.
-          // Assumption: IMU sensor is rigidly attached to the base_link
-          // (but a static rotation is possible).
-          rotNorm = target_frame_trans.getBasis().inverse() * trans.getBasis().inverse() * normAcc;
+          // Assumption 1: IMU sensor is rigidly attached to the
+          // target_frame (base_link) (but a static rotation is possible).
+          // Assumption 2: the initial pose of target_frame (base_link)
+          // is upright.
+          rotNorm = target_frame_trans.getBasis() *
+            (trans.getBasis().inverse() *
+            (target_frame_trans.getBasis().inverse() * normAcc));
         }
       }
+      // Note that acc_tmp and rotNorm are both in target_frame
       acc_tmp.setX(acc_tmp.getX() - rotNorm.getX());
       acc_tmp.setY(acc_tmp.getY() - rotNorm.getY());
       acc_tmp.setZ(acc_tmp.getZ() - rotNorm.getZ());

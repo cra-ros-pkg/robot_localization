@@ -148,7 +148,7 @@ If this parameter is set to ``true``, then any measurements from this sensor wil
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If fusing accelerometer data from IMUs, this parameter determines whether or not acceleration due to gravity is removed from the acceleration measurement before fusing it.
 
-.. note:: This assumes that the IMU that is providing the acceleration data is also producing an absolute orientation. The orientation data is required to correctly remove gravitational acceleration.
+.. note:: This uses the absolute orientation estimate from the IMU message, if available. If the IMU does not provide an orientation estimate, the first element of the orientation covariance must be set to -1, to indicate this, as specified in the IMU message definition. The orientation of the robot state is then used for gravity removal.
 
 ~gravitational_acceleration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
