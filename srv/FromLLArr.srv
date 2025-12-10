@@ -1,0 +1,3 @@
+geographic_msgs/GeoPoint[] ll_points
+---
+geometry_msgs/Point[] map_points
