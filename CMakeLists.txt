@@ -50,6 +50,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetUTMZone.srv"
   "srv/ToggleFilterProcessing.srv"
   "srv/ToLL.srv"
+  "srv/ToLLArray.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs

@@ -48,6 +48,7 @@
 #include "robot_localization/srv/set_datum.hpp"
 #include "robot_localization/srv/set_utm_zone.hpp"
 #include "robot_localization/srv/to_ll.hpp"
+#include "robot_localization/srv/to_ll_array.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -95,6 +96,12 @@ private:
   bool toLLCallback(
     const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
     std::shared_ptr<robot_localization::srv::ToLL::Response> response);
+
+  //! @brief Callback for the to Lat Long Array service
+  //!
+  bool toLLArrayCallback(
+    const std::shared_ptr<robot_localization::srv::ToLLArray::Request> request,
+    std::shared_ptr<robot_localization::srv::ToLLArray::Response> response);
 
   //! @brief Callback for the from Lat Long service
   //!
@@ -239,6 +246,11 @@ private:
    * @brief Service for to Lat Long
    */
   rclcpp::Service<robot_localization::srv::ToLL>::SharedPtr to_ll_srv_;
+
+  /**
+   * @brief Service for to Lat Long Array
+   */
+  rclcpp::Service<robot_localization::srv::ToLLArray>::SharedPtr to_ll_array_srv_;
 
   /**
    * @brief Service for from Lat Long
