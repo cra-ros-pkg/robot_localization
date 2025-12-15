@@ -462,9 +462,9 @@ bool NavSatTransform::toLLArrayCallback(
                    std::back_inserter(converted_ll_points),
       [this] (const auto & point) {
         geographic_msgs::msg::GeoPoint ll_point;
-        tf2::Vector3 point(point.x, point.y, point.z);
+        tf2::Vector3 map_point(point.x, point.y, point.z);
         mapToLL(
-          point, ll_point.latitude, ll_point.longitude,
+          map_point, ll_point.latitude, ll_point.longitude,
           ll_point.altitude);
         return ll_point;
       });
