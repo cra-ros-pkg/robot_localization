@@ -2578,7 +2578,10 @@ void RosFilter<T>::periodicUpdate()
 
   // Clear out expired history data
   if (smooth_lagged_data_) {
-    clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
+    const rclcpp::Time last_measurement_time = filter_.getLastMeasurementTime();
+    if (last_measurement_time.nanoseconds() > history_length_.nanoseconds()) {
+      clearExpiredHistory(last_measurement_time - history_length_);
+    }
   }
 
   // Warn the user if the update took too long
