@@ -768,7 +768,7 @@ bool RosFilter<T>::getFilteredAccelMessage(
     }
 
     // Fill header information
-    message->header.stamp = filter_.getLastMeasurementTime();
+    message->header.stamp = rclcpp::Time(filter_.getLastMeasurementTime());
     message->header.frame_id = base_link_output_frame_id_;
   }
 
@@ -2579,6 +2579,9 @@ void RosFilter<T>::periodicUpdate()
   // Clear out expired history data
   if (smooth_lagged_data_) {
     const rclcpp::Time last_measurement_time = filter_.getLastMeasurementTime();
+    // Prevent accidental construction of a negative time point when running in
+    // simulation mode. When not in simulation, this check should always be true
+    // if we've received at least one measurement.
     if (last_measurement_time.nanoseconds() > history_length_.nanoseconds()) {
       clearExpiredHistory(last_measurement_time - history_length_);
     }
