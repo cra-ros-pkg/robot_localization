@@ -60,6 +60,13 @@
 namespace robot_localization
 {
 
+/// \brief Computes the ECEF to ENU transform for a given geodetic origin
+/// \param lat0_deg Latitude of origin in degrees
+/// \param lon0_deg Longitude of origin in degrees
+/// \param h0_m Altitude of origin in meters
+/// \return Transform from ECEF (earth) frame to local ENU frame
+tf2::Transform computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m);
+
 class NavSatTransform : public rclcpp::Node {
 public:
   /**
@@ -210,13 +217,6 @@ private:
    * @brief Sets the manual datum pose to be used by the transform computation
    */
   void setManualDatum();
-
-  /**
-   * @brief Computes earth to cartesian transform
-   * @note Only valid when use_local_cartesian_ is true
-   */
-  void computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m);
-
 
   /**
    * @brief Frame ID of the robot's body frame
@@ -524,7 +524,6 @@ private:
    *       Earth transforms are not supported with UTM coordinates.
    */
   bool broadcast_earth_transform_;
-
 
   /**
    * @brief Transform from earth to cartesian (ECEF to local/UTM)

@@ -399,7 +399,8 @@ void NavSatTransform::computeTransform()
     // Add earth frame transforms if requested
     // Note: Only valid when use_local_cartesian_ is true (validated in constructor)
     if (broadcast_earth_transform_) {
-      computeEarthToCartesian(origin_latitude_, origin_longitude_, origin_altitude_);
+      earth_cartesian_transform_ = computeEarthToCartesian(
+        origin_latitude_, origin_longitude_, origin_altitude_);
 
       geometry_msgs::msg::TransformStamped earth_transform_stamped;
 
@@ -1101,11 +1102,8 @@ rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
   return result;
 }
 
-void NavSatTransform::computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m)
+tf2::Transform computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m)
 {
-  // This function should only be called when use_local_cartesian_ is true
-  // (validated in constructor)
-
   GeographicLib::Geocentric geo(GeographicLib::Constants::WGS84_a(),
     GeographicLib::Constants::WGS84_f());
   double X0, Y0, Z0;
@@ -1128,10 +1126,8 @@ void NavSatTransform::computeEarthToCartesian(double lat0_deg, double lon0_deg, 
   // Therefore: translation = -R * origin
   tf2::Vector3 origin_ecef(X0, Y0, Z0);
   tf2::Vector3 translated_origin = -(R_ecef_to_enu * origin_ecef);
-  tf2::Transform E2C(R_ecef_to_enu, translated_origin);
 
-  // Store the transform (earth -> local_enu)
-  earth_cartesian_transform_ = E2C;
+  return tf2::Transform(R_ecef_to_enu, translated_origin);
 }
 
 

@@ -32,9 +32,12 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <string>
 
+#include "GeographicLib/Geocentric.hpp"
 #include "navsat_conversions.hpp"
+#include "robot_localization/navsat_transform.hpp"
 
 void NavsatConversionsTest(
   const double lat, const double lon,
@@ -63,6 +66,150 @@ TEST(NavsatConversionsTest, UtmTest)
 {
   NavsatConversionsTest(51.423964, 5.494271, 5699924.709, 673409.989, "31U", 1.950);
   NavsatConversionsTest(-43.530955, 172.636645, 5178919.718, 632246.802, "59G", -1.127);
+}
+
+// Helper to compute ECEF coordinates for a given geodetic position
+void geodeticToECEF(double lat_deg, double lon_deg, double h_m, double & x, double & y, double & z)
+{
+  GeographicLib::Geocentric geo(GeographicLib::Constants::WGS84_a(),
+    GeographicLib::Constants::WGS84_f());
+  geo.Forward(lat_deg, lon_deg, h_m, x, y, z);
+}
+
+TEST(EarthToCartesianTest, OriginMapsToZero)
+{
+  // The geodetic origin should map to (0, 0, 0) in the local ENU frame
+  const double lat = 40.0;
+  const double lon = -74.0;
+  const double alt = 100.0;
+
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(lat, lon, alt);
+
+  // Get ECEF coordinates of the origin
+  double x_ecef, y_ecef, z_ecef;
+  geodeticToECEF(lat, lon, alt, x_ecef, y_ecef, z_ecef);
+
+  // Transform the origin point to local frame
+  tf2::Vector3 origin_ecef(x_ecef, y_ecef, z_ecef);
+  tf2::Vector3 local = transform * origin_ecef;
+
+  EXPECT_NEAR(local.x(), 0.0, 1e-6);
+  EXPECT_NEAR(local.y(), 0.0, 1e-6);
+  EXPECT_NEAR(local.z(), 0.0, 1e-6);
+}
+
+TEST(EarthToCartesianTest, RotationMatrixIsOrthonormal)
+{
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(45.0, -122.0, 0.0);
+  tf2::Matrix3x3 R = transform.getBasis();
+
+  // R * R^T should equal identity
+  tf2::Matrix3x3 RRt;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      double sum = 0.0;
+      for (int k = 0; k < 3; ++k) {
+        sum += R[i][k] * R[j][k];
+      }
+      RRt[i][j] = sum;
+    }
+  }
+
+  // Check diagonal elements are 1
+  EXPECT_NEAR(RRt[0][0], 1.0, 1e-10);
+  EXPECT_NEAR(RRt[1][1], 1.0, 1e-10);
+  EXPECT_NEAR(RRt[2][2], 1.0, 1e-10);
+
+  // Check off-diagonal elements are 0
+  EXPECT_NEAR(RRt[0][1], 0.0, 1e-10);
+  EXPECT_NEAR(RRt[0][2], 0.0, 1e-10);
+  EXPECT_NEAR(RRt[1][0], 0.0, 1e-10);
+  EXPECT_NEAR(RRt[1][2], 0.0, 1e-10);
+  EXPECT_NEAR(RRt[2][0], 0.0, 1e-10);
+  EXPECT_NEAR(RRt[2][1], 0.0, 1e-10);
+}
+
+TEST(EarthToCartesianTest, RotationMatrixDeterminantIsOne)
+{
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(45.0, -122.0, 0.0);
+  tf2::Matrix3x3 R = transform.getBasis();
+
+  // Compute determinant
+  double det = R[0][0] * (R[1][1] * R[2][2] - R[1][2] * R[2][1]) -
+    R[0][1] * (R[1][0] * R[2][2] - R[1][2] * R[2][0]) +
+    R[0][2] * (R[1][0] * R[2][1] - R[1][1] * R[2][0]);
+
+  EXPECT_NEAR(det, 1.0, 1e-10);
+}
+
+TEST(EarthToCartesianTest, EquatorPrimeMeridian)
+{
+  // At equator/prime meridian (0, 0, 0):
+  // - East points in +Y_ecef direction
+  // - North points in +Z_ecef direction
+  // - Up points in +X_ecef direction
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(0.0, 0.0, 0.0);
+  tf2::Matrix3x3 R = transform.getBasis();
+
+  // Row 0 is East axis in ECEF: should be (0, 1, 0)
+  EXPECT_NEAR(R[0][0], 0.0, 1e-10);
+  EXPECT_NEAR(R[0][1], 1.0, 1e-10);
+  EXPECT_NEAR(R[0][2], 0.0, 1e-10);
+
+  // Row 1 is North axis in ECEF: should be (0, 0, 1)
+  EXPECT_NEAR(R[1][0], 0.0, 1e-10);
+  EXPECT_NEAR(R[1][1], 0.0, 1e-10);
+  EXPECT_NEAR(R[1][2], 1.0, 1e-10);
+
+  // Row 2 is Up axis in ECEF: should be (1, 0, 0)
+  EXPECT_NEAR(R[2][0], 1.0, 1e-10);
+  EXPECT_NEAR(R[2][1], 0.0, 1e-10);
+  EXPECT_NEAR(R[2][2], 0.0, 1e-10);
+}
+
+TEST(EarthToCartesianTest, NorthPole)
+{
+  // At north pole (90, 0, 0):
+  // - Up points in +Z_ecef direction
+  // - East/North are degenerate but should still form orthonormal basis
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(90.0, 0.0, 0.0);
+  tf2::Matrix3x3 R = transform.getBasis();
+
+  // Row 2 is Up axis: at north pole, should point in +Z_ecef direction
+  EXPECT_NEAR(R[2][0], 0.0, 1e-10);
+  EXPECT_NEAR(R[2][1], 0.0, 1e-10);
+  EXPECT_NEAR(R[2][2], 1.0, 1e-10);
+
+  // The matrix should still be orthonormal (tested separately, but verify here too)
+  double det = R[0][0] * (R[1][1] * R[2][2] - R[1][2] * R[2][1]) -
+    R[0][1] * (R[1][0] * R[2][2] - R[1][2] * R[2][0]) +
+    R[0][2] * (R[1][0] * R[2][1] - R[1][1] * R[2][0]);
+  EXPECT_NEAR(det, 1.0, 1e-10);
+}
+
+TEST(EarthToCartesianTest, AxisDirectionsAtEquator)
+{
+  // At equator (0 lat) with 90 deg longitude:
+  // - East points in -X_ecef direction
+  // - North points in +Z_ecef direction
+  // - Up points in +Y_ecef direction
+  tf2::Transform transform = robot_localization::computeEarthToCartesian(0.0, 90.0, 0.0);
+  tf2::Matrix3x3 R = transform.getBasis();
+
+  // Row 0 is East: should be (-1, 0, 0)
+  EXPECT_NEAR(R[0][0], -1.0, 1e-10);
+  EXPECT_NEAR(R[0][1], 0.0, 1e-10);
+  EXPECT_NEAR(R[0][2], 0.0, 1e-10);
+
+  // Row 1 is North: should be (0, 0, 1)
+  EXPECT_NEAR(R[1][0], 0.0, 1e-10);
+  EXPECT_NEAR(R[1][1], 0.0, 1e-10);
+  EXPECT_NEAR(R[1][2], 1.0, 1e-10);
+
+  // Row 2 is Up: should be (0, 1, 0)
+  EXPECT_NEAR(R[2][0], 0.0, 1e-10);
+  EXPECT_NEAR(R[2][1], 1.0, 1e-10);
+  EXPECT_NEAR(R[2][2], 0.0, 1e-10);
 }
 
 int main(int argc, char ** argv)
