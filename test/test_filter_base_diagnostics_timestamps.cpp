@@ -198,6 +198,8 @@ public:
 */
 TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   robot_localization::DiagnosticsHelper dh_;
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(dh_.node_);
 
   // keep track of which diagnostic messages are detected.
   bool received_warning_imu = false;
@@ -208,12 +210,12 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   // For about a second, send correct messages.
   rclcpp::Rate loopRate(10);
   for (size_t i = 0; i < 10; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
 
-  rclcpp::spin_some(dh_.node_);
+  executor.spin_some();
 
   // create an empty timestamp and send all messages with this empty timestamp.
   static uint32_t empty_sec = 0;
@@ -223,12 +225,12 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   rclcpp::Time empty = msg;
 
   dh_.publishMessages(empty);
-  rclcpp::spin_some(dh_.node_);
+  executor.spin_some();
 
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     loopRate.sleep();
   }
 
@@ -270,6 +272,8 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
 
 TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   robot_localization::DiagnosticsHelper dh_;
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(dh_.node_);
 
   // keep track of which diagnostic messages are detected.
   bool received_warning_imu = false;
@@ -280,17 +284,17 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   // For about a second, send correct messages.
   rclcpp::Rate loopRate(10);
   for (size_t i = 0; i < 10; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
-  rclcpp::spin_some(dh_.node_);
+  executor.spin_some();
 
   rclcpp::Time curr = (dh_.node_)->now();
   // Set the pose to the current timestamp.
   dh_.setPose(curr);
 
-  rclcpp::spin_some(dh_.node_);
+  executor.spin_some();
 
   // wait for 1 sec to make synchronize setPose msg & before msg
   sleep(1);
@@ -300,7 +304,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     loopRate.sleep();
   }
   /*
@@ -341,6 +345,8 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
 
 TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   robot_localization::DiagnosticsHelper dh_;
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(dh_.node_);
   // keep track of which diagnostic messages are detected.
   // we have more things to check here because the messages get split over
   // various callbacks if they pass the check if they predate the set_pose time.
@@ -354,11 +360,11 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   // For two seconds send correct messages.
   rclcpp::Rate loopRate(20);
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     dh_.publishMessages((dh_.node_)->now());
     loopRate.sleep();
   }
-  rclcpp::spin_some(dh_.node_);
+  executor.spin_some();
 
   // Send message that is one second in the past.
   dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1, 0));
@@ -366,7 +372,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   // The filter runs and sends the diagnostics every second.
   // Just run this for two seconds to ensure we get all the diagnostic message.
   for (size_t i = 0; i < 20; ++i) {
-    rclcpp::spin_some(dh_.node_);
+    executor.spin_some();
     loopRate.sleep();
   }
 

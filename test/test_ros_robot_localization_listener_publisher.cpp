@@ -49,7 +49,10 @@ int main(int argc, char ** argv)
   rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr accel_pub =
     node->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>("accel/filtered", 1);
 
-  tf2_ros::StaticTransformBroadcaster transform_broadcaster(node);
+  tf2_ros::StaticTransformBroadcaster transform_broadcaster(
+    rclcpp::node_interfaces::NodeInterfaces(
+      node->get_node_parameters_interface(),
+      node->get_node_topics_interface()));
 
   rclcpp::Time end_time = node->now() + rclcpp::Duration(10, 0);
   while (rclcpp::ok() && node->now() < end_time) {
