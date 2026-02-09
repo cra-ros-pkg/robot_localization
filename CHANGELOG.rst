@@ -10,7 +10,6 @@ Unreleased (2026-02-09)
   * Contributor: Boopesh
 
 3.10.0 (2025-08-29)
--------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
   * Added FromLLArray service
   ---------
@@ -22,6 +21,19 @@ Unreleased (2026-02-09)
 * "toggle" and "enable" services are now namespaced (`#940 <https://github.com/cra-ros-pkg/robot_localization/issues/940>`_)
 * chore: tf2_ros to hpp headers (`#941 <https://github.com/cra-ros-pkg/robot_localization/issues/941>`_)
 * Contributors: Enzo Ghisoni, Jay Herpin, Tim Clephas, Tom Moore, ari-bw
+
+Unreleased (2026-02-09)
+-----------------------
+* Implement Lifecycle Node Support for EKF and UKF nodes (`#958 <https://github.com/cra-ros-pkg/robot_localization/issues/958>`_).
+  * New boolean parameter `lifecycle_managed_node` (default: `false`) —
+    when `false` nodes auto-configure/activate (backward-compatible); when
+    `true` nodes remain UNCONFIGURED and require `ros2 lifecycle` transitions.
+  * Added `rclcpp_lifecycle` dependency, lifecycle callbacks, and updated
+    launch files to expose the parameter.
+  * Added `doc/lifecycle_support.rst` with usage examples
+  * Contributor: Boopesh
+
+
 
 3.9.3 (2025-05-19)
 ------------------

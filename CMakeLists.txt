@@ -101,7 +101,7 @@ target_link_libraries(${library_name} PUBLIC
 )
 target_link_libraries(${library_name} PRIVATE
   ${GeographicLib_LIBRARIES}
-  yaml-cpp::yaml-cpp
+  ${YAML_CPP_LIBRARIES}
 )
 
 add_executable(

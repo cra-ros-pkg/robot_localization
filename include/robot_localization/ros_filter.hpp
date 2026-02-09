@@ -530,6 +530,13 @@ protected:
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
 
+  //! @brief Whether the node requires external lifecycle management
+  //!
+  //! When false (default), the node auto-transitions through configure and activate
+  //! on startup, maintaining backward compatibility. When true, external lifecycle
+  //! management via ros2 lifecycle commands is required.
+  bool lifecycle_managed_node_;
+
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
   //!
