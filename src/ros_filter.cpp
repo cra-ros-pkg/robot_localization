@@ -29,18 +29,17 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "robot_localization/ros_filter.hpp"
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <iomanip>
 #include <functional>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -62,6 +61,7 @@
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/filter_state.hpp"
 #include "robot_localization/filter_utilities.hpp"
+#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
 #include "robot_localization/srv/set_pose.hpp"
 #include "robot_localization/srv/toggle_filter_processing.hpp"
@@ -76,7 +76,6 @@
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/transform_broadcaster.hpp>
 #include <tf2_ros/transform_listener.hpp>
-#include <type_traits>
 
 namespace robot_localization
 {
@@ -2373,9 +2372,13 @@ void RosFilter<T>::initialize()
 
   const std::chrono::duration<double> timespan{1.0 / frequency_};
   timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
-    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
-    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
-  this->get_node_timers_interface()->add_timer(timer_, this->get_node_base_interface()->get_default_callback_group());
+    this->get_clock(),
+    std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
+    std::bind(&RosFilter<T>::periodicUpdate, this),
+    this->get_node_base_interface()->get_context());
+  this->get_node_timers_interface()->add_timer(
+    timer_,
+    this->get_node_base_interface()->get_default_callback_group());
 }
 
 template<typename T>

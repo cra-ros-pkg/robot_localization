@@ -45,8 +45,9 @@ namespace
 {
 std::atomic_bool g_sigint_requested{false};
 
-void sigintHandler(int)
+void sigintHandler(int signum)
 {
+  static_cast<void>(signum);
   g_sigint_requested.store(true);
 }
 }  // namespace
