@@ -30,32 +30,87 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <atomic>
+#include <csignal>
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
+#include "rclcpp/utilities.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
+#include "lifecycle_msgs/msg/transition.hpp"
 #include "robot_localization/ros_filter_types.hpp"
+
+namespace
+{
+std::atomic_bool g_sigint_requested{false};
+
+void sigintHandler(int)
+{
+  g_sigint_requested.store(true);
+}
+}  // namespace
 
 int main(int argc, char ** argv)
 {
-  rclcpp::init(argc, argv);
+  rclcpp::InitOptions init_options;
+  rclcpp::init(argc, argv, init_options, rclcpp::SignalHandlerOptions::None);
+  std::signal(SIGINT, sigintHandler);
   rclcpp::NodeOptions options;
   options.arguments({"ukf_filter_node"});
   options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosUkf> filter =
     std::make_shared<robot_localization::RosUkf>(options);
-  
+
+  // Initialize UKF constants from parameters (needed for sigma point weights).
+  const double alpha = filter->declare_parameter("alpha", 0.001);
+  const double kappa = filter->declare_parameter("kappa", 0.0);
+  const double beta = filter->declare_parameter("beta", 2.0);
+  filter->getFilter().setConstants(alpha, kappa, beta);
+
   // Handle lifecycle management after the shared_ptr is created
   if (!filter->get_parameter("lifecycle_managed_node").as_bool()) {
-    RCLCPP_INFO(filter->get_logger(), 
-      "Lifecycle management disabled - Automatically transitioning to ACTIVE state");
+    RCLCPP_INFO(
+      filter->get_logger(),
+      "Lifecycle management disabled - Using legacy initialization");
     filter->configure();
     filter->activate();
   } else {
     RCLCPP_INFO(filter->get_logger(),
-      "Lifecycle management enabled - Node requires external lifecycle management via ros2 lifecycle commands.");
+      "Lifecycle management enabled - Node requires external lifecycle management "
+      "via ros2 lifecycle commands.");
   }
-  
-  rclcpp::spin(filter->get_node_base_interface());
+
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(filter->get_node_base_interface());
+  while (rclcpp::ok()) {
+    executor.spin_some();
+    if (g_sigint_requested.load()) {
+      break;
+    }
+  }
+
+  // Ensure lifecycle node is properly shut down to avoid warnings on exit.
+  const auto state_id = filter->get_current_state().id();
+  if (state_id != lifecycle_msgs::msg::State::PRIMARY_STATE_FINALIZED) {
+    uint8_t transition_id = 0;
+    if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_ACTIVE_SHUTDOWN;
+    } else if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_INACTIVE_SHUTDOWN;
+    } else if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
+      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_UNCONFIGURED_SHUTDOWN;
+    }
+
+    if (transition_id != 0) {
+      try {
+        filter->trigger_transition(transition_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(filter->get_logger(), "Failed to shutdown node: %s", e.what());
+      }
+    }
+  }
+
   rclcpp::shutdown();
   return 0;
 }
