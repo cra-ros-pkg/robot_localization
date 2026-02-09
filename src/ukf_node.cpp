@@ -43,11 +43,18 @@ int main(int argc, char ** argv)
   options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosUkf> filter =
     std::make_shared<robot_localization::RosUkf>(options);
-  double alpha = filter->declare_parameter("alpha", 0.001);
-  double kappa = filter->declare_parameter("kappa", 0.0);
-  double beta = filter->declare_parameter("beta", 2.0);
-  filter->getFilter().setConstants(alpha, kappa, beta);
-  filter->initialize();
+  
+  // Handle lifecycle management after the shared_ptr is created
+  if (!filter->get_parameter("lifecycle_managed_node").as_bool()) {
+    RCLCPP_INFO(filter->get_logger(), 
+      "Lifecycle management disabled - Automatically transitioning to ACTIVE state");
+    filter->configure();
+    filter->activate();
+  } else {
+    RCLCPP_INFO(filter->get_logger(),
+      "Lifecycle management enabled - Node requires external lifecycle management via ros2 lifecycle commands.");
+  }
+  
   rclcpp::spin(filter->get_node_base_interface());
   rclcpp::shutdown();
   return 0;

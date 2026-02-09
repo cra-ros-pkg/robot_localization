@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 import os
@@ -24,12 +25,22 @@ import launch.actions
 from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
+    # Declare lifecycle management parameter
+    lifecycle_managed_param = DeclareLaunchArgument(
+        'lifecycle_managed_node',
+        default_value='false',
+        description='Enable lifecycle management for the UKF node')
+    
     return LaunchDescription([
+        lifecycle_managed_param,
         launch_ros.actions.Node(
             package='robot_localization',
             executable='ukf_node',
             name='ukf_filter_node',
             output='screen',
-            parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'ukf.yaml')],
+            parameters=[
+                os.path.join(get_package_share_directory("robot_localization"), 'params', 'ukf.yaml'),
+                {'lifecycle_managed_node': LaunchConfiguration('lifecycle_managed_node')}
+            ],
            ),
-])
+    ])

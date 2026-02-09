@@ -52,6 +52,8 @@
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "robot_localization/filter_state.hpp"
 #include "robot_localization/measurement.hpp"
 #include "robot_localization/srv/toggle_filter_processing.hpp"
@@ -95,7 +97,7 @@ using MeasurementHistoryDeque = std::deque<MeasurementPtr>;
 using FilterStateHistoryDeque = std::deque<FilterStatePtr>;
 
 template<class T>
-class RosFilter : public rclcpp::Node
+class RosFilter : public rclcpp_lifecycle::LifecycleNode
 {
 public:
   //! @brief Constructor
@@ -110,6 +112,42 @@ public:
   //! Clears out the message filters and topic subscribers.
   //!
   ~RosFilter();
+
+  //! @brief Lifecycle transition callback for Configuring state
+  //!
+  //! Loads parameters and prepares the filter for activation
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &);
+
+  //! @brief Lifecycle transition callback for Activating state
+  //!
+  //! Creates publishers, subscribers, services, and starts the filter timer
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &);
+
+  //! @brief Lifecycle transition callback for Deactivating state
+  //!
+  //! Stops the filter timer and deactivates publishers
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &);
+
+  //! @brief Lifecycle transition callback for CleaningUp state
+  //!
+  //! Cleans up resources and resets the filter
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_cleanup(const rclcpp_lifecycle::State &);
+
+  //! @brief Lifecycle transition callback for ShuttingDown state
+  //!
+  //! Performs final cleanup before node shutdown
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_shutdown(const rclcpp_lifecycle::State &);
+
 
   //! @brief Resets the filter to its initial state
   //!
@@ -496,6 +534,13 @@ protected:
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
 
+  //! @brief Whether the node requires external lifecycle management
+  //!
+  //! When false (default), the node auto-transitions through configure and activate
+  //! on startup, maintaining backward compatibility. When true, external lifecycle
+  //! management via ros2 lifecycle commands is required.
+  bool lifecycle_managed_node_;
+
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
   //!
@@ -826,11 +871,11 @@ protected:
 
   //! @brief Position publisher
   //!
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr position_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Odometry>::SharedPtr position_pub_;
 
   //! Acceleration publisher
   //!
-  rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr
+  rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr
     accel_pub_;
 
   //! @brief Our filter (EKF, UKF, etc.)

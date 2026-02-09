@@ -26,6 +26,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -96,10 +97,11 @@ target_link_libraries(${library_name} PUBLIC
   tf2_eigen::tf2_eigen
   tf2_geometry_msgs::tf2_geometry_msgs
   tf2_ros::tf2_ros
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 target_link_libraries(${library_name} PRIVATE
   ${GeographicLib_LIBRARIES}
-  yaml-cpp::yaml-cpp
+  ${YAML_CPP_LIBRARIES}
 )
 
 add_executable(
@@ -109,6 +111,7 @@ add_executable(
 target_link_libraries(ekf_node PRIVATE
   ${library_name}
   rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 add_executable(
@@ -118,6 +121,7 @@ add_executable(
 target_link_libraries(ukf_node PRIVATE
   ${library_name}
   rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 add_executable(
@@ -361,6 +365,7 @@ ament_export_dependencies(
   message_filters
   nav_msgs
   rclcpp
+  rclcpp_lifecycle
   rosidl_default_runtime
   sensor_msgs
   std_msgs

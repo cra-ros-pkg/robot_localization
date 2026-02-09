@@ -83,7 +83,8 @@ using namespace std::chrono_literals;
 
 template<typename T>
 RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
-: Node(options.arguments()[0], options),
+: LifecycleNode(options.arguments()[0], options),
+  lifecycle_managed_node_(false),
   print_diagnostics_(true),
   publish_acceleration_(false),
   publish_transform_(true),
@@ -131,6 +132,9 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   state_variable_names_.push_back("X_ACCELERATION");
   state_variable_names_.push_back("Y_ACCELERATION");
   state_variable_names_.push_back("Z_ACCELERATION");
+
+  // Load lifecycle_managed_node parameter - actual transition will happen after construction
+  lifecycle_managed_node_ = this->declare_parameter("lifecycle_managed_node", false);
 }
 
 template<typename T>
@@ -149,6 +153,199 @@ RosFilter<T>::~RosFilter()
   freq_diag_.reset();
   accel_pub_.reset();
   position_pub_.reset();
+}
+
+template<typename T>
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+RosFilter<T>::on_configure(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Configured' state. Parameters loaded.",
+      get_name());
+
+  // Initialize angular acceleration (no parameters needed)
+  angular_acceleration_.setZero();
+  angular_acceleration_cov_.setIdentity();
+  angular_acceleration_cov_ *= 1e-6;
+  last_state_twist_rot_.setZero();
+
+  // Set up diagnostic updater (must be before loadParams)
+  diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(
+    shared_from_this());
+  diagnostic_updater_->setHardwareID("none");
+
+  // Set up transform broadcaster (must be before loadParams)
+  world_transform_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
+    shared_from_this());
+
+  // Load all parameters - this declares and loads everything
+  // After this call, all parameters like print_diagnostics_, frequency_, etc. are available
+  loadParams();
+
+  // Now we can safely use parameters that were loaded above
+  if (print_diagnostics_) {
+    diagnostic_updater_->add(
+      "Filter diagnostic updater", this,
+      &RosFilter<T>::aggregateDiagnostics);
+  }
+
+  // Set up the frequency diagnostic (uses frequency_ parameter)
+  min_frequency_ = frequency_ - 2;
+  max_frequency_ = frequency_ + 2;
+  freq_diag_ =
+    std::make_unique<diagnostic_updater::HeaderlessTopicDiagnostic>(
+    "odometry/filtered",
+    *diagnostic_updater_,
+    diagnostic_updater::FrequencyStatusParam(
+      &min_frequency_,
+      &max_frequency_, 0.1, 10));
+
+  // Initialize time tracking
+  last_diag_time_ = this->now();
+  last_diff_time_ = this->now().seconds();
+
+  // Clear out the transforms
+  world_base_link_trans_msg_.transform =
+    tf2::toMsg(tf2::Transform::getIdentity());
+
+  RCLCPP_INFO(get_logger(), "[%s]: Node Configured and in Inactive state.", get_name());
+  return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+template<typename T>
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+RosFilter<T>::on_activate(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Active' state. Publishers and timers started.",
+      get_name());
+  // Enable filter processing
+  enabled_ = true;
+  if (!this->get_clock()->started()) {
+    RCLCPP_INFO(get_logger(), "Waiting for clock to start...");
+    this->get_clock()->wait_until_started();
+  }
+
+  // Create lifecycle publishers
+  rclcpp::PublisherOptions publisher_options;
+  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
+
+  position_pub_ =
+    this->create_publisher<nav_msgs::msg::Odometry>(
+    "odometry/filtered", rclcpp::QoS(10), publisher_options);
+
+  if (publish_acceleration_) {
+    accel_pub_ =
+      this->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
+      "accel/filtered", rclcpp::QoS(10), publisher_options);
+  }
+
+  // Activate publishers
+  position_pub_->on_activate();
+  if (accel_pub_) {
+    accel_pub_->on_activate();
+  }
+
+  // Start the periodic update timer
+  const std::chrono::duration<double> timespan{1.0 / frequency_};
+  timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
+    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
+    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
+  this->get_node_timers_interface()->add_timer(timer_, nullptr);
+
+  RCLCPP_INFO(get_logger(), "[%s]: Node Active.", get_name());
+  return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+template<typename T>
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+RosFilter<T>::on_deactivate(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_WARN(get_logger(), "[%s]: Transitioning to 'Inactive' state.", get_name());
+
+  // Disable filter processing FIRST
+  enabled_ = false;
+
+  // Stop the timer
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+
+  // Deactivate publishers
+  if (position_pub_) {
+    position_pub_->on_deactivate();
+  }
+  if (accel_pub_) {
+    accel_pub_->on_deactivate();
+  }
+
+  RCLCPP_WARN(get_logger(), "[%s]: Node Inactive.", get_name());
+  return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+template<typename T>
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+RosFilter<T>::on_cleanup(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Unconfigured' state. Resources reset.",
+      get_name());
+
+  // Reset the filter state
+  reset();
+
+  // Disable filter processing
+  enabled_ = false;
+
+  // Stop and cleanup timer if it exists
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+
+  // Clean up publishers
+  position_pub_.reset();
+  accel_pub_.reset();
+
+  // Clean up other resources
+  diagnostic_updater_.reset();
+  world_transform_broadcaster_.reset();
+  freq_diag_.reset();
+
+  RCLCPP_WARN(get_logger(), "[%s]: Node Cleaned Up.", get_name());
+  return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+}
+
+template<typename T>
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+RosFilter<T>::on_shutdown(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_WARN(get_logger(), "[%s]: Transitioning to 'shutdown' state. Process exiting.",
+      get_name());
+
+  // Stop timer if running
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+
+  // Clean up all resources
+  topic_subs_.clear();
+  set_pose_sub_.reset();
+  control_sub_.reset();
+  stamped_control_sub_.reset();
+  position_pub_.reset();
+  accel_pub_.reset();
+  diagnostic_updater_.reset();
+  world_transform_broadcaster_.reset();
+  set_pose_service_.reset();
+  toggle_filter_processing_srv_.reset();
+  reset_srv_.reset();
+  enable_filter_srv_.reset();
+  freq_diag_.reset();
+  tf_listener_.reset();
+  tf_buffer_.reset();
+
+  RCLCPP_WARN(get_logger(), "[%s]: Finalized. System resources released.", get_name());
+  return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
 
 template<typename T>
@@ -2077,69 +2274,10 @@ void RosFilter<T>::poseCallback(
 template<typename T>
 void RosFilter<T>::initialize()
 {
-  if (!this->get_clock()->started()) {
-    RCLCPP_INFO(get_logger(), "Waiting for clock to start...");
-    this->get_clock()->wait_until_started();
-  }
-
-  angular_acceleration_.setZero();
-  angular_acceleration_cov_.setIdentity();
-  angular_acceleration_cov_ *= 1e-6;
-
-  last_state_twist_rot_.setZero();
-
-  diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(
-    shared_from_this());
-  diagnostic_updater_->setHardwareID("none");
-
-  world_transform_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
-    shared_from_this());
-
-  loadParams();
-
-  if (print_diagnostics_) {
-    diagnostic_updater_->add(
-      "Filter diagnostic updater", this,
-      &RosFilter<T>::aggregateDiagnostics);
-  }
-
-  // Set up the frequency diagnostic
-  min_frequency_ = frequency_ - 2;
-  max_frequency_ = frequency_ + 2;
-  freq_diag_ =
-    std::make_unique<diagnostic_updater::HeaderlessTopicDiagnostic>(
-    "odometry/filtered",
-    *diagnostic_updater_,
-    diagnostic_updater::FrequencyStatusParam(
-      &min_frequency_,
-      &max_frequency_, 0.1, 10));
-
-  last_diag_time_ = this->now();
-  last_diff_time_ = this->now().seconds();
-
-  // Clear out the transforms
-  world_base_link_trans_msg_.transform =
-    tf2::toMsg(tf2::Transform::getIdentity());
-
-  // Position publisher
-  rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
-  position_pub_ =
-    this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/filtered", rclcpp::QoS(10), publisher_options);
-
-  // Optional acceleration publisher
-  if (publish_acceleration_) {
-    accel_pub_ =
-      this->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "accel/filtered", rclcpp::QoS(10), publisher_options);
-  }
-
-  const std::chrono::duration<double> timespan{1.0 / frequency_};
-  timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
-    this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
-    std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
-  this->get_node_timers_interface()->add_timer(timer_, nullptr);
+  // This method is kept for backward compatibility but is now a no-op
+  // All initialization is handled by lifecycle callbacks (on_configure and on_activate)
+  // when autostart is enabled
+  RCLCPP_DEBUG(get_logger(), "initialize() called - lifecycle callbacks handle initialization");
 }
 
 template<typename T>
