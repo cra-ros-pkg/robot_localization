@@ -30,8 +30,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <atomic>
-#include <csignal>
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
@@ -41,22 +39,10 @@
 #include "lifecycle_msgs/msg/transition.hpp"
 #include "robot_localization/ros_filter_types.hpp"
 
-namespace
-{
-std::atomic_bool g_sigint_requested{false};
-
-void sigintHandler(int signum)
-{
-  static_cast<void>(signum);
-  g_sigint_requested.store(true);
-}
-}  // namespace
-
 int main(int argc, char ** argv)
 {
   rclcpp::InitOptions init_options;
-  rclcpp::init(argc, argv, init_options, rclcpp::SignalHandlerOptions::None);
-  std::signal(SIGINT, sigintHandler);
+  rclcpp::init(argc, argv, init_options);
   rclcpp::NodeOptions options;
   options.arguments({"ukf_filter_node"});
   options.clock_type(RCL_ROS_TIME);
@@ -69,26 +55,14 @@ int main(int argc, char ** argv)
   const double beta = filter->declare_parameter("beta", 2.0);
   filter->getFilter().setConstants(alpha, kappa, beta);
 
-  // Handle lifecycle management after the shared_ptr is created
-  if (!filter->get_parameter("lifecycle_managed_node").as_bool()) {
-    RCLCPP_INFO(
-      filter->get_logger(),
-      "Lifecycle management disabled - Using legacy initialization");
-    filter->configure();
-    filter->activate();
-  } else {
-    RCLCPP_INFO(filter->get_logger(),
-      "Lifecycle management enabled - Node requires external lifecycle management "
-      "via ros2 lifecycle commands.");
-  }
+  RCLCPP_INFO(
+    filter->get_logger(),
+    "Lifecycle node initialized; use lifecycle transitions to configure/activate.");
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(filter->get_node_base_interface());
   while (rclcpp::ok()) {
     executor.spin_some();
-    if (g_sigint_requested.load()) {
-      break;
-    }
   }
 
   // Ensure lifecycle node is properly shut down to avoid warnings on exit.

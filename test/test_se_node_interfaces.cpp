@@ -43,6 +43,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_srvs/srv/empty.hpp"
+#include "lifecycle_msgs/srv/change_state.hpp"
+#include "lifecycle_msgs/srv/get_state.hpp"
 #include "tf2/LinearMath/Quaternion.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
@@ -865,6 +867,99 @@ int main(int argc, char ** argv)
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   reset_client_ = node_->create_client<std_srvs::srv::Empty>("reset");
+  auto change_state_client =
+    node_->create_client<lifecycle_msgs::srv::ChangeState>(
+    "/test_se_node_interfaces/change_state");
+  auto get_state_client =
+    node_->create_client<lifecycle_msgs::srv::GetState>(
+    "/test_se_node_interfaces/get_state");
+
+  if (!get_state_client->wait_for_service(10s)) {
+    RCLCPP_ERROR(node_->get_logger(), "Lifecycle get_state service not available after waiting");
+    return 1;
+  }
+
+  if (!change_state_client->wait_for_service(10s)) {
+    RCLCPP_ERROR(node_->get_logger(), "Lifecycle change_state service not available after waiting");
+    return 1;
+  }
+
+  auto get_state = [&]() -> uint8_t {
+      auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
+      auto future = get_state_client->async_send_request(request);
+      if (rclcpp::spin_until_future_complete(node_, future, 1s) ==
+        rclcpp::FutureReturnCode::SUCCESS)
+      {
+        return future.get()->current_state.id;
+      }
+      return lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN;
+    };
+
+  auto wait_for_state = [&](uint8_t desired, std::chrono::seconds timeout) -> bool {
+      const auto start = std::chrono::steady_clock::now();
+      while (rclcpp::ok() &&
+        (std::chrono::steady_clock::now() - start) < timeout)
+      {
+        if (get_state() == desired) {
+          return true;
+        }
+        rclcpp::Rate(5.0).sleep();
+      }
+      return false;
+    };
+
+  // Transition lifecycle node to configured, then active.
+  auto change_state = [&](uint8_t transition_id) -> bool {
+      auto req = std::make_shared<lifecycle_msgs::srv::ChangeState::Request>();
+      req->transition.id = transition_id;
+      auto future = change_state_client->async_send_request(req);
+      return rclcpp::spin_until_future_complete(node_, future, 5s) ==
+        rclcpp::FutureReturnCode::SUCCESS && future.get()->success;
+    };
+
+  uint8_t state = get_state();
+  if (state == lifecycle_msgs::msg::State::PRIMARY_STATE_UNKNOWN) {
+    // Give the lifecycle services a moment to report a valid state.
+    if (!wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED, 5s)) {
+      RCLCPP_ERROR(node_->get_logger(), "Lifecycle node state is unknown");
+      return 1;
+    }
+    state = get_state();
+  }
+  if (state == lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
+    if (!change_state(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE)) {
+      state = get_state();
+      if (state != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE &&
+        state != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+      {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to configure lifecycle node");
+        return 1;
+      }
+      RCLCPP_WARN(node_->get_logger(), "Configure transition reported failure but node is configured");
+    }
+  }
+  if (!wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE, 10s) &&
+    !wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE, 1s))
+  {
+    RCLCPP_ERROR(node_->get_logger(), "Lifecycle node did not reach inactive state");
+    return 1;
+  }
+
+  state = get_state();
+  if (state != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    if (!change_state(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE)) {
+      state = get_state();
+      if (state != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+        RCLCPP_ERROR(node_->get_logger(), "Failed to activate lifecycle node");
+        return 1;
+      }
+      RCLCPP_WARN(node_->get_logger(), "Activate transition reported failure but node is active");
+    }
+  }
+  if (!wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE, 10s)) {
+    RCLCPP_ERROR(node_->get_logger(), "Lifecycle node did not reach active state");
+    return 1;
+  }
 
   if (!reset_client_->wait_for_service(10s)) {
     RCLCPP_ERROR(node_->get_logger(), "Reset service not available after waiting");

@@ -154,8 +154,10 @@ RosRobotLocalizationListener::RosRobotLocalizationListener(
     odom_sub_.getTopic().c_str(), accel_sub_.getTopic().c_str());
 
   // Wait until the base and world frames are set by the incoming messages
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(node);
   while (rclcpp::ok() && base_frame_id_.empty()) {
-    rclcpp::spin_some(node);
+    executor.spin_some();
     RCLCPP_INFO_THROTTLE(
       node_logger_->get_logger(), *node->get_clock(), 1000,
       "Ros Robot Localization Listener: Waiting for incoming messages on "

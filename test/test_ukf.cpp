@@ -51,7 +51,8 @@ TEST(UkfTest, Measurements) {
   options.arguments({"ukf_test_node"});
   std::shared_ptr<robot_localization::RosUkf> filter =
     std::make_shared<robot_localization::RosUkf>(options);
-  filter->initialize();
+  filter->configure();
+  filter->activate();
   double alpha = filter->declare_parameter("alpha", 0.001);
   double kappa = filter->declare_parameter("kappa", 0.0);
   double beta = filter->declare_parameter("beta", 2.0);

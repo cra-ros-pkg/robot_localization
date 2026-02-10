@@ -49,7 +49,8 @@ TEST(EkfTest, Measurements) {
   options.arguments({"ekf_filter_node"});
   std::shared_ptr<robot_localization::RosEkf> filter =
     std::make_shared<robot_localization::RosEkf>(options);
-  filter->initialize();
+  filter->configure();
+  filter->activate();
 
   // create the instance of the class and pass parameters
   Eigen::MatrixXd initialCovar(15, 15);
