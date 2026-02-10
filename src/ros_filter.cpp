@@ -155,8 +155,9 @@ template<typename T>
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 RosFilter<T>::on_configure(const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Configured' state. Parameters loaded.",
-      get_name());
+  RCLCPP_INFO(
+    get_logger(), "[%s]: Transitioning to 'Configured' state. Parameters loaded.",
+    get_name());
 
   // Initialize angular acceleration (no parameters needed)
   angular_acceleration_.setZero();
@@ -211,8 +212,9 @@ template<typename T>
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 RosFilter<T>::on_activate(const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Active' state. Publishers and timers started.",
-      get_name());
+  RCLCPP_INFO(
+    get_logger(), "[%s]: Transitioning to 'Active' state. Publishers and timers started.",
+    get_name());
   // Enable filter processing
   enabled_ = true;
   if (!this->get_clock()->started()) {
@@ -283,8 +285,9 @@ template<typename T>
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 RosFilter<T>::on_cleanup(const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Unconfigured' state. Resources reset.",
-      get_name());
+  RCLCPP_INFO(
+    get_logger(), "[%s]: Transitioning to 'Unconfigured' state. Resources reset.",
+    get_name());
 
   // Reset the filter state
   reset();
@@ -315,8 +318,9 @@ template<typename T>
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 RosFilter<T>::on_shutdown(const rclcpp_lifecycle::State &)
 {
-  RCLCPP_WARN(get_logger(), "[%s]: Transitioning to 'shutdown' state. Process exiting.",
-      get_name());
+  RCLCPP_WARN(
+    get_logger(), "[%s]: Transitioning to 'shutdown' state. Process exiting.",
+    get_name());
 
   // Stop timer if running
   if (timer_) {
@@ -1043,19 +1047,19 @@ void RosFilter<T>::loadParams()
   twist_var_counts[StateMemberVyaw] = 0;
 
   // Determine if we'll be printing diagnostic information
-  print_diagnostics_ = declareWithDefault("print_diagnostics", false);
+  print_diagnostics_ = this->declare_parameter("print_diagnostics", false);
 
-  // Check for custom gravitational acceleration value
-  gravitational_acceleration_ = declareWithDefault(
+// Check for custom gravitational acceleration value
+  gravitational_acceleration_ = this->declare_parameter(
     "gravitational_acceleration",
     gravitational_acceleration_);
 
   // Grab the debug param. If true, the node will produce a LOT of output.
-  bool debug = declareWithDefault("debug", false);
+  bool debug = this->declare_parameter("debug", false);
   std::string debug_out_file = "robot_localization_debug.txt";
   if (debug) {
     try {
-      debug_out_file = declareWithDefault("debug_out_file", debug_out_file);
+      debug_out_file = this->declare_parameter("debug_out_file", debug_out_file);
       debug_stream_.open(debug_out_file.c_str());
 
       // Make sure we succeeded
@@ -1076,12 +1080,12 @@ void RosFilter<T>::loadParams()
 
   // These params specify the name of the robot's body frame (typically
   // base_link) and odometry frame (typically odom)
-  map_frame_id_ = declareWithDefault("map_frame", std::string("map"));
-  odom_frame_id_ = declareWithDefault("odom_frame", std::string("odom"));
-  base_link_frame_id_ = declareWithDefault(
+  map_frame_id_ = this->declare_parameter("map_frame", std::string("map"));
+  odom_frame_id_ = this->declare_parameter("odom_frame", std::string("odom"));
+  base_link_frame_id_ = this->declare_parameter(
     "base_link_frame",
     std::string("base_link"));
-  base_link_output_frame_id_ = declareWithDefault(
+  base_link_output_frame_id_ = this->declare_parameter(
     "base_link_frame_output",
     base_link_frame_id_);
 
@@ -1110,7 +1114,7 @@ void RosFilter<T>::loadParams()
    *
    * The default is the latter behavior (broadcast of odom->base_link).
    */
-  world_frame_id_ = declareWithDefault("world_frame", odom_frame_id_);
+  world_frame_id_ = this->declare_parameter("world_frame", odom_frame_id_);
 
   if (map_frame_id_ == odom_frame_id_ ||
     odom_frame_id_ == base_link_frame_id_ ||
@@ -1127,7 +1131,7 @@ void RosFilter<T>::loadParams()
 
   // Try to resolve tf_prefix
   std::string tf_prefix = "";
-  declareParameterIfNotDeclared("tf_prefix", rclcpp::PARAMETER_STRING);
+  this->declare_parameter("tf_prefix", rclcpp::PARAMETER_STRING);
   if (this->get_parameter("tf_prefix", tf_prefix)) {
     // Append the tf prefix in a tf2-friendly manner
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
@@ -1138,38 +1142,38 @@ void RosFilter<T>::loadParams()
   }
 
   // Whether we're publshing the world_frame->base_link_frame transform
-  publish_transform_ = declareWithDefault("publish_tf", true);
+  publish_transform_ = this->declare_parameter("publish_tf", true);
 
   // Whether we're publishing the acceleration state transform
-  publish_acceleration_ = declareWithDefault("publish_acceleration", false);
+  publish_acceleration_ = this->declare_parameter("publish_acceleration", false);
 
   // Whether we'll allow old measurements to cause a re-publication of the updated state
-  permit_corrected_publication_ = declareWithDefault("permit_corrected_publication", false);
+  permit_corrected_publication_ = this->declare_parameter("permit_corrected_publication", false);
 
   // Transform future dating
-  double offset_tmp = declareWithDefault("transform_time_offset", 0.0);
+  double offset_tmp = this->declare_parameter("transform_time_offset", 0.0);
   tf_time_offset_ = rclcpp::Duration::from_seconds(offset_tmp);
 
   // Transform timeout
-  double timeout_tmp = declareWithDefault("transform_timeout", 0.0);
+  double timeout_tmp = this->declare_parameter("transform_timeout", 0.0);
   tf_timeout_ = rclcpp::Duration::from_seconds(timeout_tmp);
 
   // Update frequency and sensor timeout
-  frequency_ = declareWithDefault("frequency", 30.0);
+  frequency_ = this->declare_parameter("frequency", 30.0);
 
-  predict_to_current_time_ = declareWithDefault("predict_to_current_time", false);
+  predict_to_current_time_ = this->declare_parameter("predict_to_current_time", false);
 
   sensor_timeout_ =
     rclcpp::Duration::from_seconds(
-    declareWithDefault("sensor_timeout", 1.0 / frequency_));
+    this->declare_parameter("sensor_timeout", 1.0 / frequency_));
   filter_.setSensorTimeout(sensor_timeout_);
 
   // Determine if we're in 2D mode
-  two_d_mode_ = declareWithDefault("two_d_mode", false);
+  two_d_mode_ = this->declare_parameter("two_d_mode", false);
 
   // Smoothing window size
-  smooth_lagged_data_ = declareWithDefault("smooth_lagged_data", false);
-  double history_length_double = declareWithDefault("history_length", 0.0);
+  smooth_lagged_data_ = this->declare_parameter("smooth_lagged_data", false);
+  double history_length_double = this->declare_parameter("history_length", 0.0);
 
   if (!smooth_lagged_data_ && std::abs(history_length_double) > 0) {
     RCLCPP_ERROR_STREAM(
@@ -1188,7 +1192,7 @@ void RosFilter<T>::loadParams()
   history_length_ = rclcpp::Duration::from_seconds(std::abs(history_length_double));
 
   // Whether we reset filter on jump back in time
-  reset_on_time_jump_ = declareWithDefault("reset_on_time_jump", false);
+  reset_on_time_jump_ = this->declare_parameter("reset_on_time_jump", false);
 
   // Determine if we're using a control term
   double control_timeout = sensor_timeout_.seconds();
@@ -1198,12 +1202,12 @@ void RosFilter<T>::loadParams()
   std::vector<double> deceleration_limits;
   std::vector<double> deceleration_gains;
 
-  use_control_ = declareWithDefault("use_control", false);
-  stamped_control_ = declareWithDefault("stamped_control", true);
-  control_timeout = declareWithDefault("control_timeout", 0.0);
+  use_control_ = this->declare_parameter("use_control", false);
+  stamped_control_ = this->declare_parameter("stamped_control", true);
+  control_timeout = this->declare_parameter("control_timeout", 0.0);
 
   if (use_control_) {
-    declareParameterIfNotDeclared("control_config", rclcpp::PARAMETER_BOOL_ARRAY);
+    this->declare_parameter("control_config", rclcpp::PARAMETER_BOOL_ARRAY);
     if (this->get_parameter("control_config", control_update_vector)) {
       if (control_update_vector.size() != TWIST_SIZE) {
         RCLCPP_ERROR_STREAM(
@@ -1221,7 +1225,7 @@ void RosFilter<T>::loadParams()
       use_control_ = false;
     }
 
-    declareParameterIfNotDeclared("acceleration_limits", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    this->declare_parameter("acceleration_limits", rclcpp::PARAMETER_DOUBLE_ARRAY);
     if (this->get_parameter("acceleration_limits", acceleration_limits)) {
       if (acceleration_limits.size() != TWIST_SIZE) {
         RCLCPP_ERROR_STREAM(
@@ -1239,7 +1243,7 @@ void RosFilter<T>::loadParams()
       acceleration_limits.resize(TWIST_SIZE, 1.0);
     }
 
-    declareParameterIfNotDeclared("acceleration_gains", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    this->declare_parameter("acceleration_gains", rclcpp::PARAMETER_DOUBLE_ARRAY);
     if (this->get_parameter("acceleration_gains", acceleration_gains)) {
       const int size = acceleration_gains.size();
       if (size != TWIST_SIZE) {
@@ -1254,7 +1258,7 @@ void RosFilter<T>::loadParams()
       }
     }
 
-    declareParameterIfNotDeclared("deceleration_limits", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    this->declare_parameter("deceleration_limits", rclcpp::PARAMETER_DOUBLE_ARRAY);
     if (this->get_parameter("deceleration_limits", deceleration_limits)) {
       if (deceleration_limits.size() != TWIST_SIZE) {
         RCLCPP_ERROR_STREAM(
@@ -1271,7 +1275,7 @@ void RosFilter<T>::loadParams()
       deceleration_limits = acceleration_limits;
     }
 
-    declareParameterIfNotDeclared("deceleration_gains", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    this->declare_parameter("deceleration_gains", rclcpp::PARAMETER_DOUBLE_ARRAY);
     if (this->get_parameter("deceleration_gains", deceleration_gains)) {
       const int size = deceleration_gains.size();
       if (size != TWIST_SIZE) {
@@ -1299,13 +1303,13 @@ void RosFilter<T>::loadParams()
     deceleration_gains.resize(TWIST_SIZE, 1.0);
   }
 
-  bool dynamic_process_noise_covariance = declareWithDefault(
+  bool dynamic_process_noise_covariance = this->declare_parameter(
     "dynamic_process_noise_covariance", false);
   filter_.setUseDynamicProcessNoiseCovariance(
     dynamic_process_noise_covariance);
 
   std::vector<double> initial_state;
-  declareParameterIfNotDeclared("initial_state", rclcpp::PARAMETER_DOUBLE_ARRAY);
+  this->declare_parameter("initial_state", rclcpp::PARAMETER_DOUBLE_ARRAY);
   if (this->get_parameter("initial_state", initial_state)) {
     if (initial_state.size() != STATE_SIZE) {
       RCLCPP_ERROR_STREAM(
@@ -1320,7 +1324,7 @@ void RosFilter<T>::loadParams()
   }
 
   // Check if the filter should start or not
-  disabled_at_startup_ = declareWithDefault("disabled_at_startup", false);
+  disabled_at_startup_ = this->declare_parameter("disabled_at_startup", false);
   enabled_ = !disabled_at_startup_;
 
   // Debugging writes to file
@@ -1403,7 +1407,7 @@ void RosFilter<T>::loadParams()
     ss << "odom" << topic_ind++;
     std::string odom_topic_name = ss.str();
     std::string odom_topic;
-    declareParameterIfNotDeclared(odom_topic_name, rclcpp::PARAMETER_STRING);
+    this->declare_parameter(odom_topic_name, rclcpp::PARAMETER_STRING);
 
     rclcpp::Parameter parameter;
     if (this->get_parameter(odom_topic_name, parameter)) {
@@ -1415,12 +1419,12 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       // Determine if we want to integrate this sensor differentially
-      bool differential = declareWithDefault(
+      bool differential = this->declare_parameter(
         odom_topic_name + std::string("_differential"),
         false);
 
       // Determine if we want to integrate this sensor relatively
-      bool relative = declareWithDefault(odom_topic_name + std::string("_relative"), false);
+      bool relative = this->declare_parameter(odom_topic_name + std::string("_relative"), false);
 
       if (relative && differential) {
         RCLCPP_ERROR_STREAM(
@@ -1432,23 +1436,23 @@ void RosFilter<T>::loadParams()
       }
 
       // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
-      bool pose_use_child_frame = declareWithDefault(
+      bool pose_use_child_frame = this->declare_parameter(
         odom_topic_name + std::string("_pose_use_child_frame"), false);
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = declareWithDefault(
+      double pose_mahalanobis_thresh = this->declare_parameter(
         odom_topic_name +
         std::string("_pose_rejection_threshold"),
         std::numeric_limits<double>::max());
 
       // Check for twist rejection threshold
-      double twist_mahalanobis_thresh = declareWithDefault(
+      double twist_mahalanobis_thresh = this->declare_parameter(
         odom_topic_name +
         std::string("_twist_rejection_threshold"),
         std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = declareWithDefault(
+      int queue_size = this->declare_parameter(
         odom_topic_name +
         std::string("_queue_size"), 10);
 
@@ -1558,7 +1562,7 @@ void RosFilter<T>::loadParams()
     ss << "pose" << topic_ind++;
     std::string pose_topic_name = ss.str();
     std::string pose_topic;
-    declareParameterIfNotDeclared(pose_topic_name, rclcpp::PARAMETER_STRING);
+    this->declare_parameter(pose_topic_name, rclcpp::PARAMETER_STRING);
 
     rclcpp::Parameter parameter;
     if (this->get_parameter(pose_topic_name, parameter)) {
@@ -1569,12 +1573,12 @@ void RosFilter<T>::loadParams()
     }
 
     if (more_params) {
-      bool differential = declareWithDefault(
+      bool differential = this->declare_parameter(
         pose_topic_name + std::string("_differential"),
         false);
 
       // Determine if we want to integrate this sensor relatively
-      bool relative = declareWithDefault(
+      bool relative = this->declare_parameter(
         pose_topic_name + std::string("_relative"),
         false);
 
@@ -1588,13 +1592,13 @@ void RosFilter<T>::loadParams()
       }
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = declareWithDefault(
+      double pose_mahalanobis_thresh = this->declare_parameter(
         pose_topic_name +
         std::string("_rejection_threshold"),
         std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = declareWithDefault(
+      int queue_size = this->declare_parameter(
         pose_topic_name +
         std::string("_queue_size"), 10);
 
@@ -1676,7 +1680,7 @@ void RosFilter<T>::loadParams()
     ss << "twist" << topic_ind++;
     std::string twist_topic_name = ss.str();
     std::string twist_topic;
-    declareParameterIfNotDeclared(twist_topic_name, rclcpp::PARAMETER_STRING);
+    this->declare_parameter(twist_topic_name, rclcpp::PARAMETER_STRING);
 
     rclcpp::Parameter parameter;
     if (this->get_parameter(twist_topic_name, parameter)) {
@@ -1688,13 +1692,13 @@ void RosFilter<T>::loadParams()
 
     if (more_params) {
       // Check for twist rejection threshold
-      double twist_mahalanobis_thresh = declareWithDefault(
+      double twist_mahalanobis_thresh = this->declare_parameter(
         twist_topic_name +
         std::string("_rejection_threshold"),
         std::numeric_limits<double>::max());
 
       // Set optional custom queue size
-      int queue_size = declareWithDefault(
+      int queue_size = this->declare_parameter(
         twist_topic_name +
         std::string("_queue_size"), 10);
 
@@ -1756,7 +1760,7 @@ void RosFilter<T>::loadParams()
     ss << "imu" << topic_ind++;
     std::string imu_topic_name = ss.str();
     std::string imu_topic;
-    declareParameterIfNotDeclared(imu_topic_name, rclcpp::PARAMETER_STRING);
+    this->declare_parameter(imu_topic_name, rclcpp::PARAMETER_STRING);
 
     rclcpp::Parameter parameter;
     if (this->get_parameter(imu_topic_name, parameter)) {
@@ -1767,12 +1771,12 @@ void RosFilter<T>::loadParams()
     }
 
     if (more_params) {
-      bool differential = declareWithDefault(
+      bool differential = this->declare_parameter(
         imu_topic_name + std::string("_differential"),
         false);
 
       // Determine if we want to integrate this sensor relatively
-      bool relative = declareWithDefault(imu_topic_name + std::string("_relative"), false);
+      bool relative = this->declare_parameter(imu_topic_name + std::string("_relative"), false);
 
       if (relative && differential) {
         RCLCPP_ERROR_STREAM(
@@ -1784,7 +1788,7 @@ void RosFilter<T>::loadParams()
       }
 
       // Check for pose rejection threshold
-      double pose_mahalanobis_thresh = declareWithDefault(
+      double pose_mahalanobis_thresh = this->declare_parameter(
         imu_topic_name +
         std::string("_pose_rejection_threshold"),
         std::numeric_limits<double>::max());
@@ -1792,17 +1796,17 @@ void RosFilter<T>::loadParams()
       // Check for angular velocity rejection threshold
       std::string imu_twist_rejection_name =
         imu_topic_name + std::string("_twist_rejection_threshold");
-      double twist_mahalanobis_thresh = declareWithDefault(
+      double twist_mahalanobis_thresh = this->declare_parameter(
         imu_twist_rejection_name,
         std::numeric_limits<double>::max());
 
       // Check for acceleration rejection threshold
-      double accel_mahalanobis_thresh = declareWithDefault(
+      double accel_mahalanobis_thresh = this->declare_parameter(
         imu_topic_name +
         std::string("_linear_acceleration_rejection_threshold"),
         std::numeric_limits<double>::max());
 
-      bool remove_grav_acc = declareWithDefault(
+      bool remove_grav_acc = this->declare_parameter(
         imu_topic_name +
         "_remove_gravitational_acceleration",
         false);
@@ -1810,7 +1814,7 @@ void RosFilter<T>::loadParams()
         remove_grav_acc;
 
       // Set optional custom queue size
-      int queue_size = declareWithDefault(
+      int queue_size = this->declare_parameter(
         imu_topic_name +
         std::string("_queue_size"), 10);
 
@@ -2010,7 +2014,7 @@ void RosFilter<T>::loadParams()
       deceleration_gains);
 
     // Select between TwistStamped or Twist control input
-    if(stamped_control_) {
+    if (stamped_control_) {
       stamped_control_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
         "cmd_vel", rclcpp::QoS(1),
         std::bind(&RosFilter<T>::controlStampedCallback, this, std::placeholders::_1));
@@ -2072,12 +2076,12 @@ void RosFilter<T>::loadParams()
 
   auto load_covariance =
     [this](
-      const std::string & parameter, Eigen::MatrixXd & covariance)
+    const std::string & parameter, Eigen::MatrixXd & covariance)
     {
       covariance.setZero();
       std::vector<double> covar_flat;
 
-      declareParameterIfNotDeclared(parameter, rclcpp::PARAMETER_DOUBLE_ARRAY);
+      this->declare_parameter(parameter, rclcpp::PARAMETER_DOUBLE_ARRAY);
       if (get_parameter(parameter, covar_flat)) {
         if (covar_flat.size() == STATE_SIZE) {
           RCLCPP_INFO_STREAM(
@@ -2801,7 +2805,7 @@ std::vector<bool> RosFilter<T>::loadUpdateConfig(const std::string & topic_name)
   std::vector<bool> update_vector(STATE_SIZE, 0);
   const std::string topic_config_name = topic_name + "_config";
 
-  update_vector = declareWithDefault(topic_config_name, update_vector);
+  update_vector = this->declare_parameter(topic_config_name, update_vector);
 
   return update_vector;
 }

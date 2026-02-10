@@ -914,7 +914,7 @@ int main(int argc, char ** argv)
       req->transition.id = transition_id;
       auto future = change_state_client->async_send_request(req);
       return rclcpp::spin_until_future_complete(node_, future, 5s) ==
-        rclcpp::FutureReturnCode::SUCCESS && future.get()->success;
+             rclcpp::FutureReturnCode::SUCCESS && future.get()->success;
     };
 
   uint8_t state = get_state();
@@ -935,7 +935,8 @@ int main(int argc, char ** argv)
         RCLCPP_ERROR(node_->get_logger(), "Failed to configure lifecycle node");
         return 1;
       }
-      RCLCPP_WARN(node_->get_logger(), "Configure transition reported failure but node is configured");
+      RCLCPP_WARN(
+        node_->get_logger(), "Configure transition reported failure but node is configured");
     }
   }
   if (!wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE, 10s) &&
@@ -953,7 +954,9 @@ int main(int argc, char ** argv)
         RCLCPP_ERROR(node_->get_logger(), "Failed to activate lifecycle node");
         return 1;
       }
-      RCLCPP_WARN(node_->get_logger(), "Activate transition reported failure but node is active");
+      RCLCPP_WARN(
+        node_->get_logger(),
+        "Activate transition reported failure but node is active");
     }
   }
   if (!wait_for_state(lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE, 10s)) {

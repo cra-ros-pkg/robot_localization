@@ -424,39 +424,6 @@ protected:
   void aggregateDiagnostics(
     diagnostic_updater::DiagnosticStatusWrapper & wrapper);
 
-  //! @brief Declare a parameter if it has not been declared already.
-  //!
-  //! This replaces the old local lambda in loadParams() to keep parameter
-  //! declaration logic centralized and reusable.
-  //! @param[in] name - Parameter name
-  //! @param[in] type - Parameter type
-  //!
-  void declareParameterIfNotDeclared(
-    const std::string & name, const rclcpp::ParameterType type)
-  {
-    if (!this->has_parameter(name)) {
-      this->declare_parameter(name, type);
-    }
-  }
-
-  //! @brief Declare a parameter with a default value and return its value.
-  //!
-  //! This replaces the old local lambda in loadParams() to keep parameter
-  //! declaration logic centralized and reusable.
-  //! @param[in] name - Parameter name
-  //! @param[in] default_value - Default value if not declared
-  //!
-  template<typename ParamT>
-  ParamT declareWithDefault(const std::string & name, const ParamT & default_value)
-  {
-    if (!this->has_parameter(name)) {
-      return this->declare_parameter(name, default_value);
-    }
-    ParamT value = default_value;
-    this->get_parameter(name, value);
-    return value;
-  }
-
   //! @brief Utility method for copying covariances from ROS covariance arrays
   //! to Eigen matrices
   //!

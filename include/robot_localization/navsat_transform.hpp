@@ -60,7 +60,8 @@
 namespace robot_localization
 {
 
-class NavSatTransform : public rclcpp::Node {
+class NavSatTransform : public rclcpp::Node
+{
 public:
   /**
    * @brief Constructor
