@@ -224,8 +224,9 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
   if (delay > 0) {
-    RCLCPP_INFO_STREAM(this->get_logger(),
-        "Delaying for " << delay << " seconds before starting...");
+    RCLCPP_INFO_STREAM(
+      this->get_logger(),
+      "Delaying for " << delay << " seconds before starting...");
     rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
     this->get_clock()->sleep_for(delay_duration);
     RCLCPP_INFO_STREAM(this->get_logger(), "Delay elapsed. Continuing.");
@@ -449,7 +450,7 @@ bool NavSatTransform::fromLLCallback(
 {
   try {
     response->map_point = fromLL(request->ll_point);
-  } catch(const std::runtime_error & e) {
+  } catch (const std::runtime_error & e) {
     return false;
   }
 
@@ -464,10 +465,11 @@ bool NavSatTransform::fromLLArrayCallback(
   converted_points.reserve(request->ll_points.size());
 
   try {
-    std::transform(request->ll_points.begin(), request->ll_points.end(),
-                   std::back_inserter(converted_points),
-      [this] (const auto & point) {return fromLL(point);});
-  } catch(const std::runtime_error & e) {
+    std::transform(
+      request->ll_points.begin(), request->ll_points.end(),
+      std::back_inserter(converted_points),
+      [this](const auto & point) {return fromLL(point);});
+  } catch (const std::runtime_error & e) {
     return false;
   }
 
