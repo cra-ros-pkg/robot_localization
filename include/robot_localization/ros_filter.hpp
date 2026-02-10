@@ -424,6 +424,39 @@ protected:
   void aggregateDiagnostics(
     diagnostic_updater::DiagnosticStatusWrapper & wrapper);
 
+  //! @brief Declare a parameter if it has not been declared already.
+  //!
+  //! This replaces the old local lambda in loadParams() to keep parameter
+  //! declaration logic centralized and reusable.
+  //! @param[in] name - Parameter name
+  //! @param[in] type - Parameter type
+  //!
+  void declareParameterIfNotDeclared(
+    const std::string & name, const rclcpp::ParameterType type)
+  {
+    if (!this->has_parameter(name)) {
+      this->declare_parameter(name, type);
+    }
+  }
+
+  //! @brief Declare a parameter with a default value and return its value.
+  //!
+  //! This replaces the old local lambda in loadParams() to keep parameter
+  //! declaration logic centralized and reusable.
+  //! @param[in] name - Parameter name
+  //! @param[in] default_value - Default value if not declared
+  //!
+  template<typename ParamT>
+  ParamT declareWithDefault(const std::string & name, const ParamT & default_value)
+  {
+    if (!this->has_parameter(name)) {
+      return this->declare_parameter(name, default_value);
+    }
+    ParamT value = default_value;
+    this->get_parameter(name, value);
+    return value;
+  }
+
   //! @brief Utility method for copying covariances from ROS covariance arrays
   //! to Eigen matrices
   //!
@@ -530,12 +563,6 @@ protected:
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
 
-  //! @brief Whether the node requires external lifecycle management
-  //!
-  //! When false (default), the node auto-transitions through configure and activate
-  //! on startup, maintaining backward compatibility. When true, external lifecycle
-  //! management via ros2 lifecycle commands is required.
-  bool lifecycle_managed_node_;
 
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
