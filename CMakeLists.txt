@@ -131,6 +131,7 @@ add_executable(
 target_link_libraries(navsat_transform_node PRIVATE
   ${library_name}
   rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 add_executable(

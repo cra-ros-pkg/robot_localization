@@ -55,30 +55,7 @@ int main(int argc, char ** argv)
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(filter->get_node_base_interface());
-  while (rclcpp::ok()) {
-    executor.spin_some();
-  }
-
-  // Ensure lifecycle node is properly shut down to avoid warnings on exit.
-  const auto state_id = filter->get_current_state().id();
-  if (state_id != lifecycle_msgs::msg::State::PRIMARY_STATE_FINALIZED) {
-    uint8_t transition_id = 0;
-    if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
-      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_ACTIVE_SHUTDOWN;
-    } else if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
-      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_INACTIVE_SHUTDOWN;
-    } else if (state_id == lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
-      transition_id = lifecycle_msgs::msg::Transition::TRANSITION_UNCONFIGURED_SHUTDOWN;
-    }
-
-    if (transition_id != 0) {
-      try {
-        filter->trigger_transition(transition_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(filter->get_logger(), "Failed to shutdown node: %s", e.what());
-      }
-    }
-  }
+  executor.spin();
 
   rclcpp::shutdown();
   return 0;
