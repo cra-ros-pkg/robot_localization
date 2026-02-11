@@ -42,6 +42,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "navsat_conversions.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
@@ -65,7 +66,7 @@ using namespace std::chrono_literals;
 namespace robot_localization
 {
 NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
-: Node("navsat_transform_node", options),
+: rclcpp_lifecycle::LifecycleNode("navsat_transform_node", options),
   base_link_frame_id_("base_link"),
   broadcast_cartesian_transform_(false),
   broadcast_cartesian_transform_as_parent_frame_(false),

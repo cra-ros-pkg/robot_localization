@@ -530,7 +530,6 @@ protected:
     std::vector<bool> & updateVector, Eigen::VectorXd & measurement,
     Eigen::MatrixXd & measurementCovariance);
 
-
   //! @brief Whether or not we print diagnostic messages to the /diagnostics
   //! topic
   //!

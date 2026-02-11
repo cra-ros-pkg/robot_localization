@@ -43,6 +43,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/timer.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "robot_localization/srv/from_ll.hpp"
 #include "robot_localization/srv/from_ll_array.hpp"
 #include "robot_localization/srv/set_datum.hpp"
@@ -60,7 +61,7 @@
 namespace robot_localization
 {
 
-class NavSatTransform : public rclcpp::Node
+class NavSatTransform : public rclcpp_lifecycle::LifecycleNode
 {
 public:
   /**
