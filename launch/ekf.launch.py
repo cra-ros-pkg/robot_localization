@@ -24,8 +24,8 @@ def generate_launch_description():
     autostart = DeclareLaunchArgument(
         'autostart',
         default_value='false',
-        description='Automatically configure and activate the EKF lifecycle node')
-    
+        description='Automatically configure and activate the node. Set to false for managed lifecycle control.')
+
     return LaunchDescription([
         autostart,
         launch_ros.actions.LifecycleNode(
@@ -35,8 +35,6 @@ def generate_launch_description():
             namespace='',
             output='screen',
             autostart=LaunchConfiguration('autostart'),
-            parameters=[
-                os.path.join(get_package_share_directory("robot_localization"), 'params', 'ekf.yaml')
-            ]
+            parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'ekf.yaml')],
            ),
-    ])
+])

@@ -48,21 +48,16 @@ int main(int argc, char ** argv)
   options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosUkf> filter =
     std::make_shared<robot_localization::RosUkf>(options);
-
-  // Initialize UKF constants from parameters (needed for sigma point weights).
-  const double alpha = filter->declare_parameter("alpha", 0.001);
-  const double kappa = filter->declare_parameter("kappa", 0.0);
-  const double beta = filter->declare_parameter("beta", 2.0);
+  double alpha = filter->declare_parameter("alpha", 0.001);
+  double kappa = filter->declare_parameter("kappa", 0.0);
+  double beta = filter->declare_parameter("beta", 2.0);
   filter->getFilter().setConstants(alpha, kappa, beta);
-
   RCLCPP_INFO(
     filter->get_logger(),
     "Lifecycle node initialized; use lifecycle transitions to configure/activate.");
-
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(filter->get_node_base_interface());
   executor.spin();
-
   rclcpp::shutdown();
   return 0;
 }

@@ -29,11 +29,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "robot_localization/ros_filter.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <functional>
 #include <iomanip>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -61,7 +63,6 @@
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/filter_state.hpp"
 #include "robot_localization/filter_utilities.hpp"
-#include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"
 #include "robot_localization/srv/set_pose.hpp"
 #include "robot_localization/srv/toggle_filter_processing.hpp"
@@ -379,13 +380,16 @@ void RosFilter<T>::reset()
   initial_measurements_.clear();
   previous_measurements_.clear();
   previous_measurement_covariances_.clear();
+
   clearMeasurementQueue();
+
   filter_state_history_.clear();
   measurement_history_.clear();
 
   angular_acceleration_.setZero();
   angular_acceleration_cov_.setIdentity();
   angular_acceleration_cov_ *= 0.01;
+
   last_state_twist_rot_.setZero();
 
   // Also set the last set pose time, so we ignore all messages
@@ -394,6 +398,7 @@ void RosFilter<T>::reset()
   last_diag_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   latest_control_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   last_published_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+
   last_diff_time_ = this->now().seconds();
 
   // clear tf buffer to avoid TF_OLD_DATA errors
@@ -766,7 +771,7 @@ void RosFilter<T>::imuCallback(
 {
   RF_DEBUG(
     "------ RosFilter<T>::imuCallback (" <<
-      topic_name << ") ------\n")       // << "IMU message:\n" << *msg);
+      topic_name << ") ------\n")         // << "IMU message:\n" << *msg);
 
   // If we've just reset the filter, then we want to ignore any messages
   // that arrive with an older timestamp
@@ -797,7 +802,6 @@ void RosFilter<T>::imuCallback(
     // should ignore that portion of the message. robot_localization allows
     // users to explicitly ignore data using its parameters, but we should also
     // be compliant with message specs.
-
     if (std::abs(msg->orientation_covariance[0] + 1) < 1e-9) {
       RF_DEBUG(
         "Received IMU message with -1 as its first covariance value for "
@@ -968,7 +972,6 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       if (smooth_lagged_data_) {
         // Invariant still holds: measurementHistoryDeque_.back().time_ <
         // measurement_queue_.top().time_
-
         measurement_history_.push_back(measurement);
 
         // We should only save the filter state once per unique timstamp
@@ -1097,7 +1100,6 @@ void RosFilter<T>::loadParams()
           ". Error was " << e.what());
     }
   }
-
 
   // These params specify the name of the robot's body frame (typically
   // base_link) and odometry frame (typically odom)
@@ -2109,7 +2111,7 @@ void RosFilter<T>::loadParams()
       deceleration_gains);
 
     // Select between TwistStamped or Twist control input
-    if (stamped_control_) {
+    if(stamped_control_) {
       stamped_control_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
         "cmd_vel", rclcpp::QoS(1),
         std::bind(&RosFilter<T>::controlStampedCallback, this, std::placeholders::_1));
@@ -2169,9 +2171,7 @@ void RosFilter<T>::loadParams()
     }
   }
 
-  auto load_covariance =
-    [this](
-    const std::string & parameter, Eigen::MatrixXd & covariance)
+  auto load_covariance = [this](const std::string & parameter, Eigen::MatrixXd & covariance)
     {
       covariance.setZero();
       std::vector<double> covar_flat;
@@ -2422,7 +2422,6 @@ void RosFilter<T>::periodicUpdate()
       filtered_position->pose.pose.position.z;
     world_base_link_trans_msg_.transform.rotation =
       filtered_position->pose.pose.orientation;
-
 
     // The filtered_position is the message containing the state and covariances:
     // nav_msgs Odometry
@@ -3122,7 +3121,6 @@ bool RosFilter<T>::preparePose(
   // 1. Get the measurement into a tf-friendly transform (pose) object
   tf2::Stamped<tf2::Transform> pose_tmp;
 
-
   // We'll need this later for storing this measurement for differential
   // integration
   tf2::Transform cur_measurement;
@@ -3432,7 +3430,6 @@ bool RosFilter<T>::preparePose(
           "After rotating to the target frame, measurement delta is:\n" <<
             pose_tmp << "\n");
 
-
         // 7c. Now use the time difference from the last message to compute
         // translational and rotational velocities
         double dt = filter_utilities::toSec(msg->header.stamp) -
@@ -3601,7 +3598,6 @@ bool RosFilter<T>::prepareTwist(
   // Determine the frame_id of the data
   std::string msg_frame =
     (msg->header.frame_id == "" ? target_frame : msg->header.frame_id);
-
 
   // 2. robot_localization lets users configure which variables from the sensor
   // should be

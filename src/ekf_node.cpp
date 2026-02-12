@@ -48,15 +48,12 @@ int main(int argc, char ** argv)
   options.clock_type(RCL_ROS_TIME);
   std::shared_ptr<robot_localization::RosEkf> filter =
     std::make_shared<robot_localization::RosEkf>(options);
-
   RCLCPP_INFO(
     filter->get_logger(),
     "Lifecycle node initialized; use lifecycle transitions to configure/activate.");
-
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(filter->get_node_base_interface());
   executor.spin();
-
   rclcpp::shutdown();
   return 0;
 }
