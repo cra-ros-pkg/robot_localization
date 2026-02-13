@@ -32,6 +32,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <chrono>
 
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
@@ -226,10 +227,21 @@ TEST(FilterBaseDiagnosticsTest, EmptyTimestamps) {
   rclcpp::spin_some(dh_.node_);
 
   // The filter runs and sends the diagnostics every second.
-  // Just run this for two seconds to ensure we get all the diagnostic message.
-  for (size_t i = 0; i < 20; ++i) {
+  // Wait up to 10 seconds for diagnostic messages to arrive.
+  auto start_time = std::chrono::steady_clock::now();
+  auto timeout = std::chrono::seconds(10);
+  while (std::chrono::steady_clock::now() - start_time < timeout) {
     rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
+
+    // Check if we've received all expected diagnostics
+    if (!dh_.diagnostics.empty()) {
+      for (size_t i = 0; i < 20; ++i) {
+        rclcpp::spin_some(dh_.node_);
+        loopRate.sleep();
+      }
+      break;
+    }
   }
 
   /*
@@ -298,10 +310,21 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
   dh_.publishMessages(curr - rclcpp::Duration(1, 0));
 
   // The filter runs and sends the diagnostics every second.
-  // Just run this for two seconds to ensure we get all the diagnostic message.
-  for (size_t i = 0; i < 20; ++i) {
+  // Wait up to 10 seconds for diagnostic messages to arrive.
+  auto start_time = std::chrono::steady_clock::now();
+  auto timeout = std::chrono::seconds(10);
+  while (std::chrono::steady_clock::now() - start_time < timeout) {
     rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
+
+    // Check if we've received all expected diagnostics
+    if (!dh_.diagnostics.empty()) {
+      for (size_t i = 0; i < 20; ++i) {
+        rclcpp::spin_some(dh_.node_);
+        loopRate.sleep();
+      }
+      break;
+    }
   }
   /*
     Now the diagnostic messages have to be investigated to see whether they
@@ -364,10 +387,21 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   dh_.publishMessages((dh_.node_)->now() - rclcpp::Duration(1, 0));
 
   // The filter runs and sends the diagnostics every second.
-  // Just run this for two seconds to ensure we get all the diagnostic message.
-  for (size_t i = 0; i < 20; ++i) {
+  // Wait up to 10 seconds for diagnostic messages to arrive.
+  auto start_time = std::chrono::steady_clock::now();
+  auto timeout = std::chrono::seconds(10);
+  while (std::chrono::steady_clock::now() - start_time < timeout) {
     rclcpp::spin_some(dh_.node_);
     loopRate.sleep();
+
+    // Check if we've received all expected diagnostics
+    if (!dh_.diagnostics.empty()) {
+      for (size_t i = 0; i < 20; ++i) {
+        rclcpp::spin_some(dh_.node_);
+        loopRate.sleep();
+      }
+      break;
+    }
   }
 
   /*

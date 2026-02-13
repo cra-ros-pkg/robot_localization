@@ -57,15 +57,19 @@
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/transform_listener.hpp>
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
+#include "lifecycle_msgs/msg/transition.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 namespace robot_localization
 {
 NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
-: Node("navsat_transform_node", options),
+: LifecycleNode("navsat_transform_node", options),
   base_link_frame_id_("base_link"),
   broadcast_cartesian_transform_(false),
   broadcast_cartesian_transform_as_parent_frame_(false),
@@ -85,7 +89,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   force_user_utm_(false),
   use_manual_datum_(false),
   use_odometry_yaw_(false),
-  cartesian_broadcaster_(*this),
   utm_meridian_convergence_(0.0),
   utm_zone_(0),
   northp_(true),
@@ -93,149 +96,246 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   yaw_offset_(0.0),
   zero_altitude_(false)
 {
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
-
   latest_cartesian_covariance_.resize(POSE_SIZE, POSE_SIZE);
   latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
 
-  double frequency = 10.0;
-  double delay = 0.0;
-  double transform_timeout = 0.0;
+  // 1. Declare Parameters in the Constructor (Prevents "already declared" errors)
+  this->declare_parameter("magnetic_declination_radians", 0.0);
+  this->declare_parameter("yaw_offset", 0.0);
+  this->declare_parameter("zero_altitude", false);
+  this->declare_parameter("publish_filtered_gps", true);
+  this->declare_parameter("use_odometry_yaw", false);
+  this->declare_parameter("wait_for_datum", false);
+  this->declare_parameter("use_local_cartesian", false);
+  this->declare_parameter("frequency", 10.0);
+  this->declare_parameter("delay", 0.0);
+  this->declare_parameter("transform_timeout", 0.0);
+  this->declare_parameter("datum", std::vector<double>());
+  this->declare_parameter("broadcast_utm_transform", false);
+  this->declare_parameter("broadcast_cartesian_transform", false);
+  this->declare_parameter("broadcast_utm_transform_as_parent_frame", false);
+  this->declare_parameter("broadcast_cartesian_transform_as_parent_frame", false);
 
-  // Load the parameters we need
-  magnetic_declination_ = this->declare_parameter("magnetic_declination_radians", 0.0);
-  yaw_offset_ = this->declare_parameter("yaw_offset", 0.0);
-  zero_altitude_ = this->declare_parameter("zero_altitude", false);
-  publish_gps_ = this->declare_parameter("publish_filtered_gps", true);
-  use_odometry_yaw_ = this->declare_parameter("use_odometry_yaw", false);
-  use_manual_datum_ = this->declare_parameter("wait_for_datum", false);
-  use_local_cartesian_ = this->declare_parameter("use_local_cartesian", false);
-  frequency = this->declare_parameter("frequency", frequency);
-  delay = this->declare_parameter("delay", delay);
-  transform_timeout = this->declare_parameter("transform_timeout", transform_timeout);
+  RCLCPP_INFO(this->get_logger(), "Node created & Parameters declared");
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Node in Unconfigured state. Use lifecycle transition commands to change state !");
+}
 
-  transform_timeout_ = tf2::durationFromSec(transform_timeout);
+NavSatTransform::~NavSatTransform() {}
 
-  broadcast_cartesian_transform_ =
-    this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
+CallbackReturn NavSatTransform::on_configure(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Configuring Node", get_name());
 
+  // 1. Initialize TF Buffer and Listener
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+
+  // 2. Initialize Broadcaster
+  cartesian_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
+
+  // 3. Update Class Variables from Parameters
+  this->get_parameter("magnetic_declination_radians", magnetic_declination_);
+  this->get_parameter("yaw_offset", yaw_offset_);
+  this->get_parameter("zero_altitude", zero_altitude_);
+  this->get_parameter("publish_filtered_gps", publish_gps_);
+  this->get_parameter("use_odometry_yaw", use_odometry_yaw_);
+  this->get_parameter("wait_for_datum", use_manual_datum_);
+  this->get_parameter("use_local_cartesian", use_local_cartesian_);
+
+  double timeout_sec;
+  this->get_parameter("transform_timeout", timeout_sec);
+  transform_timeout_ = tf2::durationFromSec(timeout_sec);
+
+  this->get_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
   if (broadcast_cartesian_transform_) {
     RCLCPP_WARN(
-      this->get_logger(), "Parameter 'broadcast_utm_transform' has been deprecated. "
+      this->get_logger(),
+      "Parameter 'broadcast_utm_transform' has been deprecated. "
       "Please use 'broadcast_cartesian_transform' instead.");
   } else {
-    broadcast_cartesian_transform_ =
-      this->declare_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
+    this->get_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
   }
 
-  broadcast_cartesian_transform_as_parent_frame_ =
-    this->declare_parameter(
-    "broadcast_utm_transform_as_parent_frame_",
+  this->get_parameter(
+    "broadcast_utm_transform_as_parent_frame",
     broadcast_cartesian_transform_as_parent_frame_);
-
   if (broadcast_cartesian_transform_as_parent_frame_) {
     RCLCPP_WARN(
-      this->get_logger(), "Parameter 'broadcast_utm_transform_as_parent_frame' has been "
-      "deprecated. Please use 'broadcast_cartesian_transform_as_parent_frame' instead.");
+      this->get_logger(),
+      "Parameter 'broadcast_utm_transform_as_parent_frame' has been deprecated. "
+      "Please use 'broadcast_cartesian_transform_as_parent_frame' instead.");
   } else {
-    broadcast_cartesian_transform_as_parent_frame_ =
-      this->declare_parameter(
+    this->get_parameter(
       "broadcast_cartesian_transform_as_parent_frame",
       broadcast_cartesian_transform_as_parent_frame_);
   }
 
-  if (!this->get_clock()->started()) {
-    RCLCPP_INFO(this->get_logger(), "Waiting for clock to start...");
-    this->get_clock()->wait_until_started();
-  }
-
-  parameters_callback_handle_ = this->add_on_set_parameters_callback(
-    std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
-
+  // 4. Initialize Services
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
-
   to_ll_srv_ = this->create_service<robot_localization::srv::ToLL>(
     "toLL", std::bind(&NavSatTransform::toLLCallback, this, _1, _2));
   from_ll_srv_ = this->create_service<robot_localization::srv::FromLL>(
     "fromLL", std::bind(&NavSatTransform::fromLLCallback, this, _1, _2));
   from_ll_array_srv_ = this->create_service<robot_localization::srv::FromLLArray>(
     "fromLLArray", std::bind(&NavSatTransform::fromLLArrayCallback, this, _1, _2));
-
   set_utm_zone_srv_ = this->create_service<robot_localization::srv::SetUTMZone>(
     "setUTMZone", std::bind(&NavSatTransform::setUTMZoneCallback, this, _1, _2));
 
-  std::vector<double> datum_vals;
-  if (use_manual_datum_) {
-    datum_vals = this->declare_parameter("datum", datum_vals);
+  parameters_callback_handle_ = this->add_on_set_parameters_callback(
+    std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
 
-    double datum_lat = 0.0;
-    double datum_lon = 0.0;
-    double datum_yaw = 0.0;
-
-    if (datum_vals.size() == 3) {
-      datum_lat = datum_vals[0];
-      datum_lon = datum_vals[1];
-      datum_yaw = datum_vals[2];
-    }
-
-    auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
-    request->geo_pose.position.latitude = datum_lat;
-    request->geo_pose.position.longitude = datum_lon;
-    request->geo_pose.position.altitude = 0.0;
-    tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, datum_yaw);
-    request->geo_pose.orientation = tf2::toMsg(quat);
-    auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
-    datumCallback(request, response);
+  // 5. Initialize Lifecycle Publishers (Standard create_publisher returns LifecyclePublisher)
+  gps_odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry/gps", rclcpp::QoS(10));
+  if (publish_gps_) {
+    filtered_gps_pub_ = this->create_publisher<sensor_msgs::msg::NavSatFix>(
+      "gps/filtered", rclcpp::QoS(
+        10));
   }
 
-  auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
+  // 6. Support Manual Datum from Configuration
+  if (use_manual_datum_) {
+    std::vector<double> datum_vals;
+    this->get_parameter("datum", datum_vals);
+    if (datum_vals.size() == 3) {
+      auto request = std::make_shared<robot_localization::srv::SetDatum::Request>();
+      request->geo_pose.position.latitude = datum_vals[0];
+      request->geo_pose.position.longitude = datum_vals[1];
+      request->geo_pose.position.altitude = 0.0;
+      tf2::Quaternion quat;
+      quat.setRPY(0.0, 0.0, datum_vals[2]);
+      request->geo_pose.orientation = tf2::toMsg(quat);
+      auto response = std::make_shared<robot_localization::srv::SetDatum::Response>();
+      datumCallback(request, response);
 
+      RCLCPP_INFO(get_logger(), "[%s]: Manual datum set from parameters.", get_name());
+    }
+  }
+
+  RCLCPP_INFO(get_logger(), "[%s]: Node Configured.", get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn NavSatTransform::on_activate(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Active' state.", get_name());
+
+  // Wait for clock to be ready
+  if (!this->get_clock()->started()) {
+    RCLCPP_INFO(this->get_logger(), "Waiting for clock to start...");
+    this->get_clock()->wait_until_started();
+  }
+  // 1. Activate Publishers (Crucial for LifecyclePublishers)
+  gps_odom_pub_->on_activate();
+  if (filtered_gps_pub_) {
+    filtered_gps_pub_->on_activate();
+  }
+
+  // 2. Handle Activation Delay
+  double delay = 0.0;
+  this->get_parameter("delay", delay);
+  if (delay > 0) {
+    RCLCPP_INFO(get_logger(), "Delaying activation for %g seconds...", delay);
+    rclcpp::sleep_for(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(delay)));
+  }
+
+  // 3. Setup Subscriptions
   auto subscriber_options = rclcpp::SubscriptionOptions();
-  subscriber_options.qos_overriding_options =
-    rclcpp::QosOverridingOptions::with_default_policies();
-  odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", custom_qos, std::bind(
-      &NavSatTransform::odomCallback, this, _1), subscriber_options);
+  subscriber_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
+  auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
 
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
     "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
     subscriber_options);
+
+  odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    "odometry/filtered", custom_qos, std::bind(
+      &NavSatTransform::odomCallback, this,
+      _1), subscriber_options);
 
   if (!use_odometry_yaw_ && !use_manual_datum_) {
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
       "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
   }
 
-  rclcpp::PublisherOptions publisher_options;
-  publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
-  gps_odom_pub_ =
-    this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/gps", rclcpp::QoS(10), publisher_options);
-
-  if (publish_gps_) {
-    filtered_gps_pub_ =
-      this->create_publisher<sensor_msgs::msg::NavSatFix>(
-      "gps/filtered", rclcpp::QoS(10), publisher_options);
-  }
-
-  // Sleep for the parameterized amount of time, to give
-  // other nodes time to start up (not always necessary)
-  if (delay > 0) {
-    RCLCPP_INFO_STREAM(this->get_logger(),
-        "Delaying for " << delay << " seconds before starting...");
-    rclcpp::Duration delay_duration = rclcpp::Duration::from_seconds(delay);
-    this->get_clock()->sleep_for(delay_duration);
-    RCLCPP_INFO_STREAM(this->get_logger(), "Delay elapsed. Continuing.");
-  }
-
+  // 4. Start Processing Timer
+  double frequency = 10.0;
+  this->get_parameter("frequency", frequency);
+  gps_updated_ = false;
+  odom_updated_ = false;
   auto interval = std::chrono::duration<double>(1.0 / frequency);
   timer_ = this->create_wall_timer(interval, std::bind(&NavSatTransform::transformCallback, this));
+
+  RCLCPP_INFO(get_logger(), "[%s]: Node Active.", get_name());
+  return CallbackReturn::SUCCESS;
 }
 
-NavSatTransform::~NavSatTransform() {}
+CallbackReturn NavSatTransform::on_deactivate(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_WARN(get_logger(), "[%s]: Transitioning to 'Inactive' state.", get_name());
+
+  // 1. Deactivate Publishers
+  gps_odom_pub_->on_deactivate();
+  if (filtered_gps_pub_) {
+    filtered_gps_pub_->on_deactivate();
+  }
+
+  // 2. Clear Processing Resources
+  timer_.reset();
+  gps_sub_.reset();
+  imu_sub_.reset();
+  odom_sub_.reset();
+
+  RCLCPP_WARN(get_logger(), "[%s]: Node Inactive.", get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn NavSatTransform::on_cleanup(const rclcpp_lifecycle::State &)
+{
+  RCLCPP_INFO(get_logger(), "[%s]: Transitioning to 'Unconfigured' state.", get_name());
+
+  // 1. Release Core TF Resources
+  tf_listener_.reset();
+  tf_buffer_.reset();
+  cartesian_broadcaster_.reset();
+
+  // 2. Release Services
+  datum_srv_.reset();
+  to_ll_srv_.reset();
+  from_ll_srv_.reset();
+  from_ll_array_srv_.reset();
+  set_utm_zone_srv_.reset();
+  parameters_callback_handle_.reset();
+
+  // 3. Release Publishers
+  gps_odom_pub_.reset();
+  filtered_gps_pub_.reset();
+
+  RCLCPP_INFO(get_logger(), "[%s]: Node Unconfigured.", get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn NavSatTransform::on_shutdown(const rclcpp_lifecycle::State & state)
+{
+  RCLCPP_WARN(
+    get_logger(), "[%s]: Shutting down from state %s.", get_name(),
+    state.label().c_str());
+  this->on_cleanup(state);
+  RCLCPP_INFO(get_logger(), "[%s]: Node shut down & Finalized.", get_name());
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn NavSatTransform::on_error(const rclcpp_lifecycle::State & state)
+{
+  RCLCPP_ERROR(
+    get_logger(), "[%s]: Error in state %s. Reverting !", get_name(),
+    state.label().c_str());
+  return this->on_cleanup(state);
+}
 
 void NavSatTransform::transformCallback()
 {
@@ -368,7 +468,7 @@ void NavSatTransform::computeTransform()
         tf2::toMsg(cartesian_world_trans_inverse_) : tf2::toMsg(cartesian_world_transform_));
       cartesian_transform_stamped.transform.translation.z =
         (zero_altitude_ ? 0.0 : cartesian_transform_stamped.transform.translation.z);
-      cartesian_broadcaster_.sendTransform(cartesian_transform_stamped);
+      cartesian_broadcaster_->sendTransform(cartesian_transform_stamped);
     }
   }
 }
@@ -449,7 +549,7 @@ bool NavSatTransform::fromLLCallback(
 {
   try {
     response->map_point = fromLL(request->ll_point);
-  } catch(const std::runtime_error & e) {
+  } catch (const std::runtime_error & e) {
     return false;
   }
 
@@ -464,10 +564,11 @@ bool NavSatTransform::fromLLArrayCallback(
   converted_points.reserve(request->ll_points.size());
 
   try {
-    std::transform(request->ll_points.begin(), request->ll_points.end(),
-                   std::back_inserter(converted_points),
-      [this] (const auto & point) {return fromLL(point);});
-  } catch(const std::runtime_error & e) {
+    std::transform(
+      request->ll_points.begin(), request->ll_points.end(),
+      std::back_inserter(converted_points),
+      [this](const auto & point) {return fromLL(point);});
+  } catch (const std::runtime_error & e) {
     return false;
   }
 

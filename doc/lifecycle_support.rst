@@ -1,7 +1,7 @@
 Lifecycle Node Support
 ======================
 
-`robot_localization` nodes (EKF/UKF) support the ROS 2 managed lifecycle. This allows running the node in either an automatic (backward-compatible) mode or in a managed mode where an external controller performs the lifecycle transitions.
+`robot_localization` nodes (EKF/UKF and NavSatTransform) support the ROS 2 managed lifecycle. This allows running the node in either an automatic (backward-compatible) mode or in a managed mode where an external controller performs the lifecycle transitions.
 
 Control is via the ``autostart`` launch argument:
 

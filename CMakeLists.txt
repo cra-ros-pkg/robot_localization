@@ -131,6 +131,7 @@ add_executable(
 target_link_libraries(navsat_transform_node PRIVATE
   ${library_name}
   rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 add_executable(
@@ -289,6 +290,25 @@ if(BUILD_TESTING)
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   )
 
+#### NAVSAT LIFECYCLE INTERFACE TESTS ####
+  ament_add_gtest(test_navsat_transform_lifecycle
+    test/test_navsat_transform_lifecycle.cpp
+    TIMEOUT 120
+  )
+  target_link_libraries(test_navsat_transform_lifecycle
+    ${library_name}
+    rclcpp::rclcpp
+    rclcpp_lifecycle::rclcpp_lifecycle
+    ${sensor_msgs_TARGETS}
+    ${nav_msgs_TARGETS}
+    ${geometry_msgs_TARGETS}
+    tf2_ros::tf2_ros
+  )
+
+  target_include_directories(test_navsat_transform_lifecycle PRIVATE
+    include
+  )
+
   ament_cppcheck(LANGUAGE "c++")
   ament_cpplint()
   ament_lint_cmake()
@@ -307,6 +327,7 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag3
     test_robot_localization_estimator
     test_navsat_conversions
+    test_navsat_transform_lifecycle
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1

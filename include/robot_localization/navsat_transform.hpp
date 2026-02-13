@@ -56,11 +56,14 @@
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/static_transform_broadcaster.hpp>
 #include <tf2_ros/transform_listener.hpp>
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 
 namespace robot_localization
 {
 
-class NavSatTransform : public rclcpp::Node {
+class NavSatTransform : public rclcpp_lifecycle::LifecycleNode
+{
 public:
   /**
    * @brief Constructor
@@ -70,7 +73,49 @@ public:
   /**
    * @brief Destructor
    */
-  ~NavSatTransform();
+  ~NavSatTransform() override;
+
+  //! @brief Lifecycle transition callback for Configuring state
+  //!
+  //! Loads parameters and prepares the filter for activation
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &)override;
+
+  //! @brief Lifecycle transition callback for Activating state
+  //!
+  //! Creates publishers, subscribers, services, and starts the filter timer
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &)override;
+
+  //! @brief Lifecycle transition callback for Deactivating state
+  //!
+  //! Stops the filter timer and deactivates publishers
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &)override;
+
+  //! @brief Lifecycle transition callback for CleaningUp state
+  //!
+  //! Cleans up resources and resets the filter
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_cleanup(const rclcpp_lifecycle::State &)override;
+
+  //! @brief Lifecycle transition callback for ShuttingDown state
+  //!
+  //! Performs final cleanup before node shutdown
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_shutdown(const rclcpp_lifecycle::State &)override;
+
+  //! @brief Lifecycle transition callback for any error
+  //!
+  //! Performs cleanup in case of error
+  //!
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_error(const rclcpp_lifecycle::State &)override;
 
 private:
   /**
@@ -260,7 +305,7 @@ private:
   /**
    * @brief Navsatfix publisher
    */
-  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::NavSatFix>::SharedPtr filtered_gps_pub_;
 
   /**
    * @brief The frame_id of the GPS message (specifies mounting location)
@@ -270,7 +315,7 @@ private:
   /**
    * @brief GPS odometry publisher
    */
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr gps_odom_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Odometry>::SharedPtr gps_odom_pub_;
 
   /**
    * @brief GPS Subscription
@@ -441,7 +486,7 @@ private:
   /**
    * @brief Used for publishing the static world_frame->cartesian transform
    */
-  tf2_ros::StaticTransformBroadcaster cartesian_broadcaster_;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> cartesian_broadcaster_;
 
   /**
    * @brief UTM's meridian convergence

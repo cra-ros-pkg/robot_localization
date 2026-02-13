@@ -1,0 +1,12 @@
+test_navsat_lifecycle_node:
+  ros__parameters:
+    magnetic_declination_radians: 0.0436  # Approx 2.5 degrees
+    yaw_offset: 0.0
+    zero_altitude: true
+    publish_filtered_gps: true
+    use_odometry_yaw: false
+    wait_for_datum: false
+    frequency: 30.0
+    delay: 0.0
+    transform_timeout: 0.1
+    broadcast_cartesian_transform: true
