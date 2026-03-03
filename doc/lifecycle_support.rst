@@ -5,8 +5,8 @@ Lifecycle Node Support
 
 Control is via the ``autostart`` launch argument:
 
-- ``true`` : The node will configure and activate itself automatically on startup (preserves previous behavior).
-- ``false`` (default): The node will remain in the UNCONFIGURED state and must be transitioned to CONFIGURED/ACTIVE with ``ros2 lifecycle`` commands.
+- ``true`` (default): The node will configure and activate itself automatically on startup (preserves previous behavior).
+- ``false`` : The node will remain in the UNCONFIGURED state and must be transitioned to CONFIGURED/ACTIVE with ``ros2 lifecycle`` commands.
 
 Examples
 --------
@@ -33,3 +33,4 @@ Notes
 - When running with ``autostart:=false``, the node will not publish filtered output until it has been activated via a lifecycle transition.
 - The launch files ``launch/ekf.launch.py`` and ``launch/ukf.launch.py`` expose the ``autostart`` argument.
 - Default behavior (``true``) preserves compatibility with existing setups that expect the node to start and publish immediately.
+- **Deprecation Note**: Starting in the *Lyrical* release, the default for ``autostart`` will change from ``true`` to ``false``.

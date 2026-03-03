@@ -1108,9 +1108,7 @@ void RosFilter<T>::loadParams()
   this->get_parameter("base_link_frame", base_link_frame_id_);
 
   // Handle base_link_frame_output with fallback to base_link_frame
-  if (!this->get_parameter("base_link_frame_output", base_link_output_frame_id_)) {
-    base_link_output_frame_id_ = base_link_frame_id_;
-  }
+  this->get_parameter_or("base_link_frame_output", base_link_output_frame_id_, base_link_frame_id_);
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -1137,9 +1135,7 @@ void RosFilter<T>::loadParams()
    *
    * The default is the latter behavior (broadcast of odom->base_link).
    */
-  if (!this->get_parameter("world_frame", world_frame_id_)) {
-    world_frame_id_ = odom_frame_id_;
-  }
+  this->get_parameter_or("world_frame", world_frame_id_, odom_frame_id_);
 
   if (map_frame_id_ == odom_frame_id_ ||
     odom_frame_id_ == base_link_frame_id_ ||
@@ -1472,7 +1468,6 @@ void RosFilter<T>::loadParams()
         this->declare_parameter(child_frame_param, false);
       }
 
-      // Consider odometry transformation from the child_frame_id instead of the base_link_frame_id
       bool pose_use_child_frame = false;
       this->get_parameter(child_frame_param, pose_use_child_frame);
 
