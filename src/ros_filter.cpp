@@ -298,22 +298,27 @@ RosFilter<T>::on_deactivate(const rclcpp_lifecycle::State &)
 {
   RCLCPP_WARN(get_logger(), "[%s]: Transitioning to 'Inactive' state.", get_name());
 
-  // Disable filter processing FIRST
-  enabled_ = false;
+  // Reverse the construction order from on_activate to ensure proper cleanup
 
-  // Stop the timer
+  // Stop the periodic update timer
   if (timer_) {
     timer_->cancel();
     timer_.reset();
   }
 
-  // Deactivate publishers
+  // Deactivate and destroy publishers to return to pre-activation state
   if (position_pub_) {
     position_pub_->on_deactivate();
+    position_pub_.reset();
   }
   if (accel_pub_) {
     accel_pub_->on_deactivate();
+    accel_pub_.reset();
   }
+
+  // Disable filter processing and reset internal state
+  enabled_ = false;
+  reset();
 
   RCLCPP_WARN(get_logger(), "[%s]: Node Inactive.", get_name());
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -327,17 +332,15 @@ RosFilter<T>::on_cleanup(const rclcpp_lifecycle::State &)
     get_logger(), "[%s]: Transitioning to 'Unconfigured' state. Resources reset.",
     get_name());
 
+  // Ensure filter is disabled
   enabled_ = false;
-  reset();
 
-  // Stop timer if running
-  if (timer_) {
-    timer_->cancel();
-    timer_.reset();
-  }
+  // Clean up diagnostic and transform infrastructure
+  diagnostic_updater_.reset();
+  world_transform_broadcaster_.reset();
+  freq_diag_.reset();
 
-  position_pub_.reset();
-  accel_pub_.reset();
+  // Clean up subscribers and services
   set_pose_sub_.reset();
   control_sub_.reset();
   stamped_control_sub_.reset();
@@ -346,9 +349,14 @@ RosFilter<T>::on_cleanup(const rclcpp_lifecycle::State &)
   enable_filter_srv_.reset();
   reset_srv_.reset();
   toggle_filter_processing_srv_.reset();
-  diagnostic_updater_.reset();
-  world_transform_broadcaster_.reset();
-  freq_diag_.reset();
+
+  // Defensive cleanup for resources that should already be destroyed
+  if (timer_) {
+    timer_->cancel();
+    timer_.reset();
+  }
+  position_pub_.reset();
+  accel_pub_.reset();
 
   RCLCPP_WARN(get_logger(), "[%s]: Node Cleaned Up. All resources released.", get_name());
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
@@ -459,6 +467,11 @@ void RosFilter<T>::accelerationCallback(
   const CallbackData & callback_data,
   const std::string & target_frame)
 {
+  // Ignore sensor data when filter is disabled
+  if (!enabled_) {
+    return;
+  }
+
   // If we've just reset the filter, then we want to ignore any messages
   // that arrive with an older timestamp
   if (last_set_pose_time_ >= msg->header.stamp) {
@@ -769,6 +782,11 @@ void RosFilter<T>::imuCallback(
   const CallbackData & twist_callback_data,
   const CallbackData & accel_callback_data)
 {
+  // Ignore sensor data when filter is disabled
+  if (!enabled_) {
+    return;
+  }
+
   RF_DEBUG(
     "------ RosFilter<T>::imuCallback (" <<
       topic_name << ") ------\n")         // << "IMU message:\n" << *msg);
@@ -2212,6 +2230,11 @@ void RosFilter<T>::odometryCallback(
   const CallbackData & pose_callback_data,
   const CallbackData & twist_callback_data)
 {
+  // Ignore sensor data when filter is disabled
+  if (!enabled_) {
+    return;
+  }
+
   // If we've just reset the filter, then we want to ignore any messages
   // that arrive with an older timestamp
   if (last_set_pose_time_ >= msg->header.stamp) {
@@ -2273,6 +2296,11 @@ void RosFilter<T>::poseCallback(
   const CallbackData & callback_data, const std::string & target_frame,
   const std::string & pose_source_frame, const bool imu_data)
 {
+  // Ignore sensor data when filter is disabled
+  if (!enabled_) {
+    return;
+  }
+
   const std::string & topic_name = callback_data.topic_name_;
 
   // If we've just reset the filter, then we want to ignore any messages
@@ -2660,6 +2688,11 @@ void RosFilter<T>::twistCallback(
   const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg,
   const CallbackData & callback_data, const std::string & target_frame)
 {
+  // Ignore sensor data when filter is disabled
+  if (!enabled_) {
+    return;
+  }
+
   const std::string & topic_name = callback_data.topic_name_;
 
   // If we've just reset the filter, then we want to ignore any messages
