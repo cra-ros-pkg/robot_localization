@@ -2083,10 +2083,10 @@ void RosFilter<T>::poseCallback(
 template<typename T>
 void RosFilter<T>::initialize()
 {
-  if (!this->get_clock()->started()) {
-    RCLCPP_INFO(get_logger(), "Waiting for clock to start...");
-    this->get_clock()->wait_until_started();
-  }
+  // Do not block here waiting for the clock to start, as it can deadlock
+  // when use_sim_time is enabled. The node's executor is not yet spinning,
+  // so it cannot process the /clock messages that would activate the clock.
+  // The node will receive clock messages once rclcpp::spin() starts.
 
   angular_acceleration_.setZero();
   angular_acceleration_cov_.setIdentity();
@@ -2157,6 +2157,12 @@ void RosFilter<T>::periodicUpdate()
       get_logger(),
       "Filter is disabled. To enable it call the %s service",
       enable_filter_srv_->get_service_name());
+    return;
+  }
+
+  // Ensure clock is running before processing
+  // Early callbacks may fire before the clock receives its first /clock message
+  if (!this->get_clock()->started()) {
     return;
   }
 
