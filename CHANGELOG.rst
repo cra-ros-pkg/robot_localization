@@ -2,6 +2,13 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Unreleased (2026-02-09)
+-----------------------
+* Implement Lifecycle Node Support for EKF and UKF nodes (`#958 <https://github.com/cra-ros-pkg/robot_localization/issues/958>`_).
+  * Added `rclcpp_lifecycle` dependency, lifecycle callbacks, and updated launch files to expose an `autostart` argument.
+  * Added `doc/lifecycle_support.rst` with usage examples.
+  * Contributor: Boopesh
+
 3.10.0 (2025-08-29)
 -------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)

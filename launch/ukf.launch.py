@@ -14,22 +14,27 @@
 # limitations under the License.
 
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 import launch_ros.actions
 import os
-import yaml
-from launch.substitutions import EnvironmentVariable
-import pathlib
-import launch.actions
-from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
+    autostart = DeclareLaunchArgument(
+        'autostart',
+        default_value='true',
+        description='Automatically configure and activate the node. Set to false for managed lifecycle control.')
+
     return LaunchDescription([
-        launch_ros.actions.Node(
+        autostart,
+        launch_ros.actions.LifecycleNode(
             package='robot_localization',
             executable='ukf_node',
             name='ukf_filter_node',
+            namespace='',
             output='screen',
+            autostart=LaunchConfiguration('autostart'),
             parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'ukf.yaml')],
            ),
 ])

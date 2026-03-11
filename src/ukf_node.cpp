@@ -33,11 +33,16 @@
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
+#include "rclcpp/utilities.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
+#include "lifecycle_msgs/msg/transition.hpp"
 #include "robot_localization/ros_filter_types.hpp"
 
 int main(int argc, char ** argv)
 {
-  rclcpp::init(argc, argv);
+  rclcpp::InitOptions init_options;
+  rclcpp::init(argc, argv, init_options);
   rclcpp::NodeOptions options;
   options.arguments({"ukf_filter_node"});
   options.clock_type(RCL_ROS_TIME);
@@ -47,8 +52,12 @@ int main(int argc, char ** argv)
   double kappa = filter->declare_parameter("kappa", 0.0);
   double beta = filter->declare_parameter("beta", 2.0);
   filter->getFilter().setConstants(alpha, kappa, beta);
-  filter->initialize();
-  rclcpp::spin(filter->get_node_base_interface());
+  RCLCPP_INFO(
+    filter->get_logger(),
+    "Lifecycle node initialized; use lifecycle transitions to configure/activate.");
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(filter->get_node_base_interface());
+  executor.spin();
   rclcpp::shutdown();
   return 0;
 }
