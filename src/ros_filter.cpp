@@ -2320,7 +2320,13 @@ void RosFilter<T>::periodicUpdate()
 
   // Clear out expired history data
   if (smooth_lagged_data_) {
-    clearExpiredHistory(filter_.getLastMeasurementTime() - history_length_);
+    const rclcpp::Time last_measurement_time = filter_.getLastMeasurementTime();
+    // Prevent accidental construction of a negative time point when running in
+    // simulation mode. When not in simulation, this check should always be true
+    // if we've received at least one measurement.
+    if (last_measurement_time.nanoseconds() > history_length_.nanoseconds()) {
+      clearExpiredHistory(last_measurement_time - history_length_);
+    }
   }
 
   // Warn the user if the update took too long
@@ -2965,7 +2971,7 @@ bool RosFilter<T>::preparePose(
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
     tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
-    rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
+    rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_), RCL_ROS_TIME), tf_timeout_,
     target_frame_trans);
 
   // handling multiple odometry origins: convert to the origin adherent to base_link.
@@ -2975,7 +2981,7 @@ bool RosFilter<T>::preparePose(
   if (source_frame != base_link_frame_id_) {
     can_src_transform = ros_filter_utilities::lookupTransformSafe(
       tf_buffer_.get(), source_frame, base_link_frame_id_,
-      rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
+      rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_), RCL_ROS_TIME), tf_timeout_,
       source_frame_trans);
   }
 
