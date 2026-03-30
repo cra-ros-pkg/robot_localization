@@ -26,7 +26,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     autostart = DeclareLaunchArgument(
         'autostart',
-        default_value='false',
+        default_value='true',
         description='Automatically configure and activate the node. Set to false for managed lifecycle control.')
 
     return LaunchDescription([

@@ -4,13 +4,15 @@ Changelog for package robot_localization
 
 Unreleased (2026-02-13)
 -----------------------
-* Implement Lifecycle Node Support for EKF, UKF, and NavSatTransform nodes (`#958 <https://github.com/cra-ros-pkg/robot_localization/issues/958>`_).
-  * Migrated `NavSatTransform`, `EkfNode`, and `UkfNode` to `rclcpp_lifecycle::LifecycleNode`.
-  * Implemented standard transition callbacks: on_configure, on_activate, on_deactivate, on_cleanup, and on_shutdown.
-  * Updated launch files and examples with `autostart` and `namespace` arguments for managed state control.
-  * Added comprehensive GTests for lifecycle state machine verification in `navsat_transform`.
-  * Added `doc/lifecycle_support.rst` with usage examples.
-  * Contributor: Boopesh
+* Implement Lifecycle Node Support for EKF and UKF nodes (`#959 <https://github.com/cra-ros-pkg/robot_localization/issues/959>`_).
+  * Added `rclcpp_lifecycle` dependency, lifecycle callbacks, and updated launch files to expose an ``autostart`` argument.
+  * Added ``doc/lifecycle_support.rst`` with usage examples.
+* Migrate NavSatTransform to LifecycleNode (`#963 <https://github.com/cra-ros-pkg/robot_localization/issues/963>`_).
+  * Migrated ``NavSatTransform`` to ``rclcpp_lifecycle::LifecycleNode``.
+  * Implemented standard transition callbacks: ``on_configure``, ``on_activate``, ``on_deactivate``, ``on_cleanup``, and ``on_shutdown``.
+  * Updated launch files and examples with ``autostart`` and ``namespace`` arguments for managed state control.
+  * Added GTests for lifecycle state machine verification in ``navsat_transform``.
+* Contributors: Boopesh
 
 3.10.0 (2025-08-29)
 -------------------
