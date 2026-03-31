@@ -311,7 +311,7 @@ private:
    */
   OnSetParametersCallbackHandle::SharedPtr parameters_callback_handle_;
  
- /**
+  /**
    * @brief Covariance for most recent odometry data
    */
   Eigen::MatrixXd latest_odom_covariance_;

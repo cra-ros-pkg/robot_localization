@@ -433,8 +433,7 @@ bool NavSatTransform::toLLArrCallback(
     return false;
   }
 
-  for(auto &p : request->map_points)
-  {
+  for(auto &p : request->map_points) {
     geographic_msgs::msg::GeoPoint geo_point;
     tf2::Vector3 point(p.x, p.y, p.z);
     mapToLL(point, geo_point.latitude, geo_point.longitude, geo_point.altitude);
@@ -492,8 +491,7 @@ bool NavSatTransform::fromLLArrCallback(
   const std::shared_ptr<robot_localization::srv::FromLLArr::Request> request,
   std::shared_ptr<robot_localization::srv::FromLLArr::Response> response)
 {
-  for (auto &llp : request->ll_points)
-  {
+  for (auto &llp : request->ll_points) {
     double altitude = llp.altitude;
     double longitude = llp.longitude;
     double latitude = llp.latitude;
