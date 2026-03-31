@@ -439,8 +439,6 @@ bool NavSatTransform::toLLArrCallback(
   for(auto &p : request->map_points)
   {
     geographic_msgs::msg::GeoPoint geo_point;
-    // tf2::Vector3 point;
-    // tf2::fromMsg(request.map_point, point);
     tf2::Vector3 point(p.x, p.y, p.z);
     mapToLL(point, geo_point.latitude, geo_point.longitude, geo_point.altitude);
     response->ll_points.push_back(geo_point);
@@ -938,14 +936,13 @@ void NavSatTransform::setTransformGps(
     utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
   }
 
-  //TODO - do we want this?
-  // RCLCPP_INFO(
-  //   this->get_logger(), "Datum (latitude, longitude, altitude) is (%0.2f, %0.2f, %0.2f)",
-  //   msg->latitude, msg->longitude, msg->altitude);
-  // RCLCPP_INFO(
-  //   this->get_logger(), "Datum %s coordinate is (%s, %0.2f, %0.2f)",
-  //   ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), utm_zone_.c_str(), cartesian_x,
-  //   cartesian_y);
+  RCLCPP_INFO(
+    this->get_logger(), "Datum (latitude, longitude, altitude) is (%0.2f, %0.2f, %0.2f)",
+    msg->latitude, msg->longitude, msg->altitude);
+  RCLCPP_INFO(
+    this->get_logger(), "Datum %s coordinate is (%s, %0.2f, %0.2f)",
+    ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), utm_zone_.c_str(), cartesian_x,
+    cartesian_y);
 
   transform_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
   transform_cartesian_pose_.setRotation(tf2::Quaternion::getIdentity());

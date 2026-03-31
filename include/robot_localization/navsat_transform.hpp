@@ -95,7 +95,7 @@ private:
     const std::shared_ptr<robot_localization::srv::ToLL::Request> request,
     std::shared_ptr<robot_localization::srv::ToLL::Response> response);
 
-  //! @brief Callback for the to Lat Long Array service - implemented by BW (Yair B.)
+  //! @brief Callback for the to Lat Long Array service
   //!
   bool toLLArrCallback(
     const std::shared_ptr<robot_localization::srv::ToLLArr::Request> request,
@@ -107,7 +107,7 @@ private:
     const std::shared_ptr<robot_localization::srv::FromLL::Request> request,
     std::shared_ptr<robot_localization::srv::FromLL::Response> response);
 
-  //! @brief Callback for the from Lat Long Array service - implemented by BW (Yair B.)
+  //! @brief Callback for the from Lat Long Array service
   //!
   bool fromLLArrCallback(
     const std::shared_ptr<robot_localization::srv::FromLLArr::Request> request,
