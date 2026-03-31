@@ -2,6 +2,16 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.5.4 (2025-08-29)
+------------------
+* Backporting IMU sub reset fix
+* Fixing off-diagonal covariance values in measurement (`#942 <https://github.com/cra-ros-pkg/robot_localization/issues/942>`_)
+* Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
+  * Add a Parameters Callback to be able to set magnetic_declination_radians value at runtime.
+* Added subscription to stamped topic (`#898 <https://github.com/cra-ros-pkg/robot_localization/issues/898>`_) (`#899 <https://github.com/cra-ros-pkg/robot_localization/issues/899>`_)
+  * Added subscription to stamped topic (`#898 <https://github.com/cra-ros-pkg/robot_localization/issues/898>`_)
+* Contributors: Enzo Ghisoni, Pablo, Tom Moore
+
 3.5.3 (2024-04-16)
 ------------------
 * TF Prefix Bug (`#876 <https://github.com/cra-ros-pkg/robot_localization/issues/876>`_)

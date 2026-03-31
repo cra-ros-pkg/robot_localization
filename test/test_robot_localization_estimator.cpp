@@ -30,10 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <rclcpp/rclcpp.hpp>
 #include <gtest/gtest.h>
 
 #include <vector>
+
+#include <rclcpp/rclcpp.hpp>
 
 #include "robot_localization/robot_localization_estimator.hpp"
 

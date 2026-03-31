@@ -30,18 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ekf.hpp>
-#include <robot_localization/filter_utilities.hpp>
-#include <robot_localization/ros_filter.hpp>
-#include <robot_localization/ros_filter_utilities.hpp>
-#include <robot_localization/ukf.hpp>
-
-#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rcl/time.h>
-#include <rclcpp/qos.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -51,6 +40,18 @@
 #include <utility>
 #include <memory>
 #include <vector>
+
+#include <robot_localization/ekf.hpp>
+#include <robot_localization/filter_utilities.hpp>
+#include <robot_localization/ros_filter.hpp>
+#include <robot_localization/ros_filter_utilities.hpp>
+#include <robot_localization/ukf.hpp>
+
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <rclcpp/qos.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace robot_localization
 {
@@ -67,6 +68,7 @@ RosFilter<T>::RosFilter(const rclcpp::NodeOptions & options)
   toggled_on_(true),
   two_d_mode_(false),
   use_control_(false),
+  stamped_control_(false),
   disabled_at_startup_(false),
   enabled_(false),
   permit_corrected_publication_(false),
@@ -111,6 +113,7 @@ RosFilter<T>::~RosFilter()
   timer_.reset();
   set_pose_sub_.reset();
   control_sub_.reset();
+  stamped_control_sub_.reset();
   tf_listener_.reset();
   tf_buffer_.reset();
   diagnostic_updater_.reset();
@@ -338,6 +341,7 @@ void RosFilter<T>::forceTwoD(
   Eigen::MatrixXd & measurement_covariance,
   std::vector<bool> & update_vector)
 {
+  // Force 3D variables to 0 in the measurement
   measurement(StateMemberZ) = 0.0;
   measurement(StateMemberRoll) = 0.0;
   measurement(StateMemberPitch) = 0.0;
@@ -346,6 +350,24 @@ void RosFilter<T>::forceTwoD(
   measurement(StateMemberVpitch) = 0.0;
   measurement(StateMemberAz) = 0.0;
 
+  // Need to eliminate any off-diagonal covariance values that involve one of our 3D variables
+  measurement_covariance.col(StateMemberZ).fill(0.0);
+  measurement_covariance.col(StateMemberRoll).fill(0.0);
+  measurement_covariance.col(StateMemberPitch).fill(0.0);
+  measurement_covariance.col(StateMemberVz).fill(0.0);
+  measurement_covariance.col(StateMemberVroll).fill(0.0);
+  measurement_covariance.col(StateMemberVpitch).fill(0.0);
+  measurement_covariance.col(StateMemberAz).fill(0.0);
+
+  measurement_covariance.row(StateMemberZ).fill(0.0);
+  measurement_covariance.row(StateMemberRoll).fill(0.0);
+  measurement_covariance.row(StateMemberPitch).fill(0.0);
+  measurement_covariance.row(StateMemberVz).fill(0.0);
+  measurement_covariance.row(StateMemberVroll).fill(0.0);
+  measurement_covariance.row(StateMemberVpitch).fill(0.0);
+  measurement_covariance.row(StateMemberAz).fill(0.0);
+
+  // Now set the diagonal covariance values to something small
   measurement_covariance(StateMemberZ, StateMemberZ) = 1e-6;
   measurement_covariance(StateMemberRoll, StateMemberRoll) = 1e-6;
   measurement_covariance(StateMemberPitch, StateMemberPitch) = 1e-6;
@@ -354,6 +376,7 @@ void RosFilter<T>::forceTwoD(
   measurement_covariance(StateMemberVpitch, StateMemberVpitch) = 1e-6;
   measurement_covariance(StateMemberAz, StateMemberAz) = 1e-6;
 
+  // Finally, update the update vector
   update_vector[StateMemberZ] = 1;
   update_vector[StateMemberRoll] = 1;
   update_vector[StateMemberPitch] = 1;
@@ -886,6 +909,7 @@ void RosFilter<T>::loadParams()
   std::vector<double> deceleration_gains;
 
   use_control_ = this->declare_parameter("use_control", false);
+  stamped_control_ = this->declare_parameter("stamped_control", false);
   control_timeout = this->declare_parameter("control_timeout", 0.0);
 
   if (use_control_) {
@@ -1017,6 +1041,7 @@ void RosFilter<T>::loadParams()
       "\nsmooth_lagged_data is " << (smooth_lagged_data_ ? "true" : "false") <<
       "\nhistory_length is " << filter_utilities::toSec(history_length_) <<
       "\nuse_control is " << use_control_ <<
+      "\nstamped_control_is " << stamped_control_ <<
       "\ncontrol_config is " << control_update_vector <<
       "\ncontrol_timeout is " << control_timeout <<
       "\nacceleration_limits are " << acceleration_limits <<
@@ -1204,7 +1229,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           odom_topic << " (" << odom_topic_name << ")\n\t" <<
           odom_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << odom_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << odom_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << odom_topic_name <<
@@ -1324,7 +1349,7 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           pose_topic << " (" << pose_topic_name << ")\n\t" <<
           pose_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << pose_topic_name <<
           "_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << pose_topic_name << " update vector is " <<
           pose_update_vec);
@@ -1630,14 +1655,14 @@ void RosFilter<T>::loadParams()
         "Subscribed to " <<
           imu_topic << " (" << imu_topic_name << ")\n\t" <<
           imu_topic_name << "_differential is " <<
-        (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
+          (differential ? "true" : "false") << "\n\t" << imu_topic_name <<
           "_pose_rejection_threshold is " << pose_mahalanobis_thresh <<
           "\n\t" << imu_topic_name << "_twist_rejection_threshold is " <<
           twist_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_linear_acceleration_rejection_threshold is " <<
           accel_mahalanobis_thresh << "\n\t" << imu_topic_name <<
           "_remove_gravitational_acceleration is " <<
-        (remove_grav_acc ? "true" : "false") << "\n\t" <<
+          (remove_grav_acc ? "true" : "false") << "\n\t" <<
           imu_topic_name << " pose update vector is " << pose_update_vec <<
           "\t" << imu_topic_name << " twist update vector is " <<
           twist_update_vec << "\t" << imu_topic_name <<
@@ -1669,9 +1694,16 @@ void RosFilter<T>::loadParams()
       acceleration_limits, acceleration_gains, deceleration_limits,
       deceleration_gains);
 
-    control_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-      "cmd_vel", rclcpp::QoS(1),
-      std::bind(&RosFilter<T>::controlCallback, this, std::placeholders::_1));
+    // Select between TwistStamped or Twist control input
+    if (stamped_control_) {
+      stamped_control_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+        "cmd_vel", rclcpp::QoS(1),
+        std::bind(&RosFilter<T>::controlStampedCallback, this, std::placeholders::_1));
+    } else {
+      control_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
+        "cmd_vel", rclcpp::QoS(1),
+        std::bind(&RosFilter<T>::controlCallback, this, std::placeholders::_1));
+    }
   }
 
   /* Warn users about:

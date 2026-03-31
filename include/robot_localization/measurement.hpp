@@ -36,14 +36,15 @@
 #define ROBOT_LOCALIZATION__MEASUREMENT_HPP_
 
 #include <Eigen/Dense>
-#include <rclcpp/duration.hpp>
-#include <rclcpp/macros.hpp>
-#include <rclcpp/time.hpp>
 
 #include <limits>
 #include <string>
 #include <vector>
 #include <memory>
+
+#include <rclcpp/duration.hpp>
+#include <rclcpp/macros.hpp>
+#include <rclcpp/time.hpp>
 
 namespace robot_localization
 {

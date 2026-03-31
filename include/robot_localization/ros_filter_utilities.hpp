@@ -33,17 +33,18 @@
 #ifndef ROBOT_LOCALIZATION__ROS_FILTER_UTILITIES_HPP_
 #define ROBOT_LOCALIZATION__ROS_FILTER_UTILITIES_HPP_
 
-#include <rclcpp/time.hpp>
+#include <Eigen/Dense>
+
+#include <tf2_ros/buffer.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
-#include <tf2_ros/buffer.h>
-
-#include <Eigen/Dense>
 
 #include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include <rclcpp/time.hpp>
 
 #define RF_DEBUG(msg) \
   if (filter_.getDebug()) { \

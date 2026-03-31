@@ -31,16 +31,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/filter_base.hpp>
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/filter_utilities.hpp>
-
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <vector>
 #include <algorithm>
+
+#include <robot_localization/filter_base.hpp>
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
 
 namespace robot_localization
 {

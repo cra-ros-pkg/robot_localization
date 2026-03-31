@@ -30,12 +30,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/ukf.hpp>
-#include <angles/angles.h>
 #include <Eigen/Cholesky>
+#include <angles/angles.h>
 #include <vector>
 
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/ukf.hpp>
 
 namespace robot_localization
 {

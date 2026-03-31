@@ -33,8 +33,8 @@
 #ifndef ROBOT_LOCALIZATION__UKF_HPP_
 #define ROBOT_LOCALIZATION__UKF_HPP_
 
-#include <robot_localization/filter_base.hpp>
 #include <vector>
+#include <robot_localization/filter_base.hpp>
 
 namespace robot_localization
 {

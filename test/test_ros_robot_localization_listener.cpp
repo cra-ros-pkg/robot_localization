@@ -30,12 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <rclcpp/rclcpp.hpp>
 #include <gtest/gtest.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <string>
 #include <memory>
+
+#include <rclcpp/rclcpp.hpp>
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
 #include "robot_localization/filter_common.hpp"

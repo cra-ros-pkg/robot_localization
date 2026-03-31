@@ -30,15 +30,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <rclcpp/qos.hpp>
-
 #include <Eigen/Dense>
 
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/time.h>
-#include <tf2_eigen/tf2_eigen.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <exception>
@@ -47,6 +43,11 @@
 #include <vector>
 #include <map>
 #include <memory>
+
+#include <rclcpp/qos.hpp>
+
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
 #include "robot_localization/ros_filter_utilities.hpp"

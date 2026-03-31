@@ -30,13 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <gtest/gtest.h>
-#include <robot_localization/filter_base.hpp>
+
 #include <limits>
 #include <vector>
 #include <memory>
 
+#include <robot_localization/filter_base.hpp>
 #include "robot_localization/ekf.hpp"
 #include "robot_localization/ros_filter.hpp"
 #include "robot_localization/ros_filter_types.hpp"

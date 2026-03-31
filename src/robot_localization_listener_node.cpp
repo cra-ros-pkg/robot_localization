@@ -31,12 +31,11 @@
  */
 
 #include <Eigen/Dense>
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <functional>
 #include <string>
 #include <memory>
+
+#include <rclcpp/rclcpp.hpp>
 
 #include "robot_localization/ros_robot_localization_listener.hpp"
 #include "robot_localization/srv/get_state.hpp"

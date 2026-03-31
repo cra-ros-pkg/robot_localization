@@ -30,8 +30,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
 #include <Eigen/Dense>
+
+#include <gtest/gtest.h>
 
 #include <iostream>
 #include <queue>

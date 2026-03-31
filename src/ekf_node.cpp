@@ -31,13 +31,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robot_localization/ros_filter_types.hpp>
-#include <rclcpp/rclcpp.hpp>
-
 #include <algorithm>
 #include <string>
 #include <memory>
 #include <vector>
+
+#include <robot_localization/ros_filter_types.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char ** argv)
 {

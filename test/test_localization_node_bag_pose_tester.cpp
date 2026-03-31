@@ -30,16 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <nav_msgs/msg/odometry.hpp>
 #include <gtest/gtest.h>
-#include <cmath>
-#include <fstream>
-#include <functional>  // for bind()
 
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <cmath>
+#include <fstream>
+#include <functional>  // for bind()
+
+#include <nav_msgs/msg/odometry.hpp>
 #include "rclcpp/rclcpp.hpp"
 
 // using namespace std;

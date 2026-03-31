@@ -30,6 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <Eigen/Dense>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <memory>
+#include <utility>
+
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/filter_utilities.hpp>
 #include <robot_localization/navsat_conversions.hpp>
@@ -43,14 +50,6 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <Eigen/Dense>
-
-#include <iostream>
-#include <string>
-#include <vector>
-#include <memory>
-#include <utility>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -134,6 +133,9 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       "broadcast_cartesian_transform_as_parent_frame",
       broadcast_cartesian_transform_as_parent_frame_);
   }
+
+  parameters_callback_handle_ = this->add_on_set_parameters_callback(
+    std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
 
   datum_srv_ = this->create_service<robot_localization::srv::SetDatum>(
     "datum", std::bind(&NavSatTransform::datumCallback, this, _1, _2));
@@ -219,11 +221,6 @@ void NavSatTransform::transformCallback()
 {
   if (!transform_good_) {
     computeTransform();
-
-    if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
-      // Once we have the transform, we don't need the IMU
-      imu_sub_.reset();
-    }
   } else {
     auto gps_odom = std::make_unique<nav_msgs::msg::Odometry>();
     if (prepareGpsOdometry(gps_odom.get())) {
@@ -727,6 +724,11 @@ void NavSatTransform::gpsFixCallback(
 
 void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
+  if (transform_good_ && !use_odometry_yaw_ && !use_manual_datum_) {
+    // Once we have the transform, we don't need the IMU
+    return;
+  }
+
   // We need the baseLinkFrameId_ from the odometry message, so
   // we need to wait until we receive it.
   if (has_transform_odom_) {
@@ -971,6 +973,26 @@ void NavSatTransform::setTransformOdometry(
       std::make_shared<sensor_msgs::msg::Imu>(imu);
     imuCallback(imuPtr);
   }
+}
+
+rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+  // Here update class attributes
+  for (const auto & param : parameters) {
+    if (param.get_name() == "magnetic_declination_radians") {
+      magnetic_declination_ = param.as_double();
+
+      // Set back transform_good_ to false to recalculate the transform
+      transform_good_ = false;
+      RCLCPP_INFO(
+        this->get_logger(), "The new magnetic declination is (%f) rads", magnetic_declination_);
+    }
+  }
+  return result;
 }
 
 }  // namespace robot_localization

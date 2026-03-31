@@ -31,19 +31,20 @@
  */
 
 // Header file names has been updated as per ros2
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <gtest/gtest.h>
-#include <nav_msgs/msg/odometry.hpp>
-#include <rclcpp/qos.hpp>
-#include <sensor_msgs/msg/imu.hpp>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <gtest/gtest.h>
 
 #include <chrono>
 #include <functional>
 #include <iostream>
 #include <memory>
+
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/qos.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include "robot_localization/srv/set_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 

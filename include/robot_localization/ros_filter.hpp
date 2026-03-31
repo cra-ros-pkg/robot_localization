@@ -33,6 +33,21 @@
 #ifndef ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 #define ROBOT_LOCALIZATION__ROS_FILTER_HPP_
 
+#include <Eigen/Dense>
+
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <deque>
+#include <fstream>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <string>
+#include <memory>
+#include <vector>
+
 #include <robot_localization/srv/set_pose.hpp>
 #include <robot_localization/srv/toggle_filter_processing.hpp>
 
@@ -47,26 +62,12 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/empty.hpp>
-#include <tf2/LinearMath/Transform.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/publisher.hpp>
 #include <robot_localization/filter_base.hpp>
 #include <robot_localization/filter_common.hpp>
 #include <robot_localization/ros_filter_utilities.hpp>
-
-#include <Eigen/Dense>
-
-#include <deque>
-#include <fstream>
-#include <map>
-#include <numeric>
-#include <queue>
-#include <string>
-#include <memory>
-#include <vector>
 
 namespace robot_localization
 {
@@ -515,6 +516,10 @@ protected:
   //!
   bool use_control_;
 
+  //! @brief Whether or not we use a stamped control term
+  //!
+  bool stamped_control_;
+
   //! @brief Start the Filter disabled at startup
   //!
   //! If this is true, the filter reads parameters and prepares publishers and subscribes
@@ -727,6 +732,10 @@ protected:
   //! @brief Subscribes to the control input topic
   //!
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr control_sub_;
+
+  //! @brief Subscribes to the control stamped input topic
+  //!
+  rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr stamped_control_sub_;
 
   //! @brief Subscribes to the set_pose topic (usually published from rviz).
   //! Message type is geometry_msgs/PoseWithCovarianceStamped.

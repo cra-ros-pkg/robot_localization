@@ -31,12 +31,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <Eigen/Dense>
+#include <angles/angles.h>
+#include <vector>
 #include <robot_localization/ekf.hpp>
 #include <robot_localization/filter_common.hpp>
-#include <angles/angles.h>
-#include <Eigen/Dense>
 #include <rclcpp/duration.hpp>
-#include <vector>
 
 namespace robot_localization
 {

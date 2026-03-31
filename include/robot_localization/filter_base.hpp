@@ -34,17 +34,17 @@
 #ifndef ROBOT_LOCALIZATION__FILTER_BASE_HPP_
 #define ROBOT_LOCALIZATION__FILTER_BASE_HPP_
 
-#include <robot_localization/filter_common.hpp>
-#include <robot_localization/filter_utilities.hpp>
-#include <robot_localization/measurement.hpp>
-#include <robot_localization/filter_state.hpp>
-
 #include <algorithm>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
 #include <limits>
+
+#include <robot_localization/filter_common.hpp>
+#include <robot_localization/filter_utilities.hpp>
+#include <robot_localization/measurement.hpp>
+#include <robot_localization/filter_state.hpp>
 
 namespace robot_localization
 {

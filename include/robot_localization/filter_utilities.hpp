@@ -33,16 +33,18 @@
 #ifndef ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
 #define ROBOT_LOCALIZATION__FILTER_UTILITIES_HPP_
 
-#include <angles/angles.h>
 #include <Eigen/Dense>
-#include <rclcpp/duration.hpp>
-#include <rclcpp/time.hpp>
-#include <std_msgs/msg/header.hpp>
+
+#include <angles/angles.h>
 
 #include <iostream>
 #include <ostream>
 #include <string>
 #include <vector>
+
+#include <rclcpp/duration.hpp>
+#include <rclcpp/time.hpp>
+#include <std_msgs/msg/header.hpp>
 
 #define FB_DEBUG(msg) \
   if (getDebug()) { \
