@@ -310,7 +310,7 @@ private:
    * @brief Parameters Callback handle
    */
   OnSetParametersCallbackHandle::SharedPtr parameters_callback_handle_;
- 
+
   /**
    * @brief Covariance for most recent odometry data
    */
