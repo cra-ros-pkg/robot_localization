@@ -433,7 +433,7 @@ bool NavSatTransform::toLLArrCallback(
     return false;
   }
 
-  for(auto & p : request->map_points) {
+  for (auto & p : request->map_points) {
     geographic_msgs::msg::GeoPoint geo_point;
     tf2::Vector3 point(p.x, p.y, p.z);
     mapToLL(point, geo_point.latitude, geo_point.longitude, geo_point.altitude);
