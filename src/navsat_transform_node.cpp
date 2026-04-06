@@ -33,6 +33,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "robot_localization/navsat_transform.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
 
 int main(int argc, char ** argv)
 {
@@ -42,7 +43,9 @@ int main(int argc, char ** argv)
   options.clock_type(RCL_ROS_TIME);
   auto navsat_transform_node = std::make_shared<robot_localization::NavSatTransform>(options);
 
-  rclcpp::spin(navsat_transform_node->get_node_base_interface());
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(navsat_transform_node->get_node_base_interface());
+  executor.spin();
 
   rclcpp::shutdown();
   return 0;

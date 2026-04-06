@@ -20,13 +20,29 @@ import pathlib
 import launch.actions
 from launch.actions import DeclareLaunchArgument
 from ament_index_python.packages import get_package_share_directory
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     robot_localization_dir = get_package_share_directory('robot_localization')
     parameters_file_dir = os.path.join(robot_localization_dir, 'params')
     parameters_file_path = os.path.join(parameters_file_dir, 'dual_ekf_navsat_example.yaml')
     os.environ['FILE_PATH'] = str(parameters_file_dir)
+
+    autostart_arg = DeclareLaunchArgument(
+        'autostart',
+        default_value='false',
+        description='Automatically configure and activate the dual-EKF stack. Set to false for managed lifecycle control.')
+    namespace_arg = DeclareLaunchArgument(
+        'namespace',
+        default_value='',
+        description='Top-level namespace')
+
+    autostart = LaunchConfiguration('autostart')
+    namespace = LaunchConfiguration('namespace')
+
     return LaunchDescription([
+        autostart_arg,
+        namespace_arg,
         launch.actions.DeclareLaunchArgument(
             'output_final_position',
             default_value='false'),
@@ -34,26 +50,32 @@ def generate_launch_description():
             'output_location',
 	    default_value='~/dual_ekf_navsat_example_debug.txt'),
 	
-    launch_ros.actions.Node(
+    launch_ros.actions.LifecycleNode(
             package='robot_localization', 
             executable='ekf_node', 
             name='ekf_filter_node_odom',
+            namespace=namespace,
+            autostart=autostart,
 	        output='screen',
             parameters=[parameters_file_path],
             remappings=[('odometry/filtered', 'odometry/local')]           
            ),
-    launch_ros.actions.Node(
+    launch_ros.actions.LifecycleNode(
             package='robot_localization', 
             executable='ekf_node', 
             name='ekf_filter_node_map',
+            namespace=namespace,
+            autostart=autostart,
 	        output='screen',
             parameters=[parameters_file_path],
             remappings=[('odometry/filtered', 'odometry/global')]
            ),           
-    launch_ros.actions.Node(
+    launch_ros.actions.LifecycleNode(
             package='robot_localization', 
             executable='navsat_transform_node', 
             name='navsat_transform',
+            namespace=namespace,
+            autostart=autostart,
 	        output='screen',
             parameters=[parameters_file_path],
             remappings=[('imu', 'imu/data'),
