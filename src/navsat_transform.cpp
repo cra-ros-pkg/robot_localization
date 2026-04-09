@@ -85,13 +85,18 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   force_user_utm_(false),
   use_manual_datum_(false),
   use_odometry_yaw_(false),
-  cartesian_broadcaster_(*this),
+  tf_broadcaster_(*this),
   utm_meridian_convergence_(0.0),
   utm_zone_(0),
   northp_(true),
   world_frame_id_("odom"),
   yaw_offset_(0.0),
-  zero_altitude_(false)
+  zero_altitude_(false),
+  earth_frame_id_("earth"),
+  broadcast_earth_transform_(false),
+  origin_latitude_(0.0),
+  origin_longitude_(0.0),
+  origin_altitude_(0.0)
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -144,6 +149,21 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       "broadcast_cartesian_transform_as_parent_frame",
       broadcast_cartesian_transform_as_parent_frame_);
   }
+
+  earth_frame_id_ = this->declare_parameter("earth_frame_id", earth_frame_id_);
+  broadcast_earth_transform_ = this->declare_parameter("broadcast_earth_transform",
+      broadcast_earth_transform_);
+
+  // Validate parameter combinations
+  if (broadcast_earth_transform_ && !use_local_cartesian_) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Invalid parameter combination: broadcast_earth_transform=true requires "
+      "use_local_cartesian=true. Earth frame transforms are only supported with local cartesian "
+      "coordinates, not UTM. This setting will be ignored!");
+    broadcast_earth_transform_ = false;
+  }
+
 
   if (!this->get_clock()->started()) {
     RCLCPP_INFO(this->get_logger(), "Waiting for clock to start...");
@@ -353,22 +373,61 @@ void NavSatTransform::computeTransform()
 
     transform_good_ = true;
 
-    // Send out the (static) UTM transform in case anyone else would like to use
-    // it.
+    // Prepare vector of transforms to publish
+    std::vector<geometry_msgs::msg::TransformStamped> transforms_to_publish;
+
+    // Add cartesian transform if requested
     if (broadcast_cartesian_transform_) {
       geometry_msgs::msg::TransformStamped cartesian_transform_stamped;
       cartesian_transform_stamped.header.stamp = this->now();
-      std::string cartesian_frame_id = (use_local_cartesian_ ? "local_enu" : "utm");
-      cartesian_transform_stamped.header.frame_id =
-        (broadcast_cartesian_transform_as_parent_frame_ ? cartesian_frame_id : world_frame_id_);
-      cartesian_transform_stamped.child_frame_id =
-        (broadcast_cartesian_transform_as_parent_frame_ ? world_frame_id_ : cartesian_frame_id);
-      cartesian_transform_stamped.transform =
-        (broadcast_cartesian_transform_as_parent_frame_ ?
-        tf2::toMsg(cartesian_world_trans_inverse_) : tf2::toMsg(cartesian_world_transform_));
+      std::string const cartesian_frame_id =
+        (use_local_cartesian_ ? "local_enu" : "utm");
+      if (broadcast_cartesian_transform_as_parent_frame_) {
+        cartesian_transform_stamped.header.frame_id = cartesian_frame_id;
+        cartesian_transform_stamped.child_frame_id = world_frame_id_;
+        cartesian_transform_stamped.transform = tf2::toMsg(cartesian_world_trans_inverse_);
+      } else {
+        cartesian_transform_stamped.header.frame_id = world_frame_id_;
+        cartesian_transform_stamped.child_frame_id = cartesian_frame_id;
+        cartesian_transform_stamped.transform = tf2::toMsg(cartesian_world_transform_);
+      }
       cartesian_transform_stamped.transform.translation.z =
         (zero_altitude_ ? 0.0 : cartesian_transform_stamped.transform.translation.z);
-      cartesian_broadcaster_.sendTransform(cartesian_transform_stamped);
+      transforms_to_publish.push_back(cartesian_transform_stamped);
+    }
+
+    // Add earth frame transforms if requested
+    // Note: Only valid when use_local_cartesian_ is true (validated in constructor)
+    if (broadcast_earth_transform_) {
+      earth_cartesian_transform_ = computeEarthToCartesian(
+        origin_latitude_, origin_longitude_, origin_altitude_);
+
+      geometry_msgs::msg::TransformStamped earth_transform_stamped;
+
+      earth_transform_stamped.header.stamp = this->now();
+      earth_transform_stamped.header.frame_id = earth_frame_id_;
+
+      // If cartesian -> world is published, then we public earth -> cartesian
+      // Otherwise, we publish earth -> world
+      if (broadcast_cartesian_transform_ &&
+        broadcast_cartesian_transform_as_parent_frame_)
+      {
+        earth_transform_stamped.child_frame_id = "local_enu";
+        earth_transform_stamped.transform = tf2::toMsg(earth_cartesian_transform_.inverse());
+
+      } else {
+        tf2::Transform const C2W = cartesian_world_transform_;
+        tf2::Transform const E2W = C2W * earth_cartesian_transform_;
+
+        earth_transform_stamped.child_frame_id = world_frame_id_;
+        earth_transform_stamped.transform = tf2::toMsg(E2W.inverse());
+      }
+      transforms_to_publish.push_back(earth_transform_stamped);
+    }
+
+    // Publish all transforms in a single call
+    if (!transforms_to_publish.empty()) {
+      tf_broadcaster_.sendTransform(transforms_to_publish);
     }
   }
 }
@@ -948,6 +1007,11 @@ bool NavSatTransform::prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom)
 void NavSatTransform::setTransformGps(
   const sensor_msgs::msg::NavSatFix::SharedPtr & msg)
 {
+  // Store origin coordinates for earth frame computation
+  origin_latitude_ = msg->latitude;
+  origin_longitude_ = msg->longitude;
+  origin_altitude_ = msg->altitude;
+
   double cartesian_x {};
   double cartesian_y {};
   double cartesian_z {};
@@ -1037,5 +1101,34 @@ rcl_interfaces::msg::SetParametersResult NavSatTransform::parametersCallback(
   }
   return result;
 }
+
+tf2::Transform computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m)
+{
+  GeographicLib::Geocentric geo(GeographicLib::Constants::WGS84_a(),
+    GeographicLib::Constants::WGS84_f());
+  double X0, Y0, Z0;
+  geo.Forward(lat0_deg, lon0_deg, h0_m, X0, Y0, Z0);
+
+  double sphi, cphi, slam, clam;
+  GeographicLib::Math::sincosd(lat0_deg, sphi, cphi);
+  GeographicLib::Math::sincosd(lon0_deg, slam, clam);
+
+  // ECEF -> ENU at datum (using GeographicLib's exact matrix layout)
+  tf2::Matrix3x3 R_ecef_to_enu(
+    -slam, clam, 0,                          // East axis
+    -clam * sphi, -slam * sphi, cphi,        // North axis
+    clam * cphi, slam * cphi, sphi           // Up axis
+  );
+
+  // Create transform to match LocalCartesian behavior
+  // LocalCartesian does: R * (input - origin)
+  // TF2 does: R * input + translation
+  // Therefore: translation = -R * origin
+  tf2::Vector3 origin_ecef(X0, Y0, Z0);
+  tf2::Vector3 translated_origin = -(R_ecef_to_enu * origin_ecef);
+
+  return tf2::Transform(R_ecef_to_enu, translated_origin);
+}
+
 
 }  // namespace robot_localization

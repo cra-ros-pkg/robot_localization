@@ -60,6 +60,13 @@
 namespace robot_localization
 {
 
+/// \brief Computes the ECEF to ENU transform for a given geodetic origin
+/// \param lat0_deg Latitude of origin in degrees
+/// \param lon0_deg Longitude of origin in degrees
+/// \param h0_m Altitude of origin in meters
+/// \return Transform from ECEF (earth) frame to local ENU frame
+tf2::Transform computeEarthToCartesian(double lat0_deg, double lon0_deg, double h0_m);
+
 class NavSatTransform : public rclcpp::Node {
 public:
   /**
@@ -439,9 +446,9 @@ private:
   bool use_odometry_yaw_;
 
   /**
-   * @brief Used for publishing the static world_frame->cartesian transform
+   * @brief Used for publishing static transforms
    */
-  tf2_ros::StaticTransformBroadcaster cartesian_broadcaster_;
+  tf2_ros::StaticTransformBroadcaster tf_broadcaster_;
 
   /**
    * @brief UTM's meridian convergence
@@ -505,6 +512,31 @@ private:
    * can be set.
    */
   geographic_msgs::msg::GeoPose manual_datum_geopose_;
+
+  /**
+   * @brief Earth frame ID for ECEF coordinates
+   */
+  std::string earth_frame_id_;
+
+  /**
+   * @brief Whether or not we broadcast the earth transform
+   * @note Only valid when use_local_cartesian_ is true.
+   *       Earth transforms are not supported with UTM coordinates.
+   */
+  bool broadcast_earth_transform_;
+
+  /**
+   * @brief Transform from earth to cartesian (ECEF to local/UTM)
+   * Note: This is the mathematical transform E2C, inverted when published to TF
+   */
+  tf2::Transform earth_cartesian_transform_;
+
+  /**
+   * @brief Origin GPS coordinates for earth frame computation
+   */
+  double origin_latitude_;
+  double origin_longitude_;
+  double origin_altitude_;
 };
 
 }  // namespace robot_localization

@@ -48,3 +48,10 @@ navsat_transform_node:
 # and heading in radians. As navsat_transform_node assumes an ENU standard, a 0 heading corresponds to east.
         datum: [55.944904, -3.186693, 0.0]
 
+# Earth frame ID for ECEF coordinates (REP-105 compliant). Defaults to "earth".
+        earth_frame_id: "earth"
+
+# If this is true, the transform earth->cartesian or earth->world transform is broadcast for use by other nodes.
+# This enables REP-105 compliant ECEF coordinate system support. Defaults to false.
+        broadcast_earth_transform: false
+

@@ -272,6 +272,10 @@ if(BUILD_TESTING)
   target_include_directories(test_navsat_conversions PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
   target_link_libraries(test_navsat_conversions ${library_name} ${GeographicLib_LIBRARIES})
 
+  #### EARTH CHAIN TESTS ####
+  ament_add_gtest(test_earth_chain test/test_earth_chain.cpp)
+  target_link_libraries(test_earth_chain ${library_name})
+
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)
   target_link_libraries(test_ros_robot_localization_listener ${library_name})
@@ -307,6 +311,7 @@ if(BUILD_TESTING)
     #test_ekf_localization_node_bag3
     test_robot_localization_estimator
     test_navsat_conversions
+    test_earth_chain
     test_ros_robot_localization_listener
     test_ros_robot_localization_listener_publisher
     #test_ukf_localization_node_bag1
