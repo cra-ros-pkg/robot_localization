@@ -1,10 +1,6 @@
 import sys
 import os
 
-import catkin_pkg.package
-catkin_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-catkin_package = catkin_pkg.package.parse_package(os.path.join(catkin_dir, catkin_pkg.package.PACKAGE_MANIFEST_FILENAME))
-
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
@@ -21,10 +17,11 @@ master_doc = 'index'
 project = u'robot_localization'
 copyright = u'2016, Tom Moore'
 author = u'Tom Moore'
-version = catkin_package.version
-release = catkin_package.version
+# version/release are provided by rosdoc2 from package.xml; keep in sync manually for local builds.
+version = '3.10.0'
+release = '3.10.0'
 
-language = None
+language = 'en'
 exclude_patterns = ['.build']
 pygments_style = 'sphinx'
 todo_include_todos = True
@@ -194,4 +191,4 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}

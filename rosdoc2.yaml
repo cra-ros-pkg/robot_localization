@@ -1,0 +1,19 @@
+## rosdoc2 configuration for robot_localization.
+## See: https://github.com/ros-infrastructure/rosdoc2
+type: 'rosdoc2 config'
+version: 1
+
+---
+
+settings:
+    generate_package_index: true
+
+builders:
+    - doxygen:
+        name: 'robot_localization C++ API'
+        output_dir: 'generated/doxygen'
+    - sphinx:
+        name: 'robot_localization'
+        sphinx_sourcedir: 'doc'
+        doxygen_xml_directory: 'generated/doxygen/xml'
+        output_dir: ''
