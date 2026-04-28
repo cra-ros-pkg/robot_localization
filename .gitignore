@@ -2,6 +2,9 @@ build
 install
 log
 doc/html
+doc/.build
+docs_build
+docs_output
 *.cproject
 *.project
 *.settings

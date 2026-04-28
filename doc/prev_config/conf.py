@@ -2,7 +2,7 @@ import sys
 import os
 
 import catkin_pkg.package
-catkin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+catkin_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 catkin_package = catkin_pkg.package.parse_package(os.path.join(catkin_dir, catkin_pkg.package.PACKAGE_MANIFEST_FILENAME))
 
 extensions = [
@@ -14,7 +14,7 @@ extensions = [
     'sphinx.ext.mathjax',
 ]
 
-templates_path = ['.templates']
+templates_path = ['../.templates']
 source_suffix = '.rst'
 master_doc = 'index'
 
@@ -37,7 +37,7 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/rl_small.png'
+html_logo = '../images/rl_small.png'
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
