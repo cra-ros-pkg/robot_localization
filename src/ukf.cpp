@@ -285,10 +285,15 @@ void Ukf::correct(const Measurement & measurement)
   {
     state_.noalias() += kalman_gain_subset * innovation_subset;
 
-    // (6) Compute the new estimate error covariance P = P - (K * P_zz * K')
+    // (6) Compute the new estimate error covariance P = P - K * P_xz'
+    // This is equivalent to P - K * (P_zz + R) * K' (the correct UKF formula), since
+    // K = P_xz * (P_zz + R)^-1 implies K * (P_zz + R) = P_xz.
     estimate_error_covariance_.noalias() -=
-      (kalman_gain_subset * predicted_meas_covar *
-      kalman_gain_subset.transpose());
+      kalman_gain_subset * cross_covar.transpose();
+
+    // Force symmetry on the covariance matrix to prevent numerical instability
+    estimate_error_covariance_ =
+      0.5 * (estimate_error_covariance_ + estimate_error_covariance_.transpose());
 
     wrapStateAngles();
 
