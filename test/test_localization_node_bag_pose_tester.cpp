@@ -51,6 +51,8 @@ void filterCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
 TEST(BagTest, PoseCheck) {
   auto node = rclcpp::Node::make_shared("localization_node_bag_pose_tester");
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(node);
 
   // getting parameters value from yaml file using get_parameter() API
   double finalX = node->declare_parameter("final_x", 0.0);
@@ -66,7 +68,7 @@ TEST(BagTest, PoseCheck) {
     "/odometry/filtered", rclcpp::QoS(1), filterCallback);
 
   while (rclcpp::ok()) {
-    rclcpp::spin_some(node);
+    executor.spin_some();
     rclcpp::Rate(3).sleep();
   }
 
