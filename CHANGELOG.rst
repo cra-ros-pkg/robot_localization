@@ -5,6 +5,7 @@ Changelog for package robot_localization
 Unreleased (2026-02-09)
 -----------------------
 * Implement Lifecycle Node Support for EKF and UKF nodes (`#958 <https://github.com/cra-ros-pkg/robot_localization/issues/958>`_).
+
   * Added `rclcpp_lifecycle` dependency, lifecycle callbacks, and updated launch files to expose an `autostart` argument.
   * Added `doc/lifecycle_support.rst` with usage examples.
   * Contributor: Boopesh
@@ -12,9 +13,9 @@ Unreleased (2026-02-09)
 3.10.0 (2025-08-29)
 -------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
+
   * Added FromLLArray service
-  ---------
-  Co-authored-by: Marcin Słomiany <m.slomiany93@gmail.com>
+  * Co-authored-by: Marcin Słomiany <m.slomiany93@gmail.com>
 * Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
 * Backporting IMU sub reset fix
 * Fixing ROS time sources (`#943 <https://github.com/cra-ros-pkg/robot_localization/issues/943>`_)
@@ -31,10 +32,12 @@ Unreleased (2026-02-09)
 3.9.2 (2025-03-21)
 ------------------
 * Same change on rolling (`#918 <https://github.com/cra-ros-pkg/robot_localization/issues/918>`_)
-  Co-authored-by: Ferry Schoenmakers <ferry.schoenmakers@nobleo.nl>
+
+  * Co-authored-by: Ferry Schoenmakers <ferry.schoenmakers@nobleo.nl>
 * Fixing bug with diagonal covariance loading (`#909 <https://github.com/cra-ros-pkg/robot_localization/issues/909>`_)
 * Switching stamped control to default true for rolling/future distributions to align with Nav2 and ROS 2 Control (`#910 <https://github.com/cra-ros-pkg/robot_localization/issues/910>`_)
 * Added subscription to stamped topic (`#898 <https://github.com/cra-ros-pkg/robot_localization/issues/898>`_)
+
   * Added subscription to stamped topic
 * Fixing IMU differential test (`#897 <https://github.com/cra-ros-pkg/robot_localization/issues/897>`_)
 * Contributors: Ferry Schoenmakers, Pablo, Steve Macenski, Tom Moore
@@ -59,18 +62,22 @@ Unreleased (2026-02-09)
 ------------------
 * TF Prefix Bug (`#876 <https://github.com/cra-ros-pkg/robot_localization/issues/876>`_)
 * Update ukf.yaml to match ekf.yaml (`#867 <https://github.com/cra-ros-pkg/robot_localization/issues/867>`_)
-  Add missing *_pose_use_child_frame parameter.
+  
+  * Add missing *_pose_use_child_frame* parameter.
 * Fix throttle duration (`#866 <https://github.com/cra-ros-pkg/robot_localization/issues/866>`_)
 * Migrate static tfs to ros2 format. (`#864 <https://github.com/cra-ros-pkg/robot_localization/issues/864>`_)
 * Update issue templates
 * Feature/set utm service (`#856 <https://github.com/cra-ros-pkg/robot_localization/issues/856>`_)
 * fix: modify dual_ekf_navsat_example.launch file to remap the correct imu topic (`#857 <https://github.com/cra-ros-pkg/robot_localization/issues/857>`_)
 * fix header timestamp (`#852 <https://github.com/cra-ros-pkg/robot_localization/issues/852>`_)
-  Co-authored-by: Luke Chang <luke@boxfish.nz>
+  
+  * Co-authored-by: Luke Chang <luke@boxfish.nz>
 * Wait for odometry message before setting manual datum so that the base and world frame names can be set. (`#836 <https://github.com/cra-ros-pkg/robot_localization/issues/836>`_)
+ 
   * wait for odom msg before setting manual datum
 * Test navsat transform functionality (`#838 <https://github.com/cra-ros-pkg/robot_localization/issues/838>`_)
 * Utm using geographiclib ros2 branch (`#833 <https://github.com/cra-ros-pkg/robot_localization/issues/833>`_)
+
   * Add single test for navsat_conversions
   * Add a southern point to the navsat_transform test
   * LLtoUTM using GeographicLib
@@ -87,26 +94,34 @@ Unreleased (2026-02-09)
 3.3.2 (2022-12-11)
 ------------------
 * Port PR `#753 <https://github.com/cra-ros-pkg/robot_localization/issues/753>`_ and `#728 <https://github.com/cra-ros-pkg/robot_localization/issues/728>`_ to ROS2 version (`#765 <https://github.com/cra-ros-pkg/robot_localization/issues/765>`_)
+ 
   * compiling version of commit `#753 <https://github.com/cra-ros-pkg/robot_localization/issues/753>`_ and `#728 <https://github.com/cra-ros-pkg/robot_localization/issues/728>`_ ported to ros2 rolling
   * format fixes
   * fix time source disagreement by converting to seconds beforehand, append parameter usage, fix linting
   * fix linting and uncrustify
 * Adding support for setting diagonals for covariance matrices (`#755 <https://github.com/cra-ros-pkg/robot_localization/issues/755>`_)
 * Fixing and cleaning up interface tests (`#754 <https://github.com/cra-ros-pkg/robot_localization/issues/754>`_)
+ 
   * Fixing and cleaning up interface tests
 * Linting and header cleanup, part 1 (`#752 <https://github.com/cra-ros-pkg/robot_localization/issues/752>`_)
+ 
   * Header cleanup and logging fixes
 * UKF update (`#751 <https://github.com/cra-ros-pkg/robot_localization/issues/751>`_)
+ 
   * Pulling UKF changes from Noetic
   * Adding a reset service to make tests more deterministic
 * Fix angles dependency (`#747 <https://github.com/cra-ros-pkg/robot_localization/issues/747>`_)
+  
   * Add angles to CMakeLists.txt
 * Using angles library to normalize angles (`#739 <https://github.com/cra-ros-pkg/robot_localization/issues/739>`_)
+
   * Using angles library for innovation angle normalization
 * Read predict_to_current_time from ROS parameters (`#737 <https://github.com/cra-ros-pkg/robot_localization/issues/737>`_)
-  Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
+  
+  * Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
 * Fixed state history reversion (`#736 <https://github.com/cra-ros-pkg/robot_localization/issues/736>`_)
-  Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
+  
+  * Co-authored-by: Zygfryd Wieszok <zwieszok@autonomous-systems.pl>
 * Fixing code style divergence for ament_uncrustify in main ROS2 branch (`#743 <https://github.com/cra-ros-pkg/robot_localization/issues/743>`_)
 * This fixes `#732 <https://github.com/cra-ros-pkg/robot_localization/issues/732>`_ (broadcast_cartesian_transform) (`#733 <https://github.com/cra-ros-pkg/robot_localization/issues/733>`_)
 * Contributors: Anish, Haoguang Yang, Marek Piechula, RoboTech Vision, Tom Moore, Tony Najjar, Zygfryd Wieszok
@@ -115,8 +130,9 @@ Unreleased (2026-02-09)
 ------------------
 * Moving to C++17 support (`#725 <https://github.com/cra-ros-pkg/robot_localization/issues/725>`_)
 * SHARED linking for Geographiclib (`#624 <https://github.com/cra-ros-pkg/robot_localization/issues/624>`_) (`#712 <https://github.com/cra-ros-pkg/robot_localization/issues/712>`_)
+  
   * remove GeographicLib specific linking option
-  Co-authored-by: Achmad Fathoni <fathoni.id@gmail.com>
+  * Co-authored-by: Achmad Fathoni <fathoni.id@gmail.com>
 * Contributors: Stephan Sundermann, Tom Moore
 
 2.4.0 (2017-06-12)
