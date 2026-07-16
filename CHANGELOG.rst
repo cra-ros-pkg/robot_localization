@@ -9,6 +9,53 @@ Unreleased (2026-02-09)
   * Added `doc/lifecycle_support.rst` with usage examples.
   * Contributor: Boopesh
 
+Forthcoming
+-----------
+* Fixing Rolling API changes (`#973 <https://github.com/cra-ros-pkg/robot_localization/issues/973>`_)
+* Fixing rosdoc (`#970 <https://github.com/cra-ros-pkg/robot_localization/issues/970>`_)
+  * Fixing rosdoc
+* move conf.py to subfolder so that rosdoc2 works (`#969 <https://github.com/cra-ros-pkg/robot_localization/issues/969>`_)
+* Adding publishing of an REP-105 compliant ECEF transform (`#948 <https://github.com/cra-ros-pkg/robot_localization/issues/948>`_)
+  * Adding publishing of an REP-105 compliant ECEF transform
+* Fix negative time crashes in Rolling (port of `#954 <https://github.com/cra-ros-pkg/robot_localization/issues/954>`_) (`#964 <https://github.com/cra-ros-pkg/robot_localization/issues/964>`_)
+  * Fix additional negative time issues in ROS Kilted
+  The previous fix (e992754) addressed some Time constructor calls but
+  missed additional code paths:
+  1. getFilteredAccelMessage(): Removed redundant rclcpp::Time() wrapper
+  around filter\_.getLastMeasurementTime() which already returns an
+  rclcpp::Time with RCL_ROS_TIME clock type. Now matches the pattern
+  used in getFilteredOdometryMessage().
+  2. preparePose(): Added RCL_ROS_TIME clock type to Time constructor
+  calls for lookupTransformSafe(), matching the pattern used in
+  navsat_transform.cpp from commit e992754.
+  These paths are only exercised with specific configurations (e.g.,
+  acceleration output enabled, certain frame transform setups), which
+  is why they weren't caught in the original fix.
+  * Fix negative time crash in periodicUpdate clearExpiredHistory
+  Guard against subtracting history_length\_ from last_measurement_time
+  when last_measurement_time is smaller, which results in negative time
+  and throws an exception in rclcpp::Time.
+  This occurs during simulation startup when the filter has received
+  measurements but hasn't been running long enough for history_length\_
+  (default 0.5s) to have elapsed.
+  * Address PR review feedback
+  - Revert unintentional removal of rclcpp::Time cast in getFilteredAccelMessage
+  - Add clarifying comment for negative time point prevention check
+  ---------
+  Co-authored-by: Jay Herpin <jherpin@metalsharkboats.com>
+* Implement Lifecycle Node Support for EKF and UKF nodes (`#959 <https://github.com/cra-ros-pkg/robot_localization/issues/959>`_)
+  * Implement Lifecycle Node Support for EKF and UKF nodes
+* Ignoring vscode
+* Fix discrepancy between tf and odometry/filtered when world_frame is set to map_frame (`#939 <https://github.com/cra-ros-pkg/robot_localization/issues/939>`_)
+  * Improve baselink odom transform lookup
+  * New transform_timeout_odom_bl parameter and documentation (`#939 <https://github.com/cra-ros-pkg/robot_localization/issues/939>`_)
+* bugfix: imu linear acceleration gravity removal with rotated IMU (`#946 <https://github.com/cra-ros-pkg/robot_localization/issues/946>`_)
+  * bugfix: gravity vector rotated to target_grame (was IMU frame) prior to removal from acc_tmp.
+  ---------
+  Co-authored-by: Haoguang YANG <yang1510@purdue.edu>
+* Fixing angular acceleration initialisation (`#945 <https://github.com/cra-ros-pkg/robot_localization/issues/945>`_)
+* Contributors: Boopesh, Jay Herpin, Jonas Otto, Manuel Wopfner, Steve Macenski, Sybren Kappert, Tom Moore
+
 3.10.0 (2025-08-29)
 -------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
