@@ -9,8 +9,8 @@ Unreleased (2026-02-09)
   * Added `doc/lifecycle_support.rst` with usage examples.
   * Contributor: Boopesh
 
-Forthcoming
------------
+3.10.1 (2026-07-16)
+-------------------
 * Fixing Rolling API changes (`#973 <https://github.com/cra-ros-pkg/robot_localization/issues/973>`_)
 * Fixing rosdoc (`#970 <https://github.com/cra-ros-pkg/robot_localization/issues/970>`_)
   * Fixing rosdoc
