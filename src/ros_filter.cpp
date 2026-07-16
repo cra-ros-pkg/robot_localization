@@ -210,7 +210,8 @@ RosFilter<T>::on_configure(const rclcpp_lifecycle::State &)
 
   // Set up transform broadcaster (must be before loadParams)
   world_transform_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
-    shared_from_this());
+    tf2_ros::TransformBroadcaster::RequiredInterfaces{
+      get_node_parameters_interface(), get_node_topics_interface()});
 
   // Load all parameters - this declares and loads everything
   // After this call, all parameters like print_diagnostics_, frequency_, etc. are available
