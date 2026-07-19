@@ -103,6 +103,12 @@ target_link_libraries(${library_name} PRIVATE
   ${GeographicLib_LIBRARIES}
   yaml-cpp::yaml-cpp
 )
+target_compile_definitions(${library_name} PRIVATE
+  $<$<CXX_COMPILER_ID:MSVC>:_USE_MATH_DEFINES>
+)
+if(WIN32 AND MSVC)
+  set_target_properties(${library_name} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 
 add_executable(
   ekf_node
