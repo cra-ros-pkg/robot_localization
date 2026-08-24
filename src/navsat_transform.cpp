@@ -760,6 +760,11 @@ void NavSatTransform::gpsFixCallback(
   const sensor_msgs::msg::NavSatFix::SharedPtr msg)
 {
   gps_frame_id_ = msg->header.frame_id;
+  // Strip any leading slash for tf2 compliance (older drivers may still
+  // publish frame_ids with a leading slash, a holdover from tf1)
+  if (!gps_frame_id_.empty() && gps_frame_id_.at(0) == '/') {
+    gps_frame_id_ = gps_frame_id_.substr(1);
+  }
 
   if (gps_frame_id_.empty()) {
     RCLCPP_ERROR(
