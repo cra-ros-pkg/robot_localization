@@ -124,6 +124,42 @@ TEST(LocalizationListenerTest, GetStateOfRelatedFrame)
   EXPECT_FLOAT_EQ(0, state(robot_localization::StateMemberVyaw));
 }
 
+TEST(LocalizationListenerTest, GetStateOfRelatedFrameWithNegativeYaw)
+{
+  {
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(node);
+    executor.spin_some();
+  }
+
+  Eigen::VectorXd state(robot_localization::STATE_SIZE);
+  Eigen::MatrixXd covariance(robot_localization::STATE_SIZE, robot_localization::STATE_SIZE);
+
+  rclcpp::Time time1(1000, 0);
+
+  // Same frame as the test above, but yawed by -pi/2 instead of +pi/2. The base is at
+  // the origin with zero orientation, so the answer is the transform itself.
+  std::string sensor_frame("sensor_negative_yaw");
+
+  EXPECT_TRUE(g_listener->getState(time1, sensor_frame, state, covariance));
+
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberX));
+  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberY));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberZ));
+
+  EXPECT_NEAR(0.0, state(robot_localization::StateMemberRoll), 1e-12);
+  EXPECT_NEAR(0.0, state(robot_localization::StateMemberPitch), 1e-12);
+  EXPECT_FLOAT_EQ(-M_PI / 2, state(robot_localization::StateMemberYaw));
+
+  EXPECT_NEAR(0.0, state(robot_localization::StateMemberVx), 1e-12);
+  EXPECT_FLOAT_EQ(1.0, state(robot_localization::StateMemberVy));
+  EXPECT_FLOAT_EQ(M_PI / 4.0, state(robot_localization::StateMemberVz));
+
+  EXPECT_NEAR(0.0, state(robot_localization::StateMemberVroll), 1e-12);
+  EXPECT_FLOAT_EQ(M_PI / 4.0, state(robot_localization::StateMemberVpitch));
+  EXPECT_FLOAT_EQ(0.0, state(robot_localization::StateMemberVyaw));
+}
+
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);

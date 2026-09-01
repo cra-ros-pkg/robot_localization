@@ -455,11 +455,18 @@ bool RosRobotLocalizationListener::getState(
   state(StateMemberY) = target_pose_odom.translation().y();
   state(StateMemberZ) = target_pose_odom.translation().z();
 
-  Eigen::Vector3d ypr = target_pose_odom.rotation().eulerAngles(2, 1, 0);
+  // Eigen::eulerAngles() returns angles in the non-canonical ranges
+  // [0:pi]x[-pi:pi]x[-pi:pi], which forces the first angle - here the yaw - to be
+  // non-negative. Extract the RPY the same way the rest of the package does, so the
+  // result stays in the fixed-axis convention the state vector uses.
+  const Eigen::Quaterniond target_orientation(target_pose_odom.rotation());
+  tf2::Quaternion orientation_quat(
+    target_orientation.x(), target_orientation.y(), target_orientation.z(),
+    target_orientation.w());
 
-  state(StateMemberRoll) = ypr[2];
-  state(StateMemberPitch) = ypr[1];
-  state(StateMemberYaw) = ypr[0];
+  ros_filter_utilities::quatToRPY(
+    orientation_quat, state(StateMemberRoll), state(StateMemberPitch),
+    state(StateMemberYaw));
 
   // Now let's calculate the twist of the target frame
   // First get the base's twist
