@@ -443,6 +443,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
 
 TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   robot_localization::DiagnosticsHelper dh_;
+  ASSERT_TRUE(dh_.resetFilter());
   // keep track of which diagnostic messages are detected.
   // we have more things to check here because the messages get split over
   // various callbacks if they pass the check if they predate the set_pose time.
