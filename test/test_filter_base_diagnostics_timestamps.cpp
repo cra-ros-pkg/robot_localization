@@ -29,8 +29,12 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <chrono>
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
@@ -46,6 +50,7 @@
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/srv/set_pose.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "std_srvs/srv/empty.hpp"
 
 namespace robot_localization
 {
@@ -123,10 +128,13 @@ private:
 
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr
     diagnostic_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr filtered_sub_;
+  rclcpp::Client<std_srvs::srv::Empty>::SharedPtr reset_;
   rclcpp::Client<robot_localization::srv::SetPose>::SharedPtr set_pose_;
 
 public:
   std::vector<diagnostic_msgs::msg::DiagnosticArray> diagnostics;
+  std::vector<nav_msgs::msg::Odometry> filtered_odometry;
   rclcpp::Node::SharedPtr node_;
 
   DiagnosticsHelper()
@@ -159,9 +167,15 @@ public:
       [&](diagnostic_msgs::msg::DiagnosticArray::UniquePtr msg) {
         diagnostics.push_back(*msg);
       });
+    filtered_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
+      "/odometry/filtered", rclcpp::QoS(10),
+      [this](nav_msgs::msg::Odometry::UniquePtr msg) {
+        filtered_odometry.push_back(*msg);
+      });
 
     set_pose_ =
       node_->create_client<robot_localization::srv::SetPose>("set_pose");
+    reset_ = node_->create_client<std_srvs::srv::Empty>("reset");
   }
 
   void publishMessages(rclcpp::Time t)
@@ -179,18 +193,106 @@ public:
     imu_pub_->publish(*imu_msg_);
   }
 
-  void setPose(rclcpp::Time t)
+  bool resetFilter()
   {
+    if (!reset_->wait_for_service(std::chrono::seconds(5))) {
+      return false;
+    }
+
+    auto request = std::make_shared<std_srvs::srv::Empty::Request>();
+    auto future = reset_->async_send_request(request);
+    return rclcpp::spin_until_future_complete(
+      node_, future, std::chrono::seconds(5)) == rclcpp::FutureReturnCode::SUCCESS;
+  }
+
+  bool setPose(
+    rclcpp::Time t, const std::string & frame_id = "odom", double x = 1.0,
+    double covariance = 1.0)
+  {
+    if (!set_pose_->wait_for_service(std::chrono::seconds(5))) {
+      return false;
+    }
+
     auto setPoseRequest =
       std::make_shared<robot_localization::srv::SetPose::Request>();
-    setPoseRequest->pose.header.frame_id = "base_link";
+    setPoseRequest->pose.header.frame_id = frame_id;
     setPoseRequest->pose.pose = getValidPose()->pose;
+    setPoseRequest->pose.pose.pose.position.x = x;
+    setPoseRequest->pose.pose.covariance[0] = covariance;
     setPoseRequest->pose.header.stamp = t;
-    set_pose_->async_send_request(setPoseRequest);
+    auto future = set_pose_->async_send_request(setPoseRequest);
+    return rclcpp::spin_until_future_complete(
+      node_, future, std::chrono::seconds(5)) == rclcpp::FutureReturnCode::SUCCESS;
+  }
+
+  bool waitForOdometryAfter(size_t count)
+  {
+    rclcpp::Rate rate(100);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (std::chrono::steady_clock::now() < deadline) {
+      rclcpp::spin_some(node_);
+      if (filtered_odometry.size() > count) {
+        return true;
+      }
+      rate.sleep();
+    }
+    return false;
+  }
+
+  bool waitForOdometryNear(double x)
+  {
+    rclcpp::Rate rate(100);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (std::chrono::steady_clock::now() < deadline) {
+      rclcpp::spin_some(node_);
+      if (!filtered_odometry.empty() &&
+        std::abs(filtered_odometry.back().pose.pose.position.x - x) < 1e-3)
+      {
+        return true;
+      }
+      rate.sleep();
+    }
+    return false;
   }
 };
 
 }  // namespace robot_localization
+
+TEST(FilterBaseDiagnosticsTest, SetPoseTransformFailurePreservesState) {
+  robot_localization::DiagnosticsHelper dh_;
+
+  rclcpp::Rate loop_rate(20);
+  for (size_t i = 0; i < 20; ++i) {
+    rclcpp::spin_some(dh_.node_);
+    dh_.publishMessages(dh_.node_->now());
+    loop_rate.sleep();
+  }
+  rclcpp::spin_some(dh_.node_);
+  ASSERT_FALSE(dh_.filtered_odometry.empty());
+
+  ASSERT_TRUE(dh_.setPose(dh_.node_->now(), "odom", 2.0));
+  ASSERT_TRUE(dh_.waitForOdometryNear(2.0));
+
+  ASSERT_TRUE(dh_.setPose(dh_.node_->now(), "missing_frame", 5.0));
+  size_t output_count = dh_.filtered_odometry.size();
+  ASSERT_TRUE(dh_.waitForOdometryAfter(output_count));
+  EXPECT_NEAR(dh_.filtered_odometry.back().pose.pose.position.x, 2.0, 1e-3);
+
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  ASSERT_TRUE(dh_.setPose(dh_.node_->now(), "odom", nan));
+  output_count = dh_.filtered_odometry.size();
+  ASSERT_TRUE(dh_.waitForOdometryAfter(output_count));
+  EXPECT_NEAR(dh_.filtered_odometry.back().pose.pose.position.x, 2.0, 1e-3);
+
+  ASSERT_TRUE(dh_.setPose(dh_.node_->now(), "odom", 5.0, nan));
+  output_count = dh_.filtered_odometry.size();
+  ASSERT_TRUE(dh_.waitForOdometryAfter(output_count));
+  EXPECT_NEAR(dh_.filtered_odometry.back().pose.pose.position.x, 2.0, 1e-3);
+
+  ASSERT_TRUE(dh_.setPose(dh_.node_->now(), "odom", 5.0));
+  ASSERT_TRUE(dh_.waitForOdometryNear(5.0));
+  ASSERT_TRUE(dh_.resetFilter());
+}
 
 /*
   First test; we run for a bit; then send messagse with an empty timestamp.
@@ -341,6 +443,7 @@ TEST(FilterBaseDiagnosticsTest, TimestampsBeforeSetPose) {
 
 TEST(FilterBaseDiagnosticsTest, TimestampsBeforePrevious) {
   robot_localization::DiagnosticsHelper dh_;
+  ASSERT_TRUE(dh_.resetFilter());
   // keep track of which diagnostic messages are detected.
   // we have more things to check here because the messages get split over
   // various callbacks if they pass the check if they predate the set_pose time.
