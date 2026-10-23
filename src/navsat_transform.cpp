@@ -570,7 +570,8 @@ geometry_msgs::msg::Point NavSatTransform::fromLL(
     }
   }
 
-  cartesian_pose.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, altitude));
+  cartesian_pose.setOrigin(
+    tf2::Vector3(cartesian_x, cartesian_y, use_local_cartesian_ ? cartesian_z : altitude));
 
   if (!transform_good_) {
     throw std::runtime_error("Invalid transform.");
@@ -638,16 +639,13 @@ void NavSatTransform::mapToLL(
 
   // Now convert the data back to lat/long and place into the message
   if (use_local_cartesian_) {
-    double altitude_tmp = {};
     gps_local_cartesian_.Reverse(
       odom_as_cartesian.getOrigin().getX(),
       odom_as_cartesian.getOrigin().getY(),
-      0.0,
+      odom_as_cartesian.getOrigin().getZ(),
       latitude,
       longitude,
-      altitude_tmp);
-
-    altitude = odom_as_cartesian.getOrigin().getZ();
+      altitude);
   } else {
     try {
       GeographicLib::UTMUPS::Reverse(
@@ -802,7 +800,8 @@ void NavSatTransform::gpsFixCallback(
       }
     }
 
-    latest_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
+    latest_cartesian_pose_.setOrigin(
+      tf2::Vector3(cartesian_x, cartesian_y, use_local_cartesian_ ? cartesian_z : msg->altitude));
     latest_cartesian_covariance_.setZero();
 
     // Copy the measurement's covariance matrix so that we can rotate it later
@@ -1053,7 +1052,8 @@ void NavSatTransform::setTransformGps(
     ((use_local_cartesian_) ? "Local Cartesian" : "UTM"),
     utm_zone_, (northp_ ? "north" : "south"), cartesian_x, cartesian_y);
 
-  transform_cartesian_pose_.setOrigin(tf2::Vector3(cartesian_x, cartesian_y, msg->altitude));
+  transform_cartesian_pose_.setOrigin(
+    tf2::Vector3(cartesian_x, cartesian_y, use_local_cartesian_ ? cartesian_z : msg->altitude));
   transform_cartesian_pose_.setRotation(tf2::Quaternion::getIdentity());
   has_transform_gps_ = true;
 }
