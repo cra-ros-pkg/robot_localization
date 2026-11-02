@@ -2,6 +2,17 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
+* Add ToLLArray service (`#953 <https://github.com/cra-ros-pkg/robot_localization/issues/953>`_)
+  * Add ToLLArray service
+* Fix discrepancy between tf and odometry/filtered when world_frame is set to map_frame (`#939 <https://github.com/cra-ros-pkg/robot_localization/issues/939>`_)
+  * Improve baselink odom transform lookup
+  * New transform_timeout_odom_bl parameter and documentation (`#939 <https://github.com/cra-ros-pkg/robot_localization/issues/939>`_)
+* Fixing angular acceleration initialisation (`#945 <https://github.com/cra-ros-pkg/robot_localization/issues/945>`_)
+* Contributors: Dawid Kmak, Elmir, Sybren Kappert, Tom Moore
+
 3.8.3 (2025-08-29)
 ------------------
 * Add a Parameters Callback to set magnetic_declination_radians at runtime (`#920 <https://github.com/cra-ros-pkg/robot_localization/issues/920>`_)
