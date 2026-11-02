@@ -42,11 +42,13 @@ set(library_name rl_lib)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/FromLL.srv"
+  "srv/FromLLArr.srv"
   "srv/GetState.srv"
   "srv/SetDatum.srv"
   "srv/SetPose.srv"
   "srv/ToggleFilterProcessing.srv"
   "srv/ToLL.srv"
+  "srv/ToLLArr.srv"
   DEPENDENCIES
     builtin_interfaces
     geometry_msgs
