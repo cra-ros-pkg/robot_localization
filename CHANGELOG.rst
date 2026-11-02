@@ -2,8 +2,8 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.5.5 (2026-11-02)
+------------------
 * Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
 * Add ToLLArray service to humble-devel (`#967 <https://github.com/cra-ros-pkg/robot_localization/issues/967>`_)
 * Contributors: Elmir, sagiben-bw
