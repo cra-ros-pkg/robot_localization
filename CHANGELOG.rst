@@ -2,16 +2,32 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Unreleased (2026-02-09)
------------------------
+Forthcoming
+-----------
 * Implement Lifecycle Node Support for EKF and UKF nodes (`#958 <https://github.com/cra-ros-pkg/robot_localization/issues/958>`_).
 
   * Added `rclcpp_lifecycle` dependency, lifecycle callbacks, and updated launch files to expose an `autostart` argument.
   * Added `doc/lifecycle_support.rst` with usage examples.
-  * Contributor: Boopesh
+* Support Windows builds in robot_localization (`#975 <https://github.com/cra-ros-pkg/robot_localization/issues/975>`_)
+  Co-authored-by: Daisuke Nishimatsu <nishimarudai@gmail.com>
+* Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
+* Include <numeric> for std::accumulate (`#986 <https://github.com/cra-ros-pkg/robot_localization/issues/986>`_)
+  Include <numeric> in ros_filter.cpp
+* Add ToLLArray service (`#953 <https://github.com/cra-ros-pkg/robot_localization/issues/953>`_)
+  * Add ToLLArray service
+* Strip leading slash from navsat frame_id (`#977 <https://github.com/cra-ros-pkg/robot_localization/issues/977>`_)
+  Some GPS drivers (older nmea_navsat_driver versions) still publish
+  frame_ids with a leading slash, left over from tf1. tf2 doesn't like
+  that and it breaks navsat_transform_node.
+  ekf_node/ukf_node already handle this in filter_utilities.hpp, but
+  only when a tf_prefix is set. navsat_transform_node had nothing for
+  this case, so added a strip right where the frame_id comes in from
+  the GPS callback.
+  Fixes `#471 <https://github.com/cra-ros-pkg/robot_localization/issues/471>`_
+* Fix world frame transform mode comment (`#978 <https://github.com/cra-ros-pkg/robot_localization/issues/978>`_)
+* fixed generated rosdoc2 output for CHANGELOG (`#971 <https://github.com/cra-ros-pkg/robot_localization/issues/971>`_)
+* Contributors: Dawid Kmak, Elmir, Francisco Martín Rico, Kunal Yadav, Manuel Wopfner, Tobias Fischer, Tom Moore, Zhewen Tan, Boopesh
 
-Forthcoming
------------
 * Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
 * Include <numeric> for std::accumulate (`#986 <https://github.com/cra-ros-pkg/robot_localization/issues/986>`_)
   Include <numeric> in ros_filter.cpp
