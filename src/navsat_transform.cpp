@@ -137,7 +137,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   broadcast_cartesian_transform_as_parent_frame_ =
     this->declare_parameter(
-    "broadcast_utm_transform_as_parent_frame_",
+    "broadcast_utm_transform_as_parent_frame",
     broadcast_cartesian_transform_as_parent_frame_);
 
   if (broadcast_cartesian_transform_as_parent_frame_) {
