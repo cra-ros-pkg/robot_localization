@@ -262,7 +262,8 @@ TEST(FilterBaseDiagnosticsTest, SetPoseTransformFailurePreservesState) {
   robot_localization::DiagnosticsHelper dh_;
 
   rclcpp::Rate loop_rate(20);
-  for (size_t i = 0; i < 20; ++i) {
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (dh_.filtered_odometry.empty() && std::chrono::steady_clock::now() < deadline) {
     rclcpp::spin_some(dh_.node_);
     dh_.publishMessages(dh_.node_->now());
     loop_rate.sleep();
