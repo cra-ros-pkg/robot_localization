@@ -2353,20 +2353,6 @@ void RosFilter<T>::setPoseCallback(
 
   std::string topic_name("set_pose");
 
-  // Get rid of any initial poses (pretend we've never had a measurement)
-  initial_measurements_.clear();
-  previous_measurements_.clear();
-  previous_measurement_covariances_.clear();
-
-  clearMeasurementQueue();
-
-  filter_state_history_.clear();
-  measurement_history_.clear();
-
-  // Also set the last set pose time, so we ignore all messages
-  // that occur before it
-  last_set_pose_time_ = msg->header.stamp;
-
   // Set the state vector to the reported pose
   Eigen::VectorXd measurement(STATE_SIZE);
   Eigen::MatrixXd measurement_covariance(STATE_SIZE, STATE_SIZE);
@@ -2382,9 +2368,32 @@ void RosFilter<T>::setPoseCallback(
   // Prepare the pose data (really just using this to transform it into the
   // target frame). Twist data is going to get zeroed out.
   // Since pose messages do not provide a child_frame_id, it defaults to baseLinkFrameId_
-  preparePose(
-    msg, topic_name, world_frame_id_, base_link_frame_id_, false, false, false,
-    update_vector, measurement, measurement_covariance);
+  if (!preparePose(
+      msg, topic_name, world_frame_id_, base_link_frame_id_, false, false, false,
+      update_vector, measurement, measurement_covariance))
+  {
+    RF_DEBUG("Could not prepare set_pose message. Filter state was not changed.\n");
+    return;
+  }
+
+  if (!measurement.allFinite() || !measurement_covariance.allFinite()) {
+    RCLCPP_WARN(get_logger(), "Ignoring set_pose request with non-finite pose or covariance.");
+    return;
+  }
+
+  // Get rid of any initial poses (pretend we've never had a measurement)
+  initial_measurements_.clear();
+  previous_measurements_.clear();
+  previous_measurement_covariances_.clear();
+
+  clearMeasurementQueue();
+
+  filter_state_history_.clear();
+  measurement_history_.clear();
+
+  // Also set the last set pose time, so we ignore all messages
+  // that occur before it
+  last_set_pose_time_ = msg->header.stamp;
 
   // For the state
   filter_.setState(measurement);
