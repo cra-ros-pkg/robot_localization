@@ -9,8 +9,8 @@ Unreleased (2026-02-09)
   * Added `doc/lifecycle_support.rst` with usage examples.
   * Contributor: Boopesh
 
-Forthcoming
------------
+3.11.0 (2026-11-02)
+-------------------
 * Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
 * Add ToLLArray service (`#953 <https://github.com/cra-ros-pkg/robot_localization/issues/953>`_)
   * Add ToLLArray service
