@@ -115,6 +115,20 @@ int main(int argc, char ** argv)
       transform_broadcaster.sendTransform(transformStamped);
     }
 
+    // Same sensor, mirrored: a negative yaw, which is where a non-canonical euler
+    // extraction and the fixed-axis RPY convention disagree.
+    transformStamped.child_frame_id = "sensor_negative_yaw";
+    {
+      tf2::Quaternion q;
+      q.setRPY(0, 0, -M_PI / 2);
+      transformStamped.transform.rotation.x = q.x();
+      transformStamped.transform.rotation.y = q.y();
+      transformStamped.transform.rotation.z = q.z();
+      transformStamped.transform.rotation.w = q.w();
+
+      transform_broadcaster.sendTransform(transformStamped);
+    }
+
     rclcpp::Rate(10).sleep();
   }
 
