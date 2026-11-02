@@ -2,6 +2,16 @@
 Changelog for package robot_localization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Drop the trailing underscore from broadcast_utm_transform_as_parent_frame (`#988 <https://github.com/cra-ros-pkg/robot_localization/issues/988>`_)
+* Add ToLLArray service (`#953 <https://github.com/cra-ros-pkg/robot_localization/issues/953>`_)
+  * Add ToLLArray service
+* Fix additional negative time issues in ROS Kilted (`#954 <https://github.com/cra-ros-pkg/robot_localization/issues/954>`_)
+  * Fix additional negative time issues in ROS Kilted
+* Fixing angular acceleration initialisation (`#945 <https://github.com/cra-ros-pkg/robot_localization/issues/945>`_)
+* Contributors: Dawid Kmak, Elmir, Jay Herpin, Tom Moore
+
 3.9.4 (2025-08-29)
 ------------------
 * Added FromLLArray service (`#912 <https://github.com/cra-ros-pkg/robot_localization/issues/912>`_)
