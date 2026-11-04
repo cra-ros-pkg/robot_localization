@@ -352,7 +352,7 @@ void FilterBase::validateDelta(rclcpp::Duration & /*delta*/)
 
 void FilterBase::prepareControl(
   const rclcpp::Time & reference_time,
-  const rclcpp::Duration &)
+  const rclcpp::Duration & delta)
 {
   control_acceleration_.setZero();
 
@@ -373,6 +373,7 @@ void FilterBase::prepareControl(
         control_acceleration_(controlInd) = computeControlAcceleration(
           state_(controlInd + POSITION_V_OFFSET),
           (timed_out ? 0.0 : latest_control_(controlInd)),
+          delta.seconds(),
           acceleration_limits_[controlInd], acceleration_gains_[controlInd],
           deceleration_limits_[controlInd], deceleration_gains_[controlInd]);
       }
@@ -383,6 +384,7 @@ void FilterBase::prepareControl(
 inline double FilterBase::computeControlAcceleration(
   const double state,
   const double control,
+  const double delta_sec,
   const double acceleration_limit,
   const double acceleration_gain,
   const double deceleration_limit,
@@ -402,7 +404,12 @@ inline double FilterBase::computeControlAcceleration(
     gain = deceleration_gain;
   }
 
-  const double final_accel = std::min(std::max(gain * error, -limit), limit);
+  // The gain is the fraction of the velocity error to remove over this
+  // prediction step, so the acceleration has to be divided by the step length.
+  // Without this, the acceleration was only correct when predicting at 1 Hz.
+  const double final_accel = (delta_sec > 0.0 ?
+    std::min(std::max(gain * error / delta_sec, -limit), limit) :
+    0.0);
 
   FB_DEBUG(
     "Control value: " <<
@@ -414,6 +421,7 @@ inline double FilterBase::computeControlAcceleration(
       "Decelerating: " << (decelerating ? "true" : "false") << "\n" <<
       "Limit: " << limit << "\n" <<
       "Gain: " << gain << "\n" <<
+      "Delta: " << delta_sec << "\n" <<
       "Final is " << final_accel << "\n");
 
   return final_accel;

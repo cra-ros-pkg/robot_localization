@@ -275,6 +275,8 @@ protected:
    * @param[in] state - The current state variable (e.g., linear X velocity)
    * @param[in] control - The current control commanded velocity corresponding
    * to the state variable
+   * @param[in] delta_sec - The length of the prediction step, in seconds. The
+   * velocity error is divided by this to get an acceleration.
    * @param[in] acceleration_limit - Limit for acceleration (regardless of
    * driving direction)
    * @param[in] acceleration_gain - Gain applied to acceleration control error
@@ -286,6 +288,7 @@ protected:
   double computeControlAcceleration(
     const double state,
     const double control,
+    const double delta_sec,
     const double acceleration_limit,
     const double acceleration_gain,
     const double deceleration_limit,
@@ -316,10 +319,11 @@ protected:
    * prediction step
    * @param[in] reference_time - The time of the update (measurement used in the
    * prediction step)
+   * @param[in] delta - The length of the prediction step
    */
   void prepareControl(
     const rclcpp::Time & reference_time,
-    const rclcpp::Duration &);
+    const rclcpp::Duration & delta);
 
   /**
    * @brief Whether or not we've received any measurements

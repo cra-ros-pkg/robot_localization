@@ -229,7 +229,7 @@ How rapidly your robot can decelerate for each dimension. Matches the parameter 
 
 ~acceleration_gains
 ^^^^^^^^^^^^^^^^^^^
-If your robot cannot instantaneously reach its acceleration limit, the permitted change can be controlled with these gains. Only used if ``use_control`` is set to *true*.
+If your robot cannot instantaneously reach its acceleration limit, the permitted change can be controlled with these gains. Each gain is the fraction of the velocity error (commanded minus estimated velocity) that the filter tries to remove in one prediction step, so the resulting acceleration is ``gain * error / delta``, capped by the acceleration limit. Only used if ``use_control`` is set to *true*.
 
 .. code-block:: xml
 
