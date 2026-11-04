@@ -32,16 +32,25 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <vector>
 
 #include "Eigen/Dense"
 #include "gtest/gtest.h"
+#include "robot_localization/ekf.hpp"
 #include "robot_localization/filter_base.hpp"
 #include "robot_localization/filter_common.hpp"
 #include "robot_localization/filter_utilities.hpp"
 #include "robot_localization/measurement.hpp"
+#include "robot_localization/ukf.hpp"
 
+using robot_localization::ControlMemberVx;
+using robot_localization::ControlMemberVyaw;
 using robot_localization::Measurement;
 using robot_localization::STATE_SIZE;
+using robot_localization::StateMemberAx;
+using robot_localization::StateMemberVx;
+using robot_localization::StateMemberVyaw;
+using robot_localization::TWIST_SIZE;
 
 namespace robot_localization
 {
@@ -83,6 +92,55 @@ public:
   void processMeasurement(const Measurement & measurement)
   {
     FilterBase::processMeasurement(measurement);
+  }
+};
+
+class FilterControl : public FilterBase
+{
+public:
+  FilterControl()
+  {
+    std::vector<bool> update_vector(TWIST_SIZE, false);
+    update_vector[ControlMemberVx] = true;
+    setControlParams(
+      update_vector, rclcpp::Duration::from_seconds(1.0),
+      std::vector<double>(TWIST_SIZE, 100.0),
+      std::vector<double>(TWIST_SIZE, 1.0),
+      std::vector<double>(TWIST_SIZE, 100.0),
+      std::vector<double>(TWIST_SIZE, 1.0));
+  }
+
+  void correct(const Measurement & /*measurement*/) {}
+
+  void predict(
+    const rclcpp::Time & /*reference_time*/,
+    const rclcpp::Duration & /*delta*/) {}
+
+  // Returns the X acceleration derived from a commanded X velocity for a
+  // prediction step of length delta_sec.
+  double controlAcceleration(
+    const double current_velocity, const double commanded_velocity,
+    const double delta_sec)
+  {
+    Eigen::VectorXd state(STATE_SIZE);
+    state.setZero();
+    state(StateMemberVx) = current_velocity;
+    setState(state);
+
+    Eigen::VectorXd control(TWIST_SIZE);
+    control.setZero();
+    control(ControlMemberVx) = commanded_velocity;
+    const rclcpp::Time now(10, 0);
+    setControl(control, now);
+
+    prepareControl(now, rclcpp::Duration::from_seconds(delta_sec));
+    return control_acceleration_(ControlMemberVx);
+  }
+
+  void setLimits(const double acceleration_limit, const double deceleration_limit)
+  {
+    acceleration_limits_.assign(TWIST_SIZE, acceleration_limit);
+    deceleration_limits_.assign(TWIST_SIZE, deceleration_limit);
   }
 };
 
@@ -203,6 +261,98 @@ TEST(FilterBaseTest, MeasurementProcessing) {
   meas.time_ = msg;
   derived.processMeasurement(meas);
   EXPECT_EQ(derived.getLastMeasurementTime(), meas.time_);
+}
+
+TEST(FilterBaseTest, ControlAccelerationUsesPredictionDelta) {
+  robot_localization::FilterControl filter;
+
+  // With a gain of 1, the whole velocity error is removed over one prediction
+  // step, whatever the step length is.
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, 1.0, 1.0), 1.0);
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, 1.0, 0.1), 10.0);
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, 1.0, 0.02), 50.0);
+
+  // Deceleration towards a zero command
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(2.0, 0.0, 0.1), -20.0);
+}
+
+TEST(FilterBaseTest, ControlAccelerationIsLimited) {
+  robot_localization::FilterControl filter;
+  filter.setLimits(1.3, 4.5);
+
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, 1.0, 0.1), 1.3);
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, -1.0, 0.1), -1.3);
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(2.0, 0.0, 0.1), -4.5);
+
+  // Small errors stay below the limits
+  EXPECT_DOUBLE_EQ(filter.controlAcceleration(0.0, 0.1, 0.1), 1.0);
+}
+
+TEST(FilterBaseTest, ControlAccelerationZeroDelta) {
+  robot_localization::FilterControl filter;
+
+  // No time passes, so there is nothing to integrate and no division by zero
+  EXPECT_EQ(filter.controlAcceleration(0.0, 1.0, 0.0), 0.0);
+}
+
+// Runs one prediction step with a commanded X and yaw velocity and returns the
+// predicted state
+Eigen::VectorXd predictWithControl(
+  robot_localization::FilterBase & filter, const double delta_sec)
+{
+  Eigen::VectorXd state(STATE_SIZE);
+  state.setZero();
+  filter.setState(state);
+
+  Eigen::MatrixXd covariance(STATE_SIZE, STATE_SIZE);
+  covariance.setIdentity();
+  covariance *= 1e-6;
+  filter.setEstimateErrorCovariance(covariance);
+
+  std::vector<bool> update_vector(TWIST_SIZE, false);
+  update_vector[ControlMemberVx] = true;
+  update_vector[ControlMemberVyaw] = true;
+  filter.setControlParams(
+    update_vector, rclcpp::Duration::from_seconds(1.0),
+    std::vector<double>(TWIST_SIZE, 100.0),
+    std::vector<double>(TWIST_SIZE, 1.0),
+    std::vector<double>(TWIST_SIZE, 100.0),
+    std::vector<double>(TWIST_SIZE, 1.0));
+
+  Eigen::VectorXd control(TWIST_SIZE);
+  control.setZero();
+  control(ControlMemberVx) = 1.0;
+  control(ControlMemberVyaw) = 0.5;
+  const rclcpp::Time now(10, 0);
+  filter.setControl(control, now);
+
+  filter.predict(now, rclcpp::Duration::from_seconds(delta_sec));
+  return filter.getState();
+}
+
+TEST(FilterBaseTest, EkfPredictAppliesControl) {
+  for (const double delta_sec : {0.1, 0.02}) {
+    robot_localization::Ekf ekf;
+    const Eigen::VectorXd state = predictWithControl(ekf, delta_sec);
+
+    // A gain of 1 reaches the commanded velocity in one step
+    EXPECT_NEAR(state(StateMemberVx), 1.0, 1e-9);
+    EXPECT_NEAR(state(StateMemberAx), 1.0 / delta_sec, 1e-9);
+    EXPECT_NEAR(state(StateMemberVyaw), 0.5, 1e-9);
+  }
+}
+
+TEST(FilterBaseTest, UkfPredictAppliesControl) {
+  for (const double delta_sec : {0.1, 0.02}) {
+    robot_localization::Ukf ukf;
+    ukf.setConstants(0.001, 0.0, 2.0);
+    const Eigen::VectorXd state = predictWithControl(ukf, delta_sec);
+
+    // Same result as the EKF
+    EXPECT_NEAR(state(StateMemberVx), 1.0, 1e-6);
+    EXPECT_NEAR(state(StateMemberAx), 1.0 / delta_sec, 1e-6);
+    EXPECT_NEAR(state(StateMemberVyaw), 0.5, 1e-6);
+  }
 }
 
 int main(int argc, char ** argv)

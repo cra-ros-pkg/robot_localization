@@ -408,6 +408,25 @@ void Ukf::projectSigmaPoint(Eigen::VectorXd & sigma_point, const rclcpp::Duratio
 {
   auto delta_sec = delta.seconds();
 
+  // Apply control terms, which are actually accelerations, the same way the
+  // EKF applies them to its state
+  sigma_point(StateMemberVroll) +=
+    control_acceleration_(ControlMemberVroll) * delta_sec;
+  sigma_point(StateMemberVpitch) +=
+    control_acceleration_(ControlMemberVpitch) * delta_sec;
+  sigma_point(StateMemberVyaw) +=
+    control_acceleration_(ControlMemberVyaw) * delta_sec;
+
+  sigma_point(StateMemberAx) = (control_update_vector_[ControlMemberVx] ?
+    control_acceleration_(ControlMemberVx) :
+    sigma_point(StateMemberAx));
+  sigma_point(StateMemberAy) = (control_update_vector_[ControlMemberVy] ?
+    control_acceleration_(ControlMemberVy) :
+    sigma_point(StateMemberAy));
+  sigma_point(StateMemberAz) = (control_update_vector_[ControlMemberVz] ?
+    control_acceleration_(ControlMemberVz) :
+    sigma_point(StateMemberAz));
+
   double roll = sigma_point(StateMemberRoll);
   double pitch = sigma_point(StateMemberPitch);
   double yaw = sigma_point(StateMemberYaw);
