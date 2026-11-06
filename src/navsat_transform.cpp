@@ -96,8 +96,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   earth_frame_id_("earth"),
   broadcast_earth_transform_(false),
   origin_latitude_(0.0),
-  origin_longitude_(0.0),
-  origin_altitude_(0.0)
+  origin_longitude_(0.0)
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -403,7 +402,7 @@ void NavSatTransform::computeTransform()
     // Note: Only valid when use_local_cartesian_ is true (validated in constructor)
     if (broadcast_earth_transform_) {
       earth_cartesian_transform_ = computeEarthToCartesian(
-        origin_latitude_, origin_longitude_, origin_altitude_);
+        origin_latitude_, origin_longitude_, LOCAL_CARTESIAN_HEIGHT);
 
       geometry_msgs::msg::TransformStamped earth_transform_stamped;
 
@@ -1048,14 +1047,12 @@ void NavSatTransform::setTransformGps(
   // Store origin coordinates for earth frame computation
   origin_latitude_ = msg->latitude;
   origin_longitude_ = msg->longitude;
-  origin_altitude_ = msg->altitude;
 
   double cartesian_x {};
   double cartesian_y {};
   double cartesian_z {};
   if (use_local_cartesian_) {
-    const double hae_altitude {};
-    gps_local_cartesian_.Reset(msg->latitude, msg->longitude, hae_altitude);
+    gps_local_cartesian_.Reset(msg->latitude, msg->longitude, LOCAL_CARTESIAN_HEIGHT);
     gps_local_cartesian_.Forward(
       msg->latitude,
       msg->longitude,

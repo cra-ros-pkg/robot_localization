@@ -281,7 +281,7 @@ if(BUILD_TESTING)
 
   #### EARTH CHAIN TESTS ####
   ament_add_gtest(test_earth_chain test/test_earth_chain.cpp)
-  target_link_libraries(test_earth_chain ${library_name})
+  target_link_libraries(test_earth_chain ${library_name} ${GeographicLib_LIBRARIES})
 
   ament_add_gtest_executable(test_ros_robot_localization_listener
                   test/test_ros_robot_localization_listener.cpp)

@@ -30,7 +30,7 @@ If this is *true*, the `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html
 
 ~use_local_cartesian
 ^^^^^^^^^^^^^^^^^^^^
-If this is *true*, the node uses a local East-North-Up (ENU) cartesian coordinate system centered at the GPS datum. If *false*, the node uses UTM coordinates. Defaults to *false* (UTM mode). Local cartesian mode is required for earth frame transform support.
+If this is *true*, the node uses a local East-North-Up (ENU) cartesian coordinate system at the GPS datum's latitude and longitude, with its origin at ellipsoid height 0, so that its z is ellipsoid height. If *false*, the node uses UTM coordinates. Defaults to *false* (UTM mode). Local cartesian mode is required for earth frame transform support.
 
 ~publish_filtered_gps
 ^^^^^^^^^^^^^^^^^^^^^

@@ -548,7 +548,12 @@ private:
    */
   double origin_latitude_;
   double origin_longitude_;
-  double origin_altitude_;
+
+  /**
+   * @brief Ellipsoid height of the local cartesian origin, so local cartesian z is the
+   * ellipsoid height. The earth transform must place the origin at this same height.
+   */
+  static constexpr double LOCAL_CARTESIAN_HEIGHT {0.0};
 };
 
 }  // namespace robot_localization
