@@ -909,7 +909,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
       "\n" <<
       measurement_queue_.size() << " measurements in queue.\n");
 
-  bool predict_to_current_time = predict_to_current_time_;
+  //bool predict_to_current_time = predict_to_current_time_;
 
   // If we have any measurements in the queue, process them
   if (!measurement_queue_.empty()) {
@@ -1013,7 +1013,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
 
     // If we get a large delta, then continuously predict until
     if (last_update_delta >= filter_.getSensorTimeout()) {
-      predict_to_current_time = true;
+      predict_to_current_time_ = true;
 
       RF_DEBUG(
         "Sensor timeout! Last measurement time was " <<
@@ -1026,7 +1026,7 @@ void RosFilter<T>::integrateMeasurements(const rclcpp::Time & current_time)
     RF_DEBUG("Filter not yet initialized.\n");
   }
 
-  if (filter_.getInitializedStatus() && predict_to_current_time) {
+  if (filter_.getInitializedStatus() && predict_to_current_time_) {
     rclcpp::Duration last_update_delta =
       current_time - filter_.getLastMeasurementTime();
 
