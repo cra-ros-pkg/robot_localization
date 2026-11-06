@@ -36,6 +36,7 @@
 #include <string>
 
 #include "GeographicLib/Geocentric.hpp"
+#include "GeographicLib/LocalCartesian.hpp"
 #include "navsat_conversions.hpp"
 #include "robot_localization/navsat_transform.hpp"
 
@@ -210,6 +211,69 @@ TEST(EarthToCartesianTest, AxisDirectionsAtEquator)
   EXPECT_NEAR(R[2][0], 0.0, 1e-10);
   EXPECT_NEAR(R[2][1], 1.0, 1e-10);
   EXPECT_NEAR(R[2][2], 0.0, 1e-10);
+}
+
+TEST(LocalCartesianTest, LocalCartesianRoundtrip)
+{
+  const double datum_lat = 60.1855015;
+  const double datum_lon = 21.5850450;
+  const double datum_alt = 0.0;
+
+  GeographicLib::LocalCartesian lc(datum_lat, datum_lon, datum_alt);
+
+  const double test_lats[] = {60.1855015, 60.190234, 60.250000, 59.900000};
+  const double test_lons[] = {21.5850450, 21.498610, 21.700000, 22.100000};
+  const double test_alts[] = {0.0, 50.0, 150.0, -10.0, 1000.0};
+
+  for (double lat : test_lats) {
+    for (double lon : test_lons) {
+      for (double alt : test_alts) {
+        double x, y, z;
+        lc.Forward(lat, lon, alt, x, y, z);
+
+        double recovered_lat, recovered_lon, recovered_alt;
+        lc.Reverse(x, y, z, recovered_lat, recovered_lon, recovered_alt);
+
+        EXPECT_NEAR(recovered_lat, lat, 1e-9);
+        EXPECT_NEAR(recovered_lon, lon, 1e-9);
+        EXPECT_NEAR(recovered_alt, alt, 1e-6);
+      }
+    }
+  }
+}
+
+TEST(LocalCartesianTest, LocalCartesianCoordinateConsistencyIssue596)
+{
+  const double datum_lat = 60.1855015;
+  const double datum_lon = 21.5850450;
+  const double datum_alt = 0.0;
+
+  GeographicLib::LocalCartesian lc(datum_lat, datum_lon, datum_alt);
+
+  // Cartesian coordinates from Issue #596:
+  const double X = -4795.329517;
+  const double Y = 530.372963;
+  const double Z = -1.820142;
+
+  // Passing the full 3D point (X, Y, Z) to Reverse calculates the true geodetic position and altitude:
+  double lat = 0.0;
+  double lon = 0.0;
+  double alt = 0.0;
+  lc.Reverse(X, Y, Z, lat, lon, alt);
+
+  EXPECT_NEAR(lat, 60.190234, 1e-5);
+  EXPECT_NEAR(lon, 21.498610, 1e-5);
+  EXPECT_NEAR(alt, 0.0, 1e-5);
+
+  // Prior to fix, Z was passed as 0.0 and replaced with Z:
+  double buggy_lat = 0.0;
+  double buggy_lon = 0.0;
+  double dummy_alt = 0.0;
+  lc.Reverse(X, Y, 0.0, buggy_lat, buggy_lon, dummy_alt);
+  double buggy_alt = Z;  // The old behavior assigned tangent-plane Z as altitude
+
+  // Verify that the old behavior would have produced an altitude error of ~1.82 meters:
+  EXPECT_NEAR(std::abs(buggy_alt - alt), 1.820142, 1e-4);
 }
 
 int main(int argc, char ** argv)
