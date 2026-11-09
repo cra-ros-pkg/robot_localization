@@ -96,8 +96,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   earth_frame_id_("earth"),
   broadcast_earth_transform_(false),
   origin_latitude_(0.0),
-  origin_longitude_(0.0),
-  origin_altitude_(0.0)
+  origin_longitude_(0.0)
 {
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -379,6 +378,8 @@ void NavSatTransform::computeTransform()
     // Prepare vector of transforms to publish
     std::vector<geometry_msgs::msg::TransformStamped> transforms_to_publish;
 
+    tf2::Transform published_cartesian_world;
+
     // Add cartesian transform if requested
     if (broadcast_cartesian_transform_) {
       geometry_msgs::msg::TransformStamped cartesian_transform_stamped;
@@ -396,6 +397,7 @@ void NavSatTransform::computeTransform()
       }
       cartesian_transform_stamped.transform.translation.z =
         (zero_altitude_ ? 0.0 : cartesian_transform_stamped.transform.translation.z);
+      tf2::fromMsg(cartesian_transform_stamped.transform, published_cartesian_world);
       transforms_to_publish.push_back(cartesian_transform_stamped);
     }
 
@@ -403,7 +405,7 @@ void NavSatTransform::computeTransform()
     // Note: Only valid when use_local_cartesian_ is true (validated in constructor)
     if (broadcast_earth_transform_) {
       earth_cartesian_transform_ = computeEarthToCartesian(
-        origin_latitude_, origin_longitude_, origin_altitude_);
+        origin_latitude_, origin_longitude_, LOCAL_CARTESIAN_HEIGHT);
 
       geometry_msgs::msg::TransformStamped earth_transform_stamped;
 
@@ -415,9 +417,12 @@ void NavSatTransform::computeTransform()
       if (broadcast_cartesian_transform_ &&
         broadcast_cartesian_transform_as_parent_frame_)
       {
+        // The published chain must equal the true earth -> world, including when the cartesian
+        // transform's z is zeroed
         earth_transform_stamped.child_frame_id = "local_enu";
-        earth_transform_stamped.transform = tf2::toMsg(earth_cartesian_transform_.inverse());
-
+        earth_transform_stamped.transform = tf2::toMsg(
+          earth_cartesian_transform_.inverse() * cartesian_world_trans_inverse_ *
+          published_cartesian_world.inverse());
       } else {
         tf2::Transform const C2W = cartesian_world_transform_;
         tf2::Transform const E2W = C2W * earth_cartesian_transform_;
@@ -1048,14 +1053,12 @@ void NavSatTransform::setTransformGps(
   // Store origin coordinates for earth frame computation
   origin_latitude_ = msg->latitude;
   origin_longitude_ = msg->longitude;
-  origin_altitude_ = msg->altitude;
 
   double cartesian_x {};
   double cartesian_y {};
   double cartesian_z {};
   if (use_local_cartesian_) {
-    const double hae_altitude {};
-    gps_local_cartesian_.Reset(msg->latitude, msg->longitude, hae_altitude);
+    gps_local_cartesian_.Reset(msg->latitude, msg->longitude, LOCAL_CARTESIAN_HEIGHT);
     gps_local_cartesian_.Forward(
       msg->latitude,
       msg->longitude,
