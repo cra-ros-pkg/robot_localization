@@ -19,7 +19,8 @@ navsat_transform_node:
 # doesn't, enter the offset here. Defaults to 0.
         yaw_offset: 0.0
 
-# If this is true, the altitude is set to 0 in the output odometry message. Defaults to false.
+# If this is true, the altitude is set to 0 in the output odometry message and the broadcast cartesian transform.
+# The earth frame transforms keep the true height. Defaults to false.
         zero_altitude: false
 
 # If this is true, the transform world_frame->utm transform is broadcast for use by other nodes. Defaults to false.

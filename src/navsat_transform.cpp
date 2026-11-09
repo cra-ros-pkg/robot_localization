@@ -378,6 +378,8 @@ void NavSatTransform::computeTransform()
     // Prepare vector of transforms to publish
     std::vector<geometry_msgs::msg::TransformStamped> transforms_to_publish;
 
+    tf2::Transform published_cartesian_world;
+
     // Add cartesian transform if requested
     if (broadcast_cartesian_transform_) {
       geometry_msgs::msg::TransformStamped cartesian_transform_stamped;
@@ -395,6 +397,7 @@ void NavSatTransform::computeTransform()
       }
       cartesian_transform_stamped.transform.translation.z =
         (zero_altitude_ ? 0.0 : cartesian_transform_stamped.transform.translation.z);
+      tf2::fromMsg(cartesian_transform_stamped.transform, published_cartesian_world);
       transforms_to_publish.push_back(cartesian_transform_stamped);
     }
 
@@ -414,9 +417,12 @@ void NavSatTransform::computeTransform()
       if (broadcast_cartesian_transform_ &&
         broadcast_cartesian_transform_as_parent_frame_)
       {
+        // The published chain must equal the true earth -> world, including when the cartesian
+        // transform's z is zeroed
         earth_transform_stamped.child_frame_id = "local_enu";
-        earth_transform_stamped.transform = tf2::toMsg(earth_cartesian_transform_.inverse());
-
+        earth_transform_stamped.transform = tf2::toMsg(
+          earth_cartesian_transform_.inverse() * cartesian_world_trans_inverse_ *
+          published_cartesian_world.inverse());
       } else {
         tf2::Transform const C2W = cartesian_world_transform_;
         tf2::Transform const E2W = C2W * earth_cartesian_transform_;

@@ -26,7 +26,7 @@ Your IMU should read 0 for yaw when facing east. If it doesn't, enter the offset
 
 ~zero_altitude
 ^^^^^^^^^^^^^^
-If this is *true*, the `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message produced by this node has its pose Z value set to 0.
+If this is *true*, the `nav_msgs/Odometry <http://docs.ros.org/api/nav_msgs/html/msg/Odometry.html>`_ message produced by this node has its pose Z value set to 0. The Z of the broadcast cartesian transform is also set to 0. The earth frame transforms keep the true height, so when the earth transform's child is ``local_enu``, that frame's origin is at the world frame origin's ellipsoid height.
 
 ~use_local_cartesian
 ^^^^^^^^^^^^^^^^^^^^

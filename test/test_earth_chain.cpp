@@ -402,6 +402,32 @@ TEST_F(EarthChainTest, SetDatumAltitudeReturnsThroughEarth)
   EXPECT_TRUE(publishUntil(node, datum_applied));
 }
 
+TEST_F(EarthChainTest, FixReturnsThroughLocalEnuWithZeroAltitude)
+{
+  const double altitude = -25.6;
+  auto node = createNavSatNode(
+  {
+    rclcpp::Parameter("use_local_cartesian", true),
+    rclcpp::Parameter("broadcast_cartesian_transform", true),
+    rclcpp::Parameter("broadcast_cartesian_transform_as_parent_frame", true),
+    rclcpp::Parameter("broadcast_earth_transform", true),
+    rclcpp::Parameter("zero_altitude", true),
+  });
+  tf2_ros::Buffer tf_buffer(node->get_clock());
+  tf2_ros::TransformListener tf_listener(tf_buffer);
+  ASSERT_TRUE(
+    publishUntil(
+      node,
+      [&tf_buffer]() {return tf_buffer.canTransform("earth", "map", tf2::TimePointZero);},
+      altitude));
+
+  const tf2::Vector3 gps = toGeodetic(lookup(tf_buffer, "earth", "map") * gpsInMap());
+  EXPECT_NEAR(gps.x(), 29.2, 1e-8);
+  EXPECT_NEAR(gps.y(), -90.1, 1e-8);
+  EXPECT_NEAR(gps.z(), altitude, 1e-3);
+  EXPECT_NEAR(lookup(tf_buffer, "local_enu", "map").getOrigin().z(), 0.0, 1e-3);
+}
+
 int main(int argc, char ** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
